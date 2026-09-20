@@ -1,6 +1,8 @@
 using System.Numerics;
 using CinematicCam.Core;
 using CinematicCam.Plugin.Game;
+using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -19,9 +21,11 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameInteropProvider Hooks { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
+    [PluginService] internal static ICondition Condition { get; private set; } = null!;
 
     internal static CameraController Camera { get; private set; } = null!;
     internal static CameraState? TestState { get; set; }
+    internal static CameraOwnership Ownership { get; } = new();
 
     public Plugin()
     {
@@ -30,9 +34,13 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "/ccam selftest | hold | push <d> | nudge <x> <y> <z> | release"
         });
 
-        Camera = new CameraController(() => TestState);
+        Camera = new CameraController(() => Ownership.IsOwned ? TestState : null);
 
-        Log.Information("CinematicCam loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version);
+        Framework.Update += OnFrameworkUpdate;
+        ClientState.TerritoryChanged += OnTerritoryChanged;
+        ClientState.Logout += OnLogout;
+
+        Log.Information("CinematicCam loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown");
     }
 
     private void OnCommand(string command, string args)
@@ -48,13 +56,13 @@ public sealed class Plugin : IDalamudPlugin
                 var current = CameraAccess.ReadState();
                 if (current is null) { Log.Error("[ccam] cannot read camera state."); break; }
                 TestState = current;
+                Ownership.Take();
                 Log.Information("[ccam] holding at {Pos} looking at {Look}",
                     current.Value.Position, current.Value.LookAt);
                 break;
             }
             case "release":
-                TestState = null;
-                Log.Information("[ccam] released.");
+                ReleaseCamera("command");
                 break;
             case "push":
             {
@@ -96,8 +104,39 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private static void ReleaseCamera(string reason)
+    {
+        if (!Ownership.IsOwned && TestState is null) return;
+
+        TestState = null;
+        Ownership.Release(reason);
+        Log.Information("[ccam] camera released: {Reason}", reason);
+    }
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        Camera.TryInstallHook();
+
+        if (!Ownership.IsOwned) return;
+
+        // TerritoryChanged misses transitions that keep the same territory id, such as an
+        // aethernet hop, a cutscene or a duty starting. This flag covers all of them.
+        if (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51])
+            ReleaseCamera("area transition");
+    }
+
+    private void OnTerritoryChanged(uint territory)
+        => ReleaseCamera($"zone change to {territory}");
+
+    private void OnLogout(int type, int code)
+        => ReleaseCamera("logout");
+
     public void Dispose()
     {
+        Framework.Update -= OnFrameworkUpdate;
+        ClientState.TerritoryChanged -= OnTerritoryChanged;
+        ClientState.Logout -= OnLogout;
+        ReleaseCamera("plugin unload");
         Camera.Dispose();
         CommandManager.RemoveHandler(CommandName);
         Log.Information("CinematicCam unloaded.");

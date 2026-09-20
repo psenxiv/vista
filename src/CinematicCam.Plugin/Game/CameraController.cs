@@ -12,7 +12,7 @@ internal sealed unsafe class CameraController : IDisposable
     private delegate void CameraUpdateDelegate(CameraBase* camera);
 
     private readonly Func<CameraState?> stateSource;
-    private readonly Hook<CameraUpdateDelegate>? updateHook;
+    private Hook<CameraUpdateDelegate>? updateHook;
 
     public bool IsHooked => updateHook?.IsEnabled == true;
     public long UpdateCount { get; private set; }
@@ -20,12 +20,14 @@ internal sealed unsafe class CameraController : IDisposable
     public CameraController(Func<CameraState?> stateSource)
     {
         this.stateSource = stateSource;
+        TryInstallHook();
+    }
 
-        if (!CameraAccess.TryGetActiveCamera(out var camera))
-        {
-            Plugin.Log.Error("[camera] no active camera at construction; hook not installed.");
-            return;
-        }
+    /// <summary>Installs the hook if a camera exists yet. Safe to call repeatedly.</summary>
+    public void TryInstallHook()
+    {
+        if (updateHook != null) return;
+        if (!CameraAccess.TryGetActiveCamera(out var camera)) return;
 
         var vtable = *(nint**)camera;
         var updateAddress = vtable[UpdateVFuncIndex];
