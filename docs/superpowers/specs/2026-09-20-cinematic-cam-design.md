@@ -114,6 +114,35 @@ command could read the field. It only shows up as motion on screen mid-input.
 clamped and start the fight again. If jitter reappears at long range, look here
 first.
 
+### Hazard: writing fields the game persists
+
+Confirmed the hard way on 2026-09-21. Writing `Distance` every frame corrupted a
+character's saved camera settings. The camera sat just above the character's
+head, survived a relog, survived a full client restart, and survived disabling
+Dalamud entirely. It affected only the character that had been used for testing.
+The fix was Character Configuration -> Control Settings -> Return to Default.
+
+Position, look-at and the up vector are recomputed every frame and are
+self-correcting, so writing them is safe. `Distance` is a *setting*, saved into
+the character's `COMMON.DAT`.
+
+**A crash is not required.** The game writes character settings on logout, on
+zoning and when the settings UI is used. Any of those firing while the plugin
+holds the camera persists our values. Restore-on-release does not help, because
+the save happens during the takeover rather than after it.
+
+Two rules follow, and they apply to any field added to the write set later:
+
+1. Before writing a game field every frame, establish whether it is runtime
+   state or a saved setting. If it is saved, do not write it.
+2. The reason `Distance` was pinned was to stop the game interpolating against
+   our imposed position, and that only ever happened in response to zoom input.
+   Blocking the input removes the need to write the field. Prefer suppressing
+   the input over overwriting the setting.
+
+`/ccam reset` restores stock values in memory as a user-facing escape hatch, but
+it cannot undo what has already been written to disk.
+
 The up vector is required, not optional. Leaving it to the game produces a
 visible roll, because the game keeps deriving it from the direction it *intends*
 to look while we have overridden the direction it actually looks. Its formula,
