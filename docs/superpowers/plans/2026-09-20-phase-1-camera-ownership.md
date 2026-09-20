@@ -28,8 +28,8 @@ macOS; the plugin supplies input and writes memory.
   `IDalamudPluginInterface` as a constructor parameter and never call
   `Create<Plugin>()` — that deadlocks silently on load.
 - Doc comments are one line. See `CLAUDE.md`.
-- Commit after every task, ending with:
-  `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
+- Commit after every task. One-line messages, conventional prefix, no trailers.
+  See `CLAUDE.md`.
 
 ## Confirmed APIs
 
@@ -205,15 +205,7 @@ Record the value of `vfunc[3]`. Task 2 hooks that address.
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Add camera accessor and self-test diagnostics
-
-Confirms the active camera pointer, its vtable, and the position,
-look-at and FoV fields are live and readable before anything hooks them.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "feat(camera) read active camera and log diagnostics"
 ```
 
 ---
@@ -359,15 +351,7 @@ Check:
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Hook CameraBase.Update as a counting passthrough
-
-Proves the hook installs and fires once per frame without altering
-camera behaviour. No writes yet.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "feat(camera) hook camera update as passthrough"
 ```
 
 ---
@@ -519,16 +503,7 @@ writing.
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Write camera position and look-at after the game's update
-
-Proves the post-Update write wins: the view freezes while the character
-walks out of frame, and releases cleanly. Adds hold, release and nudge
-verbs used by the field-of-view and collision probes.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "feat(camera) write position and look-at"
 ```
 
 ---
@@ -666,15 +641,7 @@ delete the uncertainty wording.
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Probe field-of-view writability and record the finding
-
-Settles the spec's open question about whether a post-Update FoV write
-survives the game's own camera update.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "test(camera) probe field of view writability"
 ```
 
 ---
@@ -728,16 +695,7 @@ the measured result.
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Measure camera collision behaviour under plugin control
-
-Determines whether overwriting position after the game's collision pass
-is enough to fly through geometry, or whether an assembly patch is
-needed.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "docs(spec) record camera collision behaviour"
 ```
 
 ---
@@ -959,15 +917,7 @@ phase 3 hotkey work.
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Add camera ownership with panic key and automatic release
-
-Releases on panic key, zone change, logout and plugin unload. Ownership
-state is pure and unit tested; the plugin wires game events to it.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "feat(camera) add ownership with panic key and auto-release"
 ```
 
 ---
@@ -1277,18 +1227,7 @@ should not block the flying camera from being proven.
 
 ```bash
 git add -A
-git commit -m "$(cat <<'EOF'
-Add free-flying camera driven by the movement keys
-
-Motion maths lives in Core and is unit tested, framerate independence
-included. The plugin reads the game camera's own yaw and pitch so
-mouse-look keeps steering.
-
-Character movement is not yet suppressed.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+git commit -m "feat(camera) add free-flying camera"
 ```
 
 ---
