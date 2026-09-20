@@ -32,6 +32,10 @@ internal static unsafe class SelfTest
         Plugin.Log.Information("[selftest] position={Pos} lookAt={Look} fov={Fov} dirH={H} dirV={V}",
             state.Value.Position, state.Value.LookAt, state.Value.Fov, camera->DirH, camera->DirV);
 
+        var scene = &camera->CameraBase.SceneCamera;
+        Plugin.Log.Information("[selftest] upVector={Up} tiltOffset={Tilt} distance={Dist} interpDist={IDist}",
+            scene->Vector_1, camera->TiltOffset, camera->Distance, camera->InterpDistance);
+
         Plugin.Log.Information("[selftest] hooked={Hooked} updateCount={Count}",
             Plugin.Camera.IsHooked, Plugin.Camera.UpdateCount);
 
