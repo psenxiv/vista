@@ -27,6 +27,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static CameraState? TestState { get; set; }
     internal static CameraOwnership Ownership { get; } = new();
     internal static FreeCam FreeCamera { get; } = new();
+    internal static InputBlocker Input { get; private set; } = null!;
 
     public Plugin()
     {
@@ -41,6 +42,8 @@ public sealed class Plugin : IDalamudPlugin
             return FreeCamera.Tick((float)Framework.UpdateDelta.TotalSeconds) ?? TestState;
         });
 
+        Input = new InputBlocker(() => FreeCamera.Enabled);
+
         Framework.Update += OnFrameworkUpdate;
         ClientState.TerritoryChanged += OnTerritoryChanged;
         ClientState.Logout += OnLogout;
@@ -53,6 +56,25 @@ public sealed class Plugin : IDalamudPlugin
         var verb = args.Trim().Split(' ', 2)[0].ToLowerInvariant();
         switch (verb)
         {
+            case "inputprobe":
+            {
+                var starting = !Input.Learning;
+                Input.Learning = starting;
+
+                if (starting)
+                {
+                    Log.Information("[input] learning ON - press one key at a time");
+                }
+                else
+                {
+                    Input.BlockWhatWasLearned();
+                    Log.Information("[input] learning OFF");
+                }
+                break;
+            }
+            case "inputclear":
+                Input.ClearBlocked();
+                break;
             case "fly":
             {
                 if (FreeCamera.Enabled) { ReleaseCamera("fly toggled off"); break; }
@@ -133,6 +155,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework framework)
     {
         Camera.TryInstallHook();
+        Input.SyncHookState();
 
         if (!Ownership.IsOwned) return;
 
@@ -154,7 +177,8 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         ClientState.Logout -= OnLogout;
         ReleaseCamera("plugin unload");
-        Camera.Dispose();
+        Input?.Dispose();
+        Camera?.Dispose();
         CommandManager.RemoveHandler(CommandName);
         Log.Information("CinematicCam unloaded.");
     }
