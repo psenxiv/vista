@@ -18,12 +18,16 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
 
+    internal static CameraController Camera { get; private set; } = null!;
+
     public Plugin()
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "/ccam selftest - report camera diagnostics to the log."
         });
+
+        Camera = new CameraController(() => null);
 
         Log.Information("CinematicCam loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version);
     }
@@ -44,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Camera.Dispose();
         CommandManager.RemoveHandler(CommandName);
         Log.Information("CinematicCam unloaded.");
     }
