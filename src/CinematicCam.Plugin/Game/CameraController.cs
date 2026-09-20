@@ -39,6 +39,11 @@ internal sealed unsafe class CameraController : IDisposable
     {
         updateHook!.Original(camera);
         UpdateCount++;
+
+        var desired = stateSource();
+        if (desired is null) return;
+
+        CameraAccess.WriteState(desired.Value);
     }
 
     public void Dispose()

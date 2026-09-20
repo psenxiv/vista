@@ -25,4 +25,14 @@ internal static unsafe class CameraAccess
         var scene = &camera->CameraBase.SceneCamera;
         return new CameraState(scene->Object.Position, scene->LookAtVector, camera->FoV);
     }
+
+    /// <summary>Overwrites camera position and look-at.</summary>
+    public static void WriteState(CameraState state)
+    {
+        if (!TryGetActiveCamera(out var camera)) return;
+
+        var scene = &camera->CameraBase.SceneCamera;
+        scene->Object.Position = state.Position;
+        scene->LookAtVector = state.LookAt;
+    }
 }
