@@ -77,21 +77,44 @@ Three consequences follow from writing after `Update()` returns:
    writes after it. We are last, regardless of plugin load order.
 2. **Camera collision may need no patching.** Cammy patches the geometry
    collision check to fly through walls. That correction happens inside
-   `Update()` and we overwrite its result. Unproven — a later clamping pass may
-   exist. Phase 1 settles it.
+   `Update()` and we overwrite its result. Still unproven at the time of
+   writing; the collision probe settles it.
 3. **The player keeps their keyboard during playback.** Driving the camera does
    not require taking input, so the plugin does not take it. A creator can dance
    or emote while their own camera flies. Input capture applies only to
    authoring free-cam.
 
-### Known uncertainty
+### Resolved: what we write
 
-Field-of-view is unresolved. `Camera.FoV` sits at `0x130` on the game camera,
-but the scene camera carries its own projection on `RenderCamera`. Which write
-survives a post-`Update()` overwrite cannot be determined from headers, and the
-same question applies to whether `ViewMatrix` rebuilds from our position or
-needs writing directly. Phase 1 answers it empirically via `/ccam selftest`
-(see Testing). Position and look-at carry no such doubt.
+Measured in-game 2026-09-21. Four fields, written after `Update()` returns,
+fully own the camera. Nothing the game does afterwards overrides them:
+
+| Field | Location |
+|---|---|
+| Position | `SceneCamera.Object.Position`, `0x50` |
+| Look-at point | `SceneCamera.LookAtVector`, `0x80` |
+| Up vector | `SceneCamera.Vector_1`, `0x90` |
+| Field of view | `Camera.FoV`, `0x130`, radians |
+
+The up vector is required, not optional. Leaving it to the game produces a
+visible roll, because the game keeps deriving it from the direction it *intends*
+to look while we have overridden the direction it actually looks. Its formula,
+confirmed to five decimal places against captured values, is world up projected
+onto the plane perpendicular to the view direction, left un-normalised:
+
+```
+up = worldUp - forward * dot(worldUp, forward)
+```
+
+`CameraOrientation.UpFor` implements this in `Core`, with a regression test
+built from the captured values.
+
+`TiltOffset` is not involved; it read zero throughout.
+
+Writing these four is race-independent: all are world-space and none reference
+the character model. Race affects the game's own `lookAtHeightOffset`, which
+stops applying once we own the camera. Any future feature that aims at a person
+rather than a point will need to account for per-race height.
 
 ## Track model
 
