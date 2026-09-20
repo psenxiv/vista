@@ -26,15 +26,20 @@ public sealed class Plugin : IDalamudPlugin
     internal static CameraController Camera { get; private set; } = null!;
     internal static CameraState? TestState { get; set; }
     internal static CameraOwnership Ownership { get; } = new();
+    internal static FreeCam FreeCamera { get; } = new();
 
     public Plugin()
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam selftest | hold | push <d> | nudge <x> <y> <z> | release"
+            HelpMessage = "/ccam fly | selftest | hold | push <d> | nudge <x> <y> <z> | release"
         });
 
-        Camera = new CameraController(() => Ownership.IsOwned ? TestState : null);
+        Camera = new CameraController(() =>
+        {
+            if (!Ownership.IsOwned) return null;
+            return FreeCamera.Tick((float)Framework.UpdateDelta.TotalSeconds) ?? TestState;
+        });
 
         Framework.Update += OnFrameworkUpdate;
         ClientState.TerritoryChanged += OnTerritoryChanged;
@@ -48,6 +53,17 @@ public sealed class Plugin : IDalamudPlugin
         var verb = args.Trim().Split(' ', 2)[0].ToLowerInvariant();
         switch (verb)
         {
+            case "fly":
+            {
+                if (FreeCamera.Enabled) { ReleaseCamera("fly toggled off"); break; }
+
+                var start = CameraAccess.ReadState();
+                if (start is null) { Log.Error("[ccam] cannot read camera state."); break; }
+
+                FreeCamera.Enable(start.Value.Position);
+                Ownership.Take();
+                break;
+            }
             case "selftest":
                 SelfTest.Run();
                 break;
@@ -108,6 +124,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (!Ownership.IsOwned && TestState is null) return;
 
+        FreeCamera.Disable();
         TestState = null;
         Ownership.Release(reason);
         Log.Information("[ccam] camera released: {Reason}", reason);
