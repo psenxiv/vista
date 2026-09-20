@@ -28,6 +28,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static CameraOwnership Ownership { get; } = new();
     internal static FreeCam FreeCamera { get; } = new();
     internal static InputBlocker Input { get; private set; } = null!;
+    private static CameraAccess.Snapshot? snapshotBeforeTakeover;
 
     public Plugin()
     {
@@ -72,6 +73,9 @@ public sealed class Plugin : IDalamudPlugin
                 }
                 break;
             }
+            case "reset":
+                CameraAccess.ResetToDefaults();
+                break;
             case "inputclear":
                 Input.ClearBlocked();
                 break;
@@ -83,7 +87,7 @@ public sealed class Plugin : IDalamudPlugin
                 if (start is null) { Log.Error("[ccam] cannot read camera state."); break; }
 
                 FreeCamera.Enable(start.Value.Position);
-                Ownership.Take();
+                TakeCamera();
                 break;
             }
             case "selftest":
@@ -94,7 +98,7 @@ public sealed class Plugin : IDalamudPlugin
                 var current = CameraAccess.ReadState();
                 if (current is null) { Log.Error("[ccam] cannot read camera state."); break; }
                 TestState = current;
-                Ownership.Take();
+                TakeCamera();
                 Log.Information("[ccam] holding at {Pos} looking at {Look}",
                     current.Value.Position, current.Value.LookAt);
                 break;
@@ -142,6 +146,13 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    /// <summary>Takes the camera, remembering what to put back on release.</summary>
+    private static void TakeCamera()
+    {
+        snapshotBeforeTakeover ??= CameraAccess.Capture();
+        Ownership.Take();
+    }
+
     private static void ReleaseCamera(string reason)
     {
         if (!Ownership.IsOwned && TestState is null) return;
@@ -149,6 +160,15 @@ public sealed class Plugin : IDalamudPlugin
         FreeCamera.Disable();
         TestState = null;
         Ownership.Release(reason);
+
+        // Without this the game carries on from our values rather than its own,
+        // which leaves the camera wrong long after we stop writing.
+        if (snapshotBeforeTakeover is { } snapshot)
+        {
+            CameraAccess.Restore(snapshot);
+            snapshotBeforeTakeover = null;
+        }
+
         Log.Information("[ccam] camera released: {Reason}", reason);
     }
 
