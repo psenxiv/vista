@@ -34,8 +34,9 @@ internal sealed unsafe class InputBlocker : IDisposable
         get => learning;
         set
         {
-            // Clear before arming, or ids seen in the gap are recorded then discarded.
-            lock (seenLock) seen.Clear();
+            // Clear when starting, or ids seen in the gap are recorded then discarded.
+            // Never on stop, or the results are wiped before anything can read them.
+            if (value) lock (seenLock) seen.Clear();
 
             learning = value;
             SyncHookState();

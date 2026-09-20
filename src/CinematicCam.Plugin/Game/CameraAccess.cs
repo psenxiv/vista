@@ -80,10 +80,9 @@ internal static unsafe class CameraAccess
         scene->Vector_1 = CameraOrientation.UpFor(state.Position, state.LookAt);
         camera->FoV = state.Fov;
 
-        // Keep the game's own distance consistent with the position we impose, or it
-        // interpolates toward its own idea of where the camera belongs and visibly fights us.
-        var distance = Vector3.Distance(state.Position, state.LookAt);
-        camera->Distance = distance;
-        camera->InterpDistance = distance;
+        // Distance and InterpDistance are deliberately NOT written. They are saved
+        // settings: writing them corrupted a character's stored camera on 2026-09-21,
+        // surviving relog, client restart and disabling Dalamud. See the spec.
+        // Scrolling during a takeover can jitter slightly; suppress the input instead.
     }
 }
