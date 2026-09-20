@@ -45,14 +45,10 @@ camera->FoV                                  // float,   offset 0x130
 camera->DirH, camera->DirV                   // float, radians
 ```
 
-## Open finding: direction convention
+## Confirmed: camera direction convention
 
-Measured in-game 2026-09-21, from one sample. **Confirm with a second reading at
-a different orientation before relying on it.**
-
-`lookAt - position` normalised gave `<-0.355, -0.922, 0.152>` for
-`dirH=1.9749651, dirV=-1.1658802`. Magnitudes match the usual spherical
-formula but X and Z are sign-inverted, so the game's convention appears to be:
+Measured in-game 2026-09-21 across three samples, yaw spanning 0.44 to 1.72 rad.
+Predicted and measured directions agree within ~2%.
 
 ```
 X = -sin(yaw) * cos(pitch)
@@ -60,10 +56,18 @@ Y =  sin(pitch)
 Z = -cos(yaw) * cos(pitch)
 ```
 
-Task 7's `FreeCamMotion.Direction` currently uses the un-negated form. If this
-holds, it needs the negation or the camera flies backwards. The task 7 test
-`LookAtIsOneUnitAheadOfPosition` would still pass either way, since it only
-checks distance — add a sign assertion once the convention is confirmed.
+The un-negated form would fly the camera backwards. Task 7 uses the negated one.
+
+**`LookAtVector` is a world-space point, not a direction.** In all three samples
+`|lookAt - position|` was 9.60, the camera's zoom distance, while `lookAt.Y`
+stayed at the character's height as the camera orbited. Task 7 therefore places
+its look-at target ten units ahead rather than one, to produce values in the
+range the game itself produces.
+
+**Unresolved: the strafe sign.** `right` is perpendicular to forward, and both
+candidate perpendiculars are geometrically valid — which one is "right" depends
+on the world's handedness, which these samples cannot show. Task 7's in-game
+check settles it: if A and D are swapped, negate `right`. One character.
 
 ## Who runs what
 
@@ -1014,10 +1018,18 @@ public class FreeCamMotionTests
     }
 
     [Fact]
-    public void LookAtIsOneUnitAheadOfPosition()
+    public void LookAtSitsTenUnitsAheadOfPosition()
     {
         var position = new Vector3(5, 5, 5);
-        Assert.Equal(1f, Vector3.Distance(position, FreeCamMotion.LookAtFrom(position, 0f, 0f)), 4);
+        Assert.Equal(10f, Vector3.Distance(position, FreeCamMotion.LookAtFrom(position, 0f, 0f)), 3);
+    }
+
+    [Fact]
+    public void LookAtUsesTheGameDirectionConvention()
+    {
+        // Measured in game: yaw 0 looks along -Z, yaw pi/2 looks along -X.
+        Assert.True(FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0f).Z < 0);
+        Assert.True(FreeCamMotion.LookAtFrom(Vector3.Zero, MathF.PI / 2f, 0f).X < 0);
     }
 
     [Fact]
@@ -1050,6 +1062,9 @@ namespace CinematicCam.Core;
 /// <summary>Free camera movement maths.</summary>
 public static class FreeCamMotion
 {
+    /// <summary>Matches the distance the game's own look-at target sits at.</summary>
+    private const float LookAtDistance = 10f;
+
     /// <summary>Advances a camera position by one frame of input.</summary>
     /// <param name="input">(forward, up, right), each in [-1, 1].</param>
     /// <param name="yaw">Horizontal angle in radians.</param>
@@ -1067,14 +1082,14 @@ public static class FreeCamMotion
         return position + (move * speed * deltaSeconds);
     }
 
-    /// <summary>A point one unit ahead of the camera along its facing.</summary>
+    /// <summary>A point ahead of the camera along its facing.</summary>
     public static Vector3 LookAtFrom(Vector3 position, float yaw, float pitch)
-        => position + Direction(yaw, pitch);
+        => position + (Direction(yaw, pitch) * LookAtDistance);
 
     private static Vector3 Direction(float yaw, float pitch)
     {
         var cosPitch = MathF.Cos(pitch);
-        return new Vector3(MathF.Sin(yaw) * cosPitch, MathF.Sin(pitch), MathF.Cos(yaw) * cosPitch);
+        return new Vector3(-MathF.Sin(yaw) * cosPitch, MathF.Sin(pitch), -MathF.Cos(yaw) * cosPitch);
     }
 }
 ```
@@ -1085,7 +1100,7 @@ public static class FreeCamMotion
 dotnet test tests/CinematicCam.Tests/CinematicCam.Tests.csproj
 ```
 
-Expected: 12 passed.
+Expected: 13 passed.
 
 If `UpInputMovesOnYOnly` fails, the `right` vector has a Y component. It must
 stay horizontal so rising never drifts sideways.
@@ -1259,7 +1274,7 @@ git commit -m "feat(camera) add free-flying camera"
 - Zone change, logout and plugin unload all release the camera.
 - The field-of-view question has a recorded answer in the spec.
 - The collision question has a recorded answer in the spec.
-- `dotnet test` passes, 12 tests.
+- `dotnet test` passes, 13 tests.
 
 Deliberately left for follow-up, not phase 1 blockers:
 
