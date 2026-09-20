@@ -1,3 +1,4 @@
+using CinematicCam.Plugin.Game;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -33,7 +34,7 @@ public sealed class Plugin : IDalamudPlugin
         switch (verb)
         {
             case "selftest":
-                Log.Information("[selftest] no diagnostics registered yet.");
+                SelfTest.Run();
                 break;
             default:
                 Log.Information("[ccam] unknown verb '{Verb}'.", verb);
