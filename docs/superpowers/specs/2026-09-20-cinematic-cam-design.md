@@ -75,10 +75,12 @@ Three consequences follow from writing after `Update()` returns:
 
 1. **Cammy loses by construction.** Cammy detours run inside `Update()`; ours
    writes after it. We are last, regardless of plugin load order.
-2. **Camera collision may need no patching.** Cammy patches the geometry
-   collision check to fly through walls. That correction happens inside
-   `Update()` and we overwrite its result. Still unproven at the time of
-   writing; the collision probe settles it.
+2. **Camera collision needs no patching.** Confirmed in-game 2026-09-21: the
+   camera passes straight through walls and terrain with no clamping or
+   push-back. Cammy patches the geometry collision check in assembly to achieve
+   this; we get it free, because the correction happens inside `Update()` and we
+   overwrite its result. No signature scan, so nothing here breaks on a game
+   patch.
 3. **The player keeps their keyboard during playback.** Driving the camera does
    not require taking input, so the plugin does not take it. A creator can dance
    or emote while their own camera flies. Input capture applies only to
