@@ -257,14 +257,23 @@ uninstalled.
 
 ### Safety
 
-Both are required, not optional:
+**Automatic release** on area transition, logout and plugin unload. Track
+coordinates belong to one zone, so holding a stale camera through a loading
+screen is meaningless and alarming. `Dispose` unhooks and restores; a plugin
+crash unloads the hook and reverts the camera on its own.
 
-- **A panic key** that drops camera control and restores the game camera in one
-  press. Always bound, always live.
-- **Automatic release** on zone change, logout and plugin unload. Track
-  coordinates belong to one zone, so holding a stale camera through a loading
-  screen is meaningless and alarming. `Dispose` unhooks and restores; a plugin
-  crash unloads the hook and reverts the camera on its own.
+The trigger is the `BetweenAreas` condition flag rather than `TerritoryChanged`,
+which only fires when the territory id actually changes. The flag also catches
+an aethernet hop inside one zone, a cutscene starting and a duty beginning.
+
+**No dedicated panic key.** Escape was tried and rejected: too much game UI
+depends on it, it is easy to hit by accident, and this plugin's own windows may
+want it for closing dialogs. Cammy has no keyboard panic key either, though it
+does bind free-cam exit to a repurposed game input.
+
+Revisit this once input capture lands. While input is captured, chat is not
+reachable, so `/ccam release` stops being an escape route and the automatic
+paths become the only way out.
 
 ## Cammy coexistence — out of scope
 
