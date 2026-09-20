@@ -22,12 +22,14 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
+    [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
 
     internal static CameraController Camera { get; private set; } = null!;
     internal static CameraState? TestState { get; set; }
     internal static CameraOwnership Ownership { get; } = new();
     internal static FreeCam FreeCamera { get; } = new();
     internal static InputBlocker Input { get; private set; } = null!;
+    internal static MovementLock Movement { get; private set; } = null!;
     private static CameraAccess.Snapshot? snapshotBeforeTakeover;
 
     public Plugin()
@@ -44,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
         });
 
         Input = new InputBlocker(() => FreeCamera.Enabled);
+        Movement = new MovementLock();
 
         Framework.Update += OnFrameworkUpdate;
         ClientState.TerritoryChanged += OnTerritoryChanged;
@@ -87,6 +90,7 @@ public sealed class Plugin : IDalamudPlugin
                 if (start is null) { Log.Error("[ccam] cannot read camera state."); break; }
 
                 FreeCamera.Enable(start.Value.Position);
+                Movement.Hold();
                 TakeCamera();
                 break;
             }
@@ -158,6 +162,7 @@ public sealed class Plugin : IDalamudPlugin
         if (!Ownership.IsOwned && TestState is null) return;
 
         FreeCamera.Disable();
+        Movement.Release();
         TestState = null;
         Ownership.Release(reason);
 
@@ -197,6 +202,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         ClientState.Logout -= OnLogout;
         ReleaseCamera("plugin unload");
+        Movement?.Dispose();
         Input?.Dispose();
         Camera?.Dispose();
         CommandManager.RemoveHandler(CommandName);
