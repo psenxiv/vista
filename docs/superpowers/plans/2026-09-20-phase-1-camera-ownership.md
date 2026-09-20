@@ -45,6 +45,26 @@ camera->FoV                                  // float,   offset 0x130
 camera->DirH, camera->DirV                   // float, radians
 ```
 
+## Open finding: direction convention
+
+Measured in-game 2026-09-21, from one sample. **Confirm with a second reading at
+a different orientation before relying on it.**
+
+`lookAt - position` normalised gave `<-0.355, -0.922, 0.152>` for
+`dirH=1.9749651, dirV=-1.1658802`. Magnitudes match the usual spherical
+formula but X and Z are sign-inverted, so the game's convention appears to be:
+
+```
+X = -sin(yaw) * cos(pitch)
+Y =  sin(pitch)
+Z = -cos(yaw) * cos(pitch)
+```
+
+Task 7's `FreeCamMotion.Direction` currently uses the un-negated form. If this
+holds, it needs the negation or the camera flies backwards. The task 7 test
+`LookAtIsOneUnitAheadOfPosition` would still pass either way, since it only
+checks distance — add a sign assertion once the convention is confirmed.
+
 ## Who runs what
 
 Tasks 1–7 all require **[IN-GAME]** verification by the user. Claude writes the
