@@ -69,6 +69,23 @@ candidate perpendiculars are geometrically valid — which one is "right" depend
 on the world's handedness, which these samples cannot show. Task 7's in-game
 check settles it: if A and D are swapped, negate `right`. One character.
 
+## Confirmed: the hook is class-wide, not per-object
+
+Measured 2026-09-21. `updateCount` kept climbing across a teleport from
+Empyreum to Camp Drybone, with `hooked=true` throughout.
+
+`vtable[3]` yields the shared function address for the class, and
+`HookFromAddress` patches that function, so the hook covers every camera
+instance. Object recreation — on zone change or relog — does not affect it.
+Task 6 does not need re-hooking logic; its release-on-zone-change exists because
+a track belongs to one zone's coordinates, not because the hook is fragile.
+
+**Open gap: no camera at load time.** `CameraController` resolves the camera in
+its constructor and gives up permanently if there is none. Launching the game
+with the plugin already enabled puts it at the title screen, where the hook
+would never install and nothing retries. Needs a lazy or retried install.
+Addressed in Task 6.
+
 ## Who runs what
 
 Tasks 1–7 all require **[IN-GAME]** verification by the user. Claude writes the
@@ -733,6 +750,10 @@ there is anything to escape from.
 - Create: `src/CinematicCam.Core/CameraOwnership.cs`
 - Create: `tests/CinematicCam.Tests/CameraOwnershipTests.cs`
 - Modify: `src/CinematicCam.Plugin/Plugin.cs`
+- Modify: `src/CinematicCam.Plugin/Game/CameraController.cs` — retry the hook
+  install when no camera existed at construction. Measured: the hook is
+  class-wide so it never needs replacing, but it does need installing once a
+  camera first exists. Retry on framework update until `IsHooked`, then stop.
 
 **Interfaces:**
 - Produces: `CinematicCam.Core.CameraOwnership` with `bool IsOwned`,
