@@ -88,15 +88,31 @@ Three consequences follow from writing after `Update()` returns:
 
 ### Resolved: what we write
 
-Measured in-game 2026-09-21. Four fields, written after `Update()` returns,
-fully own the camera. Nothing the game does afterwards overrides them:
+Measured in-game 2026-09-21. Six fields, written after `Update()` returns, fully
+own the camera. Nothing the game does afterwards overrides them:
 
-| Field | Location |
-|---|---|
-| Position | `SceneCamera.Object.Position`, `0x50` |
-| Look-at point | `SceneCamera.LookAtVector`, `0x80` |
-| Up vector | `SceneCamera.Vector_1`, `0x90` |
-| Field of view | `Camera.FoV`, `0x130`, radians |
+| Field | Location | Why |
+|---|---|---|
+| Position | `SceneCamera.Object.Position`, `0x50` | where the camera is |
+| Look-at point | `SceneCamera.LookAtVector`, `0x80` | what it points at |
+| Up vector | `SceneCamera.Vector_1`, `0x90` | stops roll |
+| Field of view | `Camera.FoV`, `0x130`, radians | zoom |
+| Distance | `Camera.Distance`, `0x124` | stops the game fighting |
+| Interpolated distance | `Camera.InterpDistance`, `0x18C` | stops the game fighting |
+
+The two distance fields are not read back by anything we do; they are written to
+remove a contradiction. Left alone, the game keeps interpolating toward its own
+idea of where the camera belongs, which appears as jitter that snaps back the
+moment the player stops scrolling. Setting both to the distance between the
+position and look-at we impose leaves nothing to interpolate toward.
+
+This is invisible to a `selftest` style check, because our write wins before any
+command could read the field. It only shows up as motion on screen mid-input.
+
+**Watch item:** `Camera.MinDistance` and `MaxDistance` bound this, roughly 1.5 to
+20 by default. A track whose look-at target sits further than the maximum may be
+clamped and start the fight again. If jitter reappears at long range, look here
+first.
 
 The up vector is required, not optional. Leaving it to the game produces a
 visible roll, because the game keeps deriving it from the direction it *intends*
