@@ -64,10 +64,8 @@ stayed at the character's height as the camera orbited. Task 7 therefore places
 its look-at target ten units ahead rather than one, to produce values in the
 range the game itself produces.
 
-**Unresolved: the strafe sign.** `right` is perpendicular to forward, and both
-candidate perpendiculars are geometrically valid — which one is "right" depends
-on the world's handedness, which these samples cannot show. Task 7's in-game
-check settles it: if A and D are swapped, negate `right`. One character.
+**Resolved: the strafe sign.** Confirmed in-game 2026-09-21 — A strafes left and
+D strafes right with `right = (cos yaw, 0, -sin yaw)`. No negation needed.
 
 ## Confirmed: the hook is class-wide, not per-object
 
@@ -1288,16 +1286,43 @@ git commit -m "feat(camera) add free-flying camera"
 
 ---
 
-## Phase 1 exit criteria
+## Phase 1 result
 
-- `/ccam fly` flies the camera smoothly in all six directions.
-- Escape returns the camera to normal from any state.
-- Zone change, logout and plugin unload all release the camera.
-- The field-of-view question has a recorded answer in the spec.
-- The collision question has a recorded answer in the spec.
-- `dotnet test` passes, 13 tests.
+Complete, 2026-09-21. All seven tasks done and verified in game.
 
-Deliberately left for follow-up, not phase 1 blockers:
+- `/ccam fly` flies in all six directions; mouse-look steers.
+- `/ccam release`, area transition, logout and plugin unload all release.
+- Six fields own the camera. Recorded in the spec.
+- Camera passes through geometry; no assembly patch needed.
+- `dotnet test` passes, 22 tests.
 
-- Suppressing character movement while flying.
-- A configurable panic binding, which arrives with phase 3 hotkeys.
+Findings that changed the design:
+
+- The up vector must be written or the camera rolls. Formula derived from
+  captured values and covered by a regression test.
+- `Distance` and `InterpDistance` must be pinned or the game interpolates
+  against us. Invisible to a command-driven check; only shows as motion
+  mid-input.
+- No panic key. Escape was tried and rejected; see the spec.
+- Under Wine, Cmd and Ctrl are indistinguishable. The game does not separate
+  them either, so descend responds to both.
+
+## Outstanding: input capture
+
+Not a phase 1 blocker, but the single largest remaining rough edge. The game
+processes keypresses as normal gameplay while we read them, which produces four
+separate symptoms:
+
+1. The character walks, turns and acts while the camera flies.
+2. A and D read as panning, because the game turns the character, which moves
+   `DirH`, which moves our flight direction.
+3. Zoom input fights the position lock at the `MinDistance` boundary.
+4. Any game action bound to a movement key fires during a shot.
+
+Typing in chat no longer flies the camera —
+`RaptureAtkModule.IsTextInputActive()` gates the input read — but that only
+covers text fields, not gameplay.
+
+The fix is to hook the game's input functions and swallow the keys we use while
+flying. Cammy does this with five `InputData` hooks plus one on emote cancel.
+Worth its own task before phase 2 relies on flying to author tracks.
