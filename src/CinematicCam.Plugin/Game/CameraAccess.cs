@@ -35,5 +35,6 @@ internal static unsafe class CameraAccess
         scene->Object.Position = state.Position;
         scene->LookAtVector = state.LookAt;
         scene->Vector_1 = CameraOrientation.UpFor(state.Position, state.LookAt);
+        camera->FoV = state.Fov;
     }
 }
