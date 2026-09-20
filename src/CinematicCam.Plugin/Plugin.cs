@@ -27,7 +27,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam selftest | hold | nudge <x> <y> <z> | release"
+            HelpMessage = "/ccam selftest | hold | push <d> | nudge <x> <y> <z> | release"
         });
 
         Camera = new CameraController(() => TestState);
@@ -56,6 +56,22 @@ public sealed class Plugin : IDalamudPlugin
                 TestState = null;
                 Log.Information("[ccam] released.");
                 break;
+            case "push":
+            {
+                if (TestState is null) { Log.Error("[ccam] push requires /ccam hold first."); break; }
+                var parts = args.Trim().Split(' ');
+                if (parts.Length < 2 || !float.TryParse(parts[1], out var distance))
+                {
+                    Log.Error("[ccam] usage: /ccam push <distance>");
+                    break;
+                }
+                var st = TestState.Value;
+                var forward = Vector3.Normalize(st.LookAt - st.Position);
+                var step = forward * distance;
+                TestState = st with { Position = st.Position + step, LookAt = st.LookAt + step };
+                Log.Information("[ccam] pushed {Distance} along view to {Pos}", distance, TestState.Value.Position);
+                break;
+            }
             case "nudge":
             {
                 if (TestState is null) { Log.Error("[ccam] nudge requires /ccam hold first."); break; }
