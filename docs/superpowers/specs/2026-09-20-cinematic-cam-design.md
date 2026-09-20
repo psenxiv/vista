@@ -1,0 +1,412 @@
+# Cinematic Cam — Design
+
+Date: 2026-09-20
+Status: Approved, ready for implementation planning
+
+## Purpose
+
+A Dalamud plugin that gives FFXIV content creators real camera work: paths the
+camera flies along with controlled aim, static camera positions it can jump to,
+and a switchboard for cutting between them live.
+
+Existing camera mods offer static position-and-point cameras with no motion and
+no organised way to switch between shots. The workaround is running alt accounts
+as extra "cameras" and switching between their windows in OBS. That burns a
+machine per camera and does not scale past a few angles.
+
+Target users: event runners, performance venues and streamers who want a fly
+camera panning over an audience, or a planned sequence of shots cut live.
+
+## Scope
+
+In scope for v1:
+
+- Camera tracks: a path through control points with three aim modes.
+- Snap points: static camera positions the switchboard can cut to.
+- Live mode: a program/preview switchboard with hard cuts and hotkeys.
+- An editor with a 3D path overlay, click-to-select and gizmo editing.
+- Persistence in the Dalamud plugin config.
+
+Not in scope for v1. Each entry in `FEATURES.md` records why:
+
+- Export/import of shows, and clipboard sharing.
+- Eased-move and fade-through-black transitions.
+- Aim tracking a game entity.
+- Continuous flight recording.
+- Playlists and auto-advance.
+- Detecting or mitigating conflicts with Cammy. Treated as user error.
+
+## Architecture
+
+Three projects. The split is enforced by the compiler, not by discipline:
+
+| Project | Target | Contents |
+|---|---|---|
+| `CinematicCam.Core` | `net10.0` | Spline, timing, Director, Switchboard, DTOs. No Dalamud reference, no `unsafe`. |
+| `CinematicCam.Plugin` | `net10.0-windows` | Dalamud entry point, camera hook, ImGui, hotkeys. |
+| `CinematicCam.Tests` | `net10.0` | References `Core` only. |
+
+`Core` cannot reference Dalamud because its project file does not allow it.
+Game types therefore cannot leak into the layer under test.
+
+The layers:
+
+```
+CameraController   writes game memory. the only dirty code.
+Director           shot + elapsed time -> CameraState
+Track / Spline     geometry, interpolation, timing
+Switchboard        which shot is live, which is staged, what TAKE does
+```
+
+`CameraState { Vector3 Position; Vector3 LookAt; float Fov }` is the seam
+between them.
+
+## Camera ownership
+
+Hook `CameraBase.Update()` — virtual function 3, named in FFXIVClientStructs —
+on the active camera. Call the original, let the game finish its own camera
+update, then overwrite `SceneCamera.Position` (offset `0x50` on
+`Graphics.Scene.Object`) and `SceneCamera.LookAtVector` (offset `0x80` on
+`Graphics.Scene.Camera`).
+
+One hook, one write site. The plugin does not reimplement any game camera logic.
+
+Three consequences follow from writing after `Update()` returns:
+
+1. **Cammy loses by construction.** Cammy detours run inside `Update()`; ours
+   writes after it. We are last, regardless of plugin load order.
+2. **Camera collision may need no patching.** Cammy patches the geometry
+   collision check to fly through walls. That correction happens inside
+   `Update()` and we overwrite its result. Unproven — a later clamping pass may
+   exist. Phase 1 settles it.
+3. **The player keeps their keyboard during playback.** Driving the camera does
+   not require taking input, so the plugin does not take it. A creator can dance
+   or emote while their own camera flies. Input capture applies only to
+   authoring free-cam.
+
+### Known uncertainty
+
+Field-of-view is unresolved. `Camera.FoV` sits at `0x130` on the game camera,
+but the scene camera carries its own projection on `RenderCamera`. Which write
+survives a post-`Update()` overwrite cannot be determined from headers, and the
+same question applies to whether `ViewMatrix` rebuilds from our position or
+needs writing directly. Phase 1 answers it empirically via `/ccam selftest`
+(see Testing). Position and look-at carry no such doubt.
+
+## Track model
+
+```csharp
+record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov);
+record Track(IReadOnlyList<ControlPoint> Points, AimMode Aim,
+             Vector3 LookAtTarget, float Duration, Easing Ease, bool Loop);
+```
+
+Per-point FoV costs one float and one lerp, and enables push-ins during a move.
+
+### Spline
+
+Centripetal Catmull-Rom, alpha 0.5.
+
+Catmull-Rom interpolates: the curve passes through every point the user flew to
+and dropped. A B-spline would smooth past them, which would confuse someone who
+just positioned a shot by eye.
+
+The centripetal parameterisation avoids the cusps and self-intersections that
+uniform Catmull-Rom produces on unevenly spaced points. A human dropping
+waypoints by hand always produces uneven spacing.
+
+Endpoints duplicate to supply the phantom points. A two-point track degenerates
+to a straight dolly, which is a legitimate shot. Looping tracks wrap the phantom
+points instead.
+
+### Arc-length reparameterisation
+
+Catmull-Rom's parameter is not proportional to distance. Animating the parameter
+linearly makes the camera crawl through closely spaced points and lurch across
+widely spaced ones. On a slow pan over an audience this ruins the shot.
+
+On edit, sample each segment densely, accumulate chord lengths into a cumulative
+table, and evaluate by distance along the curve rather than by parameter. The
+table rebuilds on edit, not per frame: a ten-point track is roughly 600 samples,
+computed once.
+
+### Aim
+
+`AimMode` is per track.
+
+- **LookAt** — `normalize(target - position)`. Smooth whenever position is.
+- **PathTangent** — the analytic spline derivative, with a fallback to the last
+  valid direction when coincident points collapse it, and a pitch clamp so a
+  near-vertical path does not gimbal.
+- **AimKeys** — yaw and pitch per point, splined on separate channels.
+
+AimKeys does not slerp quaternions. Slerp between two look directions can
+introduce roll, and a camera that rolls unintentionally reads as broken.
+Separate yaw and pitch channels keep the horizon level.
+
+Yaw unwraps before interpolation: walk the key sequence adding or subtracting
+2π so no two consecutive values differ by more than π. Without this, a shot
+crossing due north whips the long way around.
+
+### Timing
+
+Duration-based. A track takes N seconds, because an event runner thinks in
+"a thirty-second shot", not in units per second. Combined with arc-length
+evaluation this produces constant speed across the shot.
+
+Easing (`Linear`, `In`, `Out`, `InOut`; default smoothstep) composes on top:
+ease the normalised time, then evaluate at that distance. Looping tracks force
+linear easing or the seam stutters.
+
+Playback accumulates `IFramework.UpdateDelta` rather than counting frames, so a
+shot runs identically at 30 and 144 fps.
+
+## Director
+
+```csharp
+CameraState? Tick(float dt);
+```
+
+The nullable return is the entire control protocol. Non-null means the plugin
+owns the camera and `CameraController` writes those three fields. Null means
+hands off. "Live mode is off", "this slot is the game camera" and "control
+released" all collapse into that one rule, so exactly one place decides whether
+the game keeps its camera.
+
+A shot is a Track, a SnapPoint, or GameCamera. A SnapPoint holds position, yaw,
+pitch and FoV, captured from the free-cam with one key. It stays a distinct type
+rather than a one-point track, which keeps degenerate cases out of the spline
+code.
+
+**A finished track holds its final frame.** It does not revert to the game
+camera. Snapping back to the player's head mid-broadcast would be a disaster on
+stream. The camera freezes where the track ended and the UI reports it.
+
+### Live mode
+
+Live mode is the master toggle. On, the plugin owns the camera and the
+switchboard is active. Off, the editor still works and the game camera is
+untouched. It is the boundary between building shots and running them, and the
+safety switch: turning it off is equivalent to the panic key.
+
+## Switchboard
+
+Slots hold shots. One slot is program (live), one is preview (staged). TAKE
+makes the staged shot live and restarts it from zero.
+
+TAKE flip-flops: the outgoing program shot moves into the preview slot, as a
+broadcast switcher does. Repeated presses then bounce between two shots — stage,
+crowd, stage, crowd — which is the common case at an event. This is a one-line
+behaviour and ships as a toggle.
+
+**Preview is armed, not visible.** There is one camera, so the staged shot
+cannot be shown without going to it. The UI displays the staged shot's name,
+start position and distance from the live camera. The naming stays honest about
+this rather than implying a monitor that cannot exist.
+
+### Hotkeys
+
+Bind TAKE, preview next and previous, and direct slot selection through
+`IKeyState`. An operator cannot hunt for buttons during a show, particularly
+when also performing.
+
+Hotkeys suppress while a text field holds focus. Cutting to camera 3 because
+someone typed "3" in party chat is the kind of failure that gets a plugin
+uninstalled.
+
+### Safety
+
+Both are required, not optional:
+
+- **A panic key** that drops camera control and restores the game camera in one
+  press. Always bound, always live.
+- **Automatic release** on zone change, logout and plugin unload. Track
+  coordinates belong to one zone, so holding a stale camera through a loading
+  screen is meaningless and alarming. `Dispose` unhooks and restores; a plugin
+  crash unloads the hook and reverts the camera on its own.
+
+## Cammy coexistence — out of scope
+
+No detection, no warning, no mitigation work. Running Cammy's free-cam or firing
+a Cammy preset while this plugin holds the camera is user error, and v1 treats
+it as such.
+
+The one thing that remains true is free: because this plugin writes after
+`CameraBase.Update()` returns and Cammy's detours run inside it, this plugin
+wins any contest over camera position regardless of load order. That is a
+consequence of the architecture, not work to be done.
+
+Cammy 2.1.1.2 is installed on the development machine, which makes it a
+convenient way to confirm that property holds in practice.
+
+## Editor UI
+
+Three windows: a library of tracks and snap points filtered to the current zone,
+a track editor, and a compact switchboard intended to stay on screen during a
+show.
+
+### Authoring flow
+
+The primary loop is fly and drop. Enter free-cam, fly to a position, then
+capture the camera as a control point: position, yaw, pitch and FoV, appended to
+the end of the track. Repeat. A track is built by flying it.
+
+Capture is available two ways, and both exist in v1: a **Capture current camera**
+button in the track editor, and a hotkey for the same action so the operator
+does not have to reach for the mouse mid-flight.
+
+Editing is a separate activity and uses the tools below: select a point, then
+adjust it with a gizmo, re-capture it from the current camera, or type exact
+numbers. Points can be inserted, reordered and deleted from the list.
+
+The track editor carries a **scrub bar** — drag to see the camera at any moment
+in the shot without playing it. This falls out free, because the Director is a
+pure function of elapsed time.
+
+**3D overlay.** In v1, drawn on the ImGui foreground draw list over the game,
+projected with `Camera.WorldToScreen`:
+
+- **The spline itself**, densely sampled and drawn as a continuous polyline, so
+  the actual flight path is visible in world space rather than inferred from the
+  points.
+- **A marker per control point**, numbered in track order.
+- **An aim indicator per control point** — a short line from the point along its
+  look direction, so position and direction are both readable at a glance.
+- **The LookAt target**, marked distinctly, when the track uses that aim mode.
+
+The overlay is what makes the track editable by eye. It is not a nice-to-have
+layered on afterwards: click-to-select and gizmo editing both depend on the same
+projection, so it is built first among the editor work.
+
+**Click-to-select.** Control points already project to screen for the overlay,
+so hit-testing a click against those markers costs almost nothing.
+
+**Gizmo editing** via `Dalamud.Bindings.ImGuizmo`, which ships in the Dalamud
+dev assemblies:
+
+- Translate on the selected control point.
+- Translate on the LookAt target, which needs it most — that point usually
+  hovers in mid-air over a stage with nothing to fly to.
+- Rotate for aim direction, in AimKeys mode only.
+- No scale. It means nothing here and the gizmo never offers it.
+
+Re-capture-from-current-camera remains alongside the gizmo. It is the fastest
+way to set a point while standing in the shot. Numeric fields stay underneath as
+the precise fallback.
+
+**Gizmo risk.** ImGuizmo needs view and projection matrices in the correct
+convention. Wrong handedness or row-versus-column-major yields a gizmo that
+looks correct but drags along the wrong axis. `SceneCamera.ViewMatrix` and
+`RenderCamera->ProjectionMatrix` supply the inputs; matching FFXIV's convention
+is the work. This is the **first** task of phase 2's UI work, verified against a
+known control point. Left until last, it becomes the thing dropped when the
+phase overruns.
+
+## Storage
+
+The Dalamud plugin config, as JSON, carrying a `Version` field from the first
+commit so migrations stay possible.
+
+A `Show` groups tracks, snap points and a switchboard layout, and records its
+`TerritoryType` so the UI filters to the current zone and warns on a mismatch.
+
+The stored types are the same pure records from the track model, which makes
+round-trip a unit test. That test gets written early: `Vector3` serialisation
+has a history of surprising people.
+
+## Testing
+
+In-game verification belongs to the user. The development machine runs macOS and
+the game runs under Wine; Claude cannot see the game, drive it, or judge whether
+a shot looks right.
+
+Claude can read `~/Library/Application Support/XIV on Mac/logs/dalamud.log`
+while the game runs. It is plain text, timestamped and tagged per plugin. Crash
+dumps land in the same directory. A failure therefore reaches Claude as a stack
+trace rather than as a paraphrase.
+
+Four measures keep the user's loop short:
+
+1. **Verbose logging** of every hook install, camera write and state transition,
+   behind a debug toggle.
+2. **`/ccam selftest`** — the plugin asserts what Claude cannot observe and
+   writes results to the log: camera pointer non-null, hook installed, and FoV
+   written then read back with the delta logged. This answers the phase 1 FoV
+   question from a single launch and one command.
+3. **Scripted checklists** per phase: numbered steps with exact expected
+   results, a few minutes each. Not "does this feel right".
+4. **Hot reload.** Dalamud reloads a dev plugin without restarting the game.
+   Phase 0 confirms this works under Wine; it decides whether iteration costs
+   ten seconds or three minutes.
+
+Tests that run on macOS with no game, covering where the real bugs live:
+
+- The curve passes through its control points.
+- A deliberately bunched-then-spread track yields even spacing. This test fails
+  without arc-length reparameterisation, which is its purpose.
+- Yaw crossing ±180° takes the short way.
+- Position at t=5s is identical under 60fps and 30fps delta sequences.
+- The loop seam is continuous.
+- Degenerate input — zero, one, two and coincident points — does not throw.
+- TAKE resets elapsed time; flip-flop swaps the slots.
+- A finished track holds its last frame.
+- `Tick` returns null whenever live mode is off.
+- Zone change releases control.
+- Config round-trips, `Vector3` included.
+
+## Build environment
+
+XIV on Mac is installed with Dalamud 15.0.3.5. Dev reference assemblies sit at
+`~/Library/Application Support/XIV on Mac/dalamud/Hooks/dev/`, which is what
+`Dalamud.NET.Sdk` builds against. On Windows it reads
+`%AppData%\XIVLauncher\addon\Hooks\dev`, so `DALAMUD_HOME` points at the Mac
+path instead.
+
+Dalamud dev mode is currently off: `DevMode = false` and
+`DevPluginLoadLocations` is empty.
+
+Dalamud 15.0.3.5 targets **net10.0**, not net10.0. Its `runtimeconfig.json`
+declares `"tfm": "net10.0"` and requires `Microsoft.NETCore.App 10.0.0`. All
+three projects therefore target .NET 10, which the machine's SDK 10.0.301 and
+runtime 10.0.9 satisfy natively.
+
+`Dalamud.NET.Sdk/15.0.0` builds on macOS with no modification. The plugin sets
+`<AssemblyName>CinematicCam</AssemblyName>` so DalamudPackager locates the
+manifest, and build output lands flat in `bin/Debug/` rather than in a
+framework-named subdirectory.
+
+Verified during phase 0.
+
+## Phasing
+
+**Phase 0 — prove the toolchain.** A hello-world plugin building under
+`Dalamud.NET.Sdk/15.0.0` with SDK 10 cross-targeting `net10.0-windows`,
+`DALAMUD_HOME` pointed at the XIV on Mac path, dev mode enabled, the Wine path
+mapping resolved, and the plugin loading and writing to the log. Hot reload
+confirmed. Nothing else starts until this passes. A build-chain failure must
+surface on day one.
+
+**Phase 1 — own the camera.** Hook `Update()`, write position and look-at, run
+the FoV and `ViewMatrix` spike through `/ccam selftest`, build the authoring
+free-cam with its input capture and movement lock, and implement the panic key
+and release-on-zone-change. Ends with: a camera that flies, and always releases.
+Little code, most of the project's risk.
+
+**Phase 2 — tracks.** The whole `Core` layer under TDD on macOS: spline,
+arc-length table, three aim modes, easing, Director. Then the camera wiring, the
+gizmo convention check, and the editor. Ends with: author a shot, play it back.
+Most of the code, least of the risk.
+
+**Phase 3 — the switchboard.** Slots, program and preview, TAKE, hotkeys with
+the text-focus guard, snap points on the bus, persistence. Ends with: run a show.
+
+Phase 1 is small and dangerous; phase 2 is large and safe. Expect phase 1 to
+feel slow for how little it visibly produces.
+
+## Attribution
+
+Cammy (https://github.com/UnknownX7/Cammy/) ships no license file. It was read
+as reference for which game functions matter and what problems arise. No code is
+copied. The camera approach here differs: one hook on `CameraBase.Update()` with
+a post-pass, against current FFXIVClientStructs, rather than detours on five
+vtable entries that reimplement game logic.

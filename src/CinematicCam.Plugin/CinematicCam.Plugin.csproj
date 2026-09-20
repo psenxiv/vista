@@ -1,0 +1,14 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>0.1.0.0</Version>
+    <AssemblyName>CinematicCam</AssemblyName>
+    <RootNamespace>CinematicCam.Plugin</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CinematicCam.Core/CinematicCam.Core.csproj" />
+  </ItemGroup>
+</Project>

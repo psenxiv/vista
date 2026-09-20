@@ -1,0 +1,7 @@
+{
+  "Name": "Cinematic Cam",
+  "Author": "psenxiv",
+  "Punchline": "Camera tracks and a live switchboard for cinematic work.",
+  "Description": "Define camera paths with controlled aim, save snap points, and cut between them live from a program/preview switchboard.",
+  "ApplicableVersion": "any"
+}
