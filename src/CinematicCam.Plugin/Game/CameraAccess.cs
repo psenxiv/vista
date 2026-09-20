@@ -1,3 +1,4 @@
+using System.Numerics;
 using CinematicCam.Core;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
@@ -36,5 +37,11 @@ internal static unsafe class CameraAccess
         scene->LookAtVector = state.LookAt;
         scene->Vector_1 = CameraOrientation.UpFor(state.Position, state.LookAt);
         camera->FoV = state.Fov;
+
+        // Keep the game's own distance consistent with the position we impose, or it
+        // interpolates toward its own idea of where the camera belongs and visibly fights us.
+        var distance = Vector3.Distance(state.Position, state.LookAt);
+        camera->Distance = distance;
+        camera->InterpDistance = distance;
     }
 }
