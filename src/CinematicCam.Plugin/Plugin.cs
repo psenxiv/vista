@@ -1,8 +1,10 @@
 using System.Numerics;
 using CinematicCam.Plugin.Game;
+using CinematicCam.Plugin.Ui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Game.Command;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -28,15 +30,22 @@ public sealed class Plugin : IDalamudPlugin
     internal static MovementLock Movement { get; private set; } = null!;
     internal static CameraSession Session { get; private set; } = null!;
 
+    private readonly WindowSystem windows = new("CinematicCam");
+    private readonly TestWindow testWindow;
+
     public Plugin()
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam fly | selftest | hold | push <d> | nudge <x> <y> <z> | release | reset"
+            HelpMessage = "/ccam opens the test window | release | selftest | hold | push <d> | nudge <x> <y> <z> | reset"
         });
 
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
+        testWindow = new TestWindow(Session);
+        windows.AddWindow(testWindow);
+        PluginInterface.UiBuilder.Draw += windows.Draw;
+        PluginInterface.UiBuilder.OpenMainUi += OpenTestWindow;
         Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
         Input = new InputBlocker(() => Session.LocksInput);
 
@@ -52,12 +61,11 @@ public sealed class Plugin : IDalamudPlugin
         var verb = args.Trim().Split(' ', 2)[0].ToLowerInvariant();
         switch (verb)
         {
+            case "":
+                OpenTestWindow();
+                break;
             case "reset":
                 CameraAccess.ResetToDefaults();
-                break;
-            case "fly":
-                if (Session.Mode == CameraMode.Editing) Session.Release("fly toggled off");
-                else Session.Edit();
                 break;
             case "selftest":
                 SelfTest.Run();
@@ -134,6 +142,8 @@ public sealed class Plugin : IDalamudPlugin
         if (Movement.Held && Movement.Count == 0) Movement.Forget();
     }
 
+    private void OpenTestWindow() => testWindow.IsOpen = true;
+
     private void OnTerritoryChanged(uint territory)
         => Session.Release($"zone change to {territory}");
 
@@ -142,6 +152,9 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        PluginInterface.UiBuilder.Draw -= windows.Draw;
+        PluginInterface.UiBuilder.OpenMainUi -= OpenTestWindow;
+        windows.RemoveAllWindows();
         Framework.Update -= OnFrameworkUpdate;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         ClientState.Logout -= OnLogout;
