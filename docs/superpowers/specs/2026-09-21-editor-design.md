@@ -243,6 +243,11 @@ Results (2026-09-21, game 7.56hf2):
   every non-modifier key in ImGui each frame (`Win32InputHandler.cs:590`), and a
   cleared key stays cleared in the game buffer while held. A second run reads
   the physical state with `GetAsyncKeyState`.
+- **Probe 3, second run: passed.** `GetAsyncKeyState` reports our keys and
+  Alt correctly under Wine: C held for 2 s read as down for all 180 frames while
+  the game buffer saw it for 1, and the Character window stayed shut. The editor
+  reads keys from their physical state and hides them by clearing the game
+  buffer.
 
 ## Architecture
 
