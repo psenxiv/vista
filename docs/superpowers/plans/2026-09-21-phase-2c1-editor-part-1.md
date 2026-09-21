@@ -1814,3 +1814,11 @@ git commit -m "feat(probe) hide editor keys and clicks from the game"
 ## After Part 1
 
 The controller records each probe's result in the editor spec: which view matrix the overlay uses, whether aim can be written, and how keys and clicks are hidden. Part 2's plan is then written against those results. Part 2 covers fly-down on C, the key bindings, the overlay and selection, the gizmo, both windows, scrub and jumps, undo, and removing the probes.
+
+Carried into Part 2 from Part 1's final review:
+- `SessionState` needs a `Duration` for the scrub bar.
+- `CameraSession` passes through `Selected`, the edit methods, Undo/Redo and `FrameAt`.
+- `CapturePoint` goes through `AddToEnd`.
+- The path polyline is clipped at the near plane: `ScreenProjection` only rejects W ≤ 0, so points just in front of the camera project far off screen.
+- The gizmo commits only when the pose changed. `Replace` already ignores an unchanged point.
+- When those files are next touched: add tests for `RequireKeyPerPoint` rejecting 0-key and >2-key points, and move `SessionState`'s private fields to the top.
