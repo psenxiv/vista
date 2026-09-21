@@ -84,6 +84,12 @@ public sealed class Plugin : IDalamudPlugin
         Camera.TryInstallHook();
         Input.SyncHookState();
 
+        if (Camera.Faulted)
+        {
+            Session.Release("hook error");
+            Camera.ClearFault();
+        }
+
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
         // Escape is released, so it does not also open the system menu.

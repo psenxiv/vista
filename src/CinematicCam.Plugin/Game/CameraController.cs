@@ -16,6 +16,11 @@ internal sealed unsafe class CameraController : IDisposable
 
     public bool IsHooked => updateHook?.IsEnabled == true;
     public long UpdateCount { get; private set; }
+    /// <summary>True after the update hook caught an exception; it writes nothing until <see cref="ClearFault"/>.</summary>
+    public bool Faulted { get; private set; }
+
+    /// <summary>Lets the update hook write again.</summary>
+    public void ClearFault() => Faulted = false;
 
     public CameraController(Func<CameraState?> stateSource)
     {
@@ -41,11 +46,20 @@ internal sealed unsafe class CameraController : IDisposable
     {
         updateHook!.Original(camera);
         UpdateCount++;
+        if (Faulted) return;
 
-        var desired = stateSource();
-        if (desired is null) return;
+        try
+        {
+            var desired = stateSource();
+            if (desired is null) return;
 
-        CameraAccess.WriteState(desired.Value);
+            CameraAccess.WriteState(desired.Value);
+        }
+        catch (Exception ex)
+        {
+            Faulted = true;
+            Plugin.Log.Error(ex, "[camera] update hook failed; releasing on the next framework update.");
+        }
     }
 
     public void Dispose()

@@ -17,6 +17,7 @@ internal sealed class TestWindow : Window
     private readonly CameraSession session;
     private string? error;
     private (string Id, float Value)? pending;
+    private CameraMode lastMode;
 
     public TestWindow(CameraSession session)
         : base("Cinematic Cam (test)###ccam-test", ImGuiWindowFlags.AlwaysAutoResize)
@@ -27,6 +28,12 @@ internal sealed class TestWindow : Window
 
     public override void Draw()
     {
+        if (session.Mode != lastMode)
+        {
+            pending = null;
+            lastMode = session.Mode;
+        }
+
         DrawModeRow();
 
         ImGui.BeginDisabled(session.Mode != CameraMode.Editing);
@@ -57,7 +64,7 @@ internal sealed class TestWindow : Window
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Mode != CameraMode.Live || session.Director.IsPaused);
-        if (ImGui.Button("Stop")) session.Stop();
+        if (ImGui.Button("Stop")) { error = null; session.Stop(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();
@@ -97,7 +104,7 @@ internal sealed class TestWindow : Window
 
         if (ImGui.Button("Capture point")) error = session.CapturePoint();
         ImGui.SameLine();
-        if (ImGui.Button("New track")) error = session.ChangeTrack(_ => TrackEditing.Empty());
+        if (ImGui.Button("New track")) { pending = null; error = session.ChangeTrack(_ => TrackEditing.Empty()); }
     }
 
     private void DrawPoints()
@@ -147,7 +154,8 @@ internal sealed class TestWindow : Window
     {
         var track = session.Track;
         var total = track.Timing.Count == 0 ? 0f : track.Timing[^1].Time;
-        var status = $"{track.Points.Count} points | total {total:0.0} s";
+        var count = track.Points.Count;
+        var status = $"{count} point{(count == 1 ? "" : "s")} | total {total:0.0} s";
 
         var director = session.Director;
         if (director.IsLive)
