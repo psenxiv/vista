@@ -87,6 +87,36 @@ public class DirectorTests
     }
 
     [Fact]
+    public void ResumeContinuesFromThePausedFrame()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+
+        director.Tick(3f);
+        director.Pause();
+        director.Tick(2f);
+        director.Resume();
+        director.Tick(1f);
+
+        Assert.False(director.IsPaused);
+        Assert.Equal(4.0, director.Elapsed, 5);
+    }
+
+    [Fact]
+    public void ResumeOnlyTakesEffectWhileLive()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        director.Pause();
+        director.GoOffline();
+
+        director.Resume();
+
+        Assert.False(director.IsLive);
+        Assert.False(director.IsPaused);
+    }
+
+    [Fact]
     public void GoLiveRestartsATrackShotFromZero()
     {
         var director = new Director();

@@ -36,6 +36,12 @@ public sealed class Director
         if (IsLive) IsPaused = true;
     }
 
+    /// <summary>Continues from the paused frame. No effect unless live.</summary>
+    public void Resume()
+    {
+        if (IsLive) IsPaused = false;
+    }
+
     /// <summary>Takes live mode off and clears pause. <see cref="Tick"/> returns null until the next <see cref="GoLive"/>.</summary>
     public void GoOffline()
     {
