@@ -7,7 +7,7 @@ namespace CinematicCam.Core.Tracks;
 public sealed class TrackEvaluator
 {
     /// <summary>Metres a segment counts as when timing, so a leg between coincident points still takes its time.</summary>
-    private const float MinTimingLength = 0.1f;
+    public const float MinTimingLength = 0.1f;
 
     private readonly Track _track;
     private readonly Vector3[] _positions;

@@ -293,4 +293,170 @@ public class TrackEditingTests
         Assert.Equal(track.Points, updated.Points);
         Assert.Equal(track.Timing, updated.Timing);
     }
+
+    private static float Total(Track track) => track.Timing[^1].Time;
+
+    [Fact]
+    public void InsertAfterSplitsTheLegByPathLengthAndKeepsTheTotal()
+    {
+        var track = Build3PointTrack();
+        var result = TrackEditing.InsertAfter(track, 0, Point(2f, 0f, 0f));
+
+        var table = new ArcLengthTable(result.Points.Select(p => p.Position).ToArray());
+        var before = table.SegmentLength(0);
+        var after = table.SegmentLength(1);
+
+        Assert.Equal(4, result.Points.Count);
+        Assert.Equal(5f * before / (before + after), TrackEditing.LegSeconds(result, 1), 3);
+        Assert.Equal(5f, TrackEditing.LegSeconds(result, 1) + TrackEditing.LegSeconds(result, 2), 4);
+        Assert.Equal(Total(track), Total(result), 4);
+        Assert.Equal(5f, TrackEditing.LegSeconds(result, 3), 4);
+    }
+
+    [Fact]
+    public void InsertAfterKeepsTheSelectedPointsHoldAndGivesTheNewPointNone()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 0, 2f);
+        var result = TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f));
+
+        Assert.Equal(2f, TrackEditing.HoldSeconds(result, 0), 4);
+        Assert.Equal(0f, TrackEditing.HoldSeconds(result, 1));
+        Assert.Equal(Total(track), Total(result), 4);
+    }
+
+    [Fact]
+    public void InsertAfterTheLastPointAppends()
+    {
+        var track = Build3PointTrack();
+        var result = TrackEditing.InsertAfter(track, 2, Point(30f, 0f, 0f));
+
+        Assert.Equal(4, result.Points.Count);
+        Assert.Equal(TrackEditing.DefaultLegSeconds, TrackEditing.LegSeconds(result, 3));
+    }
+
+    [Fact]
+    public void InsertBetweenCoincidentPointsSplitsEvenly()
+    {
+        var track = TrackEditing.Empty();
+        track = TrackEditing.Append(track, Point(0f, 0f, 0f));
+        track = TrackEditing.Append(track, Point(0f, 0f, 0f));
+        var result = TrackEditing.InsertAfter(track, 0, Point(0f, 0f, 0f));
+
+        Assert.Equal(2.5f, TrackEditing.LegSeconds(result, 1), 4);
+        Assert.Equal(2.5f, TrackEditing.LegSeconds(result, 2), 4);
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointMergesItsLegsAndHold()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+        var result = TrackEditing.Delete(track, 1);
+
+        Assert.Equal(2, result.Points.Count);
+        Assert.Equal(12f, TrackEditing.LegSeconds(result, 1), 4);
+        Assert.Equal(Total(track), Total(result), 4);
+    }
+
+    [Fact]
+    public void DeletingTheFirstPointDropsItsHoldAndLeg()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 0, 1f);
+        var result = TrackEditing.Delete(track, 0);
+
+        Assert.Equal(2, result.Points.Count);
+        Assert.Equal(0f, result.Timing[0].Time);
+        Assert.Equal(0f, result.Timing[0].Position);
+        Assert.Equal(5f, TrackEditing.LegSeconds(result, 1), 4);
+        Assert.Equal(5f, Total(result), 4);
+    }
+
+    [Fact]
+    public void DeletingTheLastPointDropsItsLegAndHold()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 2, 2f);
+        var result = TrackEditing.Delete(track, 2);
+
+        Assert.Equal(2, result.Points.Count);
+        Assert.Equal(5f, Total(result), 4);
+    }
+
+    [Fact]
+    public void DeletingTheOnlyPointEmptiesTheTrackButKeepsItsModes()
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f, 0f, 0f));
+        track = TrackEditing.SetPlayback(track, PlaybackMode.Loop);
+        var result = TrackEditing.Delete(track, 0);
+
+        Assert.Empty(result.Points);
+        Assert.Empty(result.Timing);
+        Assert.Equal(AimMode.PathTangent, result.Aim);
+        Assert.Equal(PlaybackMode.Loop, result.Playback);
+    }
+
+    [Fact]
+    public void MovingAPointCarriesItsHoldAndLeavesLegsInTheirSlots()
+    {
+        var track = Build3PointTrack();
+        track = TrackEditing.SetLeg(track, 1, 3f);
+        track = TrackEditing.SetLeg(track, 2, 7f);
+        track = TrackEditing.SetHold(track, 2, 1f);
+        var moved = track.Points[2];
+
+        var result = TrackEditing.Move(track, 2, 0);
+
+        Assert.Same(moved, result.Points[0]);
+        Assert.Same(track.Points[0], result.Points[1]);
+        Assert.Same(track.Points[1], result.Points[2]);
+        Assert.Equal(1f, TrackEditing.HoldSeconds(result, 0), 4);
+        Assert.Equal(0f, TrackEditing.HoldSeconds(result, 2));
+        Assert.Equal(3f, TrackEditing.LegSeconds(result, 1), 4);
+        Assert.Equal(7f, TrackEditing.LegSeconds(result, 2), 4);
+        Assert.Equal(Total(track), Total(result), 4);
+    }
+
+    [Fact]
+    public void MovingAPointToWhereItIsChangesNothing()
+    {
+        var track = Build3PointTrack();
+        Assert.Same(track, TrackEditing.Move(track, 1, 1));
+    }
+
+    [Fact]
+    public void ReplaceKeepsEveryTimingKey()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+        var point = Point(99f, 1f, 2f);
+        var result = TrackEditing.Replace(track, 1, point);
+
+        Assert.Same(point, result.Points[1]);
+        Assert.Same(track.Timing, result.Timing);
+    }
+
+    [Fact]
+    public void EditsRefuseTimingKeysBetweenPoints()
+    {
+        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
+        var timing = new[]
+        {
+            new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(2f, 0.5f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(5f, 1f, TangentMode.Auto, 0f, 0f),
+        };
+        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
+
+        const string message = "timing keys between points are not supported yet";
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
+    }
+
+    [Fact]
+    public void EditsRejectOutOfRangeIndices()
+    {
+        var track = Build3PointTrack();
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.InsertAfter(track, 3, Point(0f, 0f, 0f)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(track, -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Move(track, 0, 3));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Replace(track, 3, Point(0f, 0f, 0f)));
+    }
 }

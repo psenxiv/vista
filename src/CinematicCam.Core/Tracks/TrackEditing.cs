@@ -100,6 +100,98 @@ public static class TrackEditing
     public static Track SetPlayback(Track track, PlaybackMode mode)
         => track with { Playback = mode };
 
+    /// <summary>Inserts a point after point <paramref name="index"/>, splitting that leg by path length; after the last point it appends.</summary>
+    public static Track InsertAfter(Track track, int index, ControlPoint point)
+    {
+        ValidatePointIndex(track, index, "insert");
+        RequireKeyPerPoint(track);
+        if (index == track.Points.Count - 1) return Append(track, point);
+
+        var points = new List<ControlPoint>(track.Points);
+        points.Insert(index + 1, point);
+
+        var table = new ArcLengthTable(points.Select(p => p.Position).ToArray());
+        var before = MathF.Max(table.SegmentLength(index), TrackEvaluator.MinTimingLength);
+        var after = MathF.Max(table.SegmentLength(index + 1), TrackEvaluator.MinTimingLength);
+
+        var keys = track.Timing;
+        var start = keys[LastKeyIndex(keys, index)].Time;
+        var leg = keys[FirstKeyIndex(keys, index + 1)].Time - start;
+        var inserted = new TimingKey(start + (leg * before / (before + after)), index + 1, TangentMode.Auto, 0f, 0f);
+
+        var timing = new List<TimingKey>(keys.Count + 1);
+        timing.AddRange(keys.Where(k => k.Position <= index));
+        timing.Add(inserted);
+        timing.AddRange(keys.Where(k => k.Position > index).Select(k => k with { Position = k.Position + 1 }));
+
+        return track with { Points = points, Timing = timing };
+    }
+
+    /// <summary>Removes point <paramref name="index"/>: a middle point's legs and hold merge, an end point's leg and hold go.</summary>
+    public static Track Delete(Track track, int index)
+    {
+        ValidatePointIndex(track, index, "delete");
+        RequireKeyPerPoint(track);
+        if (track.Points.Count == 1)
+            return track with { Points = Array.Empty<ControlPoint>(), Timing = Array.Empty<TimingKey>() };
+
+        var keys = track.Timing;
+        var shift = index == 0 ? keys[FirstKeyIndex(keys, 1)].Time - keys[0].Time : 0f;
+
+        var points = new List<ControlPoint>(track.Points);
+        points.RemoveAt(index);
+
+        var timing = keys
+            .Where(k => k.Position != index)
+            .Select(k => k with { Time = k.Time - shift, Position = k.Position > index ? k.Position - 1 : k.Position })
+            .ToList();
+
+        return track with { Points = points, Timing = timing };
+    }
+
+    /// <summary>Moves point <paramref name="from"/> to position <paramref name="to"/>; holds travel with their point, leg times stay in their slots.</summary>
+    public static Track Move(Track track, int from, int to)
+    {
+        ValidatePointIndex(track, from, "move");
+        ValidatePointIndex(track, to, "move");
+        RequireKeyPerPoint(track);
+        if (from == to) return track;
+
+        var n = track.Points.Count;
+        var keys = track.Timing;
+        var legs = new float[n];
+        for (var i = 1; i < n; i++) legs[i] = LegSeconds(track, i);
+
+        var order = Enumerable.Range(0, n).ToList();
+        order.RemoveAt(from);
+        order.Insert(to, from);
+
+        var timing = new List<TimingKey>(keys.Count);
+        var time = keys[0].Time;
+        for (var slot = 0; slot < n; slot++)
+        {
+            var firstIndex = FirstKeyIndex(keys, order[slot]);
+            var lastIndex = LastKeyIndex(keys, order[slot]);
+            if (slot > 0) time += legs[slot];
+
+            timing.Add(keys[firstIndex] with { Time = time, Position = slot });
+            if (lastIndex == firstIndex) continue;
+
+            time += keys[lastIndex].Time - keys[firstIndex].Time;
+            timing.Add(keys[lastIndex] with { Time = time, Position = slot });
+        }
+
+        return track with { Points = order.Select(i => track.Points[i]).ToList(), Timing = timing };
+    }
+
+    /// <summary>Replaces point <paramref name="index"/>, keeping every timing key.</summary>
+    public static Track Replace(Track track, int index, ControlPoint point)
+    {
+        ValidatePointIndex(track, index, "replace");
+        var points = new List<ControlPoint>(track.Points) { [index] = point };
+        return track with { Points = points };
+    }
+
     private static void ValidateLegIndex(Track track, int index)
     {
         var n = track.Points.Count;
@@ -136,5 +228,20 @@ public static class TrackEditing
             throw new ArgumentException($"point {point} has no timing key");
 
         return last;
+    }
+
+    private static void RequireKeyPerPoint(Track track)
+    {
+        var counts = new int[track.Points.Count];
+        foreach (var key in track.Timing)
+        {
+            var position = (int)key.Position;
+            if (key.Position != position || position < 0 || position >= counts.Length)
+                throw new ArgumentException("timing keys between points are not supported yet");
+            counts[position]++;
+        }
+
+        if (counts.Any(c => c is < 1 or > 2))
+            throw new ArgumentException("timing keys between points are not supported yet");
     }
 }
