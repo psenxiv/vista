@@ -26,15 +26,14 @@ arrive in phase 3.
 ```
 ┌ Cinematic Cam ─────────────────────────────────────────────┐
 │ [Edit ▾] [▶] [⏮]   [↶] [↷]   [ + Add │ ▾ ]                 │
-│ Aim [Recorded aim ▾]   Playback [Once ▾]   [Clear track]   │
+│ [Aim: Recorded aim ▾] [Playback: Once ▾]              [🗑] │
 ├────────────────────────────────────────────────────────────┤
 │  #    Leg (s)  Hold (s)                                    │
-│  ≡ 1     –       0.0                                       │
-│  ≡ 2    5.0      0.0     ◀                                 │
-│  ≡ 3    5.0      2.0                                       │
+│  ≡ 1     –       0.0                                  [🗑] │
+│  ≡ 2    5.0      0.0     (selected row highlighted)   [🗑] │
+│  ≡ 3    5.0      2.0                                  [🗑] │
 ├────────────────────────────────────────────────────────────┤
-│ 0.0 ━━━━━━━━━━━━●━━━━━━━━━━━━━━━━━━━━━━━━━ 12.0 s   6.3 s  │
-│ 3 points | total 12.0 s | editing       Fly speed [──●──]  │
+│ [━━━━━━━━━━━━●━━━━━━━━━━  6.3 / 12.0 s ]   Speed [ 1x ]    │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,9 +48,15 @@ Layout revised by the user on 2026-09-22 after using the first build:
   - **Restart icon**, then **Undo** and **Redo** icons. Each icon has a tooltip
     naming it.
   - **Add split button.**
-- **Second row:** Aim and Playback, their labels aligned with their drop-downs, and
-  **Clear track** (was New track).
-- **Status row:** fly speed sits at its right end.
+- **Second row:** Aim and Playback drop-downs that show their setting ("Aim: Recorded
+  aim", "Playback: Once"), and **Clear track** as a trash icon at the right end.
+- **Bottom row:** the scrub bar shows current and total time in the bar itself;
+  **Speed** sits at its right, in Edit mode only. There is no status line: the
+  mode drop-down and the Play/Pause icon show the state.
+- Rows are spaced a little more loosely than ImGui's default.
+
+Revised again on 2026-09-22 after the second build: whole-row selection, trash icons,
+the compact second row, and the status line removed.
 - **Add split button.** The `+ Add` half adds to the end. The `▾` half opens a
   menu with each item's shortcut on the right:
 
@@ -63,9 +68,10 @@ Layout revised by the user on 2026-09-22 after using the first build:
 
   The last two are disabled when nothing is selected. Overwrite has no
   confirmation step; undo covers it.
-- **Point list.** Rows are numbered from 1, matching the markers. Click a row to select it. Double-click a row to jump the camera
-  to that point (see Scrub and jumps). Drag the `≡` handle to reorder. Leg and hold
-  fields work as in the test window.
+- **Point list.** Rows are numbered from 1, matching the markers. Click anywhere on a
+  row to select it; the whole row highlights. Double-click a row to jump the camera
+  to that point (see Scrub and jumps). Drag a row to reorder. Leg and hold fields
+  work as in the test window. A trash icon at the end of each row deletes that point.
 - **Scrub bar**, 0 to the shot's total length; see Scrub and jumps.
 
 **Point window** (compact, auto-sized), shown only while a point is selected in
@@ -73,14 +79,16 @@ editing mode. It remembers where it was placed. It has no close button: deselect
 hides it, and Escape does not close it.
 
 ```
-┌ Point 2 ──────────────────────────────┐
-│ Gizmo  (•) Move  ( ) Rotate           │
-│ X [ -137.1 ]  Y [ 3.3 ]  Z [ -154.3 ] │
-│ Yaw [ 42.0° ]  Pitch [ -8.5° ]        │
-│ Roll [ 0.0° ]  FoV [ 45.0° ]          │
-│                            [ Delete ] │
-└───────────────────────────────────────┘
+┌ Point 2 ──────────────────────────────────┐
+│ Gizmo  (•) Move  ( ) Rotate          [🗑] │
+│ X    [ -137.1 ]  Y     [ 3.3 ]  Z [ -154.3 ] │
+│ Yaw  [ 42.0° ]   Pitch [ -8.5° ]          │
+│ Roll [ 0.0° ]    FoV   [ 45.0° ]          │
+└───────────────────────────────────────────┘
 ```
+
+The fields sit in an aligned grid, and Delete is a trash icon at the right of the
+top row.
 
 Position is in yalms; yaw, pitch, roll and FoV in degrees, converted from the
 stored radians for display and entry only. A field applies when editing finishes,
