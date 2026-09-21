@@ -81,6 +81,10 @@ Two consequences follow from writing after `Update()` returns:
    overwrite its result. No signature scan, so nothing here breaks on a game
    patch.
 
+**GPose** uses the same world camera (active slot 0), so the hook runs every
+frame there too; measured in game 2026-09-21. Dalamud hides plugin windows in
+GPose unless `UiBuilder.DisableGposeUiHide` is set.
+
 ### Roles and input
 
 The plugin is in editing mode, live mode, or off. In editing mode the user directs,

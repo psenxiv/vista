@@ -8,7 +8,7 @@
 
 **Tech Stack:** C# / .NET 10, xUnit 2.9, Dalamud 15.0.3.5 (`Dalamud.NET.Sdk/15.0.0`), FFXIVClientStructs.
 
-**Spec:** `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md`. Every decision in this plan was made by the user on 2026-09-21. The spec lines it relies on: nothing can be edited while live, paused included (spec:312); automatic release (spec:343-346); timing position must never decrease (spec:263).
+**Spec:** `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md`. Every decision in this plan was made by the user on 2026-09-21. The spec lines it relies on: nothing can be edited while live, paused included (spec:316); automatic release (spec:347-350); timing position must never decrease (spec:267).
 
 ## Global Constraints
 
