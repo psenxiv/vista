@@ -122,6 +122,7 @@ internal sealed class CameraSession
         director.GoOffline();
         freeCam.Disable();
         Mode = CameraMode.Off;
+        CameraAccess.ProbeRoll = 0f;
         GameUi.Restore();
         movement.Release();
         TestState = null;
