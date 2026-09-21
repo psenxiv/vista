@@ -8,7 +8,7 @@ the camera glide through all three and hold on the last frame. The spec's phase 
 is "author a shot, play it back" (`spec:529-532`).
 
 The UI is **not** in this phase; it is phase 2c (`spec:534-535`). Authoring happens through
-`/ccam track` subcommands standing in for the editor. They are scaffolding for testing, not
+`/ccam edit` and `/ccam live` subcommands standing in for the editor. They are scaffolding for testing, not
 product surface — the real flow is a button and a hotkey (`spec:383-385`), and a curve
 editor (`spec:395-398`).
 
@@ -159,20 +159,20 @@ Test: `Tick` returns null whenever live mode is off (`spec:490`).
 
 ### B1 — feed the Director to the camera
 `Plugin.cs` sources camera state from free-cam or the `/ccam hold` test state. Add the
-Director. The plugin is in one of three states, and never two at once:
+Director. The plugin is in one of three modes, and never two at once (`spec:87-92`):
 
-| State | Camera source | Character lock and input blocking |
+| Mode | Camera source | Character lock and input blocking |
 |---|---|---|
-| Idle | none | off |
-| Flying | free-cam | on |
+| Off | none | off |
+| Editing | free-cam | on |
 | Live | Director, playing or paused | on |
 
-The user directs while flying and operates the camera while live; the character is locked
-in both (`spec:87-92`). `InputBlocker` and `MovementLock` therefore follow "flying or live"
-rather than free-cam alone. Blocking zoom while live is what keeps the game from fighting our
+The user directs in editing mode and operates the camera in live mode; the character is
+locked in both. `InputBlocker` and `MovementLock` therefore follow "editing or live" rather
+than free-cam alone. Blocking zoom while live is what keeps the game from fighting our
 position without writing `Distance` (`spec:106-109`, `spec:132-135`).
 
-Moving from Flying to Live changes only the camera source: the lock and blocking stay held
+Moving between Editing and Live changes only the camera source: the lock and blocking stay held
 and the pre-takeover snapshot is kept for release.
 
 Every existing release path — zone change, area transition, logout, unload, `release` — must
@@ -180,49 +180,54 @@ turn live mode off and stop playback, not just drop the camera (`spec:340-347`).
 
 `feat(camera) drive the camera from the director`
 
-### B2 — authoring and playback commands
+### B2 — editing and live commands
 Scaffolding standing in for the editor. Nobody types a tangent; these write keys via A7.
+`/ccam fly` is renamed `/ccam edit`: the mode is editing, flying is just how you move in it.
 
-- `/ccam track new`
-- `/ccam track capture` — append the current camera as a control point (`spec:379-381`)
-- `/ccam track leg <index> <seconds>` — how long the transition into that point takes
-- `/ccam track hold <index> <seconds>` — a flat section at that point
-- `/ccam track aim <tangent|keys>`, `/ccam track mode <once|loop>`
-- `/ccam track play` — go live from zero; from Idle it takes the camera. While live it
-  restarts from zero.
-- `/ccam track stop` — pause on the current frame. `release` hands the camera back.
-- `/ccam track info` — points, keys, legs, holds, total length
+- `/ccam edit` — enter editing mode. From Off it takes the camera, free-cam starting at the
+  game camera; from Live it starts free-cam at the current frame. Already editing: no-op.
+- `/ccam edit new` — start an empty track
+- `/ccam edit capture` — append the current camera as a control point (`spec:379-381`)
+- `/ccam edit leg <index> <seconds>` — how long the transition into that point takes
+- `/ccam edit hold <index> <seconds>` — a flat section at that point
+- `/ccam edit aim <tangent|keys>`, `/ccam edit mode <once|loop>`
+- `/ccam edit info` — points, keys, legs, holds, total length. Read-only, so allowed in any mode.
+- `/ccam live play` — go live from the start of the track; from Off or Editing it takes the
+  camera. While live it restarts from zero.
+- `/ccam live stop` — pause on the current frame; stays live.
+- `/ccam release` — turn the plugin off and hand the camera back.
 
-Every editing command — `new`, `capture`, `leg`, `hold`, `aim`, `mode` — is refused while
-live, paused included, with a log message (`spec:312`). `/ccam fly` while live leaves live mode
-and starts free-cam from the current frame; `release` also leaves it.
+Every `/ccam edit` subcommand that changes the track works only in editing mode. It is
+refused while live, paused included (`spec:312`), and while off, each with a log message
+naming the command to run first.
 
-`feat(track) add authoring and playback commands`
+`feat(track) add editing and live commands`
 
 ## Your test pass
 
 One in-game round, at the end. The track lives in memory only, so a hot reload between
 steps loses it.
 
-1. `/ccam fly`, `/ccam track new`
-2. Fly to a spot, `/ccam track capture`. Repeat twice more.
-3. `/ccam track play` — the camera starts at full speed, crosses all three points
+1. `/ccam edit`, `/ccam edit new`
+2. Fly to a spot, `/ccam edit capture`. Repeat twice more.
+3. `/ccam live play` — the camera starts at full speed, crosses all three points
    **smoothly** with no stop or lurch at the middle one, and **stops dead on the last point
    and holds there** rather than snapping back
 4. While it plays: WASD does not move the character, the scroll wheel does not zoom, and
    chat still opens
-5. `/ccam track leg 2 10` — make the second transition much slower, play again. It should
-   ease into the slower pace, not switch abruptly
-6. `/ccam track hold 1 3` — play again. It should slow to a stop on the middle point, wait
-   three seconds, then move on
-7. Play, then `/ccam track stop` mid-shot — the camera freezes. `/ccam track play` restarts
-   from the first point
-8. `/ccam fly` — free-cam starts from where the camera is. `/ccam track capture` a fourth
-   point, `/ccam track info` — the two existing legs and the hold keep their timings
-9. `/ccam track mode loop`, play — after the last point the camera cuts straight back to the
-   first and plays again
+5. `/ccam edit leg 2 10` while live — refused, naming `/ccam edit`. Then `/ccam edit`,
+   `/ccam edit leg 2 10`, `/ccam live play`. The second transition is much slower and eases
+   into the slower pace, not switching abruptly
+6. `/ccam edit`, `/ccam edit hold 1 3`, `/ccam live play`. It should slow to a stop on the
+   middle point, wait three seconds, then move on
+7. `/ccam live stop` mid-shot — the camera freezes. `/ccam live play` restarts from the
+   first point
+8. `/ccam edit` — free-cam starts from where the camera is. `/ccam edit capture` a fourth
+   point, `/ccam edit info` — the two existing legs and the hold keep their timings
+9. `/ccam edit mode loop`, `/ccam live play` — after the last point the camera cuts straight
+   back to the first and plays again
 10. `/ccam release` — normal camera and movement return
-11. Play again and change zone mid-shot — playback stops and the camera releases
+11. `/ccam live play` and change zone mid-shot — playback stops and the camera releases
 
 Steps 3, 5 and 6 are the ones only you can judge: whether the motion looks smooth.
 
@@ -245,8 +250,9 @@ Flagging rather than burying. Say if you would rather decide any of these.
   without naming a method. This is the standard one.
 
 Decided on 2026-09-21: 5 seconds per leg by default; full speed at the start and a dead stop
-at the end; keys anchored to control points; `stop` pauses, `play` restarts, `fly` starts from
-the current frame; nothing can be edited while live.
+at the end; keys anchored to control points; `live stop` pauses, `live play` restarts, `edit`
+starts free-cam from the current frame; nothing can be edited while live; commands are grouped
+as `/ccam edit …` and `/ccam live …`.
 
 ## Out of scope
 
