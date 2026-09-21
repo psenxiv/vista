@@ -60,15 +60,15 @@ internal sealed class FreeCam
         var up = 0f;
         var right = 0f;
 
-        if (input.IsHeld(InputId.MOVE_FORE)) forward += 1f;
-        if (input.IsHeld(InputId.MOVE_BACK)) forward -= 1f;
+        if (input.IsDown(InputId.MOVE_FORE)) forward += 1f;
+        if (input.IsDown(InputId.MOVE_BACK)) forward -= 1f;
 
         // Turn and strafe binds both move sideways; a free cam has nothing to turn.
-        if (input.IsHeld(InputId.MOVE_RIGHT) || input.IsHeld(InputId.MOVE_STRIFE_R)) right += 1f;
-        if (input.IsHeld(InputId.MOVE_LEFT) || input.IsHeld(InputId.MOVE_STRIFE_L)) right -= 1f;
+        if (input.IsDown(InputId.MOVE_RIGHT) || input.IsDown(InputId.MOVE_STRIFE_R)) right += 1f;
+        if (input.IsDown(InputId.MOVE_LEFT) || input.IsDown(InputId.MOVE_STRIFE_L)) right -= 1f;
 
-        if (input.IsHeld(InputId.JUMP) || input.IsHeld(InputId.MOVE_RETENTION)) up += 1f;
-        if (input.IsHeld(InputId.MOVE_DESCENT)) up -= 1f;
+        if (input.IsDown(InputId.JUMP) || input.IsDown(InputId.MOVE_RETENTION)) up += 1f;
+        if (input.IsDown(InputId.MOVE_DESCENT)) up -= 1f;
 
         return new Vector3(forward, up, right);
     }

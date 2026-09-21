@@ -11,9 +11,7 @@ internal sealed unsafe class InputBlocker : IDisposable
     private delegate byte IsInputIdDelegate(InputData* self, InputId inputId);
     private delegate sbyte GetMouseWheelDelegate();
 
-    // FFXIVClientStructs does not map these two. The held query in particular is missing:
-    // what CS calls IsInputIdHeld is really the long-press function.
-    private const string HeldSignature = "E9 ?? ?? ?? ?? B9 4F 01 00 00";
+    // The wheel reader is the one query ClientStructs does not map.
     private const string MouseWheelSignature = "E8 ?? ?? ?? ?? F7 D8 48 8B CB";
 
     // The keys we fly with. The game does not route character movement through these
@@ -30,7 +28,6 @@ internal sealed unsafe class InputBlocker : IDisposable
     private readonly Hook<IsInputIdDelegate>? pressedHook;
     private readonly Hook<IsInputIdDelegate>? downHook;
     private readonly Hook<IsInputIdDelegate>? releasedHook;
-    private readonly Hook<IsInputIdDelegate>? heldHook;
     private readonly Hook<GetMouseWheelDelegate>? mouseWheelHook;
 
     private readonly Func<bool> shouldBlock;
@@ -47,7 +44,6 @@ internal sealed unsafe class InputBlocker : IDisposable
         downHook = Hook(InputData.MemberFunctionPointers.IsInputIdDown, DownDetour, "IsInputIdDown");
         releasedHook = Hook(InputData.MemberFunctionPointers.IsInputIdReleased, ReleasedDetour, "IsInputIdReleased");
 
-        heldHook = HookBySignature<IsInputIdDelegate>(HeldSignature, HeldDetour, "isInputIdHeld");
         mouseWheelHook = HookBySignature<GetMouseWheelDelegate>(MouseWheelSignature, MouseWheelDetour, "getMouseWheelStatus");
     }
 
@@ -86,7 +82,6 @@ internal sealed unsafe class InputBlocker : IDisposable
     private byte PressedDetour(InputData* self, InputId id) => Filter(pressedHook!, self, id);
     private byte DownDetour(InputData* self, InputId id) => Filter(downHook!, self, id);
     private byte ReleasedDetour(InputData* self, InputId id) => Filter(releasedHook!, self, id);
-    private byte HeldDetour(InputData* self, InputId id) => Filter(heldHook!, self, id);
 
     /// <summary>Zoom. Suppressed while flying so the camera distance is left alone.</summary>
     private sbyte MouseWheelDetour()
@@ -114,9 +109,8 @@ internal sealed unsafe class InputBlocker : IDisposable
 
         foreach (var id in new[] { InputId.MOVE_FORE, InputId.JUMP })
         {
-            Plugin.Log.Information("[diag] {Id}: held {H}, longPress {L}, down {D}, pressed {P}",
+            Plugin.Log.Information("[diag] {Id}: longPress {L}, down {D}, pressed {P}",
                 id,
-                heldHook is null ? "-" : heldHook.Original(ours, id).ToString(),
                 longPressHook is null ? "-" : longPressHook.Original(ours, id).ToString(),
                 downHook is null ? "-" : downHook.Original(ours, id).ToString(),
                 pressedHook is null ? "-" : pressedHook.Original(ours, id).ToString());
@@ -124,12 +118,12 @@ internal sealed unsafe class InputBlocker : IDisposable
     }
 
     /// <summary>True while the player holds that bind, read past our own block.</summary>
-    public bool IsHeld(InputId id)
+    public bool IsDown(InputId id)
     {
-        if (heldHook is null) return false;
+        if (downHook is null) return false;
 
         var input = Input();
-        return input != null && heldHook.Original(input, id) != 0;
+        return input != null && downHook.Original(input, id) != 0;
     }
 
     private static InputData* Input()
@@ -163,7 +157,6 @@ internal sealed unsafe class InputBlocker : IDisposable
             yield return pressedHook;
             yield return downHook;
             yield return releasedHook;
-            yield return heldHook;
         }
     }
 
