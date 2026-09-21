@@ -1,4 +1,5 @@
 using CinematicCam.Core.Camera;
+using CinematicCam.Core.Session;
 using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;

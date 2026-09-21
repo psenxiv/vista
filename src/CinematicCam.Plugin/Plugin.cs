@@ -1,4 +1,4 @@
-using System.Numerics;
+using CinematicCam.Core.Session;
 using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Session;
 using CinematicCam.Plugin.Ui;
@@ -35,9 +35,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WindowSystem windows = new("CinematicCam");
     private float wheel;
     private bool escapeWasDown;
-    private bool wasGPosing;
-    private long probeCount;
-    private long probeTime;
     private static bool blockEscape;
     private readonly TestWindow testWindow;
 
@@ -45,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the test window | release | hold | push <d> | nudge <x> <y> <z> | reset"
+            HelpMessage = "/ccam opens the test window | release"
         });
 
         Movement = new MovementLock();
@@ -73,55 +70,9 @@ public sealed class Plugin : IDalamudPlugin
             case "":
                 OpenTestWindow();
                 break;
-            case "reset":
-                CameraAccess.ResetToDefaults();
-                break;
-            case "hold":
-            {
-                var current = CameraAccess.ReadState();
-                if (current is null) { Log.Error("[ccam] cannot read camera state."); break; }
-                Session.Hold(current.Value);
-                Log.Information("[ccam] holding at {Pos} looking at {Look}",
-                    current.Value.Position, current.Value.LookAt);
-                break;
-            }
             case "release":
                 Session.Release("command");
                 break;
-            case "push":
-            {
-                if (Session.TestState is null) { Log.Error("[ccam] push requires /ccam hold first."); break; }
-                var parts = args.Trim().Split(' ');
-                if (parts.Length < 2 || !float.TryParse(parts[1], out var distance))
-                {
-                    Log.Error("[ccam] usage: /ccam push <distance>");
-                    break;
-                }
-                var st = Session.TestState.Value;
-                var forward = Vector3.Normalize(st.LookAt - st.Position);
-                var step = forward * distance;
-                Session.TestState = st with { Position = st.Position + step, LookAt = st.LookAt + step };
-                Log.Information("[ccam] pushed {Distance} along view to {Pos}", distance, Session.TestState.Value.Position);
-                break;
-            }
-            case "nudge":
-            {
-                if (Session.TestState is null) { Log.Error("[ccam] nudge requires /ccam hold first."); break; }
-                var parts = args.Trim().Split(' ');
-                if (parts.Length < 4
-                    || !float.TryParse(parts[1], out var dx)
-                    || !float.TryParse(parts[2], out var dy)
-                    || !float.TryParse(parts[3], out var dz))
-                {
-                    Log.Error("[ccam] usage: /ccam nudge <dx> <dy> <dz>");
-                    break;
-                }
-                var s = Session.TestState.Value;
-                var delta = new Vector3(dx, dy, dz);
-                Session.TestState = s with { Position = s.Position + delta, LookAt = s.LookAt + delta };
-                Log.Information("[ccam] nudged to {Pos}", Session.TestState.Value.Position);
-                break;
-            }
             default:
                 Log.Information("[ccam] unknown verb '{Verb}'.", verb);
                 break;
@@ -132,7 +83,6 @@ public sealed class Plugin : IDalamudPlugin
     {
         Camera.TryInstallHook();
         Input.SyncHookState();
-        ProbeGPose();
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
@@ -162,31 +112,6 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OpenTestWindow() => testWindow.IsOpen = true;
-
-    /// <summary>Probe: logs the active camera on entering and leaving GPose, and the hook's rate while in it.</summary>
-    private void ProbeGPose()
-    {
-        var gposing = ClientState.IsGPosing;
-        var now = Environment.TickCount64;
-
-        if (gposing != wasGPosing)
-        {
-            var (index, isWorld) = CameraAccess.ActiveCamera();
-            Log.Information("[gpose] {State}: active camera slot {Index}, is world camera {IsWorld}, mode {Mode}",
-                gposing ? "entered" : "left", index, isWorld, Session.Mode);
-            wasGPosing = gposing;
-            probeCount = Camera.UpdateCount;
-            probeTime = now;
-        }
-        else if (gposing && now - probeTime >= 5000)
-        {
-            var (index, isWorld) = CameraAccess.ActiveCamera();
-            Log.Information("[gpose] hook ran {Count} times in {Seconds:0.0} s; active slot {Index}, is world {IsWorld}, mode {Mode}",
-                Camera.UpdateCount - probeCount, (now - probeTime) / 1000.0, index, isWorld, Session.Mode);
-            probeCount = Camera.UpdateCount;
-            probeTime = now;
-        }
-    }
 
     /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
     private void OnDraw()

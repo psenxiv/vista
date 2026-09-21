@@ -19,14 +19,6 @@ internal static unsafe class CameraAccess
         return camera != null;
     }
 
-    /// <summary>Which camera slot the game is using, and whether that slot is the world camera we hook.</summary>
-    public static (int Index, bool IsWorldCamera) ActiveCamera()
-    {
-        var manager = CameraManager.Instance();
-        if (manager == null) return (-1, false);
-        return (manager->ActiveCameraIndex, manager->GetActiveCamera() == manager->Camera);
-    }
-
     /// <summary>Reads the camera's current position, look-at and field of view.</summary>
     public static CameraState? ReadState()
     {
@@ -65,17 +57,6 @@ internal static unsafe class CameraAccess
         scene->LookAtVector = snapshot.LookAt;
         scene->Vector_1 = snapshot.Up;
         camera->FoV = snapshot.Fov;
-    }
-
-    /// <summary>Puts the field of view back to stock when no snapshot is available.</summary>
-    public static void ResetToDefaults()
-    {
-        if (!TryGetWorldCamera(out var camera)) return;
-
-        // Only FoV. Distance is a persisted setting, see WriteState.
-        camera->FoV = 0.78f;
-
-        Plugin.Log.Information("[ccam] field of view reset to stock.");
     }
 
     /// <summary>Overwrites camera position and look-at.</summary>
