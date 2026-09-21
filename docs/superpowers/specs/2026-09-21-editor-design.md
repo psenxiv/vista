@@ -109,7 +109,8 @@ Colours live in one place.
 - Left-click on empty space deselects. A press that turns the camera is a drag,
   not a click, even if the cursor stays put: the game locks the cursor while the
   camera is dragged.
-- Clicks over plugin windows are ignored.
+- Clicks over plugin windows are ignored. Clicks on the game's own HUD count as
+  empty space and deselect.
 - A click on a marker does not reach the game, so it cannot target anything.
 
 Selection after track changes:
@@ -308,8 +309,10 @@ In game, all fly-down, overlay, key and gizmo checks passed, including undo in t
 middle of a gizmo drag. Clicking empty space did not deselect: see the mouse note
 under Keys and input. Changes asked for: markers twice the size, aim arrows
 instead of lines, gimbal rotate rings, and Ctrl + Alt + backtick doing nothing.
-Whether a click on the game's own HUD should deselect is still open; it can be
-tested once deselecting works.
+The follow-ups passed in game the same day: deselecting, larger markers, aim
+arrows, gimbal rings, Ctrl + Alt + backtick, and leg and hold edits applying on close
+and before mode changes. A click on the game's own HUD deselects, and the user
+accepted that.
 
 ## Open issues
 
