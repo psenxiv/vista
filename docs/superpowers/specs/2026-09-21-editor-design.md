@@ -107,7 +107,7 @@ Selection after track changes:
 | Add after selected | the new point |
 | Overwrite selected | unchanged |
 | Delete | none |
-| Reorder | **open** — awaiting the user |
+| Reorder | stays on the same point, wherever it ends up |
 | Undo / redo | kept if that point still exists, otherwise none |
 
 ## Gizmo
