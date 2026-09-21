@@ -102,9 +102,10 @@ until something is copied, and the copy is forgotten when the plugin unloads.
 (Decided 2026-09-22.)
 
 Position is in yalms; yaw, pitch, roll and FoV in degrees, converted from the
-stored radians for display and entry only. A field applies when editing finishes,
-including when its window closes or a mode button is pressed first; ImGui never
-reports a closed window's field losing focus.
+stored radians for display and entry only. The Point window's fields apply live (see
+below). The track editor's leg and hold fields apply when editing finishes, including
+when the window closes or a mode button is pressed first; ImGui never reports a
+closed window's field losing focus.
 In Direction-of-travel mode the Yaw and Pitch fields show the stored values but are
 disabled, matching the gizmo's roll-only ring.
 
