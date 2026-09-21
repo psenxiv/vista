@@ -9,6 +9,10 @@ See `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md` for v1 scope.
 
 ## Deferred from v1
 
+On 2026-09-21 the user moved export/import and anchored tracks, together with sessions
+holding multiple tracks, into phase 3, ahead of the switchboard. Details are settled after
+phase 2.
+
 ### Export / import
 Tracks and snap points, exported as one portable JSON file so a director can
 build shots and hand them to operators to run. Switchboard import/export is a
