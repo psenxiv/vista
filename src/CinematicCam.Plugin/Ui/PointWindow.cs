@@ -7,7 +7,6 @@ using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
@@ -22,6 +21,7 @@ internal sealed class PointWindow : Window
     private readonly PointGizmo gizmo;
     private readonly PendingField fields;
     private int? shown;
+    private float fieldsWidth;
 
     public PointWindow(CameraSession session, PointGizmo gizmo, PendingField fields)
         : base("Point###ccam-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
@@ -59,11 +59,10 @@ internal sealed class PointWindow : Window
         ImGui.SameLine();
         if (ImGui.RadioButton("Rotate", gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
 
+        // Right-align to last frame's field grid, not the window: the window sizes itself to its content.
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight()));
-        var delete = ImGuiComponents.IconButton("delete-point", FontAwesomeIcon.Trash);
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Delete point");
-        if (delete)
+        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + fieldsWidth - IconButton.Width(FontAwesomeIcon.Trash)));
+        if (IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point"))
         {
             fields.Clear();
             Report(session.DeleteSelected());
@@ -89,6 +88,7 @@ internal sealed class PointWindow : Window
         Field("FoV", $"fov{index}", Degrees(point.Fov), "%.1f°", v => Edit(index, p => p with { Fov = ClampFov(Radians(v), p.Fov) }));
 
         ImGui.EndTable();
+        fieldsWidth = ImGui.GetItemRectSize().X;
     }
 
     /// <summary>A label and its number field, as two cells of the field grid.</summary>

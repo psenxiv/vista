@@ -6,7 +6,6 @@ using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
@@ -73,7 +72,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.SameLine();
         var playing = session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished;
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (Icon("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
+        if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
         {
             fields.Commit();
             if (playing) session.Stop();
@@ -84,18 +83,18 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Mode != CameraMode.Live);
-        if (Icon("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
+        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
         ImGui.EndDisabled();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
         ImGui.SameLine(0f, gap);
         ImGui.BeginDisabled(!session.CanUndo);
-        if (Icon("undo", FontAwesomeIcon.Undo, "Undo")) { fields.Commit(); session.Undo(); }
+        if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo")) { fields.Commit(); session.Undo(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(!session.CanRedo);
-        if (Icon("redo", FontAwesomeIcon.Redo, "Redo")) { fields.Commit(); session.Redo(); }
+        if (IconButton.Draw("redo", FontAwesomeIcon.Redo, "Redo")) { fields.Commit(); session.Redo(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine(0f, gap);
@@ -117,14 +116,6 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
         if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Release("window"); }
         ImGui.EndCombo();
-    }
-
-    /// <summary>An icon button with a tooltip naming it, shown even while disabled.</summary>
-    private static bool Icon(string id, FontAwesomeIcon icon, string tooltip)
-    {
-        var pressed = ImGuiComponents.IconButton(id, icon);
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
-        return pressed;
     }
 
     /// <summary>Aim and playback drop-downs showing their setting, and Clear track as a trash icon at the right end.</summary>
@@ -160,8 +151,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         ImGui.SameLine();
-        RightAlign(ImGui.GetFrameHeight());
-        if (Icon("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
+        RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
+        if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
     }
 
     private void DrawAddButton()
@@ -248,8 +239,8 @@ internal sealed unsafe class TrackEditorWindow : Window
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v)))));
 
         ImGui.TableNextColumn();
-        RightAlign(ImGui.GetFrameHeight());
-        if (Icon($"delete{index}", FontAwesomeIcon.Trash, "Delete point"))
+        RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
+        if (IconButton.Draw($"delete{index}", FontAwesomeIcon.Trash, "Delete point"))
         {
             fields.Clear();
             session.Select(index);
