@@ -166,9 +166,10 @@ rather than a point will need to account for per-race height.
 ## Track model
 
 ```csharp
-record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov);
+record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov,
+                    float Hold, float DurationToNext, Easing EaseToNext);
 record Track(IReadOnlyList<ControlPoint> Points, AimMode Aim,
-             Vector3 LookAtTarget, float Duration, Easing Ease, bool Loop);
+             Vector3 LookAtTarget, bool Loop);
 ```
 
 Per-point FoV costs one float and one lerp, and enables push-ins during a move.
@@ -220,13 +221,32 @@ crossing due north whips the long way around.
 
 ### Timing
 
-Duration-based. A track takes N seconds, because an event runner thinks in
-"a thirty-second shot", not in units per second. Combined with arc-length
-evaluation this produces constant speed across the shot.
+Per segment. Each leg carries its own duration and its own easing, so a director
+can linger on one transition and move briskly through the next. Total shot length
+is the sum of every leg plus every hold, and the editor shows it.
 
-Easing (`Linear`, `In`, `Out`, `InOut`; default smoothstep) composes on top:
-ease the normalised time, then evaluate at that distance. Looping tracks force
-linear easing or the seam stutters.
+A point may also **hold**: on arrival the camera stays still for `Hold` seconds
+before starting the next leg. A hold is the cheap way to put a beat on a stage
+without distorting the speed of any transition. `Hold` on the final point of a
+non-looping track is inert, because a finished track holds its last frame anyway.
+
+Arc-length reparameterisation applies *within* a leg rather than across the
+track: each leg travels its own stretch of curve at even speed over its own
+duration. Without it a leg would still crawl through bunched points and lurch
+across spread ones.
+
+**Speed is deliberately discontinuous at interior points.** Two adjacent legs
+with different lengths and durations meet at a visible change of pace, and a leg
+easing out into a leg easing in brings the camera to a full stop at that point.
+Both are legitimate shots; neither is smoothed automatically. Continuous velocity
+across a whole track needs tangent handles on a velocity curve, which is out of
+scope. The operator controls pace by choosing easings that meet sensibly.
+
+Easing per leg: `Linear`, `In`, `Out`, `InOut`. Ease the leg's normalised time,
+then evaluate at that distance along the leg.
+
+A looping track wraps: the last point carries a leg back to the first, and the
+seam behaves like any other junction. No easing rule is forced on it.
 
 Playback accumulates `IFramework.UpdateDelta` rather than counting frames, so a
 shot runs identically at 30 and 144 fps.
@@ -425,6 +445,8 @@ Tests that run on macOS with no game, covering where the real bugs live:
   without arc-length reparameterisation, which is its purpose.
 - Yaw crossing ±180° takes the short way.
 - Position at t=5s is identical under 60fps and 30fps delta sequences.
+- Each leg takes exactly its own duration, independent of its length.
+- A hold keeps the camera still for its duration, then the next leg starts.
 - The loop seam is continuous.
 - Degenerate input — zero, one, two and coincident points — does not throw.
 - TAKE resets elapsed time; flip-flop swaps the slots.
