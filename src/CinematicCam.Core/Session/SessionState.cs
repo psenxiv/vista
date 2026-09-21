@@ -12,6 +12,7 @@ public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff }
 /// <summary>The mode, the Director and the track, and the rules for moving between modes.</summary>
 public sealed class SessionState
 {
+    private readonly EditHistory history = new();
     private Track? evaluatedTrack;
     private TrackEvaluator? evaluator;
 
@@ -19,10 +20,11 @@ public sealed class SessionState
 
     public Director Director { get; } = new();
 
-    private readonly EditHistory history = new();
-
     /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
     public Track Track { get; private set; } = TrackEditing.Empty();
+
+    /// <summary>The track's length in seconds: its last timing key, or 0 with none.</summary>
+    public double Duration => Track.Timing.Count == 0 ? 0.0 : Track.Timing[^1].Time;
 
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>
     public bool LocksInput => Mode != CameraMode.Off;

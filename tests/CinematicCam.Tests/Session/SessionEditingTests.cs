@@ -226,4 +226,17 @@ public class SessionEditingTests
         var expected = new TrackEvaluator(state.Track).Evaluate(2.5);
         Assert.Equal(expected, state.FrameAt(2.5));
     }
+
+    [Fact]
+    public void DurationIsTheLastKeysTimeAndZeroWhenEmpty()
+    {
+        var state = new SessionState();
+        Assert.Equal(0.0, state.Duration);
+
+        state = Editing();
+        Assert.Equal(10.0, state.Duration, 5);
+
+        state.ChangeTrack(t => TrackEditing.SetHold(t, 2, 2f));
+        Assert.Equal(12.0, state.Duration, 5);
+    }
 }

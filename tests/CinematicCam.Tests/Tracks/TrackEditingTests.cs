@@ -460,6 +460,38 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void EditsRefuseAPointWithNoTimingKey()
+    {
+        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
+        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f) };
+        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
+
+        const string message = "timing keys between points are not supported yet";
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
+    }
+
+    [Fact]
+    public void EditsRefuseAPointWithMoreThanTwoTimingKeys()
+    {
+        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
+        var timing = new[]
+        {
+            new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(1f, 0f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(2f, 0f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(7f, 1f, TangentMode.Auto, 0f, 0f),
+        };
+        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
+
+        const string message = "timing keys between points are not supported yet";
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
+        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
+    }
+
+    [Fact]
     public void EditsRejectOutOfRangeIndices()
     {
         var track = Build3PointTrack();
