@@ -46,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AimProbe aimProbe = new();
     private readonly InputProbe inputProbe = new();
     private readonly EditorKeys editorKeys = new();
+    private readonly PointGizmo pointGizmo = new();
     private readonly EditorLayer editorLayer;
 
     public Plugin()
@@ -57,7 +58,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
-        editorLayer = new EditorLayer(Session);
+        editorLayer = new EditorLayer(Session, pointGizmo);
         testWindow = new TestWindow(Session);
         windows.AddWindow(testWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -126,7 +127,7 @@ public sealed class Plugin : IDalamudPlugin
 
         aimProbe.Update();
         inputProbe.Update(Session.Mode);
-        editorKeys.Update(Session);
+        editorKeys.Update(Session, pointGizmo);
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that

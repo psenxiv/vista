@@ -1,8 +1,10 @@
 using System.Numerics;
 using CinematicCam.Core.Editing;
 using CinematicCam.Core.Session;
+using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Interface.Utility;
 
 namespace CinematicCam.Plugin.Editor;
@@ -17,10 +19,15 @@ internal sealed class EditorLayer
         | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoSavedSettings;
 
     private readonly CameraSession session;
+    private readonly PointGizmo gizmo;
     private readonly Overlay overlay = new();
     private readonly ClickSelection clicks = new();
 
-    public EditorLayer(CameraSession session) => this.session = session;
+    public EditorLayer(CameraSession session, PointGizmo gizmo)
+    {
+        this.session = session;
+        this.gizmo = gizmo;
+    }
 
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
@@ -28,13 +35,14 @@ internal sealed class EditorLayer
         if (session.Mode != CameraMode.Editing) { clicks.Reset(); return; }
         if (EditorView.Read() is not { } view) return;
 
-        var markers = overlay.Draw(view, session.Track, session.Selected);
+        var track = gizmo.Preview is { } preview ? TrackEditing.Replace(session.Track, preview.Index, preview.Point) : session.Track;
+        var markers = overlay.Draw(view, track, session.Selected);
         var io = ImGui.GetIO();
         var hovered = MarkerHitTest.Nearest(markers, io.MousePos, HitRadius);
 
         // The window takes the mouse only over a marker, so those clicks never reach the game.
         var flags = BaseFlags;
-        if (hovered is null && !clicks.HoldingMarker) flags |= ImGuiWindowFlags.NoInputs;
+        if (hovered is null && !clicks.HoldingMarker && !gizmo.Hot) flags |= ImGuiWindowFlags.NoInputs;
 
         ImGuiHelpers.ForceNextWindowMainViewport();
         ImGui.SetNextWindowPos(view.Origin);
@@ -42,8 +50,11 @@ internal sealed class EditorLayer
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
         if (ImGui.Begin("##ccam-editor", flags))
         {
+            ImGuizmo.BeginFrame();
+            gizmo.Draw(view, session);
+
             var overUi = io.WantCaptureMouse && !ImGui.IsWindowHovered();
-            Apply(clicks.Update(ImGui.IsMouseDown(ImGuiMouseButton.Left), io.MousePos, overUi, false, hovered));
+            Apply(clicks.Update(ImGui.IsMouseDown(ImGuiMouseButton.Left), io.MousePos, overUi, gizmo.Hot, hovered));
         }
 
         ImGui.End();

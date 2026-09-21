@@ -8,12 +8,12 @@ namespace CinematicCam.Plugin.Editor;
 /// <summary>The editing-mode key bindings, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys
 {
-    private static readonly VirtualKey[] Watched = [VirtualKey.C, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y];
+    private static readonly VirtualKey[] Watched = [VirtualKey.C, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R];
 
     private readonly bool[] held = new bool[Watched.Length];
 
     /// <summary>Reads the keys, acts on new presses and hides ours from the game. Call from Framework.Update.</summary>
-    public void Update(CameraSession session)
+    public void Update(CameraSession session, PointGizmo gizmo)
     {
         if (session.Mode != CameraMode.Editing || PhysicalKeys.IsTyping()) { Array.Clear(held); return; }
 
@@ -28,13 +28,13 @@ internal sealed class EditorKeys
             held[i] = down;
             if (!down) continue;
 
-            var ours = key is VirtualKey.C or VirtualKey.OEM_3 || ctrl;
+            var ours = key is VirtualKey.C or VirtualKey.OEM_3 or VirtualKey.R || ctrl;
             if (ours) PhysicalKeys.Hide(key);
-            if (pressed && ours) Act(session, key, ctrl, alt);
+            if (pressed && ours) Act(session, gizmo, key, ctrl, alt);
         }
     }
 
-    private static void Act(CameraSession session, VirtualKey key, bool ctrl, bool alt)
+    private static void Act(CameraSession session, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
     {
         var refusal = key switch
         {
@@ -43,9 +43,16 @@ internal sealed class EditorKeys
             VirtualKey.OEM_3 => session.AddToEnd(),
             VirtualKey.Z => session.Undo() ? null : "Nothing to undo.",
             VirtualKey.Y => session.Redo() ? null : "Nothing to redo.",
+            VirtualKey.R when session.Selected is not null => Toggle(gizmo),
             _ => null,
         };
 
         if (refusal is not null) Plugin.Log.Debug("[editor] {Key}: {Refusal}", key.ToString(), refusal);
+    }
+
+    private static string? Toggle(PointGizmo gizmo)
+    {
+        gizmo.Toggle();
+        return null;
     }
 }
