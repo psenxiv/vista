@@ -23,7 +23,7 @@ One line. Conventional prefix, lowercase, no trailing period.
     fix(camera) stop hook deadlocking on load
     docs(spec) record fov probe result
 
-Write them like a lazy dev: say what changed, stop. No body paragraphs, no
+Write them simply: say what changed, stop. No body paragraphs, no
 rationale, no co-author trailers. Reasoning belongs in the spec or the plan,
 not in git.
 
