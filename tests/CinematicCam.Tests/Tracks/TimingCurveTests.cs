@@ -168,6 +168,51 @@ public class TimingCurveTests
     }
 
     [Fact]
+    public void LopsidedLegsGiveEqualSpeedEitherSideOfAnInteriorAutoKey()
+    {
+        // Legs of very different width (1s / 10s / 1s) either side of key 1: the square
+        // clamp must not couple the two intervals' ratios together, or key 1's in- and
+        // out-tangent diverge and the pass-through stops being smooth (spec 255-257).
+        var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(11f, 2f), Key(12f, 3f) };
+        var curve = new TimingCurve(keys, loop: false, period: 0f);
+
+        const double eps = 1e-4;
+        var speedBefore = (curve.PositionAt(1.0) - curve.PositionAt(1.0 - eps)) / eps;
+        var speedAfter = (curve.PositionAt(1.0 + eps) - curve.PositionAt(1.0)) / eps;
+
+        Assert.Equal(speedBefore, speedAfter, 3);
+    }
+
+    [Fact]
+    public void LoopSeamStaysContinuousWithLopsidedFirstAndLastLegs()
+    {
+        // First leg 1s, last leg 2s: the two seam tangents are clamped against different
+        // deltas, so the min-reconciliation in BuildTangents actually has to run.
+        var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(8f, 2f), Key(10f, 3f) };
+        var curve = new TimingCurve(keys, loop: true, period: 3f);
+
+        const double eps = 1e-4;
+        var speedBefore = (curve.PositionAt(curve.Duration - eps) - curve.PositionAt(curve.Duration - 3 * eps)) / (2 * eps);
+        var speedAfter = (curve.PositionAt(3 * eps) - curve.PositionAt(eps)) / (2 * eps);
+
+        Assert.True(Math.Abs(speedBefore - speedAfter) < 0.01, $"seam speed mismatch: before {speedBefore}, after {speedAfter}");
+    }
+
+    [Fact]
+    public void LoopConstructorThrowsWhenFirstKeyIsNotAtTimeZero()
+    {
+        var keys = new[] { Key(1f, 0f), Key(2f, 1f), Key(3f, 2f) };
+        Assert.Throws<ArgumentException>(() => new TimingCurve(keys, loop: true, period: 2f));
+    }
+
+    [Fact]
+    public void LoopConstructorThrowsWhenClosingKeyDoesNotMatchPeriod()
+    {
+        var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(2f, 2f) };
+        Assert.Throws<ArgumentException>(() => new TimingCurve(keys, loop: true, period: 5f));
+    }
+
+    [Fact]
     public void LoopWrapsElapsedTimeModuloDuration()
     {
         var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(2f, 2f) };

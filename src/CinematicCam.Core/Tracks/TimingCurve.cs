@@ -6,8 +6,8 @@ public sealed class TimingCurve
     /// <summary>Below this, a secant is treated as a hold rather than divided by.</summary>
     private const float SecantEpsilon = 1e-6f;
 
-    /// <summary>Fritsch-Carlson monotonicity bound on a Hermite interval's tangent ratios.</summary>
-    private const float MonotoneBoundSquared = 9f;
+    /// <summary>Fritsch-Carlson monotonicity bound on a single tangent-to-secant ratio.</summary>
+    private const float MonotoneBound = 3f;
 
     private readonly IReadOnlyList<TimingKey> _keys;
     private readonly bool _loop;
@@ -17,10 +17,10 @@ public sealed class TimingCurve
     /// <summary>Total shot length: the last key's time, 0 with no keys.</summary>
     public double Duration { get; }
 
-    /// <summary>Builds the curve through <paramref name="keys"/>; <paramref name="period"/> is the loop's control-point span (unused for an open track).</summary>
+    /// <summary>Builds the curve through <paramref name="keys"/>; for a loop, <paramref name="period"/> is the control-point span the closing key must land on (ignored for an open track).</summary>
     public TimingCurve(IReadOnlyList<TimingKey> keys, bool loop, float period)
     {
-        Validate(keys);
+        Validate(keys, loop, period);
         _keys = keys;
         _loop = loop;
         Duration = keys.Count == 0 ? 0.0 : keys[^1].Time;
@@ -170,25 +170,17 @@ public sealed class TimingCurve
         return (w1 + w2) / ((w1 / deltaPrev) + (w2 / deltaNext));
     }
 
-    /// <summary>Fritsch-Carlson limit on an interval's tangent pair so its cubic stays monotone; a zero secant zeroes both.</summary>
+    /// <summary>Clamps an interval's tangent pair to the [0,3] square per ratio so its cubic stays monotone; a zero secant zeroes both.</summary>
     private static (float M0, float M1) ClampPair(float m0, float m1, float delta)
     {
         if (delta <= SecantEpsilon) return (0f, 0f);
 
-        var a = MathF.Max(m0 / delta, 0f);
-        var b = MathF.Max(m1 / delta, 0f);
-        var sumSquares = (a * a) + (b * b);
-        if (sumSquares > MonotoneBoundSquared)
-        {
-            var tau = MathF.Sqrt(MonotoneBoundSquared / sumSquares);
-            a *= tau;
-            b *= tau;
-        }
-
+        var a = Math.Clamp(m0 / delta, 0f, MonotoneBound);
+        var b = Math.Clamp(m1 / delta, 0f, MonotoneBound);
         return (a * delta, b * delta);
     }
 
-    private static void Validate(IReadOnlyList<TimingKey> keys)
+    private static void Validate(IReadOnlyList<TimingKey> keys, bool loop, float period)
     {
         for (var i = 1; i < keys.Count; i++)
         {
@@ -197,5 +189,12 @@ public sealed class TimingCurve
             if (keys[i].Position < keys[i - 1].Position)
                 throw new ArgumentException("timing key positions must not decrease", nameof(keys));
         }
+
+        if (!loop || keys.Count == 0) return;
+
+        if (keys[0].Time != 0f)
+            throw new ArgumentException("a looping curve's first key must be at time 0", nameof(keys));
+        if (MathF.Abs((keys[^1].Position - keys[0].Position) - period) > 1e-4f)
+            throw new ArgumentException("a looping curve's closing key must sit at the first key's position plus period", nameof(keys));
     }
 }
