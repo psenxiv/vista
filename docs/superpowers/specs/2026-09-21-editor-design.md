@@ -41,8 +41,9 @@ Layout revised by the user on 2026-09-22 after using the first build:
 
 - **Top row:** the **mode drop-down** (Off, Edit, Live), then the **Add split
   button**, then **Undo** and **Redo** icons. The mode drop-down replaces the Mode
-  text and the Edit and Release buttons: Live plays the shot as Play did, and Off
-  releases the camera.
+  text and the Edit and Release buttons, and Off releases the camera. Live cues the
+  shot: the camera goes to its start, paused, with the game UI and the windows still
+  shown, and Play starts it (changed 2026-09-22; Live used to play at once).
 - **Play/Pause and Restart icons** sit at the left of the scrub bar (moved there
   2026-09-22). Play/Pause shows Pause while the shot is playing and Play otherwise;
   Play from Edit or Off goes live. Every icon has a tooltip naming it.
@@ -226,6 +227,10 @@ These operations assume one timing key per point, which is all 2c-1 can produce.
 A track with keys between points is refused with a plain message; 2c-2 revisits
 this.
 
+Every key the editor makes is `Auto`, so pace blends between legs of different speeds
+and eases into and out of holds. Choosing linear or eased timing waits for 2c-2
+(decided 2026-09-22).
+
 ## Undo
 
 - Every track change is one step: add, overwrite, delete, reorder, gizmo drag,
@@ -368,6 +373,17 @@ The follow-ups passed in game the same day: deselecting, larger markers, aim
 arrows, gimbal rings, Ctrl + Alt + backtick, and leg and hold edits applying on close
 and before mode changes. A click on the game's own HUD deselects, and the user
 accepted that.
+
+## Part 2b results (2026-09-22)
+
+In game, every check in the Part 2b checklist passed with no notes: the track
+editor and Point window layouts, the mode drop-down, playback icons, Add menu,
+field clamping, row delete, reorder, jumps, scrub while editing and live, live
+point fields with one undo step per drag, copy and paste, axis colours and up
+arrows. `dalamud.log` shows no warnings or errors from the plugin. Changes asked
+for: Live cues the shot paused at its start instead of playing, and the three
+decisions of 2026-09-22 (scrub head from Live, up arrows in both aim modes,
+deleting another point keeps the selection).
 
 ## Open issues
 
