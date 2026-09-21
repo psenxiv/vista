@@ -1,5 +1,6 @@
 using System.Numerics;
 using CinematicCam.Plugin.Game;
+using CinematicCam.Plugin.Session;
 using CinematicCam.Plugin.Ui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;

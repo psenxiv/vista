@@ -1,4 +1,5 @@
-using CinematicCam.Core;
+using CinematicCam.Core.Tracks;
+using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Windowing;

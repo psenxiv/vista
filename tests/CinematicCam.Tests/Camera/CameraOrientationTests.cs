@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core;
+using CinematicCam.Core.Camera;
 using Xunit;
 
-namespace CinematicCam.Tests;
+namespace CinematicCam.Tests.Camera;
 
 public class CameraOrientationTests
 {

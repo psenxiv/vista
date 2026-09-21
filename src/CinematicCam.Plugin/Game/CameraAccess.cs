@@ -1,5 +1,5 @@
 using System.Numerics;
-using CinematicCam.Core;
+using CinematicCam.Core.Camera;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 

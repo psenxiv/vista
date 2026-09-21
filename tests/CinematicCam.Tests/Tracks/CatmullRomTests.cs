@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core;
+using CinematicCam.Core.Tracks;
 using Xunit;
 
-namespace CinematicCam.Tests;
+namespace CinematicCam.Tests.Tracks;
 
 public class CatmullRomTests
 {

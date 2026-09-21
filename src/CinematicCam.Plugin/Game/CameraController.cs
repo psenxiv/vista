@@ -1,4 +1,4 @@
-using CinematicCam.Core;
+using CinematicCam.Core.Camera;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game;
 

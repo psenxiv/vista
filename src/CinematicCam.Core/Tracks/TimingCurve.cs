@@ -1,4 +1,4 @@
-namespace CinematicCam.Core;
+namespace CinematicCam.Core.Tracks;
 
 /// <summary>Maps elapsed time to a place on the path, in control-point units, via a monotone cubic Hermite curve.</summary>
 public sealed class TimingCurve

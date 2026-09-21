@@ -1,5 +1,5 @@
 using System.Numerics;
-using CinematicCam.Core;
+using CinematicCam.Core.Camera;
 using Dalamud.Game.ClientState.Keys;
 using FFXIVClientStructs.FFXIV.Client.UI;
 

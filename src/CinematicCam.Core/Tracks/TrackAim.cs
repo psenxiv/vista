@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core;
+namespace CinematicCam.Core.Tracks;
 
 /// <summary>Where a playing camera looks: the recorded aim at each point, or the direction of travel.</summary>
 public static class TrackAim

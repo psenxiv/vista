@@ -1,4 +1,6 @@
-namespace CinematicCam.Core;
+using CinematicCam.Core.Camera;
+
+namespace CinematicCam.Core.Tracks;
 
 /// <summary>Holds live mode and the shot on program; each tick says where the camera goes, or null to leave it be.</summary>
 public sealed class Director

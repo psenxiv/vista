@@ -1,4 +1,4 @@
-namespace CinematicCam.Plugin;
+namespace CinematicCam.Plugin.Session;
 
 /// <summary>What the plugin is doing with the camera. Exactly one at a time.</summary>
 internal enum CameraMode

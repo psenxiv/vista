@@ -1,7 +1,8 @@
-using CinematicCam.Core;
+using CinematicCam.Core.Camera;
+using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Game;
 
-namespace CinematicCam.Plugin;
+namespace CinematicCam.Plugin.Session;
 
 /// <summary>The plugin's mode, the track being built, and the camera source that follows the mode.</summary>
 internal sealed class CameraSession

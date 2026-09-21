@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core;
+namespace CinematicCam.Core.Camera;
 
 /// <summary>Free camera movement maths.</summary>
 public static class FreeCamMotion

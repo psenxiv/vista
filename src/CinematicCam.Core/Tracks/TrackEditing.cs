@@ -1,4 +1,4 @@
-namespace CinematicCam.Core;
+namespace CinematicCam.Core.Tracks;
 
 /// <summary>Builds a track's timing keys from control points, legs and holds, without exposing tangents.</summary>
 public static class TrackEditing

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core;
+namespace CinematicCam.Core.Tracks;
 
 /// <summary>Centripetal Catmull-Rom spline through a track's control points. The path is always open.</summary>
 public static class CatmullRom
