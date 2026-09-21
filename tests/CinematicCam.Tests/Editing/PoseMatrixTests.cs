@@ -35,6 +35,31 @@ public class PoseMatrixTests
         Assert.Equal(roll, r, 4);
     }
 
+    public static IEnumerable<object[]> YawsNearThePiWrap()
+    {
+        yield return new object[] { MathF.PI };
+        yield return new object[] { -MathF.PI + 1e-3f };
+        yield return new object[] { MathF.PI - 1e-3f };
+    }
+
+    [Theory]
+    [MemberData(nameof(YawsNearThePiWrap))]
+    public void ToPoseInvertsFromAcrossTheYawWrap(float yaw)
+    {
+        const float pitch = 0.3f;
+        const float roll = 0.4f;
+        var position = new Vector3(-5f, 7f, 11f);
+        var (p, y, pi, r) = PoseMatrix.ToPose(PoseMatrix.From(position, yaw, pitch, roll));
+
+        Assert.Equal(position, p);
+        Assert.True(MathF.Abs(WrappedDifference(yaw, y)) < 1e-4f);
+        Assert.True(MathF.Abs(WrappedDifference(pitch, pi)) < 1e-4f);
+        Assert.True(MathF.Abs(WrappedDifference(roll, r)) < 1e-4f);
+    }
+
+    private static float WrappedDifference(float expected, float actual)
+        => MathF.IEEERemainder(expected - actual, MathF.Tau);
+
     [Fact]
     public void ToPoseIgnoresScaleAndClampsPitch()
     {

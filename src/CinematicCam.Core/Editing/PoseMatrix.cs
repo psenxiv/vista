@@ -7,6 +7,7 @@ namespace CinematicCam.Core.Editing;
 /// <summary>Converts a camera pose to and from the matrix a gizmo edits: rows right, up, backward, then translation.</summary>
 public static class PoseMatrix
 {
+    /// <summary>The gizmo matrix for a camera pose.</summary>
     public static Matrix4x4 From(Vector3 position, float yaw, float pitch, float roll)
     {
         var forward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
@@ -21,6 +22,7 @@ public static class PoseMatrix
             position.X, position.Y, position.Z, 1f);
     }
 
+    /// <summary>The camera pose a gizmo matrix describes, with pitch clamped to <see cref="TrackAim.PitchLimit"/>.</summary>
     public static (Vector3 Position, float Yaw, float Pitch, float Roll) ToPose(Matrix4x4 matrix)
     {
         var position = new Vector3(matrix.M41, matrix.M42, matrix.M43);
