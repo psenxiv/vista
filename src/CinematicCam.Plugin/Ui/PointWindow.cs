@@ -16,19 +16,20 @@ namespace CinematicCam.Plugin.Ui;
 internal sealed class PointWindow : Window
 {
     private const float FieldWidth = 70f;
+    private const float PositionSpeed = 0.02f;
+    private const float AngleSpeed = 0.25f;
+    private const float FovSpeed = 0.1f;
 
     private readonly CameraSession session;
     private readonly PointGizmo gizmo;
-    private readonly PendingField fields;
     private int? shown;
     private float fieldsWidth;
 
-    public PointWindow(CameraSession session, PointGizmo gizmo, PendingField fields)
+    public PointWindow(CameraSession session, PointGizmo gizmo)
         : base("Point###ccam-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.session = session;
         this.gizmo = gizmo;
-        this.fields = fields;
         RespectCloseHotkey = false;
         ShowCloseButton = false;
     }
@@ -37,14 +38,14 @@ internal sealed class PointWindow : Window
     public override void PreOpenCheck()
     {
         var selected = session.Mode == CameraMode.Editing ? session.Selected : null;
-        if (selected != shown) fields.Commit();
+        if (selected != shown) session.EndPointEdit();
         shown = selected;
         IsOpen = selected is not null;
         if (selected is { } index) WindowName = $"Point {index + 1}###ccam-point";
     }
 
-    /// <summary>Applies an unfinished field edit, since a closed window never reports the field losing focus.</summary>
-    public override void OnClose() => fields.Commit();
+    /// <summary>Ends a drag in progress, since a closed window never reports the field letting go.</summary>
+    public override void OnClose() => session.EndPointEdit();
 
     public override void Draw()
     {
@@ -64,7 +65,6 @@ internal sealed class PointWindow : Window
         ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + fieldsWidth - IconButton.Width(FontAwesomeIcon.Trash)));
         if (IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point"))
         {
-            fields.Clear();
             Report(session.DeleteSelected());
             return;
         }
@@ -73,39 +73,39 @@ internal sealed class PointWindow : Window
         if (!ImGui.BeginTable("point-fields", 6, ImGuiTableFlags.SizingFixedFit)) return;
 
         ImGui.TableNextRow();
-        Field("X", $"x{index}", point.Position.X, "%.1f", v => Edit(index, p => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } }));
-        Field("Y", $"y{index}", point.Position.Y, "%.1f", v => Edit(index, p => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } }));
-        Field("Z", $"z{index}", point.Position.Z, "%.1f", v => Edit(index, p => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } }));
+        Field("X", $"x{index}", index, point.Position.X, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
+        Field("Y", $"y{index}", index, point.Position.Y, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
+        Field("Z", $"z{index}", index, point.Position.Z, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
 
         ImGui.TableNextRow();
         ImGui.BeginDisabled(session.Track.Aim == AimMode.PathTangent);
-        Field("Yaw", $"yaw{index}", Degrees(EditLimits.Angle(point.Yaw)), "%.1f°", v => Edit(index, p => p with { Yaw = EditLimits.Angle(Radians(v)) }));
-        Field("Pitch", $"pitch{index}", Degrees(point.Pitch), "%.1f°", v => Edit(index, p => p with { Pitch = EditLimits.Pitch(Radians(v)) }));
+        Field("Yaw", $"yaw{index}", index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
+        Field("Pitch", $"pitch{index}", index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
         ImGui.EndDisabled();
 
         ImGui.TableNextRow();
-        Field("Roll", $"roll{index}", Degrees(EditLimits.Angle(point.Roll)), "%.1f°", v => Edit(index, p => p with { Roll = EditLimits.Angle(Radians(v)) }));
-        Field("FoV", $"fov{index}", Degrees(point.Fov), "%.1f°", v => Edit(index, p => p with { Fov = ClampFov(Radians(v), p.Fov) }));
+        Field("Roll", $"roll{index}", index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
+        Field("FoV", $"fov{index}", index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = ClampFov(Radians(v), p.Fov) });
 
         ImGui.EndTable();
         fieldsWidth = ImGui.GetItemRectSize().X;
     }
 
-    /// <summary>A label and its number field, as two cells of the field grid.</summary>
-    private void Field(string label, string id, float value, string format, Action<float> apply)
+    /// <summary>A label and a drag field, as two cells of the grid: dragging moves the point live, and each drag is one undo step.</summary>
+    private void Field(string label, string id, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
     {
         ImGui.TableNextColumn();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(label);
         ImGui.TableNextColumn();
-        fields.Draw(id, value, format, FieldWidth, apply);
-    }
+        ImGui.SetNextItemWidth(FieldWidth);
 
-    /// <summary>Replaces point <paramref name="index"/> with <paramref name="change"/> applied to it as it is now.</summary>
-    private void Edit(int index, Func<ControlPoint, ControlPoint> change)
-    {
-        if (index >= session.Track.Points.Count) return;
-        Report(session.ReplacePoint(index, change(session.Track.Points[index])));
+        var edited = value;
+        var changed = ImGui.DragFloat($"##{id}", ref edited, speed, 0f, 0f, format);
+        if (ImGui.IsItemActivated()) session.BeginPointEdit();
+        // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
+        if (changed && index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
+        if (ImGui.IsItemDeactivated()) session.EndPointEdit();
     }
 
     /// <summary>A field of view within the game's range, or <paramref name="current"/> when the range cannot be read.</summary>

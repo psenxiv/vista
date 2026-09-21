@@ -17,6 +17,7 @@ public sealed class SessionState
     private TrackEvaluator? evaluator;
     private double scrubTime;
     private bool resumeAfterScrub;
+    private EditSnapshot? pointEditStart;
 
     public CameraMode Mode { get; private set; }
 
@@ -68,6 +69,7 @@ public sealed class SessionState
     {
         if (Track.Points.Count == 0) return PlayOutcome.Refused;
         Scrubbing = false;
+        EndPointEdit();
 
         Director.GoLive(new TrackShot(Track));
         var fromOff = Mode == CameraMode.Off;
@@ -88,6 +90,7 @@ public sealed class SessionState
     {
         if (Mode == CameraMode.Off) return false;
         Scrubbing = false;
+        EndPointEdit();
         Director.GoOffline();
         Mode = CameraMode.Off;
         return true;
@@ -152,16 +155,54 @@ public sealed class SessionState
     }
 
     /// <summary>Restores the track and selection before the last change. Returns false if nothing was undone.</summary>
-    public bool Undo() => Restore(Mode == CameraMode.Editing ? history.Undo(Current) : null);
+    public bool Undo()
+    {
+        EndPointEdit();
+        return Restore(Mode == CameraMode.Editing ? history.Undo(Current) : null);
+    }
 
     /// <summary>Re-applies the last undone change. Returns false if nothing was redone.</summary>
-    public bool Redo() => Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
+    public bool Redo()
+    {
+        EndPointEdit();
+        return Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
+    }
+
+    /// <summary>Starts a live edit of a point: previews change the track at once and end as one undo step. Editing only.</summary>
+    public void BeginPointEdit()
+    {
+        if (Mode == CameraMode.Editing && pointEditStart is null) pointEditStart = Current;
+    }
+
+    /// <summary>Replaces point <paramref name="index"/> during a live edit without recording a step. Returns why it was refused, or null.</summary>
+    public string? PreviewPoint(int index, ControlPoint point)
+    {
+        if (pointEditStart is null) return "No point edit is in progress.";
+        try
+        {
+            Track = TrackEditing.Replace(Track, index, point);
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    /// <summary>Ends a live edit, recording it as one undo step if the track changed.</summary>
+    public void EndPointEdit()
+    {
+        if (pointEditStart is not { } start) return;
+        pointEditStart = null;
+        if (!ReferenceEquals(start.Track, Track)) history.Record(start);
+    }
 
     private EditSnapshot Current => new(Track, Selected);
 
     private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter)
     {
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
+        EndPointEdit();
 
         try
         {

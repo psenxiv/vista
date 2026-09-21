@@ -340,4 +340,62 @@ public class SessionEditingTests
         state.ChangeTrack(_ => TrackEditing.Empty());
         Assert.Equal(0.0, state.ScrubHead);
     }
+
+    [Fact]
+    public void ALivePointEditIsOneUndoStep()
+    {
+        var state = Editing();
+        var original = state.Track.Points[1];
+        state.BeginPointEdit();
+        Assert.Null(state.PreviewPoint(1, Point(11f)));
+        Assert.Null(state.PreviewPoint(1, Point(12f)));
+        Assert.Equal(12f, state.Track.Points[1].Position.X);
+        state.EndPointEdit();
+
+        Assert.True(state.Undo());
+        Assert.Equal(original, state.Track.Points[1]);
+        Assert.Equal(3, state.Track.Points.Count);
+        Assert.True(state.CanRedo);
+    }
+
+    [Fact]
+    public void AnUnchangedLivePointEditRecordsNoStep()
+    {
+        var state = Editing();
+        state.BeginPointEdit();
+        state.EndPointEdit();
+        state.Undo();
+        Assert.Equal(2, state.Track.Points.Count);
+    }
+
+    [Fact]
+    public void PreviewingWithoutALiveEditIsRefused()
+    {
+        var state = Editing();
+        Assert.NotNull(state.PreviewPoint(1, Point(99f)));
+        Assert.Equal(10f, state.Track.Points[1].Position.X);
+    }
+
+    [Fact]
+    public void UndoInTheMiddleOfALiveEditRevertsIt()
+    {
+        var state = Editing();
+        state.BeginPointEdit();
+        state.PreviewPoint(1, Point(11f));
+        Assert.True(state.Undo());
+        Assert.Equal(10f, state.Track.Points[1].Position.X);
+        Assert.NotNull(state.PreviewPoint(1, Point(12f)));
+    }
+
+    [Fact]
+    public void AModeChangeEndsALiveEditAsAStep()
+    {
+        var state = Editing();
+        state.BeginPointEdit();
+        state.PreviewPoint(1, Point(11f));
+        state.Play();
+        state.Edit();
+        Assert.True(state.Undo());
+        Assert.Equal(10f, state.Track.Points[1].Position.X);
+    }
 }

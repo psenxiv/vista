@@ -57,7 +57,7 @@ public sealed class Plugin : IDalamudPlugin
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
         trackEditor = new TrackEditorWindow(Session, fields);
         windows.AddWindow(trackEditor);
-        pointWindow = new PointWindow(Session, pointGizmo, fields);
+        pointWindow = new PointWindow(Session, pointGizmo);
         windows.AddWindow(pointWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
