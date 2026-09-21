@@ -16,7 +16,7 @@ internal sealed class TestWindow : Window
 
     private readonly CameraSession session;
     private string? error;
-    private (string Id, float Value)? pending;
+    private (string Id, float Value, Func<Track, float, Track> Set)? pending;
     private CameraMode lastMode;
 
     public TestWindow(CameraSession session)
@@ -25,6 +25,9 @@ internal sealed class TestWindow : Window
         this.session = session;
         RespectCloseHotkey = false;
     }
+
+    /// <summary>Applies an unfinished field edit, since a closed window never reports the field losing focus.</summary>
+    public override void OnClose() => CommitPending();
 
     public override void Draw()
     {
@@ -50,25 +53,25 @@ internal sealed class TestWindow : Window
         ImGui.TextUnformatted($"Mode: {session.Mode}");
 
         ImGui.SameLine();
-        if (ImGui.Button("Edit")) { error = null; session.Edit(); }
+        if (ImGui.Button("Edit")) { error = null; CommitPending(); session.Edit(); }
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (ImGui.Button("Play")) { error = null; session.Play(); }
+        if (ImGui.Button("Play")) { error = null; CommitPending(); session.Play(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Mode != CameraMode.Live);
-        if (ImGui.Button("Restart")) { error = null; session.Restart(); }
+        if (ImGui.Button("Restart")) { error = null; CommitPending(); session.Restart(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Mode != CameraMode.Live || session.Director.IsPaused);
-        if (ImGui.Button("Stop")) { error = null; session.Stop(); }
+        if (ImGui.Button("Stop")) { error = null; CommitPending(); session.Stop(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        if (ImGui.Button("Release")) { error = null; session.Release("window"); }
+        if (ImGui.Button("Release")) { error = null; CommitPending(); session.Release("window"); }
 
         var speed = session.Speed;
         var step = speed.Index;
@@ -123,7 +126,7 @@ internal sealed class TestWindow : Window
             ImGui.TableNextRow();
 
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted($"{index}");
+            ImGui.TextUnformatted($"{index + 1}");
 
             ImGui.TableNextColumn();
             if (index == 0) ImGui.TextUnformatted("-");
@@ -141,13 +144,17 @@ internal sealed class TestWindow : Window
     {
         var value = pending is { } p && p.Id == id ? p.Value : current;
         ImGui.SetNextItemWidth(70f);
-        if (ImGui.InputFloat($"##{id}", ref value, 0f, 0f, "%.1f")) pending = (id, value);
+        if (ImGui.InputFloat($"##{id}", ref value, 0f, 0f, "%.1f")) pending = (id, value, set);
 
-        if (ImGui.IsItemDeactivatedAfterEdit() && pending is { } done && done.Id == id)
-        {
-            pending = null;
-            error = session.ChangeTrack(t => set(t, done.Value));
-        }
+        if (pending is { } done && done.Id == id && !ImGui.IsItemActive()) CommitPending();
+    }
+
+    /// <summary>Applies the field edit waiting for its field to lose focus, if any.</summary>
+    private void CommitPending()
+    {
+        if (pending is not { } p) return;
+        pending = null;
+        error = session.ChangeTrack(t => p.Set(t, p.Value));
     }
 
     private void DrawStatus()
