@@ -46,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AimProbe aimProbe = new();
     private readonly InputProbe inputProbe = new();
     private readonly EditorKeys editorKeys = new();
+    private readonly EditorLayer editorLayer;
 
     public Plugin()
     {
@@ -56,6 +57,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
+        editorLayer = new EditorLayer(Session);
         testWindow = new TestWindow(Session);
         windows.AddWindow(testWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -170,6 +172,7 @@ public sealed class Plugin : IDalamudPlugin
             wheel = 0f;
         }
 
+        editorLayer.Draw();
         gizmoProbe.Draw(Session.LastFrame);
         inputProbe.Draw(Session.Mode);
         windows.Draw();
