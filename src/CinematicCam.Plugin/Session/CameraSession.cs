@@ -60,6 +60,7 @@ internal sealed class CameraSession
         }
 
         Mode = CameraMode.Editing;
+        GameUi.Restore();
         Plugin.Log.Information("[ccam] mode: editing");
     }
 
@@ -69,6 +70,7 @@ internal sealed class CameraSession
         if (Mode == CameraMode.Live && director.IsPaused && !director.IsFinished)
         {
             director.Resume();
+            GameUi.Hide();
             Plugin.Log.Information("[ccam] resumed");
             return;
         }
@@ -91,6 +93,7 @@ internal sealed class CameraSession
 
         freeCam.Disable();
         Mode = CameraMode.Live;
+        GameUi.Hide();
         Plugin.Log.Information("[ccam] mode: live, {Count} points", Track.Points.Count);
     }
 
@@ -110,6 +113,7 @@ internal sealed class CameraSession
         director.GoOffline();
         freeCam.Disable();
         Mode = CameraMode.Off;
+        GameUi.Restore();
         movement.Release();
         TestState = null;
         lastFrame = null;
