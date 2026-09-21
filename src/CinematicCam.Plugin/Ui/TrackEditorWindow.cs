@@ -107,7 +107,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.SameLine();
     }
 
-    /// <summary>Off, Edit and Live; Off releases the camera and Live plays the shot.</summary>
+    /// <summary>Off, Edit and Live; Off releases the camera and Live cues the shot paused at its start.</summary>
     private void DrawModeCombo()
     {
         var current = session.Mode switch { CameraMode.Editing => 1, CameraMode.Live => 2, _ => 0 };
@@ -117,7 +117,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
         if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Edit(); }
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Play(); }
+        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Cue(); }
         ImGui.EndDisabled();
         ImGui.EndCombo();
     }
@@ -249,8 +249,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (IconButton.Draw($"delete{index}", FontAwesomeIcon.Trash, "Delete point"))
         {
             fields.Clear();
-            session.Select(index);
-            Report(session.DeleteSelected());
+            Report(session.DeletePoint(index));
         }
 
         ImGui.EndDisabled();

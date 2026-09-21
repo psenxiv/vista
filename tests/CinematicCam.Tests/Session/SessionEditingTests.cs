@@ -105,6 +105,49 @@ public class SessionEditingTests
     }
 
     [Theory]
+    [InlineData(1, 0, 0)] // a point before it
+    [InlineData(1, 2, 1)] // a point after it
+    [InlineData(1, 1, null)] // the selected point itself
+    [InlineData(null, 1, null)] // nothing selected
+    public void DeletePointKeepsTheSelectionOnTheSamePoint(int? selected, int index, int? expected)
+    {
+        var state = Editing();
+        state.Select(selected);
+        Assert.Null(state.DeletePoint(index));
+        Assert.Equal(2, state.Track.Points.Count);
+        Assert.Equal(expected, state.Selected);
+    }
+
+    [Fact]
+    public void UndoingADeleteRestoresTheSelection()
+    {
+        var state = Editing();
+        state.Select(2);
+        state.DeletePoint(0);
+        Assert.True(state.Undo());
+        Assert.Equal(3, state.Track.Points.Count);
+        Assert.Equal(2, state.Selected);
+    }
+
+    [Fact]
+    public void DeletePointOutOfRangeIsRefused()
+    {
+        var state = Editing();
+        Assert.NotNull(state.DeletePoint(3));
+        Assert.Equal(3, state.Track.Points.Count);
+    }
+
+    [Fact]
+    public void EditFromLiveMovesTheScrubHeadToThePlaybackTime()
+    {
+        var state = Editing();
+        state.Play();
+        state.Director.Tick(2f);
+        state.Edit();
+        Assert.Equal(2.0, state.ScrubHead, 5);
+    }
+
+    [Theory]
     [InlineData(1, 1, 3, 3)] // the selected point itself moves
     [InlineData(1, 0, 2, 0)] // a point before it moves past it
     [InlineData(1, 3, 0, 2)] // a point after it moves before it

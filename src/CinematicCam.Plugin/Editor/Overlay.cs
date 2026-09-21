@@ -20,6 +20,8 @@ internal sealed class Overlay
 
     private IReadOnlyList<ControlPoint>? sampledPoints;
     private IReadOnlyList<Vector3> samples = [];
+    private Track? evaluatedTrack;
+    private TrackEvaluator? evaluator;
 
     /// <summary>Draws <paramref name="track"/> and returns each marker's absolute screen position, null when off screen.</summary>
     public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, int? selected)
@@ -27,6 +29,7 @@ internal sealed class Overlay
         var list = ImGui.GetBackgroundDrawList();
         DrawPath(list, view, track);
         if (track.Aim == AimMode.AimKeys) DrawAimArrows(list, view, track);
+        else DrawTravelUpArrows(list, view, track);
         return DrawMarkers(list, view, track, selected);
     }
 
@@ -53,6 +56,25 @@ internal sealed class Overlay
             var up = Vector3.Normalize(CameraOrientation.UpFor(Vector3.Zero, forward, point.Roll));
             DrawArrow(list, view, point.Position, point.Position + (forward * AimLength), EditorColours.AimLine);
             DrawArrow(list, view, point.Position, point.Position + (up * UpLength), EditorColours.UpLine);
+        }
+    }
+
+    /// <summary>Up arrows around the path's direction at each point, for Direction-of-travel mode.</summary>
+    private void DrawTravelUpArrows(ImDrawListPtr list, EditorView view, Track track)
+    {
+        if (!ReferenceEquals(evaluatedTrack, track))
+        {
+            evaluator = new TrackEvaluator(track);
+            evaluatedTrack = track;
+        }
+
+        for (var i = 0; i < track.Points.Count; i++)
+        {
+            if (evaluator!.Evaluate(TrackEditing.PointSeconds(track, i)) is not { } frame) continue;
+            var forward = Vector3.Normalize(frame.LookAt - frame.Position);
+            var up = Vector3.Normalize(CameraOrientation.UpFor(Vector3.Zero, forward, frame.Roll));
+            var position = track.Points[i].Position;
+            DrawArrow(list, view, position, position + (up * UpLength), EditorColours.UpLine);
         }
     }
 

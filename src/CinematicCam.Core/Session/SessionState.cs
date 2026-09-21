@@ -6,8 +6,8 @@ namespace CinematicCam.Core.Session;
 /// <summary>How <see cref="SessionState.Edit"/> changed the mode.</summary>
 public enum EditOutcome { Unchanged, FromOff, FromLive }
 
-/// <summary>What <see cref="SessionState.Play"/> or <see cref="SessionState.Restart"/> did.</summary>
-public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff }
+/// <summary>What <see cref="SessionState.Play"/>, <see cref="SessionState.Restart"/> or <see cref="SessionState.Cue"/> did.</summary>
+public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff, Cued, CuedFromOff }
 
 /// <summary>The mode, the Director and the track, and the rules for moving between modes.</summary>
 public sealed class SessionState
@@ -41,6 +41,7 @@ public sealed class SessionState
                 return EditOutcome.Unchanged;
             case CameraMode.Live:
                 Scrubbing = false;
+                scrubTime = Math.Clamp(Director.Elapsed, 0.0, Duration);
                 Director.GoOffline();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
@@ -75,6 +76,15 @@ public sealed class SessionState
         var fromOff = Mode == CameraMode.Off;
         Mode = CameraMode.Live;
         return fromOff ? PlayOutcome.StartedFromOff : PlayOutcome.Started;
+    }
+
+    /// <summary>Goes live with the track paused at its start. Refused with no points.</summary>
+    public PlayOutcome Cue()
+    {
+        var outcome = Restart();
+        if (outcome == PlayOutcome.Refused) return outcome;
+        Director.Pause();
+        return outcome == PlayOutcome.StartedFromOff ? PlayOutcome.CuedFromOff : PlayOutcome.Cued;
     }
 
     /// <summary>Holds the current frame and stays live. Returns false unless live.</summary>
@@ -143,8 +153,15 @@ public sealed class SessionState
     public string? DeleteSelected()
     {
         if (SelectionRefusal() is { } refusal) return refusal;
-        var s = Selected!.Value;
-        return Apply(t => TrackEditing.Delete(t, s), _ => null);
+        return DeletePoint(Selected!.Value);
+    }
+
+    /// <summary>Deletes point <paramref name="index"/>; any other selected point stays selected.</summary>
+    public string? DeletePoint(int index)
+    {
+        if (index < 0 || index >= Track.Points.Count) return "There is no such point.";
+        var selected = Selected;
+        return Apply(t => TrackEditing.Delete(t, index), _ => selected is { } s && s != index ? (s > index ? s - 1 : s) : null);
     }
 
     /// <summary>Moves a point in the order; the selection stays on the same point.</summary>

@@ -66,6 +66,9 @@ internal sealed class CameraSession
     /// <summary>Goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
     public void Restart() => Apply(state.Restart());
 
+    /// <summary>Goes live paused at the track's start, leaving the UI shown. Refused with no points.</summary>
+    public void Cue() => Apply(state.Cue());
+
     /// <summary>Holds the current frame and stays live. No effect unless live.</summary>
     public void Stop()
     {
@@ -164,6 +167,9 @@ internal sealed class CameraSession
     /// <summary>Deletes the selected point. Returns why it was refused, or null.</summary>
     public string? DeleteSelected() => state.DeleteSelected();
 
+    /// <summary>Deletes point <paramref name="index"/>, keeping any other selection. Returns why it was refused, or null.</summary>
+    public string? DeletePoint(int index) => state.DeletePoint(index);
+
     /// <summary>Moves a point in the order. Returns why it was refused, or null.</summary>
     public string? MovePoint(int from, int to) => state.MovePoint(from, to);
 
@@ -222,13 +228,19 @@ internal sealed class CameraSession
                 GameUi.Hide();
                 Plugin.Log.Information("[ccam] resumed");
                 return;
-            case PlayOutcome.StartedFromOff:
+            case PlayOutcome.StartedFromOff or PlayOutcome.CuedFromOff:
                 movement.Hold();
                 TakeCamera();
                 break;
         }
 
         freeCam.Disable();
+        if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromOff)
+        {
+            Plugin.Log.Information("[ccam] mode: live, cued, {Count} points", state.Track.Points.Count);
+            return;
+        }
+
         GameUi.Hide();
         Plugin.Log.Information("[ccam] mode: live, {Count} points", state.Track.Points.Count);
     }

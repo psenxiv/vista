@@ -136,6 +136,45 @@ public class SessionStateTests
     }
 
     [Fact]
+    public void CueFromEditingGoesLivePausedAtTheStart()
+    {
+        var state = EditingWithTrack();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Equal(CameraMode.Live, state.Mode);
+        Assert.True(state.Director.IsPaused);
+        state.Director.Tick(1f);
+        Assert.Equal(0.0, state.Director.Elapsed);
+    }
+
+    [Fact]
+    public void PlayAfterCueStartsTheShot()
+    {
+        var state = EditingWithTrack();
+        state.Cue();
+        Assert.Equal(PlayOutcome.Resumed, state.Play());
+        state.Director.Tick(1f);
+        Assert.Equal(1.0, state.Director.Elapsed, 5);
+    }
+
+    [Fact]
+    public void CueFromOffSaysItCuedFromOff()
+    {
+        var state = EditingWithTrack();
+        state.Release();
+        Assert.Equal(PlayOutcome.CuedFromOff, state.Cue());
+        Assert.Equal(CameraMode.Live, state.Mode);
+    }
+
+    [Fact]
+    public void CueWithNoPointsIsRefused()
+    {
+        var state = new SessionState();
+        state.Edit();
+        Assert.Equal(PlayOutcome.Refused, state.Cue());
+        Assert.Equal(CameraMode.Editing, state.Mode);
+    }
+
+    [Fact]
     public void RestartWhileLiveStartsFromZero()
     {
         var state = Live();
