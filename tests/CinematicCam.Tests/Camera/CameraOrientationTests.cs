@@ -62,4 +62,27 @@ public class CameraOrientationTests
 
         Assert.False(float.IsNaN(up.X) || float.IsNaN(up.Y) || float.IsNaN(up.Z));
     }
+
+    [Fact]
+    public void ZeroRollMatchesTheUnrolledUp()
+    {
+        var position = new Vector3(1, 2, 3);
+        var lookAt = new Vector3(4, 3, -2);
+
+        Assert.Equal(CameraOrientation.UpFor(position, lookAt), CameraOrientation.UpFor(position, lookAt, 0f));
+    }
+
+    [Fact]
+    public void QuarterRollTurnsUpToTheSideAndKeepsItsLength()
+    {
+        var position = Vector3.Zero;
+        var lookAt = new Vector3(0, 0, -10);
+        var level = CameraOrientation.UpFor(position, lookAt);
+
+        var rolled = CameraOrientation.UpFor(position, lookAt, MathF.PI / 2f);
+
+        Assert.Equal(0f, Vector3.Dot(rolled, level), 4);
+        Assert.Equal(0f, Vector3.Dot(rolled, Vector3.Normalize(lookAt - position)), 4);
+        Assert.Equal(level.Length(), rolled.Length(), 4);
+    }
 }

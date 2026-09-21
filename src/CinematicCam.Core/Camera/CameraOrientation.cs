@@ -22,4 +22,14 @@ public static class CameraOrientation
 
         return reference - (forward * Vector3.Dot(reference, forward));
     }
+
+    /// <summary>The up vector for a view, rolled about the view direction by <paramref name="roll"/> radians.</summary>
+    public static Vector3 UpFor(Vector3 position, Vector3 lookAt, float roll)
+    {
+        var up = UpFor(position, lookAt);
+        var view = lookAt - position;
+        if (roll == 0f || view.LengthSquared() < float.Epsilon) return up;
+
+        return Vector3.Transform(up, Quaternion.CreateFromAxisAngle(Vector3.Normalize(view), roll));
+    }
 }
