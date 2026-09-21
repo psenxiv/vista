@@ -309,6 +309,7 @@ switchboard is active. Off, the editor still works and the game camera is
 untouched. It is the boundary between building shots and running them, and the
 safety switch: turning it off hands the camera back. There is one live mode;
 playing a single track is live mode with that track on program.
+Nothing can be edited while live, paused included; leave live mode to edit.
 
 ## Switchboard
 
