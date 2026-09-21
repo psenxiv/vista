@@ -9,13 +9,14 @@ See `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md` for v1 scope.
 
 ## Deferred from v1
 
-### Export / import of shows
-Tracks, snap points and a switchboard layout, exported as one portable JSON file
-so a director can build shots and hand them to operators to run.
+### Export / import
+Tracks and snap points, exported as one portable JSON file so a director can
+build shots and hand them to operators to run. Switchboard import/export is a
+separate task, decided with the switchboard.
 
 **Why deferred:** the serialisable data model ships in v1 regardless, because
 the plugin config needs it. What export adds on top is file pickers, import
-validation, version migration and zone-mismatch handling, none of which help
+validation and version migration, none of which help
 testing. As long as `CinematicCam.Core` stays free of game types, adding this
 later is a UI layer rather than a refactor.
 
@@ -38,14 +39,22 @@ as a spot over a stage.
 **Why deferred:** cut from v1 on 2026-09-21. It needs a target placed with the
 gizmo, which arrives with the editor.
 
+### Aim tracking a game entity
+A track's camera stays aimed at a character or object as it moves.
+
+**Why deferred:** not a high priority.
+
+### Anchored tracks
+Every track hangs off a movable anchor instead of the world origin. Moving the anchor carries
+all its points with it, so a track can be repositioned or reused elsewhere. A track remembers
+the map it was made on, and importing it on a different map tells the user to adjust the anchor.
+
+**Why deferred:** agreed on 2026-09-21 as the intended direction for tying tracks to a place,
+but not yet scheduled. Until then tracks record no zone.
+
 ## Under consideration
 
 Raised by the maintainer, not yet agreed as a feature.
 
 ### OBS integration
 Control the switchboard from OBS, so camera cuts can follow the stream.
-
-### Anchored tracks
-Every track hangs off a movable anchor instead of the world origin. Moving the anchor carries
-all its points with it, so a track can be repositioned or reused elsewhere. A track remembers
-the map it was made on, and importing it on a different map tells the user to adjust the anchor.

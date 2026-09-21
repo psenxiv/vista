@@ -29,13 +29,10 @@ In scope for v1:
 
 Not in scope for v1. Each entry in `FEATURES.md` records why:
 
-- Export/import of shows, and clipboard sharing.
-- Eased-move and fade-through-black transitions.
+- Export/import.
 - Aim tracking a game entity.
 - Aim locked onto a fixed point (LookAt).
-- Continuous flight recording.
 - Playlists and auto-advance.
-- Detecting or mitigating conflicts with Cammy. Treated as user error.
 
 ## Architecture
 
@@ -87,7 +84,7 @@ Two consequences follow from writing after `Update()` returns:
 ### Roles and input
 
 The plugin is in editing mode, live mode, or off. In editing mode the user directs,
-flying the free-cam to build tracks; in live mode they operate the camera and run
+flying the camera to build tracks; in live mode they operate the camera and run
 the switchboard, nothing else. In both, the character is locked in place, and
 movement keys and zoom are blocked. Chat stays usable.
 
@@ -133,9 +130,6 @@ Two rules follow, and they apply to any field added to the write set later:
    our imposed position, and that only ever happened in response to zoom input.
    Blocking the input removes the need to write the field. Prefer suppressing
    the input over overwriting the setting.
-
-`/ccam reset` restores stock values in memory as a user-facing escape hatch, but
-it cannot undo what has already been written to disk.
 
 The up vector is required, not optional. Leaving it to the game produces a
 visible roll, because the game keeps deriving it from the direction it *intends*
@@ -300,7 +294,7 @@ released" all collapse into that one rule, so exactly one place decides whether
 the game keeps its camera.
 
 A shot is a Track, a SnapPoint, or GameCamera. A SnapPoint holds position, yaw,
-pitch, roll and FoV, captured from the free-cam with one key. It stays a distinct type
+pitch, roll and FoV, captured in editing mode. It stays a distinct type
 rather than a one-point track, which keeps degenerate cases out of the spline
 code.
 
@@ -310,14 +304,18 @@ stream. The camera freezes where the track ended and the UI reports it.
 
 ### Live mode
 
-Live mode is the master toggle. On, the plugin owns the camera and the
-switchboard is active. Off, the editor still works and the game camera is
-untouched. It is the boundary between building shots and running them, and the
-safety switch: turning it off hands the camera back. There is one live mode;
+The plugin is off, editing or live. Off, the game has its camera. Editing, the
+plugin owns the camera and the user flies it to build tracks. Live, the plugin
+owns the camera and plays shots. Live is the boundary between building shots and
+running them; turning the plugin off hands the camera back. There is one live mode;
 playing a single track is live mode with that track on program.
 Nothing can be edited while live, paused included; leave live mode to edit.
 
 ## Switchboard
+
+**Provisional.** Every switchboard decision is made when phase 3 is planned. That
+phase starts by looking at how real switchers work, such as the Blackmagic ATEM
+Mini, and takes a simplified form of their switching patterns.
 
 Slots hold shots. One slot is program (live), one is preview (staged). TAKE
 makes the staged shot live and restarts it from zero.
@@ -328,14 +326,13 @@ crowd, stage, crowd — which is the common case at an event. This is a one-line
 behaviour and ships as a toggle.
 
 **Preview is armed, not visible.** There is one camera, so the staged shot
-cannot be shown without going to it. The UI displays the staged shot's name,
-start position and distance from the live camera. The naming stays honest about
-this rather than implying a monitor that cannot exist.
+cannot be shown without going to it. There is no preview monitor; switching is a
+hard cut.
 
 ### Hotkeys
 
 Bind TAKE, preview next and previous, and direct slot selection through
-`IKeyState`. An operator cannot hunt for buttons during a show.
+`IKeyState`. An operator cannot hunt for buttons while live.
 
 Hotkeys suppress while a text field holds focus. Cutting to camera 3 because
 someone typed "3" in party chat is the kind of failure that gets a plugin
@@ -360,35 +357,20 @@ does bind free-cam exit to a repurposed game input.
 Input capture blocks only movement keys and zoom, so chat stays reachable and
 `/ccam release` remains an escape route alongside the automatic paths.
 
-## Cammy coexistence — out of scope
-
-No detection, no warning, no mitigation work. Running Cammy's free-cam or firing
-a Cammy preset while this plugin holds the camera is user error, and v1 treats
-it as such.
-
-The one thing that remains true is free: because this plugin writes after
-`CameraBase.Update()` returns and Cammy's detours run inside it, this plugin
-wins any contest over camera position regardless of load order. That is a
-consequence of the architecture, not work to be done.
-
-Cammy 2.1.1.2 is installed on the development machine, which makes it a
-convenient way to confirm that property holds in practice.
-
 ## Editor UI
 
-Three windows: a library of tracks and snap points filtered to the current zone,
-a track editor, and a compact switchboard intended to stay on screen during a
-show.
+Three windows: a library of tracks and snap points, a track editor, and a
+compact switchboard intended to stay on screen while live.
 
 ### Authoring flow
 
-The primary loop is fly and drop. Enter free-cam, fly to a position, then
-capture the camera as a control point: position, yaw, pitch and FoV, appended to
+The primary loop is fly and drop. Enter editing mode, fly to a position, then
+capture the camera as a control point: position, yaw, pitch, FoV and roll, appended to
 the end of the track. Repeat. A track is built by flying it.
 
 Capture is available two ways, and both exist in v1: a **Capture current camera**
-button in the track editor, and a hotkey for the same action so the operator
-does not have to reach for the mouse mid-flight.
+button in the track editor, and the backtick key (`` ` ``) in editing mode so the
+operator does not have to reach for the mouse mid-flight.
 
 Editing is a separate activity and uses the tools below: select a point, then
 adjust it with a gizmo, re-capture it from the current camera, or type exact
@@ -444,8 +426,8 @@ phase overruns.
 The Dalamud plugin config, as JSON, carrying a `Version` field from the first
 commit so migrations stay possible.
 
-A `Show` groups tracks, snap points and a switchboard layout, and records its
-`TerritoryType` so the UI filters to the current zone and warns on a mismatch.
+It stores tracks and snap points. They do not record a zone; anchored tracks
+(`FEATURES.md`) are the intended direction and are deferred.
 
 The stored types are the same pure records from the track model, which makes
 round-trip a unit test. That test gets written early: `Vector3` serialisation
@@ -541,7 +523,7 @@ play it back. Most of the code, least of the risk.
 overlay, click-to-select, gizmo editing, the scrub bar and the curve editor.
 
 **Phase 3 — the switchboard.** Slots, program and preview, TAKE, hotkeys with
-the text-focus guard, snap points on the bus, persistence. Ends with: run a show.
+the text-focus guard, snap points on the bus, persistence. Ends with: cut between shots live.
 
 Phase 1 is small and dangerous; phase 2 is large and safe. Expect phase 1 to
 feel slow for how little it visibly produces.
