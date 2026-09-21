@@ -21,7 +21,7 @@ camera panning over an audience, or a planned sequence of shots cut live.
 
 In scope for v1:
 
-- Camera tracks: a path through control points with three aim modes.
+- Camera tracks: a path through control points with two aim modes.
 - Snap points: static camera positions the switchboard can cut to.
 - Live mode: a program/preview switchboard with hard cuts and hotkeys.
 - An editor with a 3D path overlay, click-to-select and gizmo editing.
@@ -32,6 +32,7 @@ Not in scope for v1. Each entry in `FEATURES.md` records why:
 - Export/import of shows, and clipboard sharing.
 - Eased-move and fade-through-black transitions.
 - Aim tracking a game entity.
+- Aim locked onto a fixed point (LookAt).
 - Continuous flight recording.
 - Playlists and auto-advance.
 - Detecting or mitigating conflicts with Cammy. Treated as user error.
@@ -64,14 +65,15 @@ between them.
 ## Camera ownership
 
 Hook `CameraBase.Update()` — virtual function 3, named in FFXIVClientStructs —
-on the active camera. Call the original, let the game finish its own camera
-update, then overwrite `SceneCamera.Position` (offset `0x50` on
-`Graphics.Scene.Object`) and `SceneCamera.LookAtVector` (offset `0x80` on
-`Graphics.Scene.Camera`).
+on the world camera (`CameraManager->Camera`, slot 0), never `GetActiveCamera()`:
+another `Camera`-derived class overrides `Update`. Call the original, let the
+game finish its own camera update, then overwrite `SceneCamera.Position` (offset
+`0x50` on `Graphics.Scene.Object`) and `SceneCamera.LookAtVector` (offset `0x80`
+on `Graphics.Scene.Camera`).
 
 One hook, one write site. The plugin does not reimplement any game camera logic.
 
-Three consequences follow from writing after `Update()` returns:
+Two consequences follow from writing after `Update()` returns:
 
 1. **Cammy loses by construction.** Cammy detours run inside `Update()`; ours
    writes after it. We are last, regardless of plugin load order.
@@ -81,14 +83,17 @@ Three consequences follow from writing after `Update()` returns:
    this; we get it free, because the correction happens inside `Update()` and we
    overwrite its result. No signature scan, so nothing here breaks on a game
    patch.
-3. **The player keeps their keyboard during playback.** Driving the camera does
-   not require taking input, so the plugin does not take it. A creator can dance
-   or emote while their own camera flies. Input capture applies only to
-   authoring free-cam.
+
+### Roles and input
+
+The user is the director while authoring, and the camera operator while live:
+they watch the camera and run the switchboard, nothing else. Whenever the plugin
+owns the camera — authoring free-cam or live mode — the character is locked in
+place, and movement keys and zoom are blocked. Chat stays usable.
 
 ### Resolved: what we write
 
-Measured in-game 2026-09-21. Six fields, written after `Update()` returns, fully
+Measured in-game 2026-09-21. Four fields, written after `Update()` returns, fully
 own the camera. Nothing the game does afterwards overrides them:
 
 | Field | Location | Why |
@@ -97,22 +102,11 @@ own the camera. Nothing the game does afterwards overrides them:
 | Look-at point | `SceneCamera.LookAtVector`, `0x80` | what it points at |
 | Up vector | `SceneCamera.Vector_1`, `0x90` | stops roll |
 | Field of view | `Camera.FoV`, `0x130`, radians | zoom |
-| Distance | `Camera.Distance`, `0x124` | stops the game fighting |
-| Interpolated distance | `Camera.InterpDistance`, `0x18C` | stops the game fighting |
 
-The two distance fields are not read back by anything we do; they are written to
-remove a contradiction. Left alone, the game keeps interpolating toward its own
-idea of where the camera belongs, which appears as jitter that snaps back the
-moment the player stops scrolling. Setting both to the distance between the
-position and look-at we impose leaves nothing to interpolate toward.
-
-This is invisible to a `selftest` style check, because our write wins before any
-command could read the field. It only shows up as motion on screen mid-input.
-
-**Watch item:** `Camera.MinDistance` and `MaxDistance` bound this, roughly 1.5 to
-20 by default. A track whose look-at target sits further than the maximum may be
-clamped and start the fight again. If jitter reappears at long range, look here
-first.
+`Camera.Distance` and `InterpDistance` are **not** written; see the hazard below.
+Zoom input makes the game interpolate its distance against our imposed position,
+which shows as jitter that snaps back when scrolling stops. Blocking zoom input
+while we own the camera removes that.
 
 ### Hazard: writing fields the game persists
 
@@ -168,10 +162,10 @@ rather than a point will need to account for per-race height.
 ```csharp
 record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov);
 record Track(IReadOnlyList<ControlPoint> Points, IReadOnlyList<TimingKey> Timing,
-             AimMode Aim, Vector3 LookAtTarget, bool Loop);
+             AimMode Aim, bool Loop);
 ```
 
-Per-point FoV costs one float and one lerp, and enables push-ins during a move.
+Per-point FoV costs one float and enables push-ins during a move.
 `TimingKey` is defined under Timing below; the points describe the path, the
 timing curve describes the pacing along it.
 
@@ -206,10 +200,11 @@ computed once.
 
 `AimMode` is per track.
 
-- **LookAt** — `normalize(target - position)`. Smooth whenever position is.
-- **PathTangent** — the analytic spline derivative, with a fallback to the last
-  valid direction when coincident points collapse it, and a pitch clamp so a
-  near-vertical path does not gimbal.
+- **PathTangent** — the analytic spline derivative, with a pitch clamp so a
+  near-vertical path does not gimbal. Where coincident points collapse the
+  derivative, it falls back to the nearest valid direction along the path. The
+  fallback depends only on the place on the path, never on previous frames, so
+  scrubbing and playback agree.
 - **AimKeys** — yaw and pitch per point, splined on separate channels.
 
 AimKeys does not slerp quaternions. Slerp between two look directions can
@@ -218,7 +213,12 @@ Separate yaw and pitch channels keep the horizon level.
 
 Yaw unwraps before interpolation: walk the key sequence adding or subtracting
 2π so no two consecutive values differ by more than π. Without this, a shot
-crossing due north whips the long way around.
+crossing due north whips the long way around. A looping track unwraps its closing
+segment too.
+
+Yaw, pitch and FoV are each splined between points by the fraction of the
+segment's arc length travelled, the same place on the path as position. They
+therefore sit still during a hold with no special handling.
 
 ### Timing
 
@@ -234,9 +234,16 @@ record TimingKey(float Time, float Position, TangentMode Mode,
                  float InTangent, float OutTangent);
 ```
 
-`Position` is normalised distance along the path: 0 at the first control point, 1
-at the last. Combined with arc-length evaluation, a straight line on this curve
-is constant world speed however unevenly the points are spaced.
+`Position` is a place on the path in control-point units: the whole part is the
+segment, the fraction is how far along that segment's arc length. 0 is the first
+control point, 2 the third, 2.5 halfway along the segment from the third to the
+fourth. Combined with arc-length evaluation, a straight line on this curve is
+constant world speed within a segment, however unevenly the points are spaced.
+
+Keys are anchored to control points so editing geometry never retimes a shot:
+moving or appending a point, or toggling loop, leaves every key in place.
+Inserting or deleting a point renumbers the keys after it, as does appending to a
+looping track, which inserts before the closing segment.
 
 Every pacing decision is a shape in this curve:
 
@@ -251,6 +258,10 @@ rather than switching abruptly at it. `Flat` pins both tangents to zero and brin
 the camera to a stop at that key. `Linear` and `Manual` exist for the curve editor
 and are not reachable before it ships.
 
+`Auto` tangents at the first and last keys of an open track are one-sided, so a
+track starts at full speed and stops dead at its end. Easing in or out is the
+user's choice, made with a `Flat` key.
+
 **Position must never decrease.** A naive cubic through keys overshoots, which
 would make the camera reverse briefly — visible as a judder and easily mistaken
 for a bug. Auto tangents are limited so the curve stays monotone, and manual
@@ -263,14 +274,10 @@ rather than being a special case.
 Total shot length is the time of the last key.
 
 **Looping.** The path closes — the last control point carries a segment back to
-the first — so normalised position 1 is the same place as 0 and elapsed time wraps
-modulo the total. Auto tangents at the first and last keys are computed cyclically,
-treating the curve as periodic, so the seam is continuous in speed as well as in
-position. Without that the camera would lurch once per lap.
-
-Appending a control point lengthens the path, so existing keys rescale to keep
-pointing at the same place on it. Capturing a fourth point does not retime the
-first three.
+the first — so for n points, position n is the same place as 0 and elapsed time
+wraps modulo the total. Auto tangents at the first and last keys are computed
+cyclically, treating the curve as periodic, so the seam is continuous in speed as
+well as in position. Without that the camera would lurch once per lap.
 
 Playback accumulates `IFramework.UpdateDelta` rather than counting frames, so a
 shot runs identically at 30 and 144 fps.
@@ -282,7 +289,7 @@ CameraState? Tick(float dt);
 ```
 
 The nullable return is the entire control protocol. Non-null means the plugin
-owns the camera and `CameraController` writes those three fields. Null means
+owns the camera and `CameraController` writes it. Null means
 hands off. "Live mode is off", "this slot is the game camera" and "control
 released" all collapse into that one rule, so exactly one place decides whether
 the game keeps its camera.
@@ -301,7 +308,8 @@ stream. The camera freezes where the track ended and the UI reports it.
 Live mode is the master toggle. On, the plugin owns the camera and the
 switchboard is active. Off, the editor still works and the game camera is
 untouched. It is the boundary between building shots and running them, and the
-safety switch: turning it off is equivalent to the panic key.
+safety switch: turning it off hands the camera back. There is one live mode;
+playing a single track is live mode with that track on program.
 
 ## Switchboard
 
@@ -321,8 +329,7 @@ this rather than implying a monitor that cannot exist.
 ### Hotkeys
 
 Bind TAKE, preview next and previous, and direct slot selection through
-`IKeyState`. An operator cannot hunt for buttons during a show, particularly
-when also performing.
+`IKeyState`. An operator cannot hunt for buttons during a show.
 
 Hotkeys suppress while a text field holds focus. Cutting to camera 3 because
 someone typed "3" in party chat is the kind of failure that gets a plugin
@@ -344,9 +351,8 @@ depends on it, it is easy to hit by accident, and this plugin's own windows may
 want it for closing dialogs. Cammy has no keyboard panic key either, though it
 does bind free-cam exit to a repurposed game input.
 
-Revisit this once input capture lands. While input is captured, chat is not
-reachable, so `/ccam release` stops being an escape route and the automatic
-paths become the only way out.
+Input capture blocks only movement keys and zoom, so chat stays reachable and
+`/ccam release` remains an escape route alongside the automatic paths.
 
 ## Cammy coexistence — out of scope
 
@@ -386,7 +392,7 @@ The track editor carries a **scrub bar** — drag to see the camera at any momen
 in the shot without playing it. This falls out free, because the Director is a
 pure function of elapsed time.
 
-It also carries a **curve editor** for the timing curve: distance along the path
+It also carries a **curve editor** for the timing curve: position along the path
 plotted against time, with draggable keys and tangent handles. Until it exists the
 curve is generated from simple "this leg takes N seconds" and "hold here for N
 seconds" inputs, which is enough to author a shot but not to shape one.
@@ -400,7 +406,6 @@ projected with `Camera.WorldToScreen`:
 - **A marker per control point**, numbered in track order.
 - **An aim indicator per control point** — a short line from the point along its
   look direction, so position and direction are both readable at a glance.
-- **The LookAt target**, marked distinctly, when the track uses that aim mode.
 
 The overlay is what makes the track editable by eye. It is not a nice-to-have
 layered on afterwards: click-to-select and gizmo editing both depend on the same
@@ -413,8 +418,6 @@ so hit-testing a click against those markers costs almost nothing.
 dev assemblies:
 
 - Translate on the selected control point.
-- Translate on the LookAt target, which needs it most — that point usually
-  hovers in mid-air over a stage with nothing to fly to.
 - Rotate for aim direction, in AimKeys mode only.
 - No scale. It means nothing here and the gizmo never offers it.
 
@@ -426,7 +429,7 @@ the precise fallback.
 convention. Wrong handedness or row-versus-column-major yields a gizmo that
 looks correct but drags along the wrong axis. `SceneCamera.ViewMatrix` and
 `RenderCamera->ProjectionMatrix` supply the inputs; matching FFXIV's convention
-is the work. This is the **first** task of phase 2's UI work, verified against a
+is the work. This is the **first** task of phase 2c, verified against a
 known control point. Left until last, it becomes the thing dropped when the
 phase overruns.
 
@@ -473,12 +476,13 @@ Tests that run on macOS with no game, covering where the real bugs live:
 - A deliberately bunched-then-spread track yields even spacing. This test fails
   without arc-length reparameterisation, which is its purpose.
 - Yaw crossing ±180° takes the short way.
-- Position at t=5s is identical under 60fps and 30fps delta sequences.
-- A straight timing curve gives constant world speed on unevenly spaced points.
+- Position at t=5s matches under 60fps and 30fps delta sequences.
+- A straight timing curve gives constant world speed within a segment on
+  unevenly spaced points.
 - A flat section of the timing curve holds the camera still for its width.
 - The timing curve never decreases, including for keys a naive cubic would
   overshoot.
-- Appending a control point does not retime the existing ones.
+- Appending a control point or toggling loop does not retime the existing ones.
 - The loop seam is continuous in position and in speed.
 - Degenerate input — zero, one, two and coincident points — does not throw.
 - TAKE resets elapsed time; flip-flop swaps the slots.
@@ -495,10 +499,7 @@ XIV on Mac is installed with Dalamud 15.0.3.5. Dev reference assemblies sit at
 `%AppData%\XIVLauncher\addon\Hooks\dev`, so `DALAMUD_HOME` points at the Mac
 path instead.
 
-Dalamud dev mode is currently off: `DevMode = false` and
-`DevPluginLoadLocations` is empty.
-
-Dalamud 15.0.3.5 targets **net10.0**, not net10.0. Its `runtimeconfig.json`
+Dalamud 15.0.3.5 targets **net10.0**. Its `runtimeconfig.json`
 declares `"tfm": "net10.0"` and requires `Microsoft.NETCore.App 10.0.0`. All
 three projects therefore target .NET 10, which the machine's SDK 10.0.301 and
 runtime 10.0.9 satisfy natively.
@@ -521,14 +522,17 @@ surface on day one.
 
 **Phase 1 — own the camera.** Hook `Update()`, write position and look-at, run
 the FoV and `ViewMatrix` spike through `/ccam selftest`, build the authoring
-free-cam with its input capture and movement lock, and implement the panic key
-and release-on-zone-change. Ends with: a camera that flies, and always releases.
-Little code, most of the project's risk.
+free-cam with its input capture and movement lock, and implement automatic
+release on zone change, area transition, logout and unload. Ends with: a camera
+that flies, and always releases. Little code, most of the project's risk.
 
 **Phase 2 — tracks.** The whole `Core` layer under TDD on macOS: spline,
-arc-length table, three aim modes, easing, Director. Then the camera wiring, the
-gizmo convention check, and the editor. Ends with: author a shot, play it back.
-Most of the code, least of the risk.
+arc-length table, two aim modes, timing curve, Director. Then the camera wiring,
+with chat commands standing in for the editor. Ends with: author a shot, play it
+back. Most of the code, least of the risk.
+
+**Phase 2c — the editor.** The gizmo convention check first, then the 3D
+overlay, click-to-select, gizmo editing, the scrub bar and the curve editor.
 
 **Phase 3 — the switchboard.** Slots, program and preview, TAKE, hotkeys with
 the text-focus guard, snap points on the bus, persistence. Ends with: run a show.
