@@ -5,11 +5,11 @@ namespace CinematicCam.Core.Camera;
 /// <summary>Projects world points to screen pixels with a row-vector view-projection matrix, as the game does.</summary>
 public static class ScreenProjection
 {
-    /// <summary>Pixel position of <paramref name="world"/> with the origin top-left, or null when it is behind the camera.</summary>
-    public static Vector2? Project(Vector3 world, Matrix4x4 viewProjection, Vector2 viewport)
+    /// <summary>Pixel position of <paramref name="world"/> with the origin top-left, or null when it is behind the camera or nearer than <paramref name="nearW"/>.</summary>
+    public static Vector2? Project(Vector3 world, Matrix4x4 viewProjection, Vector2 viewport, float nearW = 0f)
     {
         var clip = Vector4.Transform(new Vector4(world, 1f), viewProjection);
-        return clip.W <= float.Epsilon ? null : ToPixels(clip, viewport);
+        return clip.W <= float.Epsilon || clip.W < nearW ? null : ToPixels(clip, viewport);
     }
 
     /// <summary>Pixel end points of a segment cut to the part at least <paramref name="nearW"/> in front of the camera, or null when none of it is.</summary>

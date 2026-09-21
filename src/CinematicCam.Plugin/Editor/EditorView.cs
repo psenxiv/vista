@@ -14,6 +14,10 @@ internal readonly record struct EditorView(
     public Vector2? ToScreen(Vector3 world)
         => ScreenProjection.Project(world, ViewProjection, Size) is { } p ? Origin + p : null;
 
+    /// <summary>Like <see cref="ToScreen"/>, but null nearer than the near plane, where a point would project wildly off screen.</summary>
+    public Vector2? ToScreenBeyondNear(Vector3 world)
+        => ScreenProjection.Project(world, ViewProjection, Size, Near) is { } p ? Origin + p : null;
+
     /// <summary>Reads the world camera's matrices, or null when there is no camera yet.</summary>
     public static unsafe EditorView? Read()
     {

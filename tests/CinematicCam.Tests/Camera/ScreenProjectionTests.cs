@@ -36,6 +36,15 @@ public class ScreenProjectionTests
         => Assert.Null(ScreenProjection.Project(new Vector3(0f, 0f, 20f), ViewProjection(), Viewport));
 
     [Fact]
+    public void APointInFrontButNearerThanTheNearWIsNull()
+    {
+        // The camera sits at z = 10, so z = 9.95 is 0.05 ahead: in front, but inside a near W of 0.1.
+        Assert.NotNull(ScreenProjection.Project(new Vector3(0f, 0f, 9.95f), ViewProjection(), Viewport));
+        Assert.Null(ScreenProjection.Project(new Vector3(0f, 0f, 9.95f), ViewProjection(), Viewport, 0.1f));
+        Assert.NotNull(ScreenProjection.Project(Vector3.Zero, ViewProjection(), Viewport, 0.1f));
+    }
+
+    [Fact]
     public void ASegmentInFrontProjectsToItsEndPoints()
     {
         var a = new Vector3(-1f, 0f, 0f);
