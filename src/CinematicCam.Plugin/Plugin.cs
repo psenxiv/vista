@@ -36,7 +36,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam fly | selftest | hold | push <d> | nudge <x> <y> <z> | release"
+            HelpMessage = "/ccam fly | selftest | hold | push <d> | nudge <x> <y> <z> | release | reset"
         });
 
         Camera = new CameraController(() =>
@@ -60,27 +60,8 @@ public sealed class Plugin : IDalamudPlugin
         var verb = args.Trim().Split(' ', 2)[0].ToLowerInvariant();
         switch (verb)
         {
-            case "inputprobe":
-            {
-                var starting = !Input.Learning;
-                Input.Learning = starting;
-
-                if (starting)
-                {
-                    Log.Information("[input] learning ON - press one key at a time");
-                }
-                else
-                {
-                    Input.BlockWhatWasLearned();
-                    Log.Information("[input] learning OFF");
-                }
-                break;
-            }
             case "reset":
                 CameraAccess.ResetToDefaults();
-                break;
-            case "inputclear":
-                Input.ClearBlocked();
                 break;
             case "fly":
             {
