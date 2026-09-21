@@ -46,7 +46,7 @@ internal sealed class FreeCam
     }
 
     /// <summary>True while the player is typing, so chat does not fly the camera.</summary>
-    private static unsafe bool IsTyping()
+    internal static unsafe bool IsTyping()
     {
         var module = RaptureAtkModule.Instance();
         return module != null && module->IsTextInputActive();

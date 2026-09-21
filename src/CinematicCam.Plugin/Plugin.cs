@@ -158,10 +158,19 @@ public sealed class Plugin : IDalamudPlugin
         Log.Information("[ccam] camera released: {Reason}", reason);
     }
 
+    private static int diagTick;
+
     private void OnFrameworkUpdate(IFramework framework)
     {
         Camera.TryInstallHook();
         Input.SyncHookState();
+
+        // Diagnostic while flying: roughly twice a second.
+        if (FreeCamera.Enabled && ++diagTick % 30 == 0)
+        {
+            Log.Information("[diag] isTyping {Typing}", FreeCam.IsTyping());
+            Input.LogDiagnostics();
+        }
 
         if (!Ownership.IsOwned) return;
 

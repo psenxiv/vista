@@ -35,6 +35,9 @@ internal sealed unsafe class InputBlocker : IDisposable
 
     private readonly Func<bool> shouldBlock;
 
+    // Diagnostic only. The pointer the game passes our detours, to compare against ours.
+    private nint lastSelf;
+
     public InputBlocker(Func<bool> shouldBlock)
     {
         this.shouldBlock = shouldBlock;
@@ -95,7 +98,30 @@ internal sealed unsafe class InputBlocker : IDisposable
     }
 
     private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
-        => shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);
+    {
+        lastSelf = (nint)self;
+        return shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);
+    }
+
+    /// <summary>Diagnostic. Reports which query, if any, sees a key we fly with.</summary>
+    public void LogDiagnostics()
+    {
+        var ours = Input();
+        Plugin.Log.Information("[diag] our InputData 0x{Ours:X}, game passed 0x{Theirs:X}, match {Match}",
+            (nint)ours, lastSelf, (nint)ours == lastSelf);
+
+        if (ours == null) return;
+
+        foreach (var id in new[] { InputId.MOVE_FORE, InputId.JUMP })
+        {
+            Plugin.Log.Information("[diag] {Id}: held {H}, longPress {L}, down {D}, pressed {P}",
+                id,
+                heldHook is null ? "-" : heldHook.Original(ours, id).ToString(),
+                longPressHook is null ? "-" : longPressHook.Original(ours, id).ToString(),
+                downHook is null ? "-" : downHook.Original(ours, id).ToString(),
+                pressedHook is null ? "-" : pressedHook.Original(ours, id).ToString());
+        }
+    }
 
     /// <summary>True while the player holds that bind, read past our own block.</summary>
     public bool IsHeld(InputId id)
