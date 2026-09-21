@@ -12,6 +12,8 @@ internal sealed unsafe class PointGizmo
     private Matrix4x4 matrix;
     private ControlPoint? dragStart;
     private int dragIndex;
+    private Track? dragTrack;
+    private bool waitForRelease;
 
     public GizmoMode Mode { get; set; } = GizmoMode.Move;
 
@@ -30,9 +32,27 @@ internal sealed unsafe class PointGizmo
         if (!Dragging) Mode = Mode == GizmoMode.Move ? GizmoMode.Rotate : GizmoMode.Move;
     }
 
+    /// <summary>Abandons any drag in progress without committing, for leaving editing mode.</summary>
+    public void Cancel()
+    {
+        if (Dragging) waitForRelease = true;
+        dragStart = null;
+        Preview = null;
+        dragTrack = null;
+        Hot = false;
+    }
+
     /// <summary>Draws the gizmo on the selected point into the current window. Call inside the editor window.</summary>
     public void Draw(EditorView view, CameraSession session)
     {
+        if (Dragging && (!ReferenceEquals(session.Track, dragTrack) || session.Selected != dragIndex))
+        {
+            dragStart = null;
+            Preview = null;
+            dragTrack = null;
+            waitForRelease = true;
+        }
+
         if (session.Selected is not { } index || index >= session.Track.Points.Count)
         {
             Hot = false;
@@ -63,9 +83,15 @@ internal sealed unsafe class PointGizmo
         var usingNow = ImGuizmo.IsUsing();
         Hot = usingNow || ImGuizmo.IsOver();
 
+        if (waitForRelease)
+        {
+            if (!usingNow) waitForRelease = false;
+            return;
+        }
+
         if (usingNow)
         {
-            if (dragStart is null) { dragStart = point; dragIndex = index; }
+            if (dragStart is null) { dragStart = point; dragIndex = index; dragTrack = session.Track; }
             Preview = (dragIndex, GizmoEdit.Apply(dragStart, matrix, Mode, aim));
             return;
         }
@@ -75,6 +101,7 @@ internal sealed unsafe class PointGizmo
             var edited = GizmoEdit.Apply(start, matrix, Mode, aim);
             dragStart = null;
             Preview = null;
+            dragTrack = null;
             if (!ReferenceEquals(edited, start) && session.ReplacePoint(dragIndex, edited) is { } refusal)
                 Plugin.Log.Warning("[editor] gizmo edit refused: {Refusal}", refusal);
         }

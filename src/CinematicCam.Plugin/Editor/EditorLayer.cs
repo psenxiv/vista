@@ -32,10 +32,12 @@ internal sealed class EditorLayer
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
     {
-        if (session.Mode != CameraMode.Editing) { clicks.Reset(); return; }
+        if (session.Mode != CameraMode.Editing) { clicks.Reset(); gizmo.Cancel(); return; }
         if (EditorView.Read() is not { } view) return;
 
-        var track = gizmo.Preview is { } preview ? TrackEditing.Replace(session.Track, preview.Index, preview.Point) : session.Track;
+        var track = gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
+            ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
+            : session.Track;
         var markers = overlay.Draw(view, track, session.Selected);
         var io = ImGui.GetIO();
         var hovered = MarkerHitTest.Nearest(markers, io.MousePos, HitRadius);
