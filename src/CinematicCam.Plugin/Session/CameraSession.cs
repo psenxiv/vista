@@ -33,6 +33,9 @@ internal sealed class CameraSession
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>
     public bool LocksInput => Mode != CameraMode.Off;
 
+    /// <summary>The free-cam's speed setting.</summary>
+    public FlySpeed Speed => freeCam.Speed;
+
     /// <summary>Starts free-cam: from Off at the game camera, from Live at the current frame. No-op while editing.</summary>
     public void Edit()
     {

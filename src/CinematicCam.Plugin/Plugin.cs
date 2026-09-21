@@ -2,6 +2,7 @@ using System.Numerics;
 using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Session;
 using CinematicCam.Plugin.Ui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Game.Command;
@@ -32,6 +33,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static CameraSession Session { get; private set; } = null!;
 
     private readonly WindowSystem windows = new("CinematicCam");
+    private float wheel;
     private readonly TestWindow testWindow;
 
     public Plugin()
@@ -45,7 +47,7 @@ public sealed class Plugin : IDalamudPlugin
         Session = new CameraSession(Movement);
         testWindow = new TestWindow(Session);
         windows.AddWindow(testWindow);
-        PluginInterface.UiBuilder.Draw += windows.Draw;
+        PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.OpenMainUi += OpenTestWindow;
         Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
         Input = new InputBlocker(() => Session.LocksInput);
@@ -145,6 +147,28 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OpenTestWindow() => testWindow.IsOpen = true;
 
+    /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
+    private void OnDraw()
+    {
+        var io = ImGui.GetIO();
+        if (Session.Mode == CameraMode.Editing && !io.WantCaptureMouse)
+        {
+            wheel += io.MouseWheel;
+            var steps = (int)wheel;
+            if (steps != 0)
+            {
+                Session.Speed.Step(steps);
+                wheel -= steps;
+            }
+        }
+        else
+        {
+            wheel = 0f;
+        }
+
+        windows.Draw();
+    }
+
     private void OnTerritoryChanged(uint territory)
         => Session.Release($"zone change to {territory}");
 
@@ -153,7 +177,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-        PluginInterface.UiBuilder.Draw -= windows.Draw;
+        PluginInterface.UiBuilder.Draw -= OnDraw;
         PluginInterface.UiBuilder.OpenMainUi -= OpenTestWindow;
         windows.RemoveAllWindows();
         Framework.Update -= OnFrameworkUpdate;

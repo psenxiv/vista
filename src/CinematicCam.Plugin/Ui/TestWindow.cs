@@ -1,3 +1,4 @@
+using CinematicCam.Core.Camera;
 using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
@@ -58,6 +59,14 @@ internal sealed class TestWindow : Window
 
         ImGui.SameLine();
         if (ImGui.Button("Release")) { error = null; session.Release("window"); }
+
+        var speed = session.Speed;
+        var step = speed.Index;
+        ImGui.TextUnformatted("Fly speed:");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(150f);
+        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x"))
+            speed.Set(step);
     }
 
     private void DrawTrackRow()

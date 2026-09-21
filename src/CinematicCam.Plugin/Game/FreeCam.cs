@@ -15,6 +15,9 @@ internal sealed class FreeCam
 
     public bool Enabled { get; private set; }
 
+    /// <summary>The stepped speed setting; Shift still boosts on top.</summary>
+    public FlySpeed Speed { get; } = new();
+
     public void Enable(Vector3 startPosition)
     {
         position = startPosition;
@@ -35,7 +38,7 @@ internal sealed class FreeCam
 
         var (yaw, pitch) = CameraAccess.ReadAngles() ?? (0f, 0f);
         var input = IsTyping() ? Vector3.Zero : ReadInput();
-        var speed = BaseSpeed * (Plugin.KeyState[VirtualKey.SHIFT] ? SprintMultiplier : 1f);
+        var speed = BaseSpeed * Speed.Multiplier * (Plugin.KeyState[VirtualKey.SHIFT] ? SprintMultiplier : 1f);
         position = FreeCamMotion.Step(position, input, yaw, pitch, speed, deltaSeconds);
 
         return new CameraState(
