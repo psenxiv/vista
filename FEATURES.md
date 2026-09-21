@@ -9,9 +9,10 @@ See `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md` for v1 scope.
 
 ## Deferred from v1
 
-On 2026-09-21 the user moved export/import, anchored tracks and playlists with auto-advance,
-together with sessions holding multiple tracks, into phase 3, ahead of the switchboard. Details are settled after
-phase 2.
+On 2026-09-21 the user set phase 3, ahead of the switchboard and split into sub-stages:
+export/import, sessions holding multiple tracks, anchoring for tracks and sessions, playlists
+with auto-advance, and more playback modes beyond Once and Loop (reverse, ping-pong, others to
+be decided). Details are settled after phase 2.
 
 ### Export / import
 Tracks and snap points, exported as one portable JSON file so a director can
