@@ -22,7 +22,7 @@ public class ArcLengthTableTests
     [Fact]
     public void ArcLengthEvaluationGivesEvenSpacingOnALongSegment()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         const int segment = 1;
         const int steps = 5;
 
@@ -32,8 +32,8 @@ public class ArcLengthTableTests
         {
             var fraction = (float)i / steps;
             var t = table.ParameterAt(segment, fraction);
-            byArcLength[i] = CatmullRom.Evaluate(BunchedThenSpread, loop: false, segment, t);
-            byNaiveParameter[i] = CatmullRom.Evaluate(BunchedThenSpread, loop: false, segment, fraction);
+            byArcLength[i] = CatmullRom.Evaluate(BunchedThenSpread, segment, t);
+            byNaiveParameter[i] = CatmullRom.Evaluate(BunchedThenSpread, segment, fraction);
         }
 
         var arcDistances = ConsecutiveDistances(byArcLength);
@@ -59,7 +59,7 @@ public class ArcLengthTableTests
     [Fact]
     public void SegmentLengthAndTotalLengthAreConsistent()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         var sum = 0f;
         for (var i = 0; i < table.SegmentCount; i++)
             sum += table.SegmentLength(i);
@@ -70,7 +70,7 @@ public class ArcLengthTableTests
     [Fact]
     public void ParameterAtZeroAndOneReturnTheSegmentEndpoints()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         Assert.Equal(0f, table.ParameterAt(1, 0f), 3);
         Assert.Equal(1f, table.ParameterAt(1, 1f), 3);
     }
@@ -78,7 +78,7 @@ public class ArcLengthTableTests
     [Fact]
     public void LocateClampsBelowZeroToTheStart()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         var (segment, fraction) = table.Locate(-3f);
         Assert.Equal(0, segment);
         Assert.Equal(0f, fraction);
@@ -87,7 +87,7 @@ public class ArcLengthTableTests
     [Fact]
     public void LocateClampsAboveSegmentCountToTheEnd()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         var (segment, fraction) = table.Locate(table.SegmentCount + 4f);
         Assert.Equal(table.SegmentCount - 1, segment);
         Assert.Equal(1f, fraction);
@@ -96,7 +96,7 @@ public class ArcLengthTableTests
     [Fact]
     public void LocateAtExactlySegmentCountReturnsLastSegmentAtFractionOne()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         var (segment, fraction) = table.Locate(table.SegmentCount);
         Assert.Equal(table.SegmentCount - 1, segment);
         Assert.Equal(1f, fraction);
@@ -105,7 +105,7 @@ public class ArcLengthTableTests
     [Fact]
     public void LocateSplitsWholeAndFractionalParts()
     {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: false);
+        var table = new ArcLengthTable(BunchedThenSpread);
         var (segment, fraction) = table.Locate(1.5f);
         Assert.Equal(1, segment);
         Assert.Equal(0.5f, fraction, 3);
@@ -114,28 +114,9 @@ public class ArcLengthTableTests
     [Fact]
     public void LocateWithZeroSegmentsReturnsOriginRegardlessOfPosition()
     {
-        var table = new ArcLengthTable(Array.Empty<Vector3>(), loop: false);
+        var table = new ArcLengthTable(Array.Empty<Vector3>());
         Assert.Equal((0, 0f), table.Locate(5f));
         Assert.Equal((0, 0f), table.Locate(-5f));
-    }
-
-    [Fact]
-    public void SegmentCountForALoopMatchesCatmullRom()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: true);
-        Assert.Equal(CatmullRom.SegmentCount(BunchedThenSpread.Length, loop: true), table.SegmentCount);
-    }
-
-    [Fact]
-    public void LoopSeamSegmentHasPositiveLengthAndIsLocatable()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread, loop: true);
-        var lastSegment = table.SegmentCount - 1;
-        Assert.True(table.SegmentLength(lastSegment) > 0f);
-
-        var (segment, fraction) = table.Locate(lastSegment + 0.5f);
-        Assert.Equal(lastSegment, segment);
-        Assert.Equal(0.5f, fraction, 3);
     }
 
     [Theory]
@@ -144,7 +125,7 @@ public class ArcLengthTableTests
     public void DegenerateZeroOrOnePointsDoNotThrowAndHaveNoLength(int pointCount)
     {
         var points = new Vector3[pointCount];
-        var table = new ArcLengthTable(points, loop: false);
+        var table = new ArcLengthTable(points);
         Assert.Equal(0, table.SegmentCount);
         Assert.Equal(0f, table.TotalLength);
     }
@@ -155,7 +136,7 @@ public class ArcLengthTableTests
         var p = new Vector3(2, 2, 2);
         var points = new[] { p, p };
 
-        var table = new ArcLengthTable(points, loop: false);
+        var table = new ArcLengthTable(points);
         Assert.Equal(0f, table.SegmentLength(0));
 
         Assert.Equal(0.37f, table.ParameterAt(0, 0.37f));
@@ -169,7 +150,7 @@ public class ArcLengthTableTests
         var p = new Vector3(-1, 4, 2);
         var points = new[] { p, p, p, p };
 
-        var table = new ArcLengthTable(points, loop: false);
+        var table = new ArcLengthTable(points);
         for (var segment = 0; segment < table.SegmentCount; segment++)
         {
             Assert.False(float.IsNaN(table.SegmentLength(segment)));

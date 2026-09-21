@@ -10,44 +10,33 @@ public sealed class TimingCurve
     private const float MonotoneBound = 3f;
 
     private readonly IReadOnlyList<TimingKey> _keys;
-    private readonly bool _loop;
     private readonly float[] _inTangent = Array.Empty<float>();
     private readonly float[] _outTangent = Array.Empty<float>();
 
     /// <summary>Total shot length: the last key's time, 0 with no keys.</summary>
     public double Duration { get; }
 
-    /// <summary>Builds the curve through <paramref name="keys"/>; for a loop, <paramref name="period"/> is the control-point span the closing key must land on (ignored for an open track).</summary>
-    public TimingCurve(IReadOnlyList<TimingKey> keys, bool loop, float period)
+    /// <summary>Builds the curve through <paramref name="keys"/>.</summary>
+    public TimingCurve(IReadOnlyList<TimingKey> keys)
     {
-        Validate(keys, loop, period);
+        Validate(keys);
         _keys = keys;
-        _loop = loop;
         Duration = keys.Count == 0 ? 0.0 : keys[^1].Time;
 
         if (keys.Count >= 2)
-            (_inTangent, _outTangent) = BuildTangents(keys, loop);
+            (_inTangent, _outTangent) = BuildTangents(keys);
     }
 
-    /// <summary>Place on the path at <paramref name="time"/>, in control-point units. Holds end values; loops wrap modulo <see cref="Duration"/>.</summary>
+    /// <summary>Place on the path at <paramref name="time"/>, in control-point units. Holds end values.</summary>
     public float PositionAt(double time)
     {
         var n = _keys.Count;
         if (n == 0) return 0f;
         if (n == 1) return _keys[0].Position;
 
-        double t;
-        if (_loop)
-        {
-            t = time % Duration;
-            if (t < 0) t += Duration;
-        }
-        else
-        {
-            if (time <= _keys[0].Time) return _keys[0].Position;
-            if (time >= Duration) return _keys[^1].Position;
-            t = time;
-        }
+        if (time <= _keys[0].Time) return _keys[0].Position;
+        if (time >= Duration) return _keys[^1].Position;
+        var t = time;
 
         var k = FindInterval((float)t);
         var k0 = _keys[k];
@@ -85,7 +74,7 @@ public sealed class TimingCurve
     }
 
     /// <summary>Raw (pre-clamp) in/out tangent per key, then a monotonicity clamp per interval.</summary>
-    private static (float[] InTangent, float[] OutTangent) BuildTangents(IReadOnlyList<TimingKey> keys, bool loop)
+    private static (float[] InTangent, float[] OutTangent) BuildTangents(IReadOnlyList<TimingKey> keys)
     {
         var n = keys.Count;
         var delta = new float[n - 1];
@@ -95,8 +84,6 @@ public sealed class TimingCurve
             h[i] = keys[i + 1].Time - keys[i].Time;
             delta[i] = (keys[i + 1].Position - keys[i].Position) / h[i];
         }
-
-        var seamRaw = loop ? InteriorRaw(delta[n - 2], delta[0], h[n - 2], h[0]) : 0f;
 
         var rawIn = new float[n];
         var rawOut = new float[n];
@@ -122,11 +109,9 @@ public sealed class TimingCurve
 
                 default: // Auto
                     float value;
-                    if (loop && (k == 0 || k == n - 1))
-                        value = seamRaw;
-                    else if (!loop && k == 0)
+                    if (k == 0)
                         value = delta[0];
-                    else if (!loop && k == n - 1)
+                    else if (k == n - 1)
                         value = delta[n - 2];
                     else
                         value = InteriorRaw(delta[k - 1], delta[k], h[k - 1], h[k]);
@@ -143,18 +128,6 @@ public sealed class TimingCurve
             var (m0, m1) = ClampPair(rawOut[i], rawIn[i + 1], delta[i]);
             outTangent[i] = m0;
             inTangent[i + 1] = m1;
-        }
-
-        if (loop)
-        {
-            // Both keys 0 and n-1 are the same place on the path (the closing key), so the
-            // tangent leaving 0 and the tangent arriving at n-1 must agree exactly for the
-            // seam to be continuous in speed. Each was clamped against its own interval
-            // above; take the smaller (a smaller tangent only tightens an already-satisfied
-            // monotonicity bound, never loosens it) so both sides end up equal.
-            var shared = Math.Min(outTangent[0], inTangent[n - 1]);
-            outTangent[0] = shared;
-            inTangent[n - 1] = shared;
         }
 
         return (inTangent, outTangent);
@@ -180,7 +153,7 @@ public sealed class TimingCurve
         return (a * delta, b * delta);
     }
 
-    private static void Validate(IReadOnlyList<TimingKey> keys, bool loop, float period)
+    private static void Validate(IReadOnlyList<TimingKey> keys)
     {
         for (var i = 1; i < keys.Count; i++)
         {
@@ -189,12 +162,5 @@ public sealed class TimingCurve
             if (keys[i].Position < keys[i - 1].Position)
                 throw new ArgumentException("timing key positions must not decrease", nameof(keys));
         }
-
-        if (!loop || keys.Count == 0) return;
-
-        if (keys[0].Time != 0f)
-            throw new ArgumentException("a looping curve's first key must be at time 0", nameof(keys));
-        if (MathF.Abs((keys[^1].Position - keys[0].Position) - period) > 1e-4f)
-            throw new ArgumentException("a looping curve's closing key must sit at the first key's position plus period", nameof(keys));
     }
 }

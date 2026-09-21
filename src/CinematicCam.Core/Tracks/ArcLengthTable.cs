@@ -17,19 +17,19 @@ public sealed class ArcLengthTable
     public float TotalLength { get; }
 
     /// <summary>Samples the Catmull-Rom curve through <paramref name="points"/> once and builds the cumulative table.</summary>
-    public ArcLengthTable(IReadOnlyList<Vector3> points, bool loop)
+    public ArcLengthTable(IReadOnlyList<Vector3> points)
     {
-        SegmentCount = CatmullRom.SegmentCount(points.Count, loop);
+        SegmentCount = CatmullRom.SegmentCount(points.Count);
         _cumulative = new float[SegmentCount][];
 
         var total = 0f;
         for (var segment = 0; segment < SegmentCount; segment++)
         {
             var samples = new float[SamplesPerSegment + 1];
-            var previous = CatmullRom.Evaluate(points, loop, segment, 0f);
+            var previous = CatmullRom.Evaluate(points, segment, 0f);
             for (var i = 1; i <= SamplesPerSegment; i++)
             {
-                var current = CatmullRom.Evaluate(points, loop, segment, (float)i / SamplesPerSegment);
+                var current = CatmullRom.Evaluate(points, segment, (float)i / SamplesPerSegment);
                 samples[i] = samples[i - 1] + Vector3.Distance(previous, current);
                 previous = current;
             }

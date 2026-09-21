@@ -16,54 +16,24 @@ public class CatmullRomTests
     };
 
     [Theory]
-    [InlineData(0, false)]
-    [InlineData(1, false)]
-    [InlineData(0, true)]
-    [InlineData(1, true)]
-    public void SegmentCountIsZeroBelowTheMinimumPointCount(int pointCount, bool loop)
-        => Assert.Equal(0, CatmullRom.SegmentCount(pointCount, loop));
-
-    [Fact]
-    public void SegmentCountForATwoPointLoopIsTwo()
-        => Assert.Equal(2, CatmullRom.SegmentCount(2, loop: true));
+    [InlineData(0)]
+    [InlineData(1)]
+    public void SegmentCountIsZeroBelowTheMinimumPointCount(int pointCount)
+        => Assert.Equal(0, CatmullRom.SegmentCount(pointCount));
 
     [Fact]
     public void SegmentCountForOpenTrackIsOneLessThanPointCount()
-        => Assert.Equal(4, CatmullRom.SegmentCount(5, loop: false));
-
-    [Fact]
-    public void SegmentCountForLoopEqualsPointCount()
-        => Assert.Equal(5, CatmullRom.SegmentCount(5, loop: true));
+        => Assert.Equal(4, CatmullRom.SegmentCount(5));
 
     [Fact]
     public void CurvePassesThroughEveryControlPointOnAnOpenTrack()
     {
-        var segments = CatmullRom.SegmentCount(FivePoints.Length, loop: false);
+        var segments = CatmullRom.SegmentCount(FivePoints.Length);
         for (var segment = 0; segment < segments; segment++)
         {
-            AssertClose(FivePoints[segment], CatmullRom.Evaluate(FivePoints, loop: false, segment, 0f));
-            AssertClose(FivePoints[segment + 1], CatmullRom.Evaluate(FivePoints, loop: false, segment, 1f));
+            AssertClose(FivePoints[segment], CatmullRom.Evaluate(FivePoints, segment, 0f));
+            AssertClose(FivePoints[segment + 1], CatmullRom.Evaluate(FivePoints, segment, 1f));
         }
-    }
-
-    [Fact]
-    public void CurvePassesThroughEveryControlPointOnALoop()
-    {
-        var segments = CatmullRom.SegmentCount(FivePoints.Length, loop: true);
-        for (var segment = 0; segment < segments; segment++)
-        {
-            var next = (segment + 1) % FivePoints.Length;
-            AssertClose(FivePoints[segment], CatmullRom.Evaluate(FivePoints, loop: true, segment, 0f));
-            AssertClose(FivePoints[next], CatmullRom.Evaluate(FivePoints, loop: true, segment, 1f));
-        }
-    }
-
-    [Fact]
-    public void LoopLastSegmentRunsFromLastPointBackToFirst()
-    {
-        var lastSegment = CatmullRom.SegmentCount(FivePoints.Length, loop: true) - 1;
-        AssertClose(FivePoints[^1], CatmullRom.Evaluate(FivePoints, loop: true, lastSegment, 0f));
-        AssertClose(FivePoints[0], CatmullRom.Evaluate(FivePoints, loop: true, lastSegment, 1f));
     }
 
     [Fact]
@@ -75,15 +45,15 @@ public class CatmullRomTests
 
         for (var t = 0f; t <= 1f; t += 0.1f)
         {
-            var p = CatmullRom.Evaluate(points, loop: false, 0, t);
+            var p = CatmullRom.Evaluate(points, 0, t);
             var toPoint = p - a;
             var toEnd = b - a;
             var cross = Vector3.Cross(toPoint, toEnd);
             Assert.True(cross.Length() < 0.001f, $"t={t}: {p} is not on the line from {a} to {b}");
         }
 
-        AssertClose(a, CatmullRom.Evaluate(points, loop: false, 0, 0f));
-        AssertClose(b, CatmullRom.Evaluate(points, loop: false, 0, 1f));
+        AssertClose(a, CatmullRom.Evaluate(points, 0, 0f));
+        AssertClose(b, CatmullRom.Evaluate(points, 0, 1f));
     }
 
     [Theory]
@@ -92,23 +62,22 @@ public class CatmullRomTests
     public void DegenerateZeroOrOnePointsGiveNoSegments(int pointCount)
     {
         var points = new Vector3[pointCount];
-        Assert.Equal(0, CatmullRom.SegmentCount(points.Length, loop: false));
-        Assert.Equal(0, CatmullRom.SegmentCount(points.Length, loop: true));
+        Assert.Equal(0, CatmullRom.SegmentCount(points.Length));
     }
 
     [Fact]
     public void EvaluatingASegmentWithNoPointsThrowsArgumentOutOfRange()
     {
         var points = Array.Empty<Vector3>();
-        Assert.Throws<ArgumentOutOfRangeException>(() => CatmullRom.Evaluate(points, loop: false, 0, 0.5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CatmullRom.Evaluate(points, 0, 0.5f));
     }
 
     [Fact]
     public void EvaluatingASegmentPastSegmentCountThrowsArgumentOutOfRange()
     {
-        var segments = CatmullRom.SegmentCount(FivePoints.Length, loop: false);
-        Assert.Throws<ArgumentOutOfRangeException>(() => CatmullRom.Evaluate(FivePoints, loop: false, segments, 0.5f));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CatmullRom.Derivative(FivePoints, loop: false, -1, 0.5f));
+        var segments = CatmullRom.SegmentCount(FivePoints.Length);
+        Assert.Throws<ArgumentOutOfRangeException>(() => CatmullRom.Evaluate(FivePoints, segments, 0.5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CatmullRom.Derivative(FivePoints, -1, 0.5f));
     }
 
     [Fact]
@@ -117,11 +86,11 @@ public class CatmullRomTests
         var p = new Vector3(3, 3, 3);
         var points = new[] { p, p };
 
-        var value = CatmullRom.Evaluate(points, loop: false, 0, 0.5f);
+        var value = CatmullRom.Evaluate(points, 0, 0.5f);
         AssertClose(p, value);
         Assert.False(float.IsNaN(value.X) || float.IsNaN(value.Y) || float.IsNaN(value.Z));
 
-        var deriv = CatmullRom.Derivative(points, loop: false, 0, 0.5f);
+        var deriv = CatmullRom.Derivative(points, 0, 0.5f);
         Assert.False(float.IsNaN(deriv.X) || float.IsNaN(deriv.Y) || float.IsNaN(deriv.Z));
     }
 
@@ -131,14 +100,14 @@ public class CatmullRomTests
         var p = new Vector3(-2, 5, 1);
         var points = new[] { p, p, p, p };
 
-        var segments = CatmullRom.SegmentCount(points.Length, loop: false);
+        var segments = CatmullRom.SegmentCount(points.Length);
         for (var segment = 0; segment < segments; segment++)
         {
             for (var t = 0f; t <= 1f; t += 0.25f)
             {
-                var value = CatmullRom.Evaluate(points, loop: false, segment, t);
+                var value = CatmullRom.Evaluate(points, segment, t);
                 AssertClose(p, value);
-                var deriv = CatmullRom.Derivative(points, loop: false, segment, t);
+                var deriv = CatmullRom.Derivative(points, segment, t);
                 Assert.False(float.IsNaN(deriv.X) || float.IsNaN(deriv.Y) || float.IsNaN(deriv.Z));
             }
         }
@@ -148,12 +117,12 @@ public class CatmullRomTests
     public void OneOfFourPointsCoincidingWithANeighbourDoesNotThrow()
     {
         var points = new[] { FivePoints[0], FivePoints[0], FivePoints[1], FivePoints[2] };
-        var segments = CatmullRom.SegmentCount(points.Length, loop: false);
+        var segments = CatmullRom.SegmentCount(points.Length);
         for (var segment = 0; segment < segments; segment++)
         {
             for (var t = 0f; t <= 1f; t += 0.25f)
             {
-                var value = CatmullRom.Evaluate(points, loop: false, segment, t);
+                var value = CatmullRom.Evaluate(points, segment, t);
                 Assert.False(float.IsNaN(value.X) || float.IsNaN(value.Y) || float.IsNaN(value.Z));
             }
         }
@@ -163,15 +132,15 @@ public class CatmullRomTests
     public void DerivativeMatchesAFiniteDifference()
     {
         const float h = 0.0005f;
-        var segments = CatmullRom.SegmentCount(FivePoints.Length, loop: false);
+        var segments = CatmullRom.SegmentCount(FivePoints.Length);
 
         for (var segment = 0; segment < segments; segment++)
         {
             for (var t = 0.1f; t <= 0.9f; t += 0.2f)
             {
-                var analytic = CatmullRom.Derivative(FivePoints, loop: false, segment, t);
-                var plus = CatmullRom.Evaluate(FivePoints, loop: false, segment, t + h);
-                var minus = CatmullRom.Evaluate(FivePoints, loop: false, segment, t - h);
+                var analytic = CatmullRom.Derivative(FivePoints, segment, t);
+                var plus = CatmullRom.Evaluate(FivePoints, segment, t + h);
+                var minus = CatmullRom.Evaluate(FivePoints, segment, t - h);
                 var finite = (plus - minus) / (2f * h);
 
                 Assert.True((analytic - finite).Length() < 0.01f,

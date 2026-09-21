@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace CinematicCam.Core;
 
-/// <summary>Centripetal Catmull-Rom spline through a track's control points.</summary>
+/// <summary>Centripetal Catmull-Rom spline through a track's control points. The path is always open.</summary>
 public static class CatmullRom
 {
     /// <summary>Centripetal parameterisation exponent.</summary>
@@ -14,26 +14,25 @@ public static class CatmullRom
     /// <summary>A point's value and its derivative with respect to the spline parameter u.</summary>
     private readonly record struct Dual(Vector3 Value, Vector3 Deriv);
 
-    /// <summary>Number of curve segments for a point count; open tracks need at least 2 points, loops at least 2.</summary>
-    public static int SegmentCount(int pointCount, bool loop)
-        => loop ? (pointCount >= 2 ? pointCount : 0) : Math.Max(pointCount - 1, 0);
+    /// <summary>Number of curve segments for a point count.</summary>
+    public static int SegmentCount(int pointCount) => Math.Max(pointCount - 1, 0);
 
     /// <summary>Position on the curve at parameter t in [0, 1] across the given segment.</summary>
-    public static Vector3 Evaluate(IReadOnlyList<Vector3> points, bool loop, int segment, float t)
-        => EvaluateCore(points, loop, segment, t).Value;
+    public static Vector3 Evaluate(IReadOnlyList<Vector3> points, int segment, float t)
+        => EvaluateCore(points, segment, t).Value;
 
     /// <summary>d/dt of the curve at parameter t in [0, 1] across the given segment.</summary>
-    public static Vector3 Derivative(IReadOnlyList<Vector3> points, bool loop, int segment, float t)
-        => EvaluateCore(points, loop, segment, t).Deriv;
+    public static Vector3 Derivative(IReadOnlyList<Vector3> points, int segment, float t)
+        => EvaluateCore(points, segment, t).Deriv;
 
-    private static Dual EvaluateCore(IReadOnlyList<Vector3> points, bool loop, int segment, float t)
+    private static Dual EvaluateCore(IReadOnlyList<Vector3> points, int segment, float t)
     {
-        ValidateSegment(points.Count, loop, segment);
+        ValidateSegment(points.Count, segment);
 
-        var p0 = GetPoint(points, loop, segment - 1);
-        var p1 = GetPoint(points, loop, segment);
-        var p2 = GetPoint(points, loop, segment + 1);
-        var p3 = GetPoint(points, loop, segment + 2);
+        var p0 = GetPoint(points, segment - 1);
+        var p1 = GetPoint(points, segment);
+        var p2 = GetPoint(points, segment + 1);
+        var p3 = GetPoint(points, segment + 2);
 
         var t0 = 0f;
         var t1 = t0 + KnotDelta(p0, p1);
@@ -71,20 +70,13 @@ public static class CatmullRom
 
     private static float KnotDelta(Vector3 a, Vector3 b) => MathF.Pow(Vector3.Distance(a, b), Alpha);
 
-    /// <summary>Open tracks clamp to the endpoints (the phantom points); loops wrap.</summary>
-    private static Vector3 GetPoint(IReadOnlyList<Vector3> points, bool loop, int index)
-    {
-        var n = points.Count;
-        if (!loop) return points[Math.Clamp(index, 0, n - 1)];
+    /// <summary>Endpoints duplicate to supply the phantom points.</summary>
+    private static Vector3 GetPoint(IReadOnlyList<Vector3> points, int index)
+        => points[Math.Clamp(index, 0, points.Count - 1)];
 
-        var wrapped = index % n;
-        if (wrapped < 0) wrapped += n;
-        return points[wrapped];
-    }
-
-    private static void ValidateSegment(int pointCount, bool loop, int segment)
+    private static void ValidateSegment(int pointCount, int segment)
     {
-        var count = SegmentCount(pointCount, loop);
+        var count = SegmentCount(pointCount);
         if (segment < 0 || segment >= count)
             throw new ArgumentOutOfRangeException(nameof(segment), segment, $"segment must be in [0, {count}) for {pointCount} point(s)");
     }
