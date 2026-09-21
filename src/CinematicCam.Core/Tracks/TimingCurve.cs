@@ -1,0 +1,201 @@
+namespace CinematicCam.Core;
+
+/// <summary>Maps elapsed time to a place on the path, in control-point units, via a monotone cubic Hermite curve.</summary>
+public sealed class TimingCurve
+{
+    /// <summary>Below this, a secant is treated as a hold rather than divided by.</summary>
+    private const float SecantEpsilon = 1e-6f;
+
+    /// <summary>Fritsch-Carlson monotonicity bound on a Hermite interval's tangent ratios.</summary>
+    private const float MonotoneBoundSquared = 9f;
+
+    private readonly IReadOnlyList<TimingKey> _keys;
+    private readonly bool _loop;
+    private readonly float[] _inTangent = Array.Empty<float>();
+    private readonly float[] _outTangent = Array.Empty<float>();
+
+    /// <summary>Total shot length: the last key's time, 0 with no keys.</summary>
+    public double Duration { get; }
+
+    /// <summary>Builds the curve through <paramref name="keys"/>; <paramref name="period"/> is the loop's control-point span (unused for an open track).</summary>
+    public TimingCurve(IReadOnlyList<TimingKey> keys, bool loop, float period)
+    {
+        Validate(keys);
+        _keys = keys;
+        _loop = loop;
+        Duration = keys.Count == 0 ? 0.0 : keys[^1].Time;
+
+        if (keys.Count >= 2)
+            (_inTangent, _outTangent) = BuildTangents(keys, loop);
+    }
+
+    /// <summary>Place on the path at <paramref name="time"/>, in control-point units. Holds end values; loops wrap modulo <see cref="Duration"/>.</summary>
+    public float PositionAt(double time)
+    {
+        var n = _keys.Count;
+        if (n == 0) return 0f;
+        if (n == 1) return _keys[0].Position;
+
+        double t;
+        if (_loop)
+        {
+            t = time % Duration;
+            if (t < 0) t += Duration;
+        }
+        else
+        {
+            if (time <= _keys[0].Time) return _keys[0].Position;
+            if (time >= Duration) return _keys[^1].Position;
+            t = time;
+        }
+
+        var k = FindInterval((float)t);
+        var k0 = _keys[k];
+        var k1 = _keys[k + 1];
+        var span = k1.Time - k0.Time;
+        var localT = span <= 0f ? 0f : (float)((t - k0.Time) / span);
+
+        var m0 = _outTangent[k] * span;
+        var m1 = _inTangent[k + 1] * span;
+        return Hermite(k0.Position, k1.Position, m0, m1, localT);
+    }
+
+    private int FindInterval(float t)
+    {
+        var lo = 0;
+        var hi = _keys.Count - 1;
+        while (hi - lo > 1)
+        {
+            var mid = (lo + hi) / 2;
+            if (_keys[mid].Time <= t) lo = mid; else hi = mid;
+        }
+
+        return lo;
+    }
+
+    private static float Hermite(float p0, float p1, float m0, float m1, float t)
+    {
+        var t2 = t * t;
+        var t3 = t2 * t;
+        var h00 = (2f * t3) - (3f * t2) + 1f;
+        var h10 = t3 - (2f * t2) + t;
+        var h01 = (-2f * t3) + (3f * t2);
+        var h11 = t3 - t2;
+        return (h00 * p0) + (h10 * m0) + (h01 * p1) + (h11 * m1);
+    }
+
+    /// <summary>Raw (pre-clamp) in/out tangent per key, then a monotonicity clamp per interval.</summary>
+    private static (float[] InTangent, float[] OutTangent) BuildTangents(IReadOnlyList<TimingKey> keys, bool loop)
+    {
+        var n = keys.Count;
+        var delta = new float[n - 1];
+        var h = new float[n - 1];
+        for (var i = 0; i < n - 1; i++)
+        {
+            h[i] = keys[i + 1].Time - keys[i].Time;
+            delta[i] = (keys[i + 1].Position - keys[i].Position) / h[i];
+        }
+
+        var seamRaw = loop ? InteriorRaw(delta[n - 2], delta[0], h[n - 2], h[0]) : 0f;
+
+        var rawIn = new float[n];
+        var rawOut = new float[n];
+        for (var k = 0; k < n; k++)
+        {
+            var key = keys[k];
+            switch (key.Mode)
+            {
+                case TangentMode.Flat:
+                    rawIn[k] = 0f;
+                    rawOut[k] = 0f;
+                    break;
+
+                case TangentMode.Manual:
+                    rawIn[k] = key.InTangent;
+                    rawOut[k] = key.OutTangent;
+                    break;
+
+                case TangentMode.Linear:
+                    rawIn[k] = k > 0 ? delta[k - 1] : 0f;
+                    rawOut[k] = k < n - 1 ? delta[k] : 0f;
+                    break;
+
+                default: // Auto
+                    float value;
+                    if (loop && (k == 0 || k == n - 1))
+                        value = seamRaw;
+                    else if (!loop && k == 0)
+                        value = delta[0];
+                    else if (!loop && k == n - 1)
+                        value = delta[n - 2];
+                    else
+                        value = InteriorRaw(delta[k - 1], delta[k], h[k - 1], h[k]);
+                    rawIn[k] = value;
+                    rawOut[k] = value;
+                    break;
+            }
+        }
+
+        var inTangent = new float[n];
+        var outTangent = new float[n];
+        for (var i = 0; i < n - 1; i++)
+        {
+            var (m0, m1) = ClampPair(rawOut[i], rawIn[i + 1], delta[i]);
+            outTangent[i] = m0;
+            inTangent[i + 1] = m1;
+        }
+
+        if (loop)
+        {
+            // Both keys 0 and n-1 are the same place on the path (the closing key), so the
+            // tangent leaving 0 and the tangent arriving at n-1 must agree exactly for the
+            // seam to be continuous in speed. Each was clamped against its own interval
+            // above; take the smaller (a smaller tangent only tightens an already-satisfied
+            // monotonicity bound, never loosens it) so both sides end up equal.
+            var shared = Math.Min(outTangent[0], inTangent[n - 1]);
+            outTangent[0] = shared;
+            inTangent[n - 1] = shared;
+        }
+
+        return (inTangent, outTangent);
+    }
+
+    /// <summary>PCHIP weighted harmonic mean of the two neighbouring secants; 0 if either is a hold.</summary>
+    private static float InteriorRaw(float deltaPrev, float deltaNext, float hPrev, float hNext)
+    {
+        if (deltaPrev <= SecantEpsilon || deltaNext <= SecantEpsilon) return 0f;
+
+        var w1 = (2f * hNext) + hPrev;
+        var w2 = hNext + (2f * hPrev);
+        return (w1 + w2) / ((w1 / deltaPrev) + (w2 / deltaNext));
+    }
+
+    /// <summary>Fritsch-Carlson limit on an interval's tangent pair so its cubic stays monotone; a zero secant zeroes both.</summary>
+    private static (float M0, float M1) ClampPair(float m0, float m1, float delta)
+    {
+        if (delta <= SecantEpsilon) return (0f, 0f);
+
+        var a = MathF.Max(m0 / delta, 0f);
+        var b = MathF.Max(m1 / delta, 0f);
+        var sumSquares = (a * a) + (b * b);
+        if (sumSquares > MonotoneBoundSquared)
+        {
+            var tau = MathF.Sqrt(MonotoneBoundSquared / sumSquares);
+            a *= tau;
+            b *= tau;
+        }
+
+        return (a * delta, b * delta);
+    }
+
+    private static void Validate(IReadOnlyList<TimingKey> keys)
+    {
+        for (var i = 1; i < keys.Count; i++)
+        {
+            if (keys[i].Time <= keys[i - 1].Time)
+                throw new ArgumentException("timing keys must have strictly increasing times", nameof(keys));
+            if (keys[i].Position < keys[i - 1].Position)
+                throw new ArgumentException("timing key positions must not decrease", nameof(keys));
+        }
+    }
+}
