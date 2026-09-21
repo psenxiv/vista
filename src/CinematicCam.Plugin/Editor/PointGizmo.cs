@@ -23,7 +23,7 @@ internal sealed unsafe class PointGizmo
     private Track? dragTrack;
     private bool waitForRelease;
 
-    public GizmoMode Mode { get; set; } = GizmoMode.Move;
+    public GizmoMode Mode { get; private set; } = GizmoMode.Move;
 
     /// <summary>True while a drag is in progress.</summary>
     public bool Dragging => dragStart is not null;
@@ -35,9 +35,12 @@ internal sealed unsafe class PointGizmo
     public (int Index, ControlPoint Point)? Preview { get; private set; }
 
     /// <summary>Switches between Move and Rotate, except while the mouse is still held from a drag.</summary>
-    public void Toggle()
+    public void Toggle() => SetMode(Mode == GizmoMode.Move ? GizmoMode.Rotate : GizmoMode.Move);
+
+    /// <summary>Sets Move or Rotate, except while the mouse is still held from a drag.</summary>
+    public void SetMode(GizmoMode mode)
     {
-        if (!Dragging && !waitForRelease) Mode = Mode == GizmoMode.Move ? GizmoMode.Rotate : GizmoMode.Move;
+        if (!Dragging && !waitForRelease) Mode = mode;
     }
 
     /// <summary>Abandons any drag in progress without committing, for leaving editing mode.</summary>
