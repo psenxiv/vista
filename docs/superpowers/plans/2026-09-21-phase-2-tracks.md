@@ -5,12 +5,12 @@ Phase 1 and 1b are complete: the camera is owned, flies, and always releases.
 
 **Goal, in your hands:** fly to three spots, press a key at each, set the pacing, and watch
 the camera glide through all three and hold on the last frame. The spec's phase 2 milestone
-is "author a shot, play it back" (`spec:528-531`).
+is "author a shot, play it back" (`spec:529-532`).
 
-The UI is **not** in this phase; it is phase 2c (`spec:533-534`). Authoring happens through
+The UI is **not** in this phase; it is phase 2c (`spec:534-535`). Authoring happens through
 `/ccam track` subcommands standing in for the editor. They are scaffolding for testing, not
-product surface — the real flow is a button and a hotkey (`spec:382-384`), and a curve
-editor (`spec:394-397`).
+product surface — the real flow is a button and a hotkey (`spec:383-385`), and a curve
+editor (`spec:395-398`).
 
 ## Timing model
 
@@ -37,7 +37,7 @@ is mapped, so all of it lives in A6.
 ## Part A — the Core layer
 
 All in `CinematicCam.Core`: no Dalamud, no FFXIVClientStructs, no `unsafe`, no game. Every
-test named is one the spec's list asks for (`spec:474-489`). I verify all of part A myself
+test named is one the spec's list asks for (`spec:475-490`). I verify all of part A myself
 on macOS before you see any of it.
 
 ### A1 — track model
@@ -55,7 +55,7 @@ points is a straight dolly (`spec:185-186`). Coincident neighbours give a zero k
 which is clamped rather than divided by.
 
 Tests: curve passes through its control points; zero, one, two and coincident points do not
-throw (`spec:486`).
+throw (`spec:487`).
 
 `feat(core) add centripetal catmull-rom evaluation`
 
@@ -64,7 +64,7 @@ Sample each segment, accumulate chord lengths, and map a key position — segmen
 fraction of that segment's arc length — to a spline parameter (`spec:195-198`). Rebuilds on
 edit, not per frame.
 
-Test: a bunched-then-spread track yields even spacing (`spec:475-476`).
+Test: a bunched-then-spread track yields even spacing (`spec:476-477`).
 
 `feat(core) evaluate the path by arc length`
 
@@ -86,8 +86,8 @@ length is the last key's time (`spec:272`). The curve knows nothing about playba
 looping is A6's job (`spec:274-279`).
 
 Tests: a straight curve gives constant world speed within a segment on unevenly spaced
-points (`spec:479-480`); a flat section holds the camera still (`spec:481`); the curve never
-decreases, including for keys a naive cubic would overshoot (`spec:482-483`).
+points (`spec:480-481`); a flat section holds the camera still (`spec:482`); the curve never
+decreases, including for keys a naive cubic would overshoot (`spec:483-484`).
 
 `feat(core) add the timing curve`
 
@@ -102,7 +102,7 @@ and FoV are splined by the fraction of the segment's arc length travelled, so th
 during a hold without special handling (`spec:219-221`). Yaw and pitch become a look-at
 through `FreeCamMotion.LookAtFrom`, so a captured aim replays exactly as it was flown.
 
-Test: yaw crossing ±180° takes the short way (`spec:477`).
+Test: yaw crossing ±180° takes the short way (`spec:478`).
 
 `feat(core) add the two aim modes`
 
@@ -112,7 +112,7 @@ Test: yaw crossing ±180° takes the short way (`spec:477`).
 same at 30 and 144fps (`spec:281-282`).
 
 Evaluation is a pure `Evaluate(track, time)`, which `Tick` calls; the scrub bar needs the
-same function in 2c (`spec:390-392`). Elapsed is a `double`.
+same function in 2c (`spec:391-393`). Elapsed is a `double`.
 
 The playback mode lives here and only here (`spec:274-279`). `Once` clamps elapsed at the
 duration and holds. `Loop` wraps elapsed modulo the duration, so the camera cuts back to the
@@ -120,14 +120,14 @@ first frame; wrapping also keeps a track looping for hours at full precision.
 
 Tests: position at t=5s matches under 60fps and 30fps delta sequences, within a float
 tolerance — summing 1/60 three hundred times is not bit-identical to summing 1/30 a hundred
-and fifty times (`spec:478`); a finished `Once` track holds its last frame (`spec:488`); a
-`Loop` track cuts back to its first frame after its last key (`spec:485`).
+and fifty times (`spec:479`); a finished `Once` track holds its last frame (`spec:489`); a
+`Loop` track cuts back to its first frame after its last key (`spec:486`).
 
 `feat(core) play a track`
 
 ### A7 — key generation from legs and holds
 The commands and, later, the editor need to write the curve without anyone typing tangents
-(`spec:395-397`). Each control point gets a key at its own position; a hold adds a second key
+(`spec:396-398`). Each control point gets a key at its own position; a hold adds a second key
 at the same position. Point indices are 0-based.
 
 - **Leg i** is the time from the last key at point i−1 to the first key at point i. Setting
@@ -139,7 +139,7 @@ at the same position. Point indices are 0-based.
 - **Playback mode** is a field on the track; setting it never touches the keys.
 
 Test: appending a control point does not retime the existing ones
-(`spec:484`).
+(`spec:485`).
 
 `feat(core) build timing keys from legs and holds`
 
@@ -151,7 +151,7 @@ SnapPoint, or GameCamera (`spec:296`).
 
 The Director can pause: live stays on and `Tick` keeps returning the frame it stopped on.
 
-Test: `Tick` returns null whenever live mode is off (`spec:489`).
+Test: `Tick` returns null whenever live mode is off (`spec:490`).
 
 `feat(core) add the director`
 
@@ -176,7 +176,7 @@ Moving from Flying to Live changes only the camera source: the lock and blocking
 and the pre-takeover snapshot is kept for release.
 
 Every existing release path — zone change, area transition, logout, unload, `release` — must
-turn live mode off and stop playback, not just drop the camera (`spec:339-346`).
+turn live mode off and stop playback, not just drop the camera (`spec:340-347`).
 
 `feat(camera) drive the camera from the director`
 
@@ -184,8 +184,7 @@ turn live mode off and stop playback, not just drop the camera (`spec:339-346`).
 Scaffolding standing in for the editor. Nobody types a tangent; these write keys via A7.
 
 - `/ccam track new`
-- `/ccam track capture` — append the current camera as a control point (`spec:378-380`).
-  Refused while live.
+- `/ccam track capture` — append the current camera as a control point (`spec:379-381`)
 - `/ccam track leg <index> <seconds>` — how long the transition into that point takes
 - `/ccam track hold <index> <seconds>` — a flat section at that point
 - `/ccam track aim <tangent|keys>`, `/ccam track mode <once|loop>`
@@ -194,7 +193,9 @@ Scaffolding standing in for the editor. Nobody types a tangent; these write keys
 - `/ccam track stop` — pause on the current frame. `release` hands the camera back.
 - `/ccam track info` — points, keys, legs, holds, total length
 
-`/ccam fly` while live starts free-cam from the current frame.
+Every editing command — `new`, `capture`, `leg`, `hold`, `aim`, `mode` — is refused while
+live, paused included, with a log message (`spec:312`). `/ccam fly` while live leaves live mode
+and starts free-cam from the current frame; `release` also leaves it.
 
 `feat(track) add authoring and playback commands`
 
@@ -229,13 +230,13 @@ Steps 3, 5 and 6 are the ones only you can judge: whether the motion looks smoot
 
 Flagging rather than burying. Say if you would rather decide any of these.
 
-- **Default aim mode: AimKeys.** Capture records yaw and pitch (`spec:378-380`), so
+- **Default aim mode: AimKeys.** Capture records yaw and pitch (`spec:379-381`), so
   replaying what you looked at is the natural default for a track built by flying.
 - **Pitch clamp for PathTangent: ±89°** (`spec:204-205` asks for a clamp, no number).
 - **Arc-length sampling: 60 samples per segment**, implied by "roughly 600 samples" for ten
   points (`spec:197-198`).
 - **A track with no points: `Tick` returns null.** The spec requires only that it not throw
-  (`spec:486`); null follows from "null means hands off".
+  (`spec:487`); null follows from "null means hands off".
 - **A track with one point: the camera sits at that point** with its aim and FoV.
 - **A zero-length segment** — two points in the same place — has no arc length to take a
   fraction of, so it uses the spline parameter instead. The camera stays put for the leg
@@ -245,16 +246,16 @@ Flagging rather than burying. Say if you would rather decide any of these.
 
 Decided on 2026-09-21: 5 seconds per leg by default; full speed at the start and a dead stop
 at the end; keys anchored to control points; `stop` pauses, `play` restarts, `fly` starts from
-the current frame, `capture` is refused while live.
+the current frame; nothing can be edited while live.
 
 ## Out of scope
 
 | | Why |
 |---|---|
-| Curve editor — draggable keys and tangent handles | phase 2c (`spec:533-534`). Until then the curve is generated, not shaped |
-| The rest of the editor UI — windows, scrub bar, 3D overlay, click-to-select, ImGuizmo | phase 2c; the gizmo convention check is its first task (`spec:427-432`) |
-| Switchboard: slots, program/preview, TAKE, hotkeys | phase 3 (`spec:536-537`) |
-| Persistence, and its config round-trip test | phase 3 (`spec:536-537`) |
+| Curve editor — draggable keys and tangent handles | phase 2c (`spec:534-535`). Until then the curve is generated, not shaped |
+| The rest of the editor UI — windows, scrub bar, 3D overlay, click-to-select, ImGuizmo | phase 2c; the gizmo convention check is its first task (`spec:428-433`) |
+| Switchboard: slots, program/preview, TAKE, hotkeys | phase 3 (`spec:537-538`) |
+| Persistence, and its config round-trip test | phase 3 (`spec:537-538`) |
 | LookAt aim | deferred from v1 (`spec:35`) |
 | Controller | unsupported |
 
@@ -262,7 +263,7 @@ the current frame, `capture` is refused while live.
 
 - **Part A is low risk.** No game, no interop; failures surface as failing tests.
 - **The monotonicity limiter is the one subtle bit.** Get it wrong and the camera judders
-  backwards at a key. It has a dedicated test (`spec:482-483`).
+  backwards at a key. It has a dedicated test (`spec:483-484`).
 - **Part B reuses the camera ownership proven in phase 1.** The new failure mode is a shot
   that looks wrong rather than a crash. The one new behaviour is input blocking during live
   mode, checked by step 4.
