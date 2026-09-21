@@ -15,6 +15,9 @@ public sealed class Director
     /// <summary>True once the current <see cref="TrackShot"/>'s playback has finished; false otherwise.</summary>
     public bool IsFinished => _playback?.IsFinished ?? false;
 
+    /// <summary>Seconds into the current <see cref="TrackShot"/>; 0 for other shots or before going live.</summary>
+    public double Elapsed => _playback?.Elapsed ?? 0.0;
+
     /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero.</summary>
     public void GoLive(Shot shot)
     {

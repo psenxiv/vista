@@ -185,4 +185,58 @@ public class DirectorTests
 
         Assert.False(director.IsFinished);
     }
+    [Fact]
+    public void ElapsedIsZeroBeforeGoingLive()
+    {
+        Assert.Equal(0.0, new Director().Elapsed);
+    }
+
+    [Fact]
+    public void ElapsedFollowsATrackShotsPlayback()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+
+        director.Tick(2f);
+        director.Tick(1.5f);
+
+        Assert.Equal(3.5, director.Elapsed, 5);
+    }
+
+    [Fact]
+    public void ElapsedStopsWhilePaused()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        director.Tick(2f);
+
+        director.Pause();
+        director.Tick(3f);
+
+        Assert.Equal(2.0, director.Elapsed, 5);
+    }
+
+    [Fact]
+    public void ElapsedRestartsOnGoLive()
+    {
+        var director = new Director();
+        var shot = new TrackShot(StraightTrack());
+        director.GoLive(shot);
+        director.Tick(4f);
+
+        director.GoLive(shot);
+
+        Assert.Equal(0.0, director.Elapsed);
+    }
+
+    [Fact]
+    public void ElapsedIsZeroForNonTrackShots()
+    {
+        var director = new Director();
+        director.GoLive(new SnapShot(Snap()));
+
+        director.Tick(3f);
+
+        Assert.Equal(0.0, director.Elapsed);
+    }
 }
