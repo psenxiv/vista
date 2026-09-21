@@ -48,12 +48,12 @@ internal sealed class CameraSession
         switch (state.Edit())
         {
             case EditOutcome.FromOff:
-                freeCam.Enable(start.Value.Position);
+                freeCam.Enable(start.Value.Position, 0f, start.Value.Fov);
                 movement.Hold();
                 TakeCamera();
                 break;
             case EditOutcome.FromLive:
-                freeCam.Enable(start.Value.Position, start.Value.Roll);
+                FlyFrom(start.Value);
                 break;
             default:
                 return;
@@ -112,6 +112,34 @@ internal sealed class CameraSession
     /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
     public CameraState? FrameAt(double time) => state.FrameAt(time);
 
+    /// <summary>True while the scrub head is being dragged.</summary>
+    public bool Scrubbing => state.Scrubbing;
+
+    /// <summary>Seconds under the scrub head.</summary>
+    public double ScrubHead => state.ScrubHead;
+
+    /// <summary>Starts dragging the scrub head; while editing the camera shows the scrubbed frame.</summary>
+    public void BeginScrub() => state.BeginScrub();
+
+    /// <summary>Moves the scrub head; live, playback seeks there.</summary>
+    public void ScrubTo(double time) => state.ScrubTo(time);
+
+    /// <summary>Stops dragging the scrub head; while editing the free-cam flies on from the frame shown.</summary>
+    public void EndScrub()
+    {
+        var fromEditing = state.Mode == CameraMode.Editing && state.Scrubbing;
+        state.EndScrub();
+        if (fromEditing && state.FrameAt(state.ScrubHead) is { } frame) FlyFrom(frame);
+    }
+
+    /// <summary>Puts the free-cam at point <paramref name="index"/> while editing, as a scrub release would.</summary>
+    public void JumpToPoint(int index)
+    {
+        if (state.Mode != CameraMode.Editing || index < 0 || index >= state.Track.Points.Count) return;
+        state.ScrubTo(TrackEditing.PointSeconds(state.Track, index));
+        if (state.FrameAt(state.ScrubHead) is { } frame) FlyFrom(frame);
+    }
+
     /// <summary>True while editing with a step to undo.</summary>
     public bool CanUndo => state.CanUndo;
 
@@ -163,7 +191,7 @@ internal sealed class CameraSession
 
         var frame = state.Mode switch
         {
-            CameraMode.Editing => freeCam.Tick(dt),
+            CameraMode.Editing => state.Scrubbing && state.FrameAt(state.ScrubHead) is { } scrubbed ? scrubbed : freeCam.Tick(dt),
             CameraMode.Live => state.Director.Tick(dt),
             _ => null,
         };
@@ -203,5 +231,14 @@ internal sealed class CameraSession
     {
         snapshotBeforeTakeover ??= CameraAccess.Capture();
         ownership.Take();
+    }
+
+    /// <summary>Puts the free-cam at <paramref name="frame"/>, keeping its aim by writing the game's yaw and pitch within its limits.</summary>
+    private void FlyFrom(CameraState frame)
+    {
+        freeCam.Enable(frame.Position, frame.Roll, frame.Fov);
+        var (yaw, pitch) = TrackAim.FromDirection(frame.LookAt - frame.Position);
+        var (min, max) = CameraAccess.ReadPitchLimits() ?? (-MathF.PI / 2f, MathF.PI / 2f);
+        CameraAccess.WriteAngles(yaw, Math.Clamp(pitch, min, max));
     }
 }

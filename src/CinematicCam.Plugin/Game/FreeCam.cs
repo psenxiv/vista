@@ -13,6 +13,7 @@ internal sealed class FreeCam
 
     private Vector3 position;
     private (float Yaw, float Pitch)? lastAngles;
+    private float fov;
 
     public bool Enabled { get; private set; }
 
@@ -22,10 +23,11 @@ internal sealed class FreeCam
     /// <summary>The stepped speed setting; Shift still boosts on top.</summary>
     public FlySpeed Speed { get; } = new();
 
-    public void Enable(Vector3 startPosition, float startRoll = 0f)
+    public void Enable(Vector3 startPosition, float startRoll, float startFov)
     {
         position = startPosition;
         Roll = startRoll;
+        fov = startFov;
         lastAngles = null;
         Enabled = true;
     }
@@ -46,7 +48,7 @@ internal sealed class FreeCam
         return new CameraState(
             position,
             FreeCamMotion.LookAtFrom(position, yaw, pitch),
-            CameraAccess.ReadState()?.Fov ?? 0.78f,
+            fov,
             Roll);
     }
 
