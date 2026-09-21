@@ -1,5 +1,7 @@
+using System.Linq;
 using CinematicCam.Core.Session;
 using CinematicCam.Plugin.Game;
+using CinematicCam.Plugin.Probes;
 using CinematicCam.Plugin.Session;
 using CinematicCam.Plugin.Ui;
 using Dalamud.Bindings.ImGui;
@@ -26,6 +28,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IObjectTable Objects { get; private set; } = null!;
 
     internal static CameraController Camera { get; private set; } = null!;
     internal static InputBlocker Input { get; private set; } = null!;
@@ -37,12 +41,13 @@ public sealed class Plugin : IDalamudPlugin
     private bool escapeWasDown;
     private static bool blockEscape;
     private readonly TestWindow testWindow;
+    private readonly GizmoProbe gizmoProbe = new();
 
     public Plugin()
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the test window | release"
+            HelpMessage = "/ccam opens the test window | release | probe gizmo|aim|input"
         });
 
         Movement = new MovementLock();
@@ -73,8 +78,25 @@ public sealed class Plugin : IDalamudPlugin
             case "release":
                 Session.Release("command");
                 break;
+            case "probe":
+                OnProbe(args.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).ToArray());
+                break;
             default:
                 Log.Information("[ccam] unknown verb '{Verb}'.", verb);
+                break;
+        }
+    }
+
+    /// <summary>Temporary in-game probes for phase 2c-1; removed once they have answered.</summary>
+    private void OnProbe(string[] words)
+    {
+        switch (words.FirstOrDefault())
+        {
+            case "gizmo":
+                gizmoProbe.Toggle(words.ElementAtOrDefault(1) ?? "");
+                break;
+            default:
+                Log.Information("[probe] usage: /ccam probe gizmo [game|ours]");
                 break;
         }
     }
@@ -134,6 +156,7 @@ public sealed class Plugin : IDalamudPlugin
             wheel = 0f;
         }
 
+        gizmoProbe.Draw(Session.LastFrame);
         windows.Draw();
     }
 
