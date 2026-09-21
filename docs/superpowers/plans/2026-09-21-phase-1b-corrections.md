@@ -145,59 +145,20 @@ all keys behave normally again.
 
 ---
 
-### Task 5 — fly from game input ids instead of raw key state
+### Task 5 — REVERTED, and should never have been a task
 
-`src/CinematicCam.Plugin/Game/FreeCam.cs`
+Reading the player's own keybinds instead of WASD. Implemented, then reverted in
+`5ac33c8`.
 
-`ReadInput` reads `Plugin.KeyState[VirtualKey.W]` etc. (`FreeCam.cs:60-66`). That ignores
-the player's own keybinds, which matters for our audience — creators and event runners
-routinely remap. It also explains two reported oddities: A/D behaving as turn rather than
-strafe depending on mouse state, and Cmd doubling as Ctrl.
+**This was not a correction and it was not mine to decide.** I justified it with an
+invented claim about what users need. The requirement is: **assume QWERTY WASD.** The two
+problems I said it fixed were not fixed by it — A/D turning instead of strafing was the
+game still steering the character, which task 1 fixes, and the Cmd/Ctrl behaviour was
+already looked at and accepted as a Wine quirk.
 
-Change: query the game the way Cammy does (`FreeCam.cs:224-240`) — call the real
-`isInputIdHeld` directly, reading ids `MOVE_FORE`/`MOVE_BACK` for forward/back,
-`MOVE_LEFT`+`MOVE_STRIFE_L` and `MOVE_RIGHT`+`MOVE_STRIFE_R` for lateral movement (so both
-turn and strafe binds move the camera sideways, which is what you want in a free cam),
-`JUMP`/`MOVE_RETENTION` up and `MOVE_DESCENT` down.
+Free cam reads `Plugin.KeyState[VirtualKey.W]` and friends. Left alone.
 
-We must call the **original** function, not our own detour, or we will read back the
-`false` we just told the game. Cammy handles this with `GameFunction.Original` falling back
-to `Invoke` when unhooked (`Game/GameFunction.cs:14`).
-
-`InputBlocker` already owns those hooks, so it exposes the read rather than `FreeCam`
-holding a second delegate:
-
-```csharp
-// InputBlocker
-public bool IsHeld(InputId id) => heldHookReal is { IsEnabled: true }
-    ? heldHookReal.Original(Input(), id) != 0
-    : heldDelegate(Input(), id) != 0;
-```
-
-`FreeCam` then calls `Plugin.Input.IsHeld(InputId.MOVE_FORE)`. This keeps every hook and
-raw delegate behind one type.
-
-The input data pointer comes from ClientStructs' own helper,
-`UIInputData.Instance()` (`Client/UI/UIInputData.cs:16-19`), which wraps
-`UIModule.Instance()->GetUIInputData()`. `UIInputData` inherits `InputData`.
-
-`IsTyping()` may become redundant: ClientStructs notes that raw keyboard state is not set
-while chat input is active (`InputData.cs:20-22`). That comment is about the
-`KeyboardInputs` field, **not** about `IsInputId*` — it is reasonable to expect the id
-queries inherit the behaviour since they read keybinds against that state, but that is
-inference, not a cited fact. **Keep `IsTyping()`** and only consider removing it if the
-in-game check below shows it is doing nothing.
-
-**Verify:** `/ccam fly` and confirm W/A/S/D/Space/Ctrl fly correctly; A/D move sideways
-whether or not the right mouse button is held. Rebind Move Forward to a different key in
-the game's keybind settings and confirm the camera follows the new bind. Open chat, type
-"wasd" — camera must not move.
-
-`feat(input) fly using the player's own movement binds`
-
----
-
-### Task 6 — release if something else clears the movement counter
+### Task 6 — do not decrement a movement counter someone else cleared
 
 `src/CinematicCam.Plugin/Game/MovementLock.cs`, `Plugin.cs`
 
@@ -206,8 +167,8 @@ our later `Release()` would decrement someone else's hold. Cammy uses the same c
 a dead-man's switch to exit free cam (`FreeCam.cs:206`).
 
 Change: expose the current count; in `OnFrameworkUpdate`, if `Movement.Held` and the count
-is 0, clear `Held` without decrementing and release the camera with reason
-`"movement counter cleared externally"`.
+is 0, clear `Held` without decrementing. **Keep flying** — an automatic bail-out would drop
+a shot mid-take, which is worse than the leak it guards against.
 
 **Verify:** hard to trigger deliberately; covered by the task 1 checks not regressing.
 The safety net is that `Dispose` already releases, so disabling the plugin always recovers.

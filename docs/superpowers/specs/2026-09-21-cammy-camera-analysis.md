@@ -445,10 +445,10 @@ get out".
 | `cameraNoClippyReplacer` asm patch | disable camera collision | **not needed** | our post-Update write already bypasses collision |
 | `AsmPatch` class | patch bytes, restore on dispose | **not needed now** | no patch required; revisit only if we ever need one |
 | Input-id blocking (4 hooks + keybind table) | stop move keys firing other actions | **lift, but use `InputId`** | replaces our magic numbers; note it does *not* stop movement |
-| `EmoteController.cancelEmote` → false | keep emoting while flying | **lift later** | genuinely useful for event/cinematic work; not v1-critical |
-| `canChangePerspective` → false | block 1st/3rd toggle | **lift later** | cheap polish |
-| `getCameraAutoRotateMode` → 4 | stop auto-rotate | **evaluate** | we may not need it given we overwrite post-Update |
-| `getZoomDelta` → 0 | kill zoom at source | **evaluate vs our wheel hook** | cleaner than hooking the wheel, but see open question on vf29 |
+| `EmoteController.cancelEmote` → false | keep emoting while flying | **not in scope** | not discussed; raise as a question if it ever comes up |
+| `canChangePerspective` → false | block 1st/3rd toggle | **not in scope** | not discussed |
+| `getCameraAutoRotateMode` → 4 | stop auto-rotate | **not needed** | our post-Update overwrite already wins |
+| `getZoomDelta` → 0 | kill zoom at source | **not needed** | the wheel hook is confirmed working |
 | `shouldDisplayObject` hook | hide own character | **not needed** | first-person only |
 | View bob / presets / spectate / QoLBar IPC | Cammy features | **not needed** | out of scope |
 | `Graphics.Scene.Camera.WorldToScreenPoint` / `ScreenPointToRay` | world↔screen | **use, from CS** | both verified present and resolving; this is what the 3D overlay and gizmo need |

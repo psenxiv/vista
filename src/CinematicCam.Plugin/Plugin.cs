@@ -173,13 +173,9 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        // Someone else reset the shared counter. Drop our hold rather than decrementing
-        // theirs later, and get out.
-        if (Movement.Held && Movement.Count == 0)
-        {
-            Movement.Forget();
-            ReleaseCamera("movement counter cleared elsewhere");
-        }
+        // Someone else reset the shared counter. Stop tracking our hold so we never
+        // decrement theirs, but keep flying: dropping a shot mid-take is worse.
+        if (Movement.Held && Movement.Count == 0) Movement.Forget();
     }
 
     private void OnTerritoryChanged(uint territory)
