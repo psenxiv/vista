@@ -18,9 +18,9 @@ internal sealed class AimProbe
             return;
         }
 
-        Plugin.Log.Information("[probe] aim before {Angles}", CameraAccess.ReadAngles());
+        Plugin.Log.Information("[probe] aim before {Angles}", CameraAccess.ReadAngles()?.ToString() ?? "none");
         CameraAccess.WriteAngles(yawDeg * MathF.PI / 180f, pitchDeg * MathF.PI / 180f);
-        Plugin.Log.Information("[probe] aim after write {Angles}", CameraAccess.ReadAngles());
+        Plugin.Log.Information("[probe] aim after write {Angles}", CameraAccess.ReadAngles()?.ToString() ?? "none");
         framesToLog = 2;
     }
 
@@ -29,6 +29,6 @@ internal sealed class AimProbe
     {
         if (framesToLog == 0) return;
         framesToLog--;
-        Plugin.Log.Information("[probe] aim next frame {Angles}", CameraAccess.ReadAngles());
+        Plugin.Log.Information("[probe] aim next frame {Angles}", CameraAccess.ReadAngles()?.ToString() ?? "none");
     }
 }

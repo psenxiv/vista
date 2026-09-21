@@ -71,7 +71,7 @@ internal sealed unsafe class GizmoProbe
 
         var fromGame = Matrix4x4.Invert(gameView, out var inverse) ? inverse.Translation : Vector3.Zero;
         Plugin.Log.Information("[probe] camera from game view {Game}, written {Ours}, gap {Gap:0.000}",
-            fromGame, frame?.Position, frame is { } f ? Vector3.Distance(fromGame, f.Position) : -1f);
+            fromGame, frame is { } f ? f.Position.ToString() : "none", frame is { } g ? Vector3.Distance(fromGame, g.Position) : -1f);
     }
 
     private void DrawGizmo(Matrix4x4 view, Matrix4x4 projection, float near, float far, Vector3 feet)
