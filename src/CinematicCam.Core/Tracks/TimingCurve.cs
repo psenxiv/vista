@@ -36,20 +36,19 @@ public sealed class TimingCurve
 
         if (time <= _keys[0].Time) return _keys[0].Position;
         if (time >= Duration) return _keys[^1].Position;
-        var t = time;
 
-        var k = FindInterval((float)t);
+        var k = FindInterval(time);
         var k0 = _keys[k];
         var k1 = _keys[k + 1];
         var span = k1.Time - k0.Time;
-        var localT = span <= 0f ? 0f : (float)((t - k0.Time) / span);
+        var localT = span <= 0f ? 0f : (float)((time - k0.Time) / span);
 
         var m0 = _outTangent[k] * span;
         var m1 = _inTangent[k + 1] * span;
         return Hermite(k0.Position, k1.Position, m0, m1, localT);
     }
 
-    private int FindInterval(float t)
+    private int FindInterval(double t)
     {
         var lo = 0;
         var hi = _keys.Count - 1;
@@ -107,7 +106,7 @@ public sealed class TimingCurve
                     rawOut[k] = k < n - 1 ? delta[k] : 0f;
                     break;
 
-                default: // Auto
+                case TangentMode.Auto:
                     float value;
                     if (k == 0)
                         value = delta[0];
@@ -118,6 +117,9 @@ public sealed class TimingCurve
                     rawIn[k] = value;
                     rawOut[k] = value;
                     break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(keys), $"unknown tangent mode {key.Mode}");
             }
         }
 
@@ -155,8 +157,11 @@ public sealed class TimingCurve
 
     private static void Validate(IReadOnlyList<TimingKey> keys)
     {
-        for (var i = 1; i < keys.Count; i++)
+        for (var i = 0; i < keys.Count; i++)
         {
+            if (!Enum.IsDefined(keys[i].Mode))
+                throw new ArgumentException($"timing key {i} has an unknown tangent mode");
+            if (i == 0) continue;
             if (keys[i].Time <= keys[i - 1].Time)
                 throw new ArgumentException("timing keys must have strictly increasing times");
             if (keys[i].Position < keys[i - 1].Position)

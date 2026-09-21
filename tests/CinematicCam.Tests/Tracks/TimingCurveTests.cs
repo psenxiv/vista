@@ -42,6 +42,31 @@ public class TimingCurveTests
     }
 
     [Fact]
+    public void ConstructorRejectsAnUnknownTangentMode()
+    {
+        var keys = new[] { Key(0f, 0f, (TangentMode)99), Key(1f, 1f) };
+        var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        Assert.Equal("timing key 0 has an unknown tangent mode", ex.Message);
+    }
+
+    [Fact]
+    public void PositionAtKeepsFullPrecisionOnLongShots()
+    {
+        // Keys 0.0625 s apart, one float step at a million seconds. A time cast to float
+        // rounds 1_000_000.04 up to the next key and evaluates the wrong interval.
+        var keys = new[]
+        {
+            Key(0f, 0f),
+            Key(1_000_000f, 1f),
+            Key(1_000_000.0625f, 1f),
+            Key(1_000_000.125f, 2f),
+        };
+        var curve = new TimingCurve(keys);
+
+        Assert.Equal(1f, curve.PositionAt(1_000_000.04), 4);
+    }
+
+    [Fact]
     public void ConstructorThrowsWhenTimeDecreases()
     {
         var keys = new[] { Key(1f, 0f), Key(0f, 1f) };
