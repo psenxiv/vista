@@ -85,30 +85,32 @@ internal sealed class PointWindow : Window
         if (!ImGui.BeginTable("point-fields", 6, ImGuiTableFlags.SizingFixedFit)) return;
 
         ImGui.TableNextRow();
-        Field("X", $"x{index}", index, point.Position.X, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
-        Field("Y", $"y{index}", index, point.Position.Y, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
-        Field("Z", $"z{index}", index, point.Position.Z, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
+        Field("X", EditorColours.AxisX, $"x{index}", index, point.Position.X, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
+        Field("Y", EditorColours.AxisY, $"y{index}", index, point.Position.Y, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
+        Field("Z", EditorColours.AxisZ, $"z{index}", index, point.Position.Z, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
 
+        // Pitch turns about X, yaw about Y and roll about Z, so each sits under its axis in the gizmo's colours.
         ImGui.TableNextRow();
         ImGui.BeginDisabled(session.Track.Aim == AimMode.PathTangent);
-        Field("Yaw", $"yaw{index}", index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
-        Field("Pitch", $"pitch{index}", index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
+        Field("Pitch", EditorColours.AxisX, $"pitch{index}", index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
+        Field("Yaw", EditorColours.AxisY, $"yaw{index}", index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
         ImGui.EndDisabled();
+        Field("Roll", EditorColours.AxisZ, $"roll{index}", index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
 
         ImGui.TableNextRow();
-        Field("Roll", $"roll{index}", index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
-        Field("FoV", $"fov{index}", index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = ClampFov(Radians(v), p.Fov) });
+        Field("FoV", null, $"fov{index}", index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = ClampFov(Radians(v), p.Fov) });
 
         ImGui.EndTable();
         fieldsWidth = ImGui.GetItemRectSize().X;
     }
 
     /// <summary>A label and a drag field, as two cells of the grid: dragging moves the point live, and each drag is one undo step.</summary>
-    private void Field(string label, string id, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
+    private void Field(string label, uint? colour, string id, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
     {
         ImGui.TableNextColumn();
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(label);
+        using (ImRaii.PushColor(ImGuiCol.Text, colour ?? 0u, colour is not null))
+            ImGui.TextUnformatted(label);
         ImGui.TableNextColumn();
         ImGui.SetNextItemWidth(FieldWidth);
 

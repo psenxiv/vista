@@ -6,13 +6,14 @@ using Dalamud.Bindings.ImGui;
 
 namespace CinematicCam.Plugin.Editor;
 
-/// <summary>Draws the track's path, numbered markers and aim arrows over the game.</summary>
+/// <summary>Draws the track's path, numbered markers, and aim and up arrows over the game.</summary>
 internal sealed class Overlay
 {
     public const float MarkerRadius = 20f;
     private const float LabelScale = 2f;
     private const float PathSpacing = 0.25f;
     private const float AimLength = 1.5f;
+    private const float UpLength = 0.75f;
     private const float ArrowHeadLength = 14f;
     private const float ArrowHeadHalfWidth = 7f;
 
@@ -47,17 +48,24 @@ internal sealed class Overlay
     {
         foreach (var point in track.Points)
         {
-            var tip = point.Position + (Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch)) * AimLength);
-            if (ScreenProjection.ProjectSegment(point.Position, tip, view.ViewProjection, view.Size, view.Near) is not { } s) continue;
-
-            var start = view.Origin + s.Start;
-            var end = view.Origin + s.End;
-            list.AddLine(start, end, EditorColours.AimLine, 2f);
-            if (view.ToScreen(tip) is not null) DrawArrowHead(list, start, end);
+            var forward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch));
+            var up = Vector3.Normalize(CameraOrientation.UpFor(Vector3.Zero, forward, point.Roll));
+            DrawArrow(list, view, point.Position, point.Position + (forward * AimLength), EditorColours.AimLine);
+            DrawArrow(list, view, point.Position, point.Position + (up * UpLength), EditorColours.UpLine);
         }
     }
 
-    private static void DrawArrowHead(ImDrawListPtr list, Vector2 start, Vector2 end)
+    private static void DrawArrow(ImDrawListPtr list, EditorView view, Vector3 from, Vector3 tip, uint colour)
+    {
+        if (ScreenProjection.ProjectSegment(from, tip, view.ViewProjection, view.Size, view.Near) is not { } s) return;
+
+        var start = view.Origin + s.Start;
+        var end = view.Origin + s.End;
+        list.AddLine(start, end, colour, 2f);
+        if (view.ToScreen(tip) is not null) DrawArrowHead(list, start, end, colour);
+    }
+
+    private static void DrawArrowHead(ImDrawListPtr list, Vector2 start, Vector2 end, uint colour)
     {
         var shaft = end - start;
         if (shaft.LengthSquared() < 1f) return;
@@ -65,7 +73,7 @@ internal sealed class Overlay
         var along = Vector2.Normalize(shaft);
         var across = new Vector2(-along.Y, along.X) * ArrowHeadHalfWidth;
         var back = end - (along * ArrowHeadLength);
-        list.AddTriangleFilled(end, back + across, back - across, EditorColours.AimLine);
+        list.AddTriangleFilled(end, back + across, back - across, colour);
     }
 
     private static Vector2?[] DrawMarkers(ImDrawListPtr list, EditorView view, Track track, int? selected)
