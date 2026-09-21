@@ -331,15 +331,27 @@ gets a true answer — the function works fine, the game just isn't the one call
 Also: ClientStructs has the **full `InputId` enum**. Cammy's magic-number dictionary
 (`FreeCam.cs:61-79`) is obsolete; we should use `InputId.MOVE_FORE` etc.
 
-### 6.3 `IsInputIdHeld` is misnamed in ClientStructs — confirmed
+### 6.3 `IsInputIdHeld` — I had this wrong twice; measured on 2026-09-21
 
-| Signature | ClientStructs name | Hypostasis name | Binary |
-|---|---|---|---|
-| `E8 ?? ?? ?? ?? 84 C0 74 37 EB 06` | `IsInputIdHeld` | `isInputIDLongPressed` | 0x140634CE0 |
-| `E9 ?? ?? ?? ?? B9 4F 01 00 00` | *(absent)* | `isInputIDHeld` | 0x140634A60 |
+I claimed ClientStructs misnamed this and that Hypostasis' `isInputIDHeld`
+(`E9 ?? ?? ?? ?? B9 4F 01 00 00`, 0x140634A60) was the real currently-held query. **Both
+claims were wrong.** I inferred them from signature mapping instead of measuring.
 
-Two distinct functions. Our earlier conclusion stands, and the addresses confirm they're
-different targets. ClientStructs' name is wrong; keep our own scan for the real one.
+Measured in-game while holding Move Forward, sampling all four queries twice a second:
+
+| Query | ClientStructs sig | While W is held |
+|---|---|---|
+| `IsInputIdDown` | `E8 ?? ?? ?? ?? 4C 8D 76 06` | **1, consistently** |
+| `IsInputIdHeld` | `E8 ?? ?? ?? ?? 84 C0 74 37 EB 06` | pulses 0/1 — a repeat or long-press |
+| `IsInputIdPressed` | `E9 ?? ?? ?? ?? 83 7F 44 02` | 0 (fires only on the press frame) |
+| Hypostasis `isInputIDHeld` | `E9 ?? ?? ?? ?? B9 4F 01 00 00` | **0 — never reports movement binds** |
+
+**`IsInputIdDown` is the currently-held query, and ClientStructs had it all along.** We read
+that. The Hypostasis signature is not needed and its hook has been removed; whatever that
+function is, it does not answer "is this bind down".
+
+This also re-explains §6.2: the probe never saw ids 321-326 because the game does not query
+them for movement, *and* because the one query we had hooked for "held" never reports them.
 
 ### 6.4 🔴 `MovementLock` is broken — concrete, untested-but-predictable
 
