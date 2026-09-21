@@ -59,7 +59,8 @@ arrive in phase 3.
 - **Scrub bar**, 0 to the shot's total length; see Scrub and jumps.
 
 **Point window** (compact, auto-sized), shown only while a point is selected in
-editing mode. It remembers where it was placed.
+editing mode. It remembers where it was placed. It has no close button: deselecting
+hides it, and Escape does not close it.
 
 ```
 ┌ Point 2 ──────────────────────────────┐
@@ -73,6 +74,11 @@ editing mode. It remembers where it was placed.
 
 Position is in yalms; yaw, pitch, roll and FoV in degrees, converted from the
 stored radians for display and entry only. A field applies when editing finishes.
+In Direction-of-travel mode the Yaw and Pitch fields show the stored values but are
+disabled, matching the gizmo's roll-only ring.
+
+Closing the track editor hides only the window. The overlay, gizmo and editor keys
+belong to editing mode and keep working.
 
 Everything that changes the track is disabled while live, paused included, as
 today. The scrub bar stays usable while live.
@@ -80,8 +86,10 @@ today. The scrub bar stays usable while live.
 ## Overlay
 
 Drawn in editing mode only, never live or off, on the ImGui **background** draw
-list: over the game, under plugin windows. Projected with the game's
-`WorldToScreen`; anything behind the camera is skipped.
+list: over the game, under plugin windows. Projected with our own projection
+from the world camera's matrices, not `IGameGui.WorldToScreen`, which lags a frame
+(probe 1). Markers behind the camera are skipped; the path is clipped at the near
+plane.
 
 - **Path** — the spline sampled densely along its length, drawn as a polyline.
 - **Markers** — a numbered circle per point; the selected point is highlighted.
@@ -120,7 +128,8 @@ snapping.
   roll in both aim modes. In Direction-of-travel mode only the roll ring shows.
 - The mode is switched in the Point window, or with **R** while a point is
   selected.
-- One drag is one undo step, committed on release.
+- One drag is one undo step, committed on release. While dragging, the path and
+  the point's marker follow the drag.
 - Gizmo drags do not reach the game, so the camera does not turn while dragging.
 - The arrows keep a fixed direction; they do not flip to face the camera
   (`ImGuizmo.AllowAxisFlip(false)`).
