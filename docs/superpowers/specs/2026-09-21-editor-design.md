@@ -81,14 +81,16 @@ hides it, and Escape does not close it.
 ```
 ┌ Point 2 ──────────────────────────────────┐
 │ Gizmo  (•) Move  ( ) Rotate  [⧉][📋][🗑] │
-│ X    [ -137.1 ]  Y     [ 3.3 ]  Z [ -154.3 ] │
-│ Yaw  [ 42.0° ]   Pitch [ -8.5° ]          │
-│ Roll [ 0.0° ]    FoV   [ 45.0° ]          │
+│ X     [ -137.1 ]  Y   [ 3.3 ]   Z    [ -154.3 ] │
+│ Pitch [ -8.5° ]   Yaw [ 42.0° ] Roll [ 0.0° ]   │
+│ FoV   [ 45.0° ]                                │
 └───────────────────────────────────────────┘
 ```
 
 The fields sit in an aligned grid, and Delete is a trash icon at the right of the
-top row.
+top row. Labels use the gizmo's axis colours: X and Pitch red, Y and Yaw green, Z and
+Roll blue, since pitch turns about X, yaw about Y and roll about Z. So each colour
+lines up down its column. FoV is uncoloured, on its own row.
 
 The fields are drag fields, as in BDTHPlugin: drag left or right to change the value,
 or double-click to type one. The point, its marker and the path move live while
@@ -144,6 +146,9 @@ plane.
   to match; the selected point is highlighted.
 - **Aim arrows** — a short arrow, with a head, from each point along its recorded
   aim, drawn only in Recorded-aim mode.
+- **Up arrows** — a shorter, light-blue arrow from each point along the camera's up
+  direction there, so roll is visible. Drawn with the aim arrows, in Recorded-aim
+  mode only. (Added 2026-09-22.)
 
 Colours live in one place.
 
