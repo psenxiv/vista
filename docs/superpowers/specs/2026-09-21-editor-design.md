@@ -45,11 +45,11 @@ arrive in phase 3.
 - **Add split button.** The `+ Add` half adds to the end. The `▾` half opens a
   menu with each item's shortcut on the right:
 
-  | Item | Shortcut |
+  | Item | Shortcut shown |
   |---|---|
-  | Add to end | `` ` `` |
-  | Add after selected | Alt + `` ` `` |
-  | Overwrite selected | Ctrl + `` ` `` |
+  | Add to end | Backtick |
+  | Add after selected | Alt + Backtick |
+  | Overwrite selected | Ctrl + Backtick |
 
   The last two are disabled when nothing is selected. Overwrite has no
   confirmation step; undo covers it.
@@ -78,6 +78,22 @@ including when its window closes or a mode button is pressed first; ImGui never
 reports a closed window's field losing focus.
 In Direction-of-travel mode the Yaw and Pitch fields show the stored values but are
 disabled, matching the gizmo's roll-only ring.
+
+**Invalid input is prevented, not reported** (decided 2026-09-21). Buttons and menu
+items that cannot act are disabled, keys that cannot act do nothing, and number
+fields clamp to a sensible range instead of refusing:
+
+| Field | Range |
+|---|---|
+| Leg | 0.1 to 600 s |
+| Hold | 0 to 600 s |
+| Pitch | −89° to +89°, as the gizmo |
+| Yaw, roll | wrapped to −180° to +180° |
+| FoV | the game's own `Camera.MinFoV` to `Camera.MaxFoV` |
+| X, Y, Z | any finite value |
+
+There is no error line. Anything still refused, such as an unreadable camera, is
+logged as a warning.
 
 Closing the track editor hides only the window. The overlay, gizmo and editor keys
 belong to editing mode and keep working.
