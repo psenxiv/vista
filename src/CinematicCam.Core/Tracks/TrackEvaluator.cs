@@ -17,6 +17,7 @@ public sealed class TrackEvaluator
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
+    private readonly float[] _rolls;
     private readonly float[] _fovs;
     private readonly float _fovMin;
     private readonly float _fovMax;
@@ -39,8 +40,9 @@ public sealed class TrackEvaluator
         }
 
         _curve = new TimingCurve(track.Timing.Select(ToDistance).ToArray());
-        _yaws = TrackAim.UnwrapYaw(track.Points.Select(p => p.Yaw).ToArray());
+        _yaws = TrackAim.UnwrapAngles(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
+        _rolls = TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray());
         _fovs = track.Points.Select(p => p.Fov).ToArray();
         _fovMin = _fovs.Length == 0 ? 0f : _fovs.Min();
         _fovMax = _fovs.Length == 0 ? 0f : _fovs.Max();
@@ -54,7 +56,7 @@ public sealed class TrackEvaluator
         if (_track.Points.Count == 1)
         {
             var only = _track.Points[0];
-            return new CameraState(only.Position, FreeCamMotion.LookAtFrom(only.Position, only.Yaw, only.Pitch), only.Fov);
+            return new CameraState(only.Position, FreeCamMotion.LookAtFrom(only.Position, only.Yaw, only.Pitch), only.Fov, only.Roll);
         }
 
         var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
@@ -66,8 +68,9 @@ public sealed class TrackEvaluator
             : TrackAim.PathTangent(_positions, _table, segment, fraction, (_yaws[0], _pitches[0]));
 
         var fov = Math.Clamp(TrackAim.Channel(_fovs, segment, fraction), _fovMin, _fovMax);
+        var roll = TrackAim.Channel(_rolls, segment, fraction);
 
-        return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov);
+        return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov, roll);
     }
 
     /// <summary>The key with its position and tangents moved from control-point units to distance along the path.</summary>

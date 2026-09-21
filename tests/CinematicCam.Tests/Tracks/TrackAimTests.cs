@@ -24,10 +24,10 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void UnwrapYawTakesTheShortWayAcrossPlusMinus180()
+    public void UnwrapAnglesTakesTheShortWayAcrossPlusMinus180()
     {
         var yaws = new[] { 170f * Deg, -170f * Deg };
-        var unwrapped = TrackAim.UnwrapYaw(yaws);
+        var unwrapped = TrackAim.UnwrapAngles(yaws);
 
         Assert.Equal(170f * Deg, unwrapped[0], 4);
         Assert.Equal(190f * Deg, unwrapped[1], 4);
@@ -35,10 +35,10 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void UnwrapYawLeavesASmallStepUntouched()
+    public void UnwrapAnglesLeavesASmallStepUntouched()
     {
         var yaws = new[] { 10f * Deg, 15f * Deg, 5f * Deg };
-        var unwrapped = TrackAim.UnwrapYaw(yaws);
+        var unwrapped = TrackAim.UnwrapAngles(yaws);
 
         Assert.Equal(10f * Deg, unwrapped[0], 4);
         Assert.Equal(15f * Deg, unwrapped[1], 4);
@@ -46,8 +46,8 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void UnwrapYawOfEmptySequenceIsEmpty()
-        => Assert.Empty(TrackAim.UnwrapYaw(Array.Empty<float>()));
+    public void UnwrapAnglesOfEmptySequenceIsEmpty()
+        => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
 
     [Fact]
     public void ChannelPassesThroughItsValuesAtSegmentEndpoints()

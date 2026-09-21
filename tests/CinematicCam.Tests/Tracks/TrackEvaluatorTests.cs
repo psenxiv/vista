@@ -9,8 +9,8 @@ public class TrackEvaluatorTests
 {
     private const float Deg = MathF.PI / 180f;
 
-    private static ControlPoint Point(float x, float y, float z, float yaw = 0f, float pitch = 0f, float fov = 1f)
-        => new(new Vector3(x, y, z), yaw, pitch, fov);
+    private static ControlPoint Point(float x, float y, float z, float yaw = 0f, float pitch = 0f, float fov = 1f, float roll = 0f)
+        => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
 
     private static TimingKey Key(float time, float position, TangentMode mode = TangentMode.Auto)
         => new(time, position, mode, 0f, 0f);
@@ -165,5 +165,49 @@ public class TrackEvaluatorTests
         var yaw = TrackAim.FromDirection(state.LookAt - state.Position).Yaw;
 
         Assert.InRange(yaw, 20f * Deg, 70f * Deg);
+    }
+
+    [Theory]
+    [InlineData(AimMode.AimKeys)]
+    [InlineData(AimMode.PathTangent)]
+    public void RollBlendsBetweenPointsInEitherAimMode(AimMode aim)
+    {
+        var track = new Track(
+            new[] { Point(0f, 0f, 0f, roll: 0f), Point(10f, 0f, 0f, roll: 90f * Deg) },
+            new[] { Key(0f, 0f), Key(10f, 1f) },
+            aim,
+            PlaybackMode.Once);
+        var evaluator = new TrackEvaluator(track);
+
+        Assert.Equal(0f, evaluator.Evaluate(0.0)!.Value.Roll, 4);
+        Assert.Equal(45f * Deg, evaluator.Evaluate(5.0)!.Value.Roll, 2);
+        Assert.Equal(90f * Deg, evaluator.Evaluate(10.0)!.Value.Roll, 4);
+    }
+
+    [Fact]
+    public void AChainOfSmallRollsBuildsAFullBarrelRoll()
+    {
+        var rolls = new[] { 0f, 90f, 180f, -90f, 0f };
+        var points = rolls.Select((r, i) => Point(i * 10f, 0f, 0f, roll: r * Deg)).ToArray();
+        var keys = rolls.Select((_, i) => Key(i * 5f, i)).ToArray();
+        var evaluator = new TrackEvaluator(new Track(points, keys, AimMode.AimKeys, PlaybackMode.Once));
+
+        var previous = float.NegativeInfinity;
+        for (var t = 0.0; t <= 20.0; t += 0.25)
+        {
+            var roll = evaluator.Evaluate(t)!.Value.Roll;
+            Assert.True(roll >= previous - 1e-4f, $"roll went backwards at t={t}: {previous} -> {roll}");
+            previous = roll;
+        }
+
+        Assert.Equal(2f * MathF.PI, evaluator.Evaluate(20.0)!.Value.Roll, 3);
+    }
+
+    [Fact]
+    public void ASinglePointTrackKeepsItsRoll()
+    {
+        var track = new Track(new[] { Point(1f, 2f, 3f, roll: 0.3f) }, Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
+
+        Assert.Equal(0.3f, new TrackEvaluator(track).Evaluate(0.0)!.Value.Roll);
     }
 }

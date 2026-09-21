@@ -285,4 +285,13 @@ public class DirectorTests
         Assert.True(director.IsLive);
         Assert.Equal(expected, director.Tick(1f));
     }
+
+    [Fact]
+    public void ASnapShotCarriesItsRoll()
+    {
+        var director = new Director();
+        director.GoLive(new SnapShot(new SnapPoint(Vector3.Zero, 0f, 0f, 1f, 0.4f)));
+
+        Assert.Equal(0.4f, director.Tick(0.1f)!.Value.Roll);
+    }
 }

@@ -160,7 +160,7 @@ rather than a point will need to account for per-race height.
 ## Track model
 
 ```csharp
-record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Roll, float Fov);
+record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov, float Roll = 0);
 record Track(IReadOnlyList<ControlPoint> Points, IReadOnlyList<TimingKey> Timing,
              AimMode Aim, PlaybackMode Playback);
 enum PlaybackMode { Once, Loop }

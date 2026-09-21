@@ -59,7 +59,8 @@ public sealed class Director
             SnapShot snap => new CameraState(
                 snap.Point.Position,
                 FreeCamMotion.LookAtFrom(snap.Point.Position, snap.Point.Yaw, snap.Point.Pitch),
-                snap.Point.Fov),
+                snap.Point.Fov,
+                snap.Point.Roll),
             TrackShot => _playback!.Advance(IsPaused ? 0f : dt),
             _ => null,
         };

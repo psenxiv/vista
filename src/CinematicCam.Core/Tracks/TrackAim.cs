@@ -23,8 +23,8 @@ public static class TrackAim
         return (yaw, pitch);
     }
 
-    /// <summary>Walks a yaw sequence, adding or subtracting full turns so consecutive values differ by at most π.</summary>
-    public static float[] UnwrapYaw(IReadOnlyList<float> yaws)
+    /// <summary>Walks an angle sequence (yaw or roll), adding or subtracting full turns so consecutive values differ by at most π.</summary>
+    public static float[] UnwrapAngles(IReadOnlyList<float> yaws)
     {
         var result = new float[yaws.Count];
         if (yaws.Count == 0) return result;
