@@ -141,7 +141,9 @@ from the world camera's matrices, not `IGameGui.WorldToScreen`, which lags a fra
 (probe 1). Markers behind the camera are skipped; the path is clipped at the near
 plane.
 
-- **Path** — the spline sampled densely along its length, drawn as a polyline.
+- **Path** — the spline sampled densely along its length, drawn as a 3 px soft-white
+  polyline so the coloured arrows stand out against it (changed from light blue,
+  2026-09-22).
 - **Markers** — a numbered circle per point, 20 px in radius with the number sized
   to match; the selected point is highlighted.
 - **Aim arrows** — a short arrow, with a head, from each point along its recorded
