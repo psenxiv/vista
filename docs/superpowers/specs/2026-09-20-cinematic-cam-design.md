@@ -59,8 +59,8 @@ Track / Spline     geometry, interpolation, timing
 Switchboard        which shot is live, which is staged, what TAKE does
 ```
 
-`CameraState { Vector3 Position; Vector3 LookAt; float Fov }` is the seam
-between them.
+`CameraState { Vector3 Position; Vector3 LookAt; float Fov; float Roll }` is
+the seam between them.
 
 ## Camera ownership
 
@@ -160,7 +160,7 @@ rather than a point will need to account for per-race height.
 ## Track model
 
 ```csharp
-record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov);
+record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Roll, float Fov);
 record Track(IReadOnlyList<ControlPoint> Points, IReadOnlyList<TimingKey> Timing,
              AimMode Aim, PlaybackMode Playback);
 enum PlaybackMode { Once, Loop }
@@ -216,7 +216,13 @@ Yaw unwraps before interpolation: walk the key sequence adding or subtracting
 2π so no two consecutive values differ by more than π. Without this, a shot
 crossing due north whips the long way around.
 
-Yaw, pitch and FoV are each splined between points by the fraction of the
+**Roll** is a third channel per point, independent of aim mode, so it applies
+under PathTangent too. It unwraps like yaw, so a chain of points each under half
+a turn apart builds a full barrel roll. It rotates the up vector we already write
+about the view direction; no new game field is written. In editing mode, Q and E
+roll the free-cam.
+
+Yaw, pitch, roll and FoV are each splined between points by the fraction of the
 segment's arc length travelled, the same place on the path as position. They
 therefore sit still during a hold with no special handling.
 
@@ -294,7 +300,7 @@ released" all collapse into that one rule, so exactly one place decides whether
 the game keeps its camera.
 
 A shot is a Track, a SnapPoint, or GameCamera. A SnapPoint holds position, yaw,
-pitch and FoV, captured from the free-cam with one key. It stays a distinct type
+pitch, roll and FoV, captured from the free-cam with one key. It stays a distinct type
 rather than a one-point track, which keeps degenerate cases out of the spline
 code.
 
