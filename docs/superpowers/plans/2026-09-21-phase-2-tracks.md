@@ -7,8 +7,8 @@ Phase 1 and 1b are complete: the camera is owned, flies, and always releases.
 the camera glide through all three and hold on the last frame. The spec's phase 2 milestone
 is "author a shot, play it back" (`spec:529-532`).
 
-The UI is **not** in this phase; it is phase 2c (`spec:534-535`). Authoring happens through
-`/ccam edit` and `/ccam live` subcommands standing in for the editor. They are scaffolding for testing, not
+The editor is **not** in this phase; it is phase 2c (`spec:534-535`). Authoring happens through
+a simple test window standing in for the editor. It is scaffolding for testing, not
 product surface — the real flow is a button and a hotkey (`spec:383-385`), and a curve
 editor (`spec:395-398`).
 
@@ -180,54 +180,69 @@ turn live mode off and stop playback, not just drop the camera (`spec:340-347`).
 
 `feat(camera) drive the camera from the director`
 
-### B2 — editing and live commands
-Scaffolding standing in for the editor. Nobody types a tangent; these write keys via A7.
-`/ccam fly` is renamed `/ccam edit`: the mode is editing, flying is just how you move in it.
+### B2 — test window
+A plain ImGui window standing in for the 2c editor, because testing through chat commands is
+too slow. Scaffolding, not product surface: nothing fancy, just functional. Nobody types a
+tangent; everything writes keys via A7.
 
-- `/ccam edit` — enter editing mode. From Off it takes the camera, free-cam starting at the
-  game camera; from Live it starts free-cam at the current frame. Already editing: no-op.
-- `/ccam edit new` — start an empty track
-- `/ccam edit capture` — append the current camera as a control point (`spec:379-381`)
-- `/ccam edit leg <index> <seconds>` — how long the transition into that point takes
-- `/ccam edit hold <index> <seconds>` — a flat section at that point
-- `/ccam edit aim <tangent|keys>`, `/ccam edit mode <once|loop>`
-- `/ccam edit info` — points, keys, legs, holds, total length. Read-only, so allowed in any mode.
-- `/ccam live play` — go live from the start of the track; from Off or Editing it takes the
-  camera. While live it restarts from zero.
-- `/ccam live stop` — pause on the current frame; stays live.
-- `/ccam release` — turn the plugin off and hand the camera back.
+```
+┌ Cinematic Cam (test) ───────────────────────────────┐
+│ Mode: Editing          [Edit] [Play] [Stop] [Release] │
+│ Aim: [Recorded aim ▾]   Playback: [Once ▾]            │
+│ [Capture point]  [New track]                          │
+│  #   Leg (s)   Hold (s)                               │
+│  0      —       [0.0]                                 │
+│  1    [5.0]     [3.0]                                 │
+│ 3 points · total 18.0 s · playing 7.2 s               │
+└───────────────────────────────────────────────────────┘
+```
 
-Every `/ccam edit` subcommand that changes the track works only in editing mode. It is
-refused while live, paused included (`spec:312`), and while off, each with a log message
-naming the command to run first.
+- **Edit** enters editing mode. From Off it takes the camera, free-cam starting at the game
+  camera; from Live it starts free-cam at the current frame. Already editing: no-op.
+- **Play** goes live from the start of the track; from Off or Editing it takes the camera.
+  While live it restarts from zero.
+- **Stop** pauses on the current frame and stays live.
+- **Release** turns the plugin off and hands the camera back.
+- **Capture point** appends the current camera as a control point (`spec:379-381`).
+- **New track**, **Aim** (recorded aim / direction of travel), **Playback** (once / loop).
+- **Point list**: one row per point with editable leg (none for point 0) and hold seconds.
+- **Status line**: current mode, point count, total length, playback time.
 
-`feat(track) add editing and live commands`
+Every control that changes the track works only in editing mode and is disabled while live,
+paused included (`spec:312`), and while off. Invalid leg or hold input is rejected by A7's
+validation and shown in the window, not applied.
+
+Commands: `/ccam` opens the window. `/ccam release` stays as a text escape route
+(`spec:354-355`). The `/ccam fly` command goes; the phase-1 debug commands (`hold`, `push`,
+`nudge`, `reset`, `selftest`) stay as they are. Use Dalamud 15's windowing and ImGui bindings,
+checked against the local Dalamud source (`~/code/Dalamud`, tag `15.0.3.5`).
+
+`feat(ui) add a test window for tracks`
 
 ## Your test pass
 
 One in-game round, at the end. The track lives in memory only, so a hot reload between
 steps loses it.
 
-1. `/ccam edit`, `/ccam edit new`
-2. Fly to a spot, `/ccam edit capture`. Repeat twice more.
-3. `/ccam live play` — the camera starts at full speed, crosses all three points
-   **smoothly** with no stop or lurch at the middle one, and **stops dead on the last point
-   and holds there** rather than snapping back
-4. While it plays: WASD does not move the character, the scroll wheel does not zoom, and
-   chat still opens
-5. `/ccam edit leg 2 10` while live — refused, naming `/ccam edit`. Then `/ccam edit`,
-   `/ccam edit leg 2 10`, `/ccam live play`. The second transition is much slower and eases
+1. `/ccam` opens the window. **Edit**, **New track**
+2. Fly to a spot, **Capture point**. Repeat twice more. Clicking in the window does not
+   also turn the free-cam
+3. **Play** — the camera starts at full speed, crosses all three points **smoothly** with no
+   stop or lurch at the middle one, and **stops dead on the last point and holds there**
+   rather than snapping back
+4. While it plays: WASD does not move the character, the scroll wheel does not zoom, chat
+   still opens, and every editing control is disabled
+5. **Edit**, set point 2's leg to 10, **Play**. The second transition is much slower and eases
    into the slower pace, not switching abruptly
-6. `/ccam edit`, `/ccam edit hold 1 3`, `/ccam live play`. It should slow to a stop on the
-   middle point, wait three seconds, then move on
-7. `/ccam live stop` mid-shot — the camera freezes. `/ccam live play` restarts from the
-   first point
-8. `/ccam edit` — free-cam starts from where the camera is. `/ccam edit capture` a fourth
-   point, `/ccam edit info` — the two existing legs and the hold keep their timings
-9. `/ccam edit mode loop`, `/ccam live play` — after the last point the camera cuts straight
-   back to the first and plays again
-10. `/ccam release` — normal camera and movement return
-11. `/ccam live play` and change zone mid-shot — playback stops and the camera releases
+6. **Edit**, set point 1's hold to 3, **Play**. It should slow to a stop on the middle point,
+   wait three seconds, then move on
+7. **Stop** mid-shot — the camera freezes. **Play** restarts from the first point
+8. **Edit** — free-cam starts from where the camera is. **Capture point** a fourth point; the
+   list shows the two existing legs and the hold with their timings unchanged
+9. Playback **Loop**, **Play** — after the last point the camera cuts straight back to the
+   first and plays again
+10. **Release** — normal camera and movement return. `/ccam release` in chat does the same
+11. **Play** and change zone mid-shot — playback stops and the camera releases
 
 Steps 3, 5 and 6 are the ones only you can judge: whether the motion looks smooth.
 
@@ -250,9 +265,9 @@ Flagging rather than burying. Say if you would rather decide any of these.
   without naming a method. This is the standard one.
 
 Decided on 2026-09-21: 5 seconds per leg by default; full speed at the start and a dead stop
-at the end; keys anchored to control points; `live stop` pauses, `live play` restarts, `edit`
-starts free-cam from the current frame; nothing can be edited while live; commands are grouped
-as `/ccam edit …` and `/ccam live …`.
+at the end; keys anchored to control points; Stop pauses, Play restarts, Edit starts free-cam
+from the current frame; nothing can be edited while live; a simple test window replaces the
+chat commands, with `/ccam release` kept as an escape.
 
 ## Out of scope
 
