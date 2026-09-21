@@ -102,7 +102,7 @@ internal sealed class TestWindow : Window
             error = session.ChangeTrack(t => TrackEditing.SetPlayback(t, mode));
         }
 
-        if (ImGui.Button("Capture point")) error = session.CapturePoint();
+        if (ImGui.Button("Add to end")) error = session.AddToEnd();
         ImGui.SameLine();
         if (ImGui.Button("New track")) { pending = null; error = session.ChangeTrack(_ => TrackEditing.Empty()); }
     }

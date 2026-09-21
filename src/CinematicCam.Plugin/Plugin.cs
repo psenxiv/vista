@@ -1,5 +1,6 @@
 using System.Linq;
 using CinematicCam.Core.Session;
+using CinematicCam.Plugin.Editor;
 using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Probes;
 using CinematicCam.Plugin.Session;
@@ -44,6 +45,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly GizmoProbe gizmoProbe = new();
     private readonly AimProbe aimProbe = new();
     private readonly InputProbe inputProbe = new();
+    private readonly EditorKeys editorKeys = new();
 
     public Plugin()
     {
@@ -122,6 +124,7 @@ public sealed class Plugin : IDalamudPlugin
 
         aimProbe.Update();
         inputProbe.Update(Session.Mode);
+        editorKeys.Update(Session);
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that

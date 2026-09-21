@@ -100,10 +100,52 @@ internal sealed class CameraSession
     /// <summary>Applies <paramref name="change"/> to the track if the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change) => state.ChangeTrack(change);
 
-    /// <summary>Appends the current camera as a control point. Returns why it was refused, or null once appended.</summary>
-    public string? CapturePoint()
+    /// <summary>The selected point's index, or null.</summary>
+    public int? Selected => state.Selected;
+
+    /// <summary>Selects a point while editing; null or out of range clears the selection.</summary>
+    public void Select(int? index) => state.Select(index);
+
+    /// <summary>The track's length in seconds.</summary>
+    public double Duration => state.Duration;
+
+    /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
+    public CameraState? FrameAt(double time) => state.FrameAt(time);
+
+    /// <summary>True while editing with a step to undo.</summary>
+    public bool CanUndo => state.CanUndo;
+
+    /// <summary>True while editing with a step to redo.</summary>
+    public bool CanRedo => state.CanRedo;
+
+    /// <summary>Restores the track and selection before the last change.</summary>
+    public bool Undo() => state.Undo();
+
+    /// <summary>Re-applies the last undone change.</summary>
+    public bool Redo() => state.Redo();
+
+    /// <summary>Adds the current camera to the end of the track. Returns why it was refused, or null.</summary>
+    public string? AddToEnd() => WithCurrentPoint(state.AddToEnd);
+
+    /// <summary>Adds the current camera after the selected point and selects it. Returns why it was refused, or null.</summary>
+    public string? AddAfterSelected() => WithCurrentPoint(state.AddAfterSelected);
+
+    /// <summary>Replaces the selected point with the current camera. Returns why it was refused, or null.</summary>
+    public string? OverwriteSelected() => WithCurrentPoint(state.OverwriteSelected);
+
+    /// <summary>Replaces point <paramref name="index"/>, keeping its timing. Returns why it was refused, or null.</summary>
+    public string? ReplacePoint(int index, ControlPoint point) => state.ReplacePoint(index, point);
+
+    /// <summary>Deletes the selected point. Returns why it was refused, or null.</summary>
+    public string? DeleteSelected() => state.DeleteSelected();
+
+    /// <summary>Moves a point in the order. Returns why it was refused, or null.</summary>
+    public string? MovePoint(int from, int to) => state.MovePoint(from, to);
+
+    /// <summary>Runs <paramref name="edit"/> with the current camera as a control point.</summary>
+    private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
-        if (state.Mode != CameraMode.Editing) return "Points can only be captured while editing.";
+        if (state.Mode != CameraMode.Editing) return "Points can only be added while editing.";
 
         var camera = CameraAccess.ReadState();
         var angles = CameraAccess.ReadAngles();
@@ -111,7 +153,7 @@ internal sealed class CameraSession
 
         var s = camera.Value;
         var (yaw, pitch) = angles.Value;
-        return state.ChangeTrack(track => TrackEditing.Append(track, new ControlPoint(s.Position, yaw, pitch, s.Fov, freeCam.Roll)));
+        return edit(new ControlPoint(s.Position, yaw, pitch, s.Fov, freeCam.Roll));
     }
 
     /// <summary>Where the camera goes this frame, or null to leave it to the game. Called from the camera hook.</summary>
