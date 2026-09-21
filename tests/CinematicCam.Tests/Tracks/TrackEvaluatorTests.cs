@@ -119,4 +119,50 @@ public class TrackEvaluatorTests
         Assert.NotNull(state);
         Assert.Equal(1f, state!.Value.Fov, 2);
     }
+
+    [Fact]
+    public void WorldSpeedIsContinuousThroughAKeyBetweenUnequalSegments()
+    {
+        // Collinear points, so arc length is chord length: a 10 m leg then a 30 m leg, 5 s each.
+        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(40f, 0f, 0f) };
+        var track = new Track(points, new[] { Key(0f, 0f), Key(5f, 1f), Key(10f, 2f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var evaluator = new TrackEvaluator(track);
+
+        const double eps = 1e-2;
+        var at = evaluator.Evaluate(5.0)!.Value.Position;
+        var before = Vector3.Distance(evaluator.Evaluate(5.0 - eps)!.Value.Position, at) / eps;
+        var after = Vector3.Distance(at, evaluator.Evaluate(5.0 + eps)!.Value.Position) / eps;
+
+        Assert.True(Math.Abs(before - after) < 0.05 * after, $"speed steps at the key: {before} m/s before, {after} m/s after");
+        Assert.Equal(points[1].Position.X, at.X, 3);
+    }
+
+    [Fact]
+    public void AStraightTimingCurveGivesConstantWorldSpeedAcrossUnequalSegments()
+    {
+        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(40f, 0f, 0f) };
+        var track = new Track(points, new[] { Key(0f, 0f), Key(10f, 2f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var evaluator = new TrackEvaluator(track);
+
+        for (var i = 0; i <= 10; i++)
+            Assert.Equal(4f * i, evaluator.Evaluate(i)!.Value.Position.X, 2);
+    }
+
+    [Fact]
+    public void ALegBetweenCoincidentPointsStillTurnsOverItsDuration()
+    {
+        var points = new[]
+        {
+            Point(0f, 0f, 0f),
+            Point(10f, 0f, 0f),
+            Point(10f, 0f, 0f, yaw: 90f * Deg),
+        };
+        var track = new Track(points, new[] { Key(0f, 0f), Key(5f, 1f), Key(10f, 2f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var evaluator = new TrackEvaluator(track);
+
+        var state = evaluator.Evaluate(7.5)!.Value;
+        var yaw = TrackAim.FromDirection(state.LookAt - state.Position).Yaw;
+
+        Assert.InRange(yaw, 20f * Deg, 70f * Deg);
+    }
 }

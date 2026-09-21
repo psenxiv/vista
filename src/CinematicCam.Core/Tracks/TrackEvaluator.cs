@@ -5,9 +5,14 @@ namespace CinematicCam.Core;
 /// <summary>Turns a track and a moment in time into where the camera is, looks and its field of view.</summary>
 public sealed class TrackEvaluator
 {
+    /// <summary>Metres a segment counts as when timing, so a leg between coincident points still takes its time.</summary>
+    private const float MinTimingLength = 0.1f;
+
     private readonly Track _track;
     private readonly Vector3[] _positions;
     private readonly ArcLengthTable _table;
+    private readonly float[] _lengths;
+    private readonly float[] _distances;
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
@@ -18,13 +23,21 @@ public sealed class TrackEvaluator
     /// <summary>Total shot length: the timing curve's last key, 0 with no keys.</summary>
     public double Duration => _curve.Duration;
 
-    /// <summary>Builds the spline, arc-length table, timing curve and unwrapped yaw once for <paramref name="track"/>.</summary>
+    /// <summary>Builds the spline, arc-length table, distance timing curve and unwrapped yaw once for <paramref name="track"/>.</summary>
     public TrackEvaluator(Track track)
     {
         _track = track;
         _positions = track.Points.Select(p => p.Position).ToArray();
         _table = new ArcLengthTable(_positions);
-        _curve = new TimingCurve(track.Timing);
+        _lengths = new float[_table.SegmentCount];
+        _distances = new float[_table.SegmentCount + 1];
+        for (var i = 0; i < _table.SegmentCount; i++)
+        {
+            _lengths[i] = MathF.Max(_table.SegmentLength(i), MinTimingLength);
+            _distances[i + 1] = _distances[i] + _lengths[i];
+        }
+
+        _curve = new TimingCurve(track.Timing.Select(ToDistance).ToArray());
         _yaws = TrackAim.UnwrapYaw(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
         _fovs = track.Points.Select(p => p.Fov).ToArray();
@@ -43,8 +56,7 @@ public sealed class TrackEvaluator
             return new CameraState(only.Position, FreeCamMotion.LookAtFrom(only.Position, only.Yaw, only.Pitch), only.Fov);
         }
 
-        var position = _curve.PositionAt(time);
-        var (segment, fraction) = _table.Locate(position);
+        var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
         var parameter = _table.ParameterAt(segment, fraction);
         var cameraPosition = CatmullRom.Evaluate(_positions, segment, parameter);
 
@@ -55,6 +67,42 @@ public sealed class TrackEvaluator
         var fov = Math.Clamp(TrackAim.Channel(_fovs, segment, fraction), _fovMin, _fovMax);
 
         return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov);
+    }
+
+    /// <summary>The key with its position and tangents moved from control-point units to distance along the path.</summary>
+    private TimingKey ToDistance(TimingKey key)
+    {
+        if (_lengths.Length == 0) return key;
+
+        var position = Math.Clamp(key.Position, 0f, _lengths.Length);
+        var segment = Math.Min((int)MathF.Floor(position), _lengths.Length - 1);
+        var fraction = position - segment;
+        var inSegment = fraction == 0f && segment > 0 ? segment - 1 : segment;
+
+        return key with
+        {
+            Position = _distances[segment] + (fraction * _lengths[segment]),
+            InTangent = key.InTangent * _lengths[inSegment],
+            OutTangent = key.OutTangent * _lengths[segment],
+        };
+    }
+
+    /// <summary>Splits a distance along the path into a segment index and the arc fraction into it.</summary>
+    private (int Segment, float Fraction) LocateDistance(float distance)
+    {
+        var last = _lengths.Length - 1;
+        if (distance >= _distances[^1]) return (last, 1f);
+        if (distance <= 0f) return (0, 0f);
+
+        var lo = 0;
+        var hi = _lengths.Length;
+        while (hi - lo > 1)
+        {
+            var mid = (lo + hi) / 2;
+            if (_distances[mid] <= distance) lo = mid; else hi = mid;
+        }
+
+        return (lo, Math.Clamp((distance - _distances[lo]) / _lengths[lo], 0f, 1f));
     }
 
     private (float Yaw, float Pitch) AimKeys(int segment, float fraction)
