@@ -166,13 +166,14 @@ rather than a point will need to account for per-race height.
 ## Track model
 
 ```csharp
-record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov,
-                    float Hold, float DurationToNext, Easing EaseToNext);
-record Track(IReadOnlyList<ControlPoint> Points, AimMode Aim,
-             Vector3 LookAtTarget, bool Loop);
+record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov);
+record Track(IReadOnlyList<ControlPoint> Points, IReadOnlyList<TimingKey> Timing,
+             AimMode Aim, Vector3 LookAtTarget, bool Loop);
 ```
 
 Per-point FoV costs one float and one lerp, and enables push-ins during a move.
+`TimingKey` is defined under Timing below; the points describe the path, the
+timing curve describes the pacing along it.
 
 ### Spline
 
@@ -221,32 +222,55 @@ crossing due north whips the long way around.
 
 ### Timing
 
-Per segment. Each leg carries its own duration and its own easing, so a director
-can linger on one transition and move briskly through the next. Total shot length
-is the sum of every leg plus every hold, and the editor shows it.
+A track separates **where** from **when**. The control points and the spline
+through them describe the path and nothing else. A separate **timing curve** says
+how far along that path the camera is at each moment. This is how Unreal's
+Sequencer and Unity's Cinemachine both work, and the separation is what makes
+pacing editable without touching the shot's geometry.
 
-A point may also **hold**: on arrival the camera stays still for `Hold` seconds
-before starting the next leg. A hold is the cheap way to put a beat on a stage
-without distorting the speed of any transition. `Hold` on the final point of a
-non-looping track is inert, because a finished track holds its last frame anyway.
+```csharp
+enum TangentMode { Auto, Linear, Flat, Manual }
+record TimingKey(float Time, float Position, TangentMode Mode,
+                 float InTangent, float OutTangent);
+```
 
-Arc-length reparameterisation applies *within* a leg rather than across the
-track: each leg travels its own stretch of curve at even speed over its own
-duration. Without it a leg would still crawl through bunched points and lurch
-across spread ones.
+`Position` is normalised distance along the path: 0 at the first control point, 1
+at the last. Combined with arc-length evaluation, a straight line on this curve
+is constant world speed however unevenly the points are spaced.
 
-**Speed is deliberately discontinuous at interior points.** Two adjacent legs
-with different lengths and durations meet at a visible change of pace, and a leg
-easing out into a leg easing in brings the camera to a full stop at that point.
-Both are legitimate shots; neither is smoothed automatically. Continuous velocity
-across a whole track needs tangent handles on a velocity curve, which is out of
-scope. The operator controls pace by choosing easings that meet sensibly.
+Every pacing decision is a shape in this curve:
 
-Easing per leg: `Linear`, `In`, `Out`, `InOut`. Ease the leg's normalised time,
-then evaluate at that distance along the leg.
+- A steeper section is faster, a shallower section slower.
+- **A flat section is a hold.** The camera stays still for its width. Dwelling on
+  a point is not a separate feature and needs no field on the point.
+- Ease in and ease out are the tangents at a key, not a property of a segment.
 
-A looping track wraps: the last point carries a leg back to the first, and the
-seam behaves like any other junction. No easing rule is forced on it.
+`Auto` tangents are computed from the neighbouring keys, which makes a smooth
+pass-through the **default**: the camera changes pace gradually through a point
+rather than switching abruptly at it. `Flat` pins both tangents to zero and brings
+the camera to a stop at that key. `Linear` and `Manual` exist for the curve editor
+and are not reachable before it ships.
+
+**Position must never decrease.** A naive cubic through keys overshoots, which
+would make the camera reverse briefly — visible as a judder and easily mistaken
+for a bug. Auto tangents are limited so the curve stays monotone, and manual
+tangents are clamped on evaluation.
+
+Before the first key and after the last, the curve holds its end value. The rule
+that a finished track holds its final frame therefore falls out of evaluation
+rather than being a special case.
+
+Total shot length is the time of the last key.
+
+**Looping.** The path closes — the last control point carries a segment back to
+the first — so normalised position 1 is the same place as 0 and elapsed time wraps
+modulo the total. Auto tangents at the first and last keys are computed cyclically,
+treating the curve as periodic, so the seam is continuous in speed as well as in
+position. Without that the camera would lurch once per lap.
+
+Appending a control point lengthens the path, so existing keys rescale to keep
+pointing at the same place on it. Capturing a fourth point does not retime the
+first three.
 
 Playback accumulates `IFramework.UpdateDelta` rather than counting frames, so a
 shot runs identically at 30 and 144 fps.
@@ -362,6 +386,11 @@ The track editor carries a **scrub bar** — drag to see the camera at any momen
 in the shot without playing it. This falls out free, because the Director is a
 pure function of elapsed time.
 
+It also carries a **curve editor** for the timing curve: distance along the path
+plotted against time, with draggable keys and tangent handles. Until it exists the
+curve is generated from simple "this leg takes N seconds" and "hold here for N
+seconds" inputs, which is enough to author a shot but not to shape one.
+
 **3D overlay.** In v1, drawn on the ImGui foreground draw list over the game,
 projected with `Camera.WorldToScreen`:
 
@@ -445,9 +474,12 @@ Tests that run on macOS with no game, covering where the real bugs live:
   without arc-length reparameterisation, which is its purpose.
 - Yaw crossing ±180° takes the short way.
 - Position at t=5s is identical under 60fps and 30fps delta sequences.
-- Each leg takes exactly its own duration, independent of its length.
-- A hold keeps the camera still for its duration, then the next leg starts.
-- The loop seam is continuous.
+- A straight timing curve gives constant world speed on unevenly spaced points.
+- A flat section of the timing curve holds the camera still for its width.
+- The timing curve never decreases, including for keys a naive cubic would
+  overshoot.
+- Appending a control point does not retime the existing ones.
+- The loop seam is continuous in position and in speed.
 - Degenerate input — zero, one, two and coincident points — does not throw.
 - TAKE resets elapsed time; flip-flop swaps the slots.
 - A finished track holds its last frame.
