@@ -92,9 +92,10 @@ from the world camera's matrices, not `IGameGui.WorldToScreen`, which lags a fra
 plane.
 
 - **Path** — the spline sampled densely along its length, drawn as a polyline.
-- **Markers** — a numbered circle per point; the selected point is highlighted.
-- **Aim lines** — a short line from each point along its recorded aim, drawn only
-  in Recorded-aim mode.
+- **Markers** — a numbered circle per point, 20 px in radius with the number sized
+  to match; the selected point is highlighted.
+- **Aim arrows** — a short arrow, with a head, from each point along its recorded
+  aim, drawn only in Recorded-aim mode.
 
 Colours live in one place.
 
@@ -103,7 +104,9 @@ Colours live in one place.
 - Left-click on a marker selects it. A click is a press and release that moves
   under a few pixels; a drag still turns the camera. Overlapping markers: the
   nearest to the cursor wins.
-- Left-click on empty space deselects.
+- Left-click on empty space deselects. A press that turns the camera is a drag,
+  not a click, even if the cursor stays put: the game locks the cursor while the
+  camera is dragged.
 - Clicks over plugin windows are ignored.
 - A click on a marker does not reach the game, so it cannot target anything.
 
@@ -124,8 +127,12 @@ On the selected point only, via `Dalamud.Bindings.ImGuizmo`. No scale, no
 snapping.
 
 - **Move** — axis arrows and plane handles along world axes.
-- **Rotate** — rings in the point's own frame: yaw and pitch in Recorded-aim mode,
-  roll in both aim modes. In Direction-of-travel mode only the roll ring shows.
+- **Rotate** — gimbal rings, each changing one angle: the yaw ring lies flat
+  around world up, the pitch ring turns only with yaw, and the roll ring faces
+  along the aim. Yaw and pitch show in Recorded-aim mode, roll in both aim modes.
+  In Direction-of-travel mode only the roll ring shows. (Chosen 2026-09-21 after
+  in-game testing: rings in the point's own frame re-oriented after every drag
+  and made aiming hard.)
 - The mode is switched in the Point window, or with **R** while a point is
   selected.
 - One drag is one undo step, committed on release. While dragging, the path and
@@ -133,8 +140,8 @@ snapping.
 - Gizmo drags do not reach the game, so the camera does not turn while dragging.
 - The arrows keep a fixed direction; they do not flip to face the camera
   (`ImGuizmo.AllowAxisFlip(false)`).
-- The gizmo keeps a constant size on screen, if that is cheap to achieve; probe 1
-  showed it scaling with distance. If it is not cheap, it stays as it is.
+- The gizmo scales with distance. A size correction was built and reverted on
+  2026-09-21: the user accepted the scaling.
 
 **Drawing and matrices.** BDTHPlugin (reference only, no licence) draws its gizmo
 in a transparent, input-less, full-screen ImGui window on the main viewport, and
@@ -207,6 +214,7 @@ Editing mode:
 | `` ` `` | add to end |
 | Alt + `` ` `` | add after selected |
 | Ctrl + `` ` `` | overwrite selected |
+| Ctrl + Alt + `` ` `` | nothing (AltGr sends it on some layouts) |
 | R | gizmo Move ⇄ Rotate, only with a point selected |
 | Ctrl + Z / Ctrl + Y | undo / redo |
 | Click marker / empty space | select / deselect |
@@ -219,6 +227,10 @@ Live mode is unchanged: Escape brings the UI back; the scrub bar seeks.
 - In editing mode the keys and chords above are hidden from the game, so C does
   not open the Character window and whatever R, backtick, Z and Y are bound to does
   not fire. Movement keys stay blocked as today. Ctrl alone is no longer blocked.
+- The left mouse button is read from its physical state too: Dalamud passes a
+  press to ImGui only while ImGui wants the mouse, and clears ImGui's buttons
+  otherwise (`Win32InputHandler.cs` 209–215, 292–301), so ImGui never sees a
+  press on empty space.
 
 ## Probes
 
@@ -285,8 +297,17 @@ windows, scrub and jumps, undo.
 ## Testing
 
 Core under TDD: insert, delete, move and replace with their timing; undo history;
-selection validity; hit-testing; seek. In game, a short checklist after each piece
-with at most one or two unverified changes per round.
+selection validity; hit-testing; seek. In game, one checklist at the end of each
+plan run.
+
+## Part 2a results (2026-09-21)
+
+In game, all fly-down, overlay, key and gizmo checks passed, including undo in the
+middle of a gizmo drag. Clicking empty space did not deselect: see the mouse note
+under Keys and input. Changes asked for: markers twice the size, aim arrows
+instead of lines, gimbal rotate rings, and Ctrl + Alt + backtick doing nothing.
+Whether a click on the game's own HUD should deselect is still open; it can be
+tested once deselecting works.
 
 ## Open issues
 
