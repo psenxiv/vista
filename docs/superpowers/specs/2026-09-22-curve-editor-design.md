@@ -19,8 +19,10 @@ kept for compatibility.
 - **Inner key** — a key between two points.
 - **Leg** — the stretch of timing from one point's last key to the next point's
   first key. Row *i*'s leg arrives at point *i*.
-- **Side** — the half of a key facing one leg: a key's in side faces the leg before
-  it, its out side the leg after.
+- **Span** — the stretch between two neighbouring keys. A leg with no inner keys is
+  one span; each inner key splits it into one more.
+- **Side** — the half of a key facing one span: a key's in side faces the span before
+  it, its out side the span after.
 
 ## Scope
 
@@ -42,23 +44,25 @@ a Delete key.
 
 ```csharp
 record TimingKey(float Time, float Position, TangentMode InMode, TangentMode OutMode,
-                 float InTangent, float OutTangent);
+                 float InTangent, float OutTangent, bool Broken = false);
 ```
 
 `Position` is unchanged: control-point units, where the whole part is the segment
 and the fraction is the share of its arc length. An inner key has a fractional
-position. `InTangent` and `OutTangent` matter only on a `Manual` side.
+position, always inside one leg, never inside a hold. `InTangent` and `OutTangent`
+matter only on a `Manual` side. `Broken` says whether the key's two handles move
+separately; see Handles.
 
 `TimingCurve` works out each side from its own mode:
 
 | Mode | Shown as | Slope on that side |
 |---|---|---|
 | `Auto` | Smooth | blended from the neighbouring legs, as today; one-sided at the shot's ends |
-| `Linear` | Linear | its own leg's average speed |
+| `Linear` | Linear | its own span's average speed |
 | `Flat` | Flat | 0 |
 | `Manual` | (a dragged handle) | the stored value |
 
-The monotone clamp still applies per leg, so the curve never runs backwards, and a
+The monotone clamp still applies per span, so the curve never runs backwards, and a
 side facing a hold is always flat. New keys are `Auto` on both sides.
 
 Keys between points are allowed. The 2c-1 refusal of such tracks is removed.
@@ -76,9 +80,20 @@ key and the in side of its last key.
 | Ease out (ends slow) | Auto | Flat |
 | Ease in-out | Flat | Flat |
 
-A leg whose two sides match no row, such as one with a dragged handle, reads
-**Custom**. A preset leaves a leg's inner keys in place. Setting easing never
-changes a leg's time.
+A leg reads the preset its two bounding sides match, and **Custom** when they match
+none, such as after a dragged handle. Its inner keys don't count towards the
+reading, and a preset leaves them and their modes alone, so a Linear leg with an
+Auto inner key is not a straight line. Setting easing never changes a leg's time.
+
+Easing follows the leg's bounding sides through point edits:
+
+- **Adding a hold** moves the point key's out mode onto the new hold end, so the
+  next leg keeps its easing. **Removing a hold** moves it back.
+- **Add after selected** splits the leg: the first half keeps the old out side, the
+  second half keeps the old in side, and the new point's sides are Auto. An Ease
+  in-out leg becomes an Ease in half and an Ease out half.
+- **Deleting a middle point** merges two legs: the merged leg takes the first leg's
+  out side and the second leg's in side.
 
 Modes, not slopes, are stored, so a preset stays correct when a leg's time changes
 or a point moves.
@@ -100,31 +115,44 @@ or a point moves.
 
 - **Opening.** A graph icon on the track editor's top row opens it. It is resizable,
   remembers where it was placed, has a close button, and Escape does not close it.
-- **Axes.** Time across, distance along the path up, always fitted to the whole
-  shot. Each point has a labelled horizontal line at its distance. A straight run
+- **Axes.** Time across, distance along the path up (as timing measures it, each
+  segment at least 0.1 m), always fitted to the whole shot. Each point has a labelled horizontal line at its distance. A straight run
   is constant speed; a flat run is a hold.
 - **Playhead.** A vertical line at the scrub head. Clicking or dragging along the
   time axis scrubs, exactly as the scrub bar does.
-- **Keys.** A point key is a dot with its number; clicking it selects the point, and
-  the overlay and the Point window follow. A hold end is a plain dot. An inner key
-  is a diamond.
+- **Keys.** A point key is a dot with its number. A hold end is a plain dot. An inner
+  key is a diamond. The top row shows the selected key's time, read-only.
+- **Selection.** The graph has one timing selection: a key or a leg. Clicking a point
+  key selects that point too, so the overlay and the Point window follow; selecting a
+  point anywhere else selects its point key. Selecting a hold end, an inner key or a
+  leg leaves the point selection alone. The timing selection is not part of undo, and
+  clears when an edit removes what it pointed at.
+- **Clicks.** A handle wins over a key, a key over the curve, and the curve over the
+  time axis.
 - **Legs.** Clicking a stretch of curve away from any key selects that leg. The top
   row's easing drop-down applies to the selected leg.
 - **Dragging keys.** A point key or hold end moves in time only, squeezing its
-  neighbours: the legs either side change and the shot's length does not. An inner
-  key moves in time and distance, kept between its neighbours so the curve never
-  runs backwards. Each drag previews live and is one undo step.
-- **Adding and removing keys.** Double-click the curve to add an inner key there; the
-  curve's shape stays as it was. The top row's trash icon, or right-click, deletes
+  neighbours: the spans either side change and the shot's length does not. The first
+  point key is fixed at 0 s. The last key has nothing after it, so dragging it
+  changes the shot's length. An inner key moves in time and distance, kept between
+  its neighbours so the curve never runs backwards. Each drag previews live and is
+  one undo step.
+- **Adding and removing keys.** Double-click the curve inside a leg to add an inner key
+  there. It takes the curve's slope at that moment as Manual handles, so the shape
+  stays close to what it was. Double-clicking a hold does nothing. The top row's trash icon, or right-click, deletes
   an inner key; on a hold end it removes the hold. A point key cannot be deleted
   here; deleting the point does that.
-- **Handles.** The selected key shows a handle on each side that has a leg. Dragging
-  one makes that side `Manual`, and its leg reads Custom. The two handles move
-  together unless broken; right-click offers Break and Unify. A handle sets slope
-  only. A side facing a hold is always flat, and its handle is hidden.
+- **Handles.** The selected key shows a handle on each side that has a span. A handle
+  sets slope only. Unless the key is `Broken`, dragging either handle sets both sides
+  to `Manual` with the same slope, so the legs on both sides may read Custom. On a
+  broken key, a handle sets its own side only. Right-click offers Break and Unify;
+  Unify gives both sides the dragged side's slope. A side facing a hold is always
+  flat, and its handle is hidden.
 - **Key buttons.** Smooth, Linear and Flat set both sides of the selected key.
-- **Live.** The graph is read-only and the playhead follows playback. Scrubbing works
-  as on the scrub bar.
+- **Outside editing.** The graph is read-only. While live the playhead follows
+  playback, and scrubbing works as on the scrub bar.
+- **Empty.** With fewer than two points there is nothing to shape, and the graph
+  says so.
 - **Keyboard.** Ctrl + Z and Ctrl + Y work as everywhere in the editor. There is no
   Delete key: Dalamud's key handling makes it unreliable.
 
@@ -146,8 +174,9 @@ holds its time and its share of its leg's distance.
 | Reorder | leg times, easing and inner keys stay in their slots; holds travel with their point, as today |
 | Overwrite, gizmo, Point window fields | timing unchanged; inner keys keep their fractions and follow the new path |
 
-Keys stay at least 0.05 s apart, so times always increase. An edit that would
-break that clamps the dragged key rather than refusing.
+Keys stay at least 0.05 s apart, so times always increase, and a leg stays at least
+0.1 s, the Leg field's minimum. A drag that would break either clamps the dragged
+key rather than refusing.
 
 ## Undo
 
