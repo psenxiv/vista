@@ -239,4 +239,19 @@ public class DirectorTests
 
         Assert.Equal(0.0, director.Elapsed);
     }
+
+    [Fact]
+    public void GoLiveWithATrackThatCannotPlayLeavesTheCurrentShotOnProgram()
+    {
+        var snap = Snap();
+        var director = new Director();
+        director.GoLive(new SnapShot(snap));
+        var broken = StraightTrack() with { Timing = new[] { Key(5f, 0f), Key(5f, 2f) } };
+
+        Assert.Throws<ArgumentException>(() => director.GoLive(new TrackShot(broken)));
+
+        var expected = new CameraState(snap.Position, FreeCamMotion.LookAtFrom(snap.Position, snap.Yaw, snap.Pitch), snap.Fov);
+        Assert.True(director.IsLive);
+        Assert.Equal(expected, director.Tick(1f));
+    }
 }

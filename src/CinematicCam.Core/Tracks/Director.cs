@@ -18,11 +18,12 @@ public sealed class Director
     /// <summary>Seconds into the current <see cref="TrackShot"/>; 0 for other shots or before going live.</summary>
     public double Elapsed => _playback?.Elapsed ?? 0.0;
 
-    /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero.</summary>
+    /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero. Unchanged if the track throws.</summary>
     public void GoLive(Shot shot)
     {
+        var playback = shot is TrackShot trackShot ? new TrackPlayback(trackShot.Track) : null;
         _shot = shot;
-        _playback = shot is TrackShot trackShot ? new TrackPlayback(trackShot.Track) : null;
+        _playback = playback;
         IsLive = true;
         IsPaused = false;
     }
