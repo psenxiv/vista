@@ -37,7 +37,7 @@ internal sealed unsafe class CameraController : IDisposable
 
         var vtable = *(nint**)camera;
         var updateAddress = vtable[UpdateVFuncIndex];
-        Plugin.Log.Information("[camera] hooking Update at 0x{Addr:X}", updateAddress);
+        Plugin.Log.Debug("[camera] hooking Update at 0x{Addr:X}", updateAddress);
 
         updateHook = Plugin.Hooks.HookFromAddress<CameraUpdateDelegate>(updateAddress, UpdateDetour);
         updateHook.Enable();
@@ -67,6 +67,6 @@ internal sealed unsafe class CameraController : IDisposable
     {
         updateHook?.Disable();
         updateHook?.Dispose();
-        Plugin.Log.Information("[camera] hook disposed after {Count} updates.", UpdateCount);
+        Plugin.Log.Debug("[camera] hook disposed after {Count} updates.", UpdateCount);
     }
 }

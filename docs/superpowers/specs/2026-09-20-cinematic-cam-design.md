@@ -453,8 +453,8 @@ trace rather than as a paraphrase.
 
 Four measures keep the user's loop short:
 
-1. **Verbose logging** of every hook install, camera write and state transition,
-   behind a debug toggle.
+1. **Diagnostic logging** at Debug level, shown by raising Dalamud's own log
+   level; errors, warnings and one line per mode change stay at Information.
 2. **Probe commands** — small debug commands that assert what Claude cannot
    observe and write results to the log. `/ccam selftest` answered the phase 1
    camera and FoV questions and was removed once they were settled; later

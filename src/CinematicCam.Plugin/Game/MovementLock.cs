@@ -38,7 +38,7 @@ internal sealed unsafe class MovementLock : IDisposable
         }
 
         counter = (int*)(address + CounterOffset);
-        Plugin.Log.Information("[movement] lock counter at 0x{Addr:X}", (nint)counter);
+        Plugin.Log.Debug("[movement] lock counter at 0x{Addr:X}", (nint)counter);
     }
 
     public void Hold()
@@ -47,7 +47,7 @@ internal sealed unsafe class MovementLock : IDisposable
 
         (*counter)++;
         Held = true;
-        Plugin.Log.Information("[movement] disabled, counter now {Count}", *counter);
+        Plugin.Log.Debug("[movement] disabled, counter now {Count}", *counter);
     }
 
     public void Release()
@@ -57,7 +57,7 @@ internal sealed unsafe class MovementLock : IDisposable
         // Decrement rather than zero it: other plugins share this counter.
         if (*counter > 0) (*counter)--;
         Held = false;
-        Plugin.Log.Information("[movement] enabled, counter now {Count}", *counter);
+        Plugin.Log.Debug("[movement] enabled, counter now {Count}", *counter);
     }
 
     /// <summary>Drops our hold without decrementing, for when something else cleared the counter.</summary>

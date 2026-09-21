@@ -258,4 +258,5 @@ with at most one or two unverified changes per round.
   turns the view right; at 90° roll it turns the view up. Mouse-look drives the
   game's world-space `DirH`/`DirV`, which know nothing of our roll. A fix maps
   mouse deltas into the rolled frame and writes the angles, so it depends on
-  probe 2. Not scheduled; the user decides when.
+  probe 2. Planned with Part 2 if probe 2 passes; otherwise it goes back to the
+  user.

@@ -27,15 +27,9 @@ internal sealed class FreeCam
         position = startPosition;
         Roll = startRoll;
         Enabled = true;
-        Plugin.Log.Information("[freecam] enabled at {Pos}", position);
     }
 
-    public void Disable()
-    {
-        if (!Enabled) return;
-        Enabled = false;
-        Plugin.Log.Information("[freecam] disabled");
-    }
+    public void Disable() => Enabled = false;
 
     public CameraState? Tick(float deltaSeconds)
     {

@@ -59,7 +59,7 @@ internal sealed unsafe class InputBlocker : IDisposable
             return null;
         }
 
-        Plugin.Log.Information("[input] {Name} resolved to 0x{Addr:X}", name, address);
+        Plugin.Log.Debug("[input] {Name} resolved to 0x{Addr:X}", name, address);
         return Plugin.Hooks.HookFromAddress<T>(address, detour);
     }
 
