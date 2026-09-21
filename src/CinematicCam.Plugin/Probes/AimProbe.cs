@@ -1,3 +1,4 @@
+using System.Globalization;
 using CinematicCam.Core.Session;
 using CinematicCam.Plugin.Game;
 
@@ -12,7 +13,9 @@ internal sealed class AimProbe
     public void Run(CameraMode mode, string[] words)
     {
         if (mode != CameraMode.Editing) { Plugin.Log.Error("[probe] aim needs editing mode."); return; }
-        if (words.Length < 2 || !float.TryParse(words[0], out var yawDeg) || !float.TryParse(words[1], out var pitchDeg))
+        if (words.Length < 2
+            || !float.TryParse(words[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var yawDeg)
+            || !float.TryParse(words[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var pitchDeg))
         {
             Plugin.Log.Error("[probe] usage: /ccam probe aim <yawDegrees> <pitchDegrees>");
             return;

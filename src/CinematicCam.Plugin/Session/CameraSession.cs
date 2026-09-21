@@ -22,7 +22,7 @@ internal sealed class CameraSession
     /// <summary>The frame last written to the camera, or null when the game has it.</summary>
     public CameraState? LastFrame => lastFrame;
 
-    /// <summary>The track Edit builds and Play plays. Changed only through <see cref="ChangeTrack"/>.</summary>
+    /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
     public Track Track => state.Track;
 
     /// <summary>Read-only view of playback state. Check IsLive before IsPaused or IsFinished.</summary>

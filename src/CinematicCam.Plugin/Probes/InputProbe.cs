@@ -56,9 +56,14 @@ internal sealed unsafe class InputProbe
     {
         if (!enabled || mode != CameraMode.Editing || IsTyping()) return;
 
+        var ctrlDown = ctrl || Plugin.KeyState[VirtualKey.CONTROL];
+        var cDown = false;
+
         for (var i = 0; i < Keys.Length; i++)
         {
-            if (!held[i] || (Keys[i].NeedsCtrl && !ctrl)) continue;
+            var down = held[i] || Plugin.KeyState[Keys[i].Vk];
+            if (Keys[i].Vk == VirtualKey.C) cDown = down;
+            if (!down || (Keys[i].NeedsCtrl && !ctrlDown)) continue;
 
             if (Keys[i].Vk == VirtualKey.C && rawFramesLogged < 40)
             {
@@ -69,7 +74,7 @@ internal sealed unsafe class InputProbe
             Plugin.KeyState[Keys[i].Vk] = false;
         }
 
-        if (!held[0]) rawFramesLogged = 0;
+        if (!cDown) rawFramesLogged = 0;
     }
 
     private void DrawSpot(ImGuiIOPtr io)
