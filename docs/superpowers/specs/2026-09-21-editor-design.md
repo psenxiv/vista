@@ -288,4 +288,9 @@ with at most one or two unverified changes per round.
   probe 2. Fixed after probe 2 passed: each frame the free-cam takes the game's
   yaw and pitch change, rotates it by the roll (`FreeCamMotion.RollLook`), and
   writes it back within the game's pitch limits. Unrolled, nothing is written.
-  Awaiting in-game confirmation.
+  Confirmed in game 2026-09-21.
+- **Looping over the top is not supported.** The game clamps pitch (about +45°
+  up, −85° down) and the free-cam aims through its angles. Owning the
+  orientation would allow loops but changes how flying feels and how tracks
+  store aim; the user declined it on 2026-09-21 until there is a use case. Not
+  in `FEATURES.md`.
