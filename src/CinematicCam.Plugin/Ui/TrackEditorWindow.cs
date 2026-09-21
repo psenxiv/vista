@@ -69,7 +69,26 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         DrawModeCombo();
 
+        var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
+        ImGui.SameLine(0f, gap);
+        ImGui.BeginDisabled(!editing);
+        DrawAddButton();
+        ImGui.EndDisabled();
+
+        ImGui.SameLine(0f, gap);
+        ImGui.BeginDisabled(!session.CanUndo);
+        if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo")) { fields.Commit(); session.Undo(); }
+        ImGui.EndDisabled();
+
         ImGui.SameLine();
+        ImGui.BeginDisabled(!session.CanRedo);
+        if (IconButton.Draw("redo", FontAwesomeIcon.Redo, "Redo")) { fields.Commit(); session.Redo(); }
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>Play/Pause and Restart, to the left of the scrub bar.</summary>
+    private void DrawTransport()
+    {
         var playing = session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished;
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
@@ -78,6 +97,15 @@ internal sealed unsafe class TrackEditorWindow : Window
             if (playing) session.Stop();
             else session.Play();
         }
+
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        ImGui.BeginDisabled(session.Mode != CameraMode.Live);
+        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+    }
 
         ImGui.EndDisabled();
 
@@ -252,13 +280,14 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The scrub bar showing current and total time, with fly speed at its right while editing.</summary>
+    /// <summary>Play/Pause and Restart, the scrub bar showing current and total time, and fly speed at its right while editing.</summary>
     private void DrawScrubRow(bool editing)
     {
         var duration = (float)session.Duration;
         var head = (float)session.ScrubHead;
         var speedWidth = editing ? ImGui.CalcTextSize("Speed").X + SpeedWidth + (ImGui.GetStyle().ItemSpacing.X * 2f) : 0f;
 
+        DrawTransport();
         ImGui.BeginDisabled(session.Mode == CameraMode.Off || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - speedWidth);
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
