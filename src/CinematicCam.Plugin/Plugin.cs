@@ -41,7 +41,8 @@ public sealed class Plugin : IDalamudPlugin
     private float wheel;
     private bool escapeWasDown;
     private static bool blockEscape;
-    private readonly TestWindow testWindow;
+    private readonly TrackEditorWindow trackEditor;
+    private readonly PendingField fields;
     private readonly GizmoProbe gizmoProbe = new();
     private readonly AimProbe aimProbe = new();
     private readonly InputProbe inputProbe = new();
@@ -53,17 +54,18 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the test window | release | probe gizmo|aim|input"
+            HelpMessage = "/ccam opens the editor | release | probe gizmo|aim|input"
         });
 
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
         editorLayer = new EditorLayer(Session, pointGizmo);
-        testWindow = new TestWindow(Session);
-        windows.AddWindow(testWindow);
+        fields = new PendingField(() => Session.Mode == CameraMode.Editing);
+        trackEditor = new TrackEditorWindow(Session, fields);
+        windows.AddWindow(trackEditor);
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
-        PluginInterface.UiBuilder.OpenMainUi += OpenTestWindow;
+        PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;
         Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
         Input = new InputBlocker(() => Session.LocksInput, () => blockEscape);
 
@@ -80,7 +82,7 @@ public sealed class Plugin : IDalamudPlugin
         switch (verb)
         {
             case "":
-                OpenTestWindow();
+                OpenTrackEditor();
                 break;
             case "release":
                 Session.Release("command");
@@ -152,7 +154,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Movement.Held && Movement.Count == 0) Movement.Forget();
     }
 
-    private void OpenTestWindow() => testWindow.IsOpen = true;
+    private void OpenTrackEditor() => trackEditor.IsOpen = true;
 
     /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
     private void OnDraw()
@@ -188,7 +190,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= OnDraw;
-        PluginInterface.UiBuilder.OpenMainUi -= OpenTestWindow;
+        PluginInterface.UiBuilder.OpenMainUi -= OpenTrackEditor;
         windows.RemoveAllWindows();
         Framework.Update -= OnFrameworkUpdate;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
