@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using CinematicCam.Core.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
@@ -7,25 +8,25 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace CinematicCam.Plugin.Probes;
 
-/// <summary>Probe 3: reads our keys from ImGui, hides them from the game, and captures clicks over a test spot.</summary>
+/// <summary>Probe 3: reads our keys' physical state, hides them from the game, and captures clicks over a test spot.</summary>
 internal sealed unsafe class InputProbe
 {
     private const float SpotRadius = 40f;
 
-    private static readonly (ImGuiKey Key, VirtualKey Vk, bool NeedsCtrl)[] Keys =
+    private static readonly (VirtualKey Vk, bool NeedsCtrl)[] Keys =
     [
-        (ImGuiKey.C, VirtualKey.C, false),
-        (ImGuiKey.R, VirtualKey.R, false),
-        (ImGuiKey.GraveAccent, VirtualKey.OEM_3, false),
-        (ImGuiKey.Z, VirtualKey.Z, true),
-        (ImGuiKey.Y, VirtualKey.Y, true),
+        (VirtualKey.C, false),
+        (VirtualKey.R, false),
+        (VirtualKey.OEM_3, false),
+        (VirtualKey.Z, true),
+        (VirtualKey.Y, true),
     ];
 
     private readonly bool[] held = new bool[Keys.Length];
     private bool enabled;
-    private bool ctrl;
-    private int rawFramesLogged;
     private bool overSpot;
+    private int cFramesHeld;
+    private int cFramesInBuffer;
 
     public void Toggle()
     {
@@ -33,49 +34,55 @@ internal sealed unsafe class InputProbe
         Plugin.Log.Information("[probe] input {State}", enabled ? "on" : "off");
     }
 
-    /// <summary>Reads keys from ImGui and draws the click spot. Call from UiBuilder.Draw.</summary>
+    /// <summary>Draws the click spot. Call from UiBuilder.Draw.</summary>
     public void Draw(CameraMode mode)
     {
-        if (!enabled || mode != CameraMode.Editing) { Array.Clear(held); return; }
-
-        var io = ImGui.GetIO();
-        ctrl = io.KeyCtrl;
-        for (var i = 0; i < Keys.Length; i++)
-        {
-            var down = ImGui.IsKeyDown(Keys[i].Key);
-            if (down && !held[i])
-                Plugin.Log.Information("[probe] key {Key} down, alt {Alt}, ctrl {Ctrl}, shift {Shift}", Keys[i].Key, io.KeyAlt, io.KeyCtrl, io.KeyShift);
-            held[i] = down;
-        }
-
-        DrawSpot(io);
+        if (!enabled || mode != CameraMode.Editing) return;
+        DrawSpot(ImGui.GetIO());
     }
 
-    /// <summary>Clears our held keys from the game's buffer. Call from Framework.Update.</summary>
+    /// <summary>Reads our keys' physical state and clears held ones from the game's buffer. Call from Framework.Update.</summary>
     public void Update(CameraMode mode)
     {
-        if (!enabled || mode != CameraMode.Editing || IsTyping()) return;
+        if (!enabled || mode != CameraMode.Editing || IsTyping()) { Array.Clear(held); return; }
 
-        var ctrlDown = ctrl || Plugin.KeyState[VirtualKey.CONTROL];
-        var cDown = false;
+        var alt = IsPhysicallyDown(VirtualKey.MENU);
+        var ctrl = IsPhysicallyDown(VirtualKey.CONTROL);
 
         for (var i = 0; i < Keys.Length; i++)
         {
-            var down = held[i] || Plugin.KeyState[Keys[i].Vk];
-            if (Keys[i].Vk == VirtualKey.C) cDown = down;
-            if (!down || (Keys[i].NeedsCtrl && !ctrlDown)) continue;
+            var (vk, needsCtrl) = Keys[i];
+            var down = IsPhysicallyDown(vk);
+            if (down && !held[i])
+                Plugin.Log.Information("[probe] key {Key} down, alt {Alt}, ctrl {Ctrl}", vk, alt, ctrl);
 
-            if (Keys[i].Vk == VirtualKey.C && rawFramesLogged < 40)
-            {
-                Plugin.Log.Information("[probe] C raw before clear {Raw}", Plugin.KeyState[VirtualKey.C]);
-                rawFramesLogged++;
-            }
+            if (vk == VirtualKey.C) CountC(down, held[i]);
+            held[i] = down;
 
-            Plugin.KeyState[Keys[i].Vk] = false;
+            if (down && (!needsCtrl || ctrl)) Plugin.KeyState[vk] = false;
+        }
+    }
+
+    /// <summary>Counts, per C hold, frames physically held against frames the game's buffer showed it, logging on release.</summary>
+    private void CountC(bool down, bool wasDown)
+    {
+        if (down)
+        {
+            cFramesHeld++;
+            if (Plugin.KeyState[VirtualKey.C]) cFramesInBuffer++;
+            return;
         }
 
-        if (!cDown) rawFramesLogged = 0;
+        if (!wasDown) return;
+        Plugin.Log.Information("[probe] C released: physically held {Held} frames, in game buffer {Buffer}", cFramesHeld, cFramesInBuffer);
+        cFramesHeld = 0;
+        cFramesInBuffer = 0;
     }
+
+    private static bool IsPhysicallyDown(VirtualKey vk) => (GetAsyncKeyState((int)vk) & 0x8000) != 0;
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
 
     private void DrawSpot(ImGuiIOPtr io)
     {
