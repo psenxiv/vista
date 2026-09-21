@@ -44,3 +44,8 @@ Raised by the maintainer, not yet agreed as a feature.
 
 ### OBS integration
 Control the switchboard from OBS, so camera cuts can follow the stream.
+
+### Anchored tracks
+Every track hangs off a movable anchor instead of the world origin. Moving the anchor carries
+all its points with it, so a track can be repositioned or reused elsewhere. A track remembers
+the map it was made on, and importing it on a different map tells the user to adjust the anchor.
