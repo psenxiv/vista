@@ -528,8 +528,8 @@ that flies, and always releases. Little code, most of the project's risk.
 
 **Phase 2 — tracks.** The whole `Core` layer under TDD on macOS: spline,
 arc-length table, two aim modes, timing curve, Director. Then the camera wiring,
-with chat commands standing in for the editor. Ends with: author a shot, play it
-back. Most of the code, least of the risk.
+with a simple test window standing in for the editor. Ends with: author a shot,
+play it back. Most of the code, least of the risk.
 
 **Phase 2c — the editor.** The gizmo convention check first, then the 3D
 overlay, click-to-select, gizmo editing, the scrub bar and the curve editor.
