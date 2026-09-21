@@ -331,4 +331,13 @@ public class SessionEditingTests
         Assert.False(state.Scrubbing);
         Assert.Equal(0.0, state.ScrubHead);
     }
+
+    [Fact]
+    public void TheScrubHeadStaysWithinATrackThatGotShorter()
+    {
+        var state = Editing();
+        state.ScrubTo(10.0);
+        state.ChangeTrack(_ => TrackEditing.Empty());
+        Assert.Equal(0.0, state.ScrubHead);
+    }
 }

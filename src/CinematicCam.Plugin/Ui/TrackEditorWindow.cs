@@ -152,7 +152,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.SameLine();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
+        ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
+        ImGui.EndDisabled();
     }
 
     private void DrawAddButton()
@@ -262,7 +264,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
         if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); }
         if (moved || ImGui.IsItemActivated()) session.ScrubTo(head);
-        if (ImGui.IsItemDeactivated()) session.EndScrub();
+        // A window that stops drawing mid-drag never reports the slider deactivating, so any idle frame ends the scrub too.
+        if (ImGui.IsItemDeactivated() || (session.Scrubbing && !ImGui.IsItemActive())) session.EndScrub();
         ImGui.EndDisabled();
 
         if (!editing) return;
