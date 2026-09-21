@@ -239,4 +239,96 @@ public class SessionEditingTests
         state.ChangeTrack(t => TrackEditing.SetHold(t, 2, 2f));
         Assert.Equal(12.0, state.Duration, 5);
     }
+
+    [Fact]
+    public void TheScrubHeadWhileEditingIsTheLastScrubbedTimeWithinTheTrack()
+    {
+        var state = Editing();
+        Assert.Equal(0.0, state.ScrubHead);
+        state.ScrubTo(4.0);
+        Assert.Equal(4.0, state.ScrubHead);
+        state.ScrubTo(99.0);
+        Assert.Equal(10.0, state.ScrubHead);
+        state.ScrubTo(-1.0);
+        Assert.Equal(0.0, state.ScrubHead);
+    }
+
+    [Fact]
+    public void ScrubbingWhileEditingSetsScrubbingUntilItEnds()
+    {
+        var state = Editing();
+        state.BeginScrub();
+        Assert.True(state.Scrubbing);
+        state.EndScrub();
+        Assert.False(state.Scrubbing);
+    }
+
+    [Fact]
+    public void ScrubbingLiveHoldsPlaybackThenResumesIt()
+    {
+        var state = Editing();
+        state.Play();
+        state.BeginScrub();
+        Assert.True(state.Director.IsPaused);
+        state.ScrubTo(6.0);
+        Assert.Equal(6.0, state.ScrubHead, 5);
+        state.EndScrub();
+        Assert.False(state.Director.IsPaused);
+        Assert.False(state.Scrubbing);
+    }
+
+    [Fact]
+    public void ScrubbingAPausedShotLeavesItPaused()
+    {
+        var state = Editing();
+        state.Play();
+        state.Stop();
+        state.BeginScrub();
+        state.ScrubTo(2.0);
+        state.EndScrub();
+        Assert.True(state.Director.IsPaused);
+        Assert.Equal(2.0, state.ScrubHead, 5);
+    }
+
+    [Fact]
+    public void ScrubbingAFinishedOnceShotBackUnfinishesIt()
+    {
+        var state = Editing();
+        state.Play();
+        state.Director.Tick(20f);
+        Assert.True(state.Director.IsFinished);
+
+        state.BeginScrub();
+        state.ScrubTo(3.0);
+        state.EndScrub();
+        Assert.False(state.Director.IsFinished);
+        Assert.False(state.Director.IsPaused);
+    }
+
+    [Fact]
+    public void ModeChangesEndAScrub()
+    {
+        var state = Editing();
+        state.BeginScrub();
+        state.Play();
+        Assert.False(state.Scrubbing);
+
+        state.BeginScrub();
+        state.Edit();
+        Assert.False(state.Scrubbing);
+
+        state.BeginScrub();
+        state.Release();
+        Assert.False(state.Scrubbing);
+    }
+
+    [Fact]
+    public void ScrubbingDoesNothingWhenOff()
+    {
+        var state = new SessionState();
+        state.BeginScrub();
+        state.ScrubTo(3.0);
+        Assert.False(state.Scrubbing);
+        Assert.Equal(0.0, state.ScrubHead);
+    }
 }

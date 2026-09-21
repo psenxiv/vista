@@ -15,6 +15,8 @@ public sealed class SessionState
     private readonly EditHistory history = new();
     private Track? evaluatedTrack;
     private TrackEvaluator? evaluator;
+    private double scrubTime;
+    private bool resumeAfterScrub;
 
     public CameraMode Mode { get; private set; }
 
@@ -37,10 +39,12 @@ public sealed class SessionState
             case CameraMode.Editing:
                 return EditOutcome.Unchanged;
             case CameraMode.Live:
+                Scrubbing = false;
                 Director.GoOffline();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
             default:
+                Scrubbing = false;
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromOff;
         }
@@ -63,6 +67,7 @@ public sealed class SessionState
     public PlayOutcome Restart()
     {
         if (Track.Points.Count == 0) return PlayOutcome.Refused;
+        Scrubbing = false;
 
         Director.GoLive(new TrackShot(Track));
         var fromOff = Mode == CameraMode.Off;
@@ -82,6 +87,7 @@ public sealed class SessionState
     public bool Release()
     {
         if (Mode == CameraMode.Off) return false;
+        Scrubbing = false;
         Director.GoOffline();
         Mode = CameraMode.Off;
         return true;
@@ -206,5 +212,36 @@ public sealed class SessionState
         }
 
         return evaluator!.Evaluate(time);
+    }
+
+    /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
+    public bool Scrubbing { get; private set; }
+
+    /// <summary>Seconds under the scrub head: playback time while live, otherwise the last scrubbed or jumped-to time.</summary>
+    public double ScrubHead => Mode == CameraMode.Live ? Director.Elapsed : scrubTime;
+
+    /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect when off.</summary>
+    public void BeginScrub()
+    {
+        if (Mode == CameraMode.Off || Scrubbing) return;
+        Scrubbing = true;
+        resumeAfterScrub = Mode == CameraMode.Live && !Director.IsPaused;
+        if (Mode == CameraMode.Live) Director.Pause();
+    }
+
+    /// <summary>Moves the scrub head to <paramref name="time"/> within the track; live, playback seeks there. No effect when off.</summary>
+    public void ScrubTo(double time)
+    {
+        if (Mode == CameraMode.Off) return;
+        scrubTime = Math.Clamp(time, 0.0, Duration);
+        if (Mode == CameraMode.Live) Director.Seek(scrubTime);
+    }
+
+    /// <summary>Stops dragging the scrub head; live, playback carries on as it was before.</summary>
+    public void EndScrub()
+    {
+        if (!Scrubbing) return;
+        Scrubbing = false;
+        if (Mode == CameraMode.Live && resumeAfterScrub) Director.Resume();
     }
 }
