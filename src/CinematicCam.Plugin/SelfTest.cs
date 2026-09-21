@@ -9,7 +9,7 @@ internal static unsafe class SelfTest
     {
         Plugin.Log.Information("[selftest] ---- begin ----");
 
-        if (!CameraAccess.TryGetActiveCamera(out var camera))
+        if (!CameraAccess.TryGetWorldCamera(out var camera))
         {
             Plugin.Log.Error("[selftest] active camera is null. Aborting.");
             return;

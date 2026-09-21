@@ -8,20 +8,21 @@ namespace CinematicCam.Plugin.Game;
 /// <summary>Reads and writes the active game camera.</summary>
 internal static unsafe class CameraAccess
 {
-    public static bool TryGetActiveCamera(out Camera* camera)
+    /// <summary>The world camera. Not the active one, which is the lobby camera at the title screen.</summary>
+    public static bool TryGetWorldCamera(out Camera* camera)
     {
         camera = null;
         var manager = CameraManager.Instance();
         if (manager == null) return false;
 
-        camera = manager->GetActiveCamera();
+        camera = manager->Camera;
         return camera != null;
     }
 
     /// <summary>Reads the camera's current position, look-at and field of view.</summary>
     public static CameraState? ReadState()
     {
-        if (!TryGetActiveCamera(out var camera)) return null;
+        if (!TryGetWorldCamera(out var camera)) return null;
 
         var scene = &camera->CameraBase.SceneCamera;
         return new CameraState(scene->Object.Position, scene->LookAtVector, camera->FoV);
@@ -33,7 +34,7 @@ internal static unsafe class CameraAccess
     /// <summary>Captures the game's camera state before we start overwriting it.</summary>
     public static Snapshot? Capture()
     {
-        if (!TryGetActiveCamera(out var camera)) return null;
+        if (!TryGetWorldCamera(out var camera)) return null;
 
         var scene = &camera->CameraBase.SceneCamera;
         return new Snapshot(scene->Object.Position, scene->LookAtVector, scene->Vector_1, camera->FoV);
@@ -42,7 +43,7 @@ internal static unsafe class CameraAccess
     /// <summary>Puts back everything WriteState changed.</summary>
     public static void Restore(Snapshot snapshot)
     {
-        if (!TryGetActiveCamera(out var camera)) return;
+        if (!TryGetWorldCamera(out var camera)) return;
 
         var scene = &camera->CameraBase.SceneCamera;
         scene->Object.Position = snapshot.Position;
@@ -54,7 +55,7 @@ internal static unsafe class CameraAccess
     /// <summary>Puts the field of view back to stock when no snapshot is available.</summary>
     public static void ResetToDefaults()
     {
-        if (!TryGetActiveCamera(out var camera)) return;
+        if (!TryGetWorldCamera(out var camera)) return;
 
         // Only FoV. Distance is a persisted setting, see WriteState.
         camera->FoV = 0.78f;
@@ -65,7 +66,7 @@ internal static unsafe class CameraAccess
     /// <summary>Overwrites camera position and look-at.</summary>
     public static void WriteState(CameraState state)
     {
-        if (!TryGetActiveCamera(out var camera)) return;
+        if (!TryGetWorldCamera(out var camera)) return;
 
         var scene = &camera->CameraBase.SceneCamera;
         scene->Object.Position = state.Position;

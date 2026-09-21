@@ -70,7 +70,7 @@ internal sealed class FreeCam
 
     private static unsafe (float Yaw, float Pitch) ReadCameraAngles()
     {
-        if (!CameraAccess.TryGetActiveCamera(out var camera)) return (0f, 0f);
+        if (!CameraAccess.TryGetWorldCamera(out var camera)) return (0f, 0f);
         return (camera->DirH, camera->DirV);
     }
 }

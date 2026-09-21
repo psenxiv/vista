@@ -27,7 +27,7 @@ internal sealed unsafe class CameraController : IDisposable
     public void TryInstallHook()
     {
         if (updateHook != null) return;
-        if (!CameraAccess.TryGetActiveCamera(out var camera)) return;
+        if (!CameraAccess.TryGetWorldCamera(out var camera)) return;
 
         var vtable = *(nint**)camera;
         var updateAddress = vtable[UpdateVFuncIndex];
