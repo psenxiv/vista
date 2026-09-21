@@ -139,6 +139,14 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void SetLegRejectsNonFiniteSeconds()
+    {
+        var track = Build3PointTrack();
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, float.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, float.PositiveInfinity));
+    }
+
+    [Fact]
     public void HoldSecondsIsZeroWhenThereIsNoSecondKey()
     {
         var track = Build3PointTrack();
@@ -186,6 +194,14 @@ public class TrackEditingTests
     {
         var track = Build3PointTrack();
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 1, -1f));
+    }
+
+    [Fact]
+    public void SetHoldRejectsNonFiniteSeconds()
+    {
+        var track = Build3PointTrack();
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 1, float.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 1, float.PositiveInfinity));
     }
 
     [Fact]

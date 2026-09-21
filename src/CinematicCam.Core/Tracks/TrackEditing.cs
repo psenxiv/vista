@@ -33,7 +33,7 @@ public static class TrackEditing
     public static Track SetLeg(Track track, int index, float seconds)
     {
         ValidateLegIndex(track, index);
-        if (seconds <= 0f)
+        if (!float.IsFinite(seconds) || seconds <= 0f)
             throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "leg seconds must be > 0");
 
         var keys = track.Timing;
@@ -62,7 +62,7 @@ public static class TrackEditing
     public static Track SetHold(Track track, int index, float seconds)
     {
         ValidatePointIndex(track, index, "hold");
-        if (seconds < 0f)
+        if (!float.IsFinite(seconds) || seconds < 0f)
             throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "hold seconds must be >= 0");
 
         var keys = track.Timing;
