@@ -500,4 +500,14 @@ public class TrackEditingTests
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Move(track, 0, 3));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Replace(track, 3, Point(0f, 0f, 0f)));
     }
+
+    [Fact]
+    public void PointSecondsIsWhenThePointIsReached()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+        Assert.Equal(0f, TrackEditing.PointSeconds(track, 0));
+        Assert.Equal(5f, TrackEditing.PointSeconds(track, 1));
+        Assert.Equal(12f, TrackEditing.PointSeconds(track, 2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.PointSeconds(track, 3));
+    }
 }

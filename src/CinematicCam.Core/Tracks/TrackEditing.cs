@@ -96,6 +96,13 @@ public static class TrackEditing
         return track with { Timing = result };
     }
 
+    /// <summary>The time point <paramref name="index"/> is reached: its first key.</summary>
+    public static float PointSeconds(Track track, int index)
+    {
+        ValidatePointIndex(track, index, "time");
+        return track.Timing[FirstKeyIndex(track.Timing, index)].Time;
+    }
+
     /// <summary>Sets the playback mode; never touches points or keys.</summary>
     public static Track SetPlayback(Track track, PlaybackMode mode)
         => track with { Playback = mode };
