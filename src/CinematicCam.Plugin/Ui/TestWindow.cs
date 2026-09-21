@@ -41,8 +41,14 @@ internal sealed class TestWindow : Window
         if (ImGui.Button("Edit")) { error = null; session.Edit(); }
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(session.Track.Points.Count == 0);
+        var playing = session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished;
+        ImGui.BeginDisabled(session.Track.Points.Count == 0 || playing);
         if (ImGui.Button("Play")) { error = null; session.Play(); }
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        ImGui.BeginDisabled(session.Mode != CameraMode.Live);
+        if (ImGui.Button("Restart")) { error = null; session.Restart(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();

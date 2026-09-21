@@ -63,8 +63,21 @@ internal sealed class CameraSession
         Plugin.Log.Information("[ccam] mode: editing");
     }
 
-    /// <summary>Goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
+    /// <summary>Resumes a paused shot; otherwise goes live with the current track from its start.</summary>
     public void Play()
+    {
+        if (Mode == CameraMode.Live && director.IsPaused && !director.IsFinished)
+        {
+            director.Resume();
+            Plugin.Log.Information("[ccam] resumed");
+            return;
+        }
+
+        Restart();
+    }
+
+    /// <summary>Goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
+    public void Restart()
     {
         if (Track.Points.Count == 0) { Plugin.Log.Error("[ccam] cannot play a track with no points."); return; }
 
