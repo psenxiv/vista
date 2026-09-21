@@ -226,6 +226,24 @@ anything depends on it.
    game; Alt (Option under Wine) arrives as Alt; a marker click does not target
    anything. If a key cannot be hidden reliably, the alternatives go to the user.
 
+Results (2026-09-21, game 7.56hf2):
+
+- **Probe 1 passed.** Markers projected with the game's `SceneCamera.ViewMatrix`,
+  or with a view built from the frame we write, both sit on the target while
+  flying; Dalamud's `IGameGui.WorldToScreen` lags a frame, so the editor uses its
+  own projection. With BDTHPlugin's fix-up every gizmo drag moved along its own
+  axis only.
+- **Probe 2 passed.** Writing `DirH`/`DirV` took effect and held, mouse-look
+  continued from it, and after zoning, the settings screen and a logout,
+  `COMMON.DAT`, `CONTROL0.DAT` and `CONTROL1.DAT` were byte-identical. They are
+  runtime state: scrub release, jumps and Edit from Live keep the frame's aim.
+- **Probe 3, first run.** Clearing a key in the game's key buffer (Dalamud
+  `IKeyState`) stops its game action, and making ImGui want the mouse over a
+  marker stops the click targeting. Reading our keys failed: Dalamud releases
+  every non-modifier key in ImGui each frame (`Win32InputHandler.cs:590`), and a
+  cleared key stays cleared in the game buffer while held. A second run reads
+  the physical state with `GetAsyncKeyState`.
+
 ## Architecture
 
 Core decides; the plugin carries it out.
