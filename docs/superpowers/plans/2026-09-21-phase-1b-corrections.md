@@ -210,3 +210,22 @@ The safety net is that `Dispose` already releases, so disabling the plugin alway
 4. Whether `Camera.ResetConfigOptions()` (vfunc 26) is a safe recovery command.
 5. What 0x90 genuinely is (`Vector_1` vs `lookAtX`). Our formula works; the name does not
    matter until we need the field for something else.
+
+## Outcome
+
+Complete, 2026-09-21. Tasks 1, 2, 3, 4 and 6 done and verified in game. Task 5 was
+reverted — it was scope I invented rather than a correction, see the task entry.
+
+Verified in one pass: WASD/Space/Ctrl fly the camera, the character stays put, the wheel
+does not zoom, chat focus suppresses both camera and character, autorun cannot be
+triggered, and releasing restores normal movement. No jitter.
+
+Two predictions from the analysis were confirmed by the log and settled open questions:
+`[movement] lock counter at 0x142AA039C` and `[camera] hooking Update at 0x1418AC420`.
+
+Task 3 turned out to be load-bearing rather than tidiness, which I had it as. Three
+`Camera`-derived vtables exist and one overrides `Update` (`0x1422E3C68` slot 3 =
+`0x1418B3FC0`), so hooking via the *active* camera could have patched the wrong function
+had the plugin loaded at the title screen or while spectating. Using the world camera
+closes that. The cost is that the title screen and spectator cameras are out of reach;
+neither is a requirement.
