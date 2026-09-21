@@ -34,6 +34,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly WindowSystem windows = new("CinematicCam");
     private float wheel;
+    private bool escapeWasDown;
     private readonly TestWindow testWindow;
 
     public Plugin()
@@ -129,6 +130,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         Camera.TryInstallHook();
         Input.SyncHookState();
+
+        // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
+        var escape = KeyState[VirtualKey.ESCAPE];
+        if (escape && !escapeWasDown && Session.Mode == CameraMode.Live) GameUi.Restore();
+        escapeWasDown = escape;
 
         if (!Session.OwnsCamera) return;
 
