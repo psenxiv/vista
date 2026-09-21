@@ -158,9 +158,9 @@ public sealed class TimingCurve
         for (var i = 1; i < keys.Count; i++)
         {
             if (keys[i].Time <= keys[i - 1].Time)
-                throw new ArgumentException("timing keys must have strictly increasing times", nameof(keys));
+                throw new ArgumentException("timing keys must have strictly increasing times");
             if (keys[i].Position < keys[i - 1].Position)
-                throw new ArgumentException("timing key positions must not decrease", nameof(keys));
+                throw new ArgumentException("timing key positions must not decrease");
         }
     }
 }

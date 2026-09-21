@@ -131,6 +131,14 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void RejectionMessagesAreOnlyThePlainMessage()
+    {
+        var track = Build3PointTrack();
+        Assert.Equal("leg seconds must be > 0", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, 0f)).Message);
+        Assert.Equal("hold index must be 0..2 for a 3-point track", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 3, 1f)).Message);
+    }
+
+    [Fact]
     public void SetLegRejectsNonPositiveSeconds()
     {
         var track = Build3PointTrack();

@@ -37,7 +37,8 @@ public class TimingCurveTests
     public void ConstructorThrowsWhenTimeDoesNotStrictlyIncrease()
     {
         var keys = new[] { Key(0f, 0f), Key(0f, 1f) };
-        Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        Assert.Equal("timing keys must have strictly increasing times", ex.Message);
     }
 
     [Fact]

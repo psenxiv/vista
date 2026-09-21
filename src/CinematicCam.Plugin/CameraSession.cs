@@ -119,14 +119,16 @@ internal sealed class CameraSession
         TakeCamera();
     }
 
-    /// <summary>Applies <paramref name="change"/> to the track. Returns why it was refused, or null once applied.</summary>
+    /// <summary>Applies <paramref name="change"/> to the track if the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change)
     {
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
 
         try
         {
-            Track = change(Track);
+            var result = change(Track);
+            _ = new TrackEvaluator(result);
+            Track = result;
             return null;
         }
         catch (ArgumentException ex)

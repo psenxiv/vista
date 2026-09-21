@@ -34,7 +34,7 @@ public static class TrackEditing
     {
         ValidateLegIndex(track, index);
         if (!float.IsFinite(seconds) || seconds <= 0f)
-            throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "leg seconds must be > 0");
+            throw new ArgumentOutOfRangeException(null, "leg seconds must be > 0");
 
         var keys = track.Timing;
         var prevLastIndex = LastKeyIndex(keys, index - 1);
@@ -63,7 +63,7 @@ public static class TrackEditing
     {
         ValidatePointIndex(track, index, "hold");
         if (!float.IsFinite(seconds) || seconds < 0f)
-            throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "hold seconds must be >= 0");
+            throw new ArgumentOutOfRangeException(null, "hold seconds must be >= 0");
 
         var keys = track.Timing;
         var firstIndex = FirstKeyIndex(keys, index);
@@ -104,14 +104,14 @@ public static class TrackEditing
     {
         var n = track.Points.Count;
         if (index < 1 || index > n - 1)
-            throw new ArgumentOutOfRangeException(nameof(index), index, $"leg index must be 1..{n - 1} for a {n}-point track");
+            throw new ArgumentOutOfRangeException(null, $"leg index must be 1..{n - 1} for a {n}-point track");
     }
 
     private static void ValidatePointIndex(Track track, int index, string what)
     {
         var n = track.Points.Count;
         if (index < 0 || index > n - 1)
-            throw new ArgumentOutOfRangeException(nameof(index), index, $"{what} index must be 0..{n - 1} for a {n}-point track");
+            throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track");
     }
 
     private static int FirstKeyIndex(IReadOnlyList<TimingKey> keys, int point)
