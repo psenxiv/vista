@@ -174,6 +174,7 @@ internal sealed class CameraSession
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
         if (state.Mode != CameraMode.Editing) return "Points can only be added while editing.";
+        if (state.Scrubbing) return "Points cannot be added while scrubbing.";
 
         var camera = CameraAccess.ReadState();
         var angles = CameraAccess.ReadAngles();

@@ -12,8 +12,10 @@ using Dalamud.Interface.Windowing;
 namespace CinematicCam.Plugin.Ui;
 
 /// <summary>The main editor window: modes, track settings, the point list and status.</summary>
-internal sealed class TrackEditorWindow : Window
+internal sealed unsafe class TrackEditorWindow : Window
 {
+    private const string PointPayload = "CCAM_POINT";
+
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
     private static readonly string[] PlaybackNames = ["Once", "Loop"];
 
@@ -57,6 +59,7 @@ internal sealed class TrackEditorWindow : Window
 
         DrawPoints(editing);
         ImGui.Separator();
+        DrawScrubBar();
         DrawStatus();
     }
 
@@ -153,7 +156,7 @@ internal sealed class TrackEditorWindow : Window
     private void DrawPoints(bool editing)
     {
         var track = session.Track;
-        var footer = (ImGui.GetFrameHeightWithSpacing() * 2f) + ImGui.GetStyle().ItemSpacing.Y;
+        var footer = (ImGui.GetFrameHeightWithSpacing() * 3f) + ImGui.GetStyle().ItemSpacing.Y;
         if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0
             && ImGui.BeginTable("point-table", 5, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
         {
@@ -179,10 +182,20 @@ internal sealed class TrackEditorWindow : Window
 
         ImGui.TableNextColumn();
         using (ImRaii.PushFont(UiBuilder.IconFont))
-            ImGui.TextUnformatted(FontAwesomeIcon.GripLines.ToIconString());
+            ImGui.Selectable($"{FontAwesomeIcon.GripLines.ToIconString()}##grip{index}");
+        if (editing && ImGui.BeginDragDropSource())
+        {
+            SetPayload(index);
+            ImGui.TextUnformatted($"Point {index + 1}");
+            ImGui.EndDragDropSource();
+        }
+
+        DropTarget(index, editing);
 
         ImGui.TableNextColumn();
         if (ImGui.Selectable($"{index + 1}##row{index}", selected)) session.Select(index);
+        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
+        DropTarget(index, editing);
 
         ImGui.TableNextColumn();
         if (index == 0) ImGui.TextUnformatted("-");
@@ -202,6 +215,36 @@ internal sealed class TrackEditorWindow : Window
                 ImGui.TextUnformatted(FontAwesomeIcon.CaretLeft.ToIconString());
         }
     }
+
+    private void DrawScrubBar()
+    {
+        var duration = (float)session.Duration;
+        var head = (float)session.ScrubHead;
+        var tail = $"{duration:0.0} s   {head:0.0} s";
+
+        ImGui.BeginDisabled(session.Mode == CameraMode.Off || duration <= 0f);
+        ImGui.TextUnformatted("0.0");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize(tail).X - ImGui.GetStyle().ItemSpacing.X);
+        var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), "");
+        if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); }
+        if (moved || ImGui.IsItemActivated()) session.ScrubTo(head);
+        if (ImGui.IsItemDeactivated()) session.EndScrub();
+        ImGui.SameLine();
+        ImGui.TextUnformatted(tail);
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>Moves the dragged point to <paramref name="index"/> when it is dropped on this item.</summary>
+    private void DropTarget(int index, bool editing)
+    {
+        if (!editing || !ImGui.BeginDragDropTarget()) return;
+        var payload = ImGui.AcceptDragDropPayload(PointPayload);
+        if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index) Report(session.MovePoint(from, index));
+        ImGui.EndDragDropTarget();
+    }
+
+    private static void SetPayload(int index) => ImGui.SetDragDropPayload(PointPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
 
     private void DrawStatus()
     {
