@@ -3,7 +3,6 @@ using CinematicCam.Core.Editing;
 using CinematicCam.Core.Session;
 using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Editor;
-using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -98,7 +97,7 @@ internal sealed class PointWindow : Window
         Field("Roll", EditorColours.AxisZ, $"roll{index}", index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
 
         ImGui.TableNextRow();
-        Field("FoV", null, $"fov{index}", index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = ClampFov(Radians(v), p.Fov) });
+        Field("FoV", null, $"fov{index}", index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = EditLimits.Fov(Radians(v)) });
 
         ImGui.EndTable();
         fieldsWidth = ImGui.GetItemRectSize().X;
@@ -121,10 +120,6 @@ internal sealed class PointWindow : Window
         if (changed && index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
         if (ImGui.IsItemDeactivated()) session.EndPointEdit();
     }
-
-    /// <summary>A field of view within the game's range, or <paramref name="current"/> when the range cannot be read.</summary>
-    private static float ClampFov(float radians, float current)
-        => CameraAccess.ReadFovLimits() is { } limits ? EditLimits.Fov(radians, limits.Min, limits.Max) : current;
 
     private static float Degrees(float radians) => radians * 180f / MathF.PI;
 

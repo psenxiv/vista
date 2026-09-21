@@ -20,8 +20,11 @@ public static class EditLimits
     /// <summary>A yaw or roll in radians wrapped to within half a turn; not a number becomes 0.</summary>
     public static float Angle(float radians) => float.IsFinite(radians) ? MathF.IEEERemainder(radians, MathF.Tau) : 0f;
 
-    /// <summary>A field of view in radians within the game's range; not a number becomes the minimum.</summary>
-    public static float Fov(float radians, float min, float max) => float.IsFinite(radians) ? Math.Clamp(radians, min, max) : min;
+    public const float MinFov = 5f * MathF.PI / 180f;
+    public const float MaxFov = 120f * MathF.PI / 180f;
+
+    /// <summary>A field of view in radians, 5° to 120°; not a number becomes the minimum.</summary>
+    public static float Fov(float radians) => float.IsFinite(radians) ? Math.Clamp(radians, MinFov, MaxFov) : MinFov;
 
     /// <summary>A position coordinate, or <paramref name="current"/> when the value is not finite.</summary>
     public static float Coordinate(float value, float current) => float.IsFinite(value) ? value : current;

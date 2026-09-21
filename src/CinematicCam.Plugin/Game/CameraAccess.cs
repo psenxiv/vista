@@ -50,13 +50,6 @@ internal static unsafe class CameraAccess
         return (camera->DirVMin, camera->DirVMax);
     }
 
-    /// <summary>The narrowest and widest field of view the game allows, in radians.</summary>
-    public static (float Min, float Max)? ReadFovLimits()
-    {
-        if (!TryGetWorldCamera(out var camera)) return null;
-        return (camera->MinFoV, camera->MaxFoV);
-    }
-
     /// <summary>Everything WriteState touches, so release can put it all back.</summary>
     public readonly record struct Snapshot(Vector3 Position, Vector3 LookAt, Vector3 Up, float Fov);
 

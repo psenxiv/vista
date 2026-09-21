@@ -42,12 +42,13 @@ public class EditLimitsTests
         => Assert.Equal(expected, EditLimits.Angle(input), 4);
 
     [Fact]
-    public void FovClampsToTheGamesRange()
+    public void FovClampsToFiveToOneHundredAndTwentyDegrees()
     {
-        Assert.Equal(0.5f, EditLimits.Fov(0.2f, 0.5f, 1.2f));
-        Assert.Equal(1.2f, EditLimits.Fov(2f, 0.5f, 1.2f));
-        Assert.Equal(0.8f, EditLimits.Fov(0.8f, 0.5f, 1.2f));
-        Assert.Equal(0.5f, EditLimits.Fov(float.NaN, 0.5f, 1.2f));
+        const float degree = MathF.PI / 180f;
+        Assert.Equal(5f * degree, EditLimits.Fov(1f * degree), 5);
+        Assert.Equal(120f * degree, EditLimits.Fov(200f * degree), 5);
+        Assert.Equal(90f * degree, EditLimits.Fov(90f * degree), 5);
+        Assert.Equal(5f * degree, EditLimits.Fov(float.NaN), 5);
     }
 
     [Fact]
