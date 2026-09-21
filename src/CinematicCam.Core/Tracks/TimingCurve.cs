@@ -1,6 +1,6 @@
 namespace CinematicCam.Core.Tracks;
 
-/// <summary>Maps elapsed time to a place on the path, in control-point units, via a monotone cubic Hermite curve.</summary>
+/// <summary>Maps elapsed time to a place on the path, in path units, via a monotone cubic Hermite curve.</summary>
 public sealed class TimingCurve
 {
     /// <summary>Below this, a secant is treated as a hold rather than divided by.</summary>
@@ -27,7 +27,7 @@ public sealed class TimingCurve
             (_inTangent, _outTangent) = BuildTangents(keys);
     }
 
-    /// <summary>Place on the path at <paramref name="time"/>, in control-point units. Holds end values.</summary>
+    /// <summary>Place on the path at <paramref name="time"/>, in path units. Holds end values.</summary>
     public float PositionAt(double time)
     {
         var n = _keys.Count;
