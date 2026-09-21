@@ -363,8 +363,10 @@ Input capture blocks only movement keys and zoom, so chat stays reachable and
 
 ## Editor UI
 
-Three windows: a library of tracks and snap points, a track editor, and a
-compact switchboard intended to stay on screen while live.
+Phase 2c-1 detail lives in `2026-09-21-editor-design.md`; where they differ, it wins.
+
+Windows: a track editor and a point window (2c-1), then a library of tracks and
+snap points and a compact switchboard intended to stay on screen while live.
 
 ### Authoring flow
 
@@ -372,12 +374,12 @@ The primary loop is fly and drop. Enter editing mode, fly to a position, then
 capture the camera as a control point: position, yaw, pitch, FoV and roll, appended to
 the end of the track. Repeat. A track is built by flying it.
 
-Capture is available two ways, and both exist in v1: a **Capture current camera**
-button in the track editor, and the backtick key (`` ` ``) in editing mode so the
+Adding is available two ways, and both exist in v1: a **+ Add** button in the
+track editor, and the backtick key (`` ` ``) in editing mode so the
 operator does not have to reach for the mouse mid-flight.
 
 Editing is a separate activity and uses the tools below: select a point, then
-adjust it with a gizmo, re-capture it from the current camera, or type exact
+adjust it with a gizmo, overwrite it with the current camera, or type exact
 numbers. Points can be inserted, reordered and deleted from the list.
 
 The track editor carries a **scrub bar** — drag to see the camera at any moment
@@ -389,7 +391,7 @@ plotted against time, with draggable keys and tangent handles. Until it exists t
 curve is generated from simple "this leg takes N seconds" and "hold here for N
 seconds" inputs, which is enough to author a shot but not to shape one.
 
-**3D overlay.** In v1, drawn on the ImGui foreground draw list over the game,
+**3D overlay.** In v1, drawn on the ImGui background draw list over the game,
 projected with `Camera.WorldToScreen`:
 
 - **The spline itself**, densely sampled and drawn as a continuous polyline, so
@@ -410,10 +412,10 @@ so hit-testing a click against those markers costs almost nothing.
 dev assemblies:
 
 - Translate on the selected control point.
-- Rotate for aim direction, in AimKeys mode only.
+- Rotate: yaw and pitch in AimKeys mode, roll in both aim modes.
 - No scale. It means nothing here and the gizmo never offers it.
 
-Re-capture-from-current-camera remains alongside the gizmo. It is the fastest
+Overwrite-from-current-camera remains alongside the gizmo. It is the fastest
 way to set a point while standing in the shot. Numeric fields stay underneath as
 the precise fallback.
 
@@ -421,7 +423,8 @@ the precise fallback.
 convention. Wrong handedness or row-versus-column-major yields a gizmo that
 looks correct but drags along the wrong axis. `SceneCamera.ViewMatrix` and
 `RenderCamera->ProjectionMatrix` supply the inputs; matching FFXIV's convention
-is the work. This is the **first** task of phase 2c, verified against a
+is the work; BDTHPlugin's matrix fix-up is the starting point (see the editor
+design). This is the **first** task of phase 2c, verified against a
 known control point. Left until last, it becomes the thing dropped when the
 phase overruns.
 
@@ -523,8 +526,9 @@ arc-length table, two aim modes, timing curve, Director. Then the camera wiring,
 with a simple test window standing in for the editor. Ends with: author a shot,
 play it back. Most of the code, least of the risk.
 
-**Phase 2c — the editor.** The gizmo convention check first, then the 3D
-overlay, click-to-select, gizmo editing, the scrub bar and the curve editor.
+**Phase 2c — the editor.** Two cycles. 2c-1: the gizmo convention check first,
+then the 3D overlay, click-to-select, gizmo editing, the scrub bar and undo
+(`2026-09-21-editor-design.md`). 2c-2: the curve editor.
 
 **Phase 3 — the switchboard.** Slots, program and preview, TAKE, hotkeys with
 the text-focus guard, snap points on the bus, persistence. Ends with: cut between shots live.
@@ -539,3 +543,7 @@ as reference for which game functions matter and what problems arise. No code is
 copied. The camera approach here differs: one hook on `CameraBase.Update()` with
 a post-pass, against current FFXIVClientStructs, rather than detours on five
 vtable entries that reimplement game logic.
+
+BDTHPlugin (https://github.com/LeonBlade/BDTHPlugin) ships no license file either.
+Its gizmo drawing and matrix fix-up were read as reference for the editor gizmo; no
+code is copied.
