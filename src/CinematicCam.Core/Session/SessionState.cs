@@ -194,7 +194,11 @@ public sealed class SessionState
     {
         if (pointEditStart is not { } start) return;
         pointEditStart = null;
-        if (!ReferenceEquals(start.Track, Track)) history.Record(start);
+        if (ReferenceEquals(start.Track, Track)) return;
+
+        // Previews rebuild the point list, so compare values: a drag back to the start is no step.
+        if (start.Track.Points.SequenceEqual(Track.Points)) Track = start.Track;
+        else history.Record(start);
     }
 
     private EditSnapshot Current => new(Track, Selected);

@@ -398,4 +398,37 @@ public class SessionEditingTests
         Assert.True(state.Undo());
         Assert.Equal(10f, state.Track.Points[1].Position.X);
     }
+
+    [Fact]
+    public void ALiveEditThatEndsWhereItStartedRecordsNoStepAndKeepsRedo()
+    {
+        var state = Editing();
+        state.Undo();
+        Assert.True(state.CanRedo);
+
+        var original = state.Track.Points[1];
+        state.BeginPointEdit();
+        state.PreviewPoint(1, Point(11f));
+        state.PreviewPoint(1, original);
+        state.EndPointEdit();
+
+        Assert.True(state.CanRedo);
+        Assert.True(state.Redo());
+        Assert.Equal(3, state.Track.Points.Count);
+    }
+
+    [Fact]
+    public void AnEditInTheMiddleOfALiveEditMakesTwoSteps()
+    {
+        var state = Editing();
+        state.BeginPointEdit();
+        state.PreviewPoint(1, Point(11f));
+        state.AddToEnd(Point(30f));
+
+        state.Undo();
+        Assert.Equal(3, state.Track.Points.Count);
+        Assert.Equal(11f, state.Track.Points[1].Position.X);
+        state.Undo();
+        Assert.Equal(10f, state.Track.Points[1].Position.X);
+    }
 }
