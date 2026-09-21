@@ -12,7 +12,7 @@ using Dalamud.Interface.Windowing;
 
 namespace CinematicCam.Plugin.Ui;
 
-/// <summary>The selected point's number fields, gizmo mode and delete; shown only while a point is selected in editing mode.</summary>
+/// <summary>The selected point's number fields, gizmo mode, copy, paste and delete; shown only while a point is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
 {
     private const float FieldWidth = 70f;
@@ -24,6 +24,7 @@ internal sealed class PointWindow : Window
     private readonly PointGizmo gizmo;
     private int? shown;
     private float fieldsWidth;
+    private ControlPoint? copied;
 
     public PointWindow(CameraSession session, PointGizmo gizmo)
         : base("Point###ccam-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
@@ -61,8 +62,19 @@ internal sealed class PointWindow : Window
         if (ImGui.RadioButton("Rotate", gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
 
         // Right-align to last frame's field grid, not the window: the window sizes itself to its content.
+        var gap = ImGui.GetStyle().ItemSpacing.X;
+        var icons = IconButton.Width(FontAwesomeIcon.Copy) + IconButton.Width(FontAwesomeIcon.Paste) + IconButton.Width(FontAwesomeIcon.Trash) + (gap * 2f);
         ImGui.SameLine();
-        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + fieldsWidth - IconButton.Width(FontAwesomeIcon.Trash)));
+        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + fieldsWidth - icons));
+        if (IconButton.Draw("copy-point", FontAwesomeIcon.Copy, "Copy position, aim, roll and FoV")) copied = point;
+
+        ImGui.SameLine();
+        ImGui.BeginDisabled(copied is null);
+        if (IconButton.Draw("paste-point", FontAwesomeIcon.Paste, "Paste position, aim, roll and FoV") && copied is { } c)
+            Report(session.ReplacePoint(index, point with { Position = c.Position, Yaw = c.Yaw, Pitch = c.Pitch, Roll = c.Roll, Fov = c.Fov }));
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
         if (IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point"))
         {
             Report(session.DeleteSelected());
