@@ -87,7 +87,12 @@ internal sealed unsafe class InputBlocker : IDisposable
 
     /// <summary>Zoom. Suppressed while flying so the camera distance is left alone.</summary>
     private sbyte MouseWheelDetour()
-        => shouldBlock() ? (sbyte)0 : mouseWheelHook!.Original();
+    {
+        // Always call through, then discard. Skipping the original could leave the
+        // wheel delta unconsumed for the next reader.
+        var value = mouseWheelHook!.Original();
+        return shouldBlock() ? (sbyte)0 : value;
+    }
 
     private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
         => shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);

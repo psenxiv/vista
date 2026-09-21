@@ -11,7 +11,7 @@ internal static unsafe class SelfTest
 
         if (!CameraAccess.TryGetWorldCamera(out var camera))
         {
-            Plugin.Log.Error("[selftest] active camera is null. Aborting.");
+            Plugin.Log.Error("[selftest] world camera is null. Aborting.");
             return;
         }
 

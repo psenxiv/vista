@@ -5,7 +5,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 
 namespace CinematicCam.Plugin.Game;
 
-/// <summary>Reads and writes the active game camera.</summary>
+/// <summary>Reads and writes the world camera.</summary>
 internal static unsafe class CameraAccess
 {
     /// <summary>The world camera. Not the active one, which is the lobby camera at the title screen.</summary>
