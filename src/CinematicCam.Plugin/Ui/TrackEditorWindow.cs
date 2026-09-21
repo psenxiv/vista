@@ -12,7 +12,7 @@ using Dalamud.Interface.Windowing;
 
 namespace CinematicCam.Plugin.Ui;
 
-/// <summary>The main editor window: modes, track settings, the point list and status.</summary>
+/// <summary>The main editor window: modes, track settings, the point list and the scrub bar.</summary>
 internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "CCAM_POINT";
@@ -20,6 +20,9 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly string[] ModeNames = ["Edit", "Live", "Off"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
     private static readonly string[] PlaybackNames = ["Once", "Loop"];
+    private static readonly Vector2 Spacing = new(8f, 7f);
+    private static readonly Vector2 CellPadding = new(6f, 4f);
+    private const float SpeedWidth = 90f;
 
     private readonly CameraSession session;
     private readonly PendingField fields;
@@ -49,6 +52,7 @@ internal sealed unsafe class TrackEditorWindow : Window
             lastMode = session.Mode;
         }
 
+        using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Spacing);
         var editing = session.Mode == CameraMode.Editing;
         DrawTopRow(editing);
 
@@ -59,8 +63,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         DrawPoints(editing);
         ImGui.Separator();
-        DrawScrubBar();
-        DrawStatus();
+        DrawScrubRow(editing);
     }
 
     private void DrawTopRow(bool editing)
@@ -124,32 +127,41 @@ internal sealed unsafe class TrackEditorWindow : Window
         return pressed;
     }
 
+    /// <summary>Aim and playback drop-downs showing their setting, and Clear track as a trash icon at the right end.</summary>
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Aim");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(150f);
-        if (ImGui.Combo("##aim", ref aim, AimNames))
+        ImGui.SetNextItemWidth(200f);
+        if (ImGui.BeginCombo("##aim", $"Aim: {AimNames[aim]}"))
         {
-            var mode = aim == 0 ? AimMode.AimKeys : AimMode.PathTangent;
-            Report(session.ChangeTrack(t => t with { Aim = mode }));
+            for (var i = 0; i < AimNames.Length; i++)
+            {
+                if (!ImGui.Selectable(AimNames[i], i == aim) || i == aim) continue;
+                var mode = i == 0 ? AimMode.AimKeys : AimMode.PathTangent;
+                Report(session.ChangeTrack(t => t with { Aim = mode }));
+            }
+
+            ImGui.EndCombo();
         }
 
         var playback = session.Track.Playback == PlaybackMode.Once ? 0 : 1;
         ImGui.SameLine();
-        ImGui.TextUnformatted("Playback");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(80f);
-        if (ImGui.Combo("##playback", ref playback, PlaybackNames))
+        ImGui.SetNextItemWidth(140f);
+        if (ImGui.BeginCombo("##playback", $"Playback: {PlaybackNames[playback]}"))
         {
-            var mode = playback == 0 ? PlaybackMode.Once : PlaybackMode.Loop;
-            Report(session.ChangeTrack(t => TrackEditing.SetPlayback(t, mode)));
+            for (var i = 0; i < PlaybackNames.Length; i++)
+            {
+                if (!ImGui.Selectable(PlaybackNames[i], i == playback) || i == playback) continue;
+                var mode = i == 0 ? PlaybackMode.Once : PlaybackMode.Loop;
+                Report(session.ChangeTrack(t => TrackEditing.SetPlayback(t, mode)));
+            }
+
+            ImGui.EndCombo();
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
+        RightAlign(ImGui.GetFrameHeight());
+        if (Icon("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
     }
 
     private void DrawAddButton()
@@ -170,33 +182,37 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void DrawPoints(bool editing)
     {
         var track = session.Track;
-        var footer = (ImGui.GetFrameHeightWithSpacing() * 3f) + ImGui.GetStyle().ItemSpacing.Y;
-        if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0
-            && ImGui.BeginTable("point-table", 5, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
+        var footer = ImGui.GetFrameHeightWithSpacing() + (ImGui.GetStyle().ItemSpacing.Y * 2f);
+        if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0)
         {
-            ImGui.TableSetupColumn("##handle");
-            ImGui.TableSetupColumn("#");
-            ImGui.TableSetupColumn("Leg (s)");
-            ImGui.TableSetupColumn("Hold (s)");
-            ImGui.TableSetupColumn("##selected");
-            ImGui.TableHeadersRow();
+            using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
+            if (ImGui.BeginTable("point-table", 5, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("##handle");
+                ImGui.TableSetupColumn("#");
+                ImGui.TableSetupColumn("Leg (s)");
+                ImGui.TableSetupColumn("Hold (s)");
+                ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableHeadersRow();
 
-            for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, i, editing);
-            ImGui.EndTable();
+                for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, i, editing);
+                ImGui.EndTable();
+            }
         }
 
         ImGui.EndChild();
     }
 
+    /// <summary>One point: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon deletes it.</summary>
     private void DrawPointRow(Track track, int index, bool editing)
     {
-        var selected = session.Selected == index;
         ImGui.TableNextRow();
         ImGui.BeginDisabled(!editing);
 
         ImGui.TableNextColumn();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-            ImGui.Selectable($"{FontAwesomeIcon.GripLines.ToIconString()}##grip{index}");
+        var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
+        if (ImGui.Selectable($"##row{index}", session.Selected == index, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.Select(index);
+        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
         if (editing && ImGui.BeginDragDropSource())
         {
             SetPayload(index);
@@ -206,47 +222,67 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         DropTarget(index, editing);
 
-        ImGui.TableNextColumn();
-        if (ImGui.Selectable($"{index + 1}##row{index}", selected)) session.Select(index);
-        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
-        DropTarget(index, editing);
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            ImGui.TextUnformatted(FontAwesomeIcon.GripLines.ToIconString());
 
         ImGui.TableNextColumn();
-        if (index == 0) ImGui.TextUnformatted("-");
-        else fields.Draw($"leg{index}", TrackEditing.LegSeconds(track, index), "%.1f", 70f,
-            v => Report(session.ChangeTrack(t => TrackEditing.SetLeg(t, index, EditLimits.Leg(v)))));
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted($"{index + 1}");
+
+        ImGui.TableNextColumn();
+        if (index == 0)
+        {
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted("-");
+        }
+        else
+        {
+            fields.Draw($"leg{index}", TrackEditing.LegSeconds(track, index), "%.1f", 70f,
+                v => Report(session.ChangeTrack(t => TrackEditing.SetLeg(t, index, EditLimits.Leg(v)))));
+        }
 
         ImGui.TableNextColumn();
         fields.Draw($"hold{index}", TrackEditing.HoldSeconds(track, index), "%.1f", 70f,
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v)))));
 
-        ImGui.EndDisabled();
-
         ImGui.TableNextColumn();
-        if (selected)
+        RightAlign(ImGui.GetFrameHeight());
+        if (Icon($"delete{index}", FontAwesomeIcon.Trash, "Delete point"))
         {
-            using (ImRaii.PushFont(UiBuilder.IconFont))
-                ImGui.TextUnformatted(FontAwesomeIcon.CaretLeft.ToIconString());
+            fields.Clear();
+            session.Select(index);
+            Report(session.DeleteSelected());
         }
+
+        ImGui.EndDisabled();
     }
 
-    private void DrawScrubBar()
+    /// <summary>The scrub bar showing current and total time, with fly speed at its right while editing.</summary>
+    private void DrawScrubRow(bool editing)
     {
         var duration = (float)session.Duration;
         var head = (float)session.ScrubHead;
-        var tail = $"{duration:0.0} s   {head:0.0} s";
+        var speedWidth = editing ? ImGui.CalcTextSize("Speed").X + SpeedWidth + (ImGui.GetStyle().ItemSpacing.X * 2f) : 0f;
 
         ImGui.BeginDisabled(session.Mode == CameraMode.Off || duration <= 0f);
-        ImGui.TextUnformatted("0.0");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize(tail).X - ImGui.GetStyle().ItemSpacing.X);
-        var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), "");
+        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - speedWidth);
+        var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
         if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); }
         if (moved || ImGui.IsItemActivated()) session.ScrubTo(head);
         if (ImGui.IsItemDeactivated()) session.EndScrub();
-        ImGui.SameLine();
-        ImGui.TextUnformatted(tail);
         ImGui.EndDisabled();
+
+        if (!editing) return;
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted("Speed");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(SpeedWidth);
+        var speed = session.Speed;
+        var step = speed.Index;
+        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
     }
 
     /// <summary>Moves the dragged point to <paramref name="index"/> when it is dropped on this item.</summary>
@@ -260,31 +296,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
     private static void SetPayload(int index) => ImGui.SetDragDropPayload(PointPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
 
-    /// <summary>The status line, with fly speed at its right end.</summary>
-    private void DrawStatus()
-    {
-        const float sliderWidth = 120f;
-        var count = session.Track.Points.Count;
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted($"{count} point{(count == 1 ? "" : "s")} | total {session.Duration:0.0} s | {ModeText()}");
-
-        var width = ImGui.CalcTextSize("Fly speed").X + ImGui.GetStyle().ItemSpacing.X + sliderWidth;
-        ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - width));
-        ImGui.TextUnformatted("Fly speed");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(sliderWidth);
-        var speed = session.Speed;
-        var step = speed.Index;
-        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
-    }
-
-    private string ModeText() => session.Mode switch
-    {
-        CameraMode.Live => session.Director.IsFinished ? "finished" : session.Director.IsPaused ? "paused" : "playing",
-        CameraMode.Editing => "editing",
-        _ => "off",
-    };
+    /// <summary>Moves the cursor so an item of <paramref name="width"/> ends at the right edge.</summary>
+    private static void RightAlign(float width)
+        => ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - width));
 
     private static void Report(string? refusal)
     {

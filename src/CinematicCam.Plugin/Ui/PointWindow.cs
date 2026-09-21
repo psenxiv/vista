@@ -1,3 +1,4 @@
+using System.Numerics;
 using CinematicCam.Core.Editing;
 using CinematicCam.Core.Session;
 using CinematicCam.Core.Tracks;
@@ -5,11 +6,14 @@ using CinematicCam.Plugin.Editor;
 using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 namespace CinematicCam.Plugin.Ui;
 
-/// <summary>The selected point's number fields, gizmo mode and Delete; shown only while a point is selected in editing mode.</summary>
+/// <summary>The selected point's number fields, gizmo mode and delete; shown only while a point is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
 {
     private const float FieldWidth = 70f;
@@ -46,40 +50,54 @@ internal sealed class PointWindow : Window
     {
         if (session.Selected is not { } index || index >= session.Track.Points.Count) return;
         var point = session.Track.Points[index];
+        using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
 
+        ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Gizmo");
         ImGui.SameLine();
         if (ImGui.RadioButton("Move", gizmo.Mode == GizmoMode.Move)) gizmo.SetMode(GizmoMode.Move);
         ImGui.SameLine();
         if (ImGui.RadioButton("Rotate", gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
 
-        Field("X", $"x{index}", point.Position.X, "%.1f", v => Edit(index, p => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } }));
         ImGui.SameLine();
-        Field("Y", $"y{index}", point.Position.Y, "%.1f", v => Edit(index, p => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } }));
-        ImGui.SameLine();
-        Field("Z", $"z{index}", point.Position.Z, "%.1f", v => Edit(index, p => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } }));
-
-        ImGui.BeginDisabled(session.Track.Aim == AimMode.PathTangent);
-        Field("Yaw", $"yaw{index}", Degrees(EditLimits.Angle(point.Yaw)), "%.1f°", v => Edit(index, p => p with { Yaw = EditLimits.Angle(Radians(v)) }));
-        ImGui.SameLine();
-        Field("Pitch", $"pitch{index}", Degrees(point.Pitch), "%.1f°", v => Edit(index, p => p with { Pitch = EditLimits.Pitch(Radians(v)) }));
-        ImGui.EndDisabled();
-
-        Field("Roll", $"roll{index}", Degrees(EditLimits.Angle(point.Roll)), "%.1f°", v => Edit(index, p => p with { Roll = EditLimits.Angle(Radians(v)) }));
-        ImGui.SameLine();
-        Field("FoV", $"fov{index}", Degrees(point.Fov), "%.1f°", v => Edit(index, p => p with { Fov = ClampFov(Radians(v), p.Fov) }));
-
-        if (ImGui.Button("Delete"))
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight()));
+        var delete = ImGuiComponents.IconButton("delete-point", FontAwesomeIcon.Trash);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Delete point");
+        if (delete)
         {
             fields.Clear();
             Report(session.DeleteSelected());
+            return;
         }
+
+        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
+        if (!ImGui.BeginTable("point-fields", 6, ImGuiTableFlags.SizingFixedFit)) return;
+
+        ImGui.TableNextRow();
+        Field("X", $"x{index}", point.Position.X, "%.1f", v => Edit(index, p => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } }));
+        Field("Y", $"y{index}", point.Position.Y, "%.1f", v => Edit(index, p => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } }));
+        Field("Z", $"z{index}", point.Position.Z, "%.1f", v => Edit(index, p => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } }));
+
+        ImGui.TableNextRow();
+        ImGui.BeginDisabled(session.Track.Aim == AimMode.PathTangent);
+        Field("Yaw", $"yaw{index}", Degrees(EditLimits.Angle(point.Yaw)), "%.1f°", v => Edit(index, p => p with { Yaw = EditLimits.Angle(Radians(v)) }));
+        Field("Pitch", $"pitch{index}", Degrees(point.Pitch), "%.1f°", v => Edit(index, p => p with { Pitch = EditLimits.Pitch(Radians(v)) }));
+        ImGui.EndDisabled();
+
+        ImGui.TableNextRow();
+        Field("Roll", $"roll{index}", Degrees(EditLimits.Angle(point.Roll)), "%.1f°", v => Edit(index, p => p with { Roll = EditLimits.Angle(Radians(v)) }));
+        Field("FoV", $"fov{index}", Degrees(point.Fov), "%.1f°", v => Edit(index, p => p with { Fov = ClampFov(Radians(v), p.Fov) }));
+
+        ImGui.EndTable();
     }
 
+    /// <summary>A label and its number field, as two cells of the field grid.</summary>
     private void Field(string label, string id, float value, string format, Action<float> apply)
     {
+        ImGui.TableNextColumn();
+        ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(label);
-        ImGui.SameLine();
+        ImGui.TableNextColumn();
         fields.Draw(id, value, format, FieldWidth, apply);
     }
 
