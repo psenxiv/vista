@@ -34,4 +34,34 @@ public class ScreenProjectionTests
     [Fact]
     public void APointBehindTheCameraIsNull()
         => Assert.Null(ScreenProjection.Project(new Vector3(0f, 0f, 20f), ViewProjection(), Viewport));
+
+    [Fact]
+    public void ASegmentInFrontProjectsToItsEndPoints()
+    {
+        var a = new Vector3(-1f, 0f, 0f);
+        var b = new Vector3(1f, 1f, 0f);
+        var segment = ScreenProjection.ProjectSegment(a, b, ViewProjection(), Viewport, 0.1f);
+        Assert.NotNull(segment);
+        Assert.Equal(ScreenProjection.Project(a, ViewProjection(), Viewport)!.Value, segment!.Value.Start);
+        Assert.Equal(ScreenProjection.Project(b, ViewProjection(), Viewport)!.Value, segment.Value.End);
+    }
+
+    [Fact]
+    public void ASegmentBehindTheCameraIsSkipped()
+        => Assert.Null(ScreenProjection.ProjectSegment(new Vector3(0f, 0f, 20f), new Vector3(1f, 0f, 30f), ViewProjection(), Viewport, 0.1f));
+
+    [Fact]
+    public void ASegmentCrossingTheNearPlaneIsCutWhereItCrosses()
+    {
+        // From 10 in front of the camera to 10 behind it, off to one side.
+        var front = new Vector3(1f, 0f, 0f);
+        var behind = new Vector3(1f, 0f, 20f);
+        var segment = ScreenProjection.ProjectSegment(front, behind, ViewProjection(), Viewport, 0.1f)!.Value;
+
+        var cut = ScreenProjection.Project(new Vector3(1f, 0f, 9.9f), ViewProjection(), Viewport)!.Value;
+        Assert.True(Vector2.Distance(cut, segment.End) < 1f);
+
+        var reversed = ScreenProjection.ProjectSegment(behind, front, ViewProjection(), Viewport, 0.1f)!.Value;
+        Assert.True(Vector2.Distance(cut, reversed.Start) < 1f);
+    }
 }
