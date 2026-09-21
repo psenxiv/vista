@@ -460,10 +460,10 @@ Four measures keep the user's loop short:
 
 1. **Verbose logging** of every hook install, camera write and state transition,
    behind a debug toggle.
-2. **`/ccam selftest`** — the plugin asserts what Claude cannot observe and
-   writes results to the log: camera pointer non-null, hook installed, and FoV
-   written then read back with the delta logged. This answers the phase 1 FoV
-   question from a single launch and one command.
+2. **Probe commands** — small debug commands that assert what Claude cannot
+   observe and write results to the log. `/ccam selftest` answered the phase 1
+   camera and FoV questions and was removed once they were settled; later
+   probes, such as `/ccam roll`, follow the same pattern.
 3. **Scripted checklists** per phase: numbered steps with exact expected
    results, a few minutes each. Not "does this feel right".
 4. **Hot reload.** Dalamud reloads a dev plugin without restarting the game.
