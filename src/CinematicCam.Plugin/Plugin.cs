@@ -42,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the test window | release | selftest | hold | push <d> | nudge <x> <y> <z> | roll <degrees> | reset"
+            HelpMessage = "/ccam opens the test window | release | hold | push <d> | nudge <x> <y> <z> | roll <degrees> | reset"
         });
 
         Movement = new MovementLock();
@@ -71,9 +71,6 @@ public sealed class Plugin : IDalamudPlugin
                 break;
             case "reset":
                 CameraAccess.ResetToDefaults();
-                break;
-            case "selftest":
-                SelfTest.Run();
                 break;
             case "hold":
             {
