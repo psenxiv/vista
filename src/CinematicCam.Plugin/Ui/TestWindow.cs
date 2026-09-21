@@ -19,7 +19,10 @@ internal sealed class TestWindow : Window
 
     public TestWindow(CameraSession session)
         : base("Cinematic Cam (test)###ccam-test", ImGuiWindowFlags.AlwaysAutoResize)
-        => this.session = session;
+    {
+        this.session = session;
+        RespectCloseHotkey = false;
+    }
 
     public override void Draw()
     {
@@ -42,8 +45,7 @@ internal sealed class TestWindow : Window
         if (ImGui.Button("Edit")) { error = null; session.Edit(); }
 
         ImGui.SameLine();
-        var playing = session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished;
-        ImGui.BeginDisabled(session.Track.Points.Count == 0 || playing);
+        ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (ImGui.Button("Play")) { error = null; session.Play(); }
         ImGui.EndDisabled();
 

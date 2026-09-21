@@ -7,21 +7,35 @@ internal static unsafe class GameUi
 {
     private static bool hiddenByUs;
 
+    /// <summary>True while the game UI is hidden because we hid it.</summary>
+    public static bool HiddenByUs => hiddenByUs;
+
     /// <summary>Hides the game UI if it is showing, and remembers that we did.</summary>
     public static void Hide() => Plugin.Framework.RunOnFrameworkThread(() =>
     {
         var module = RaptureAtkModule.Instance();
-        if (module == null || !module->IsUiVisible) return;
+        if (module == null || !module->IsUiVisible)
+        {
+            Plugin.Log.Information("[ui] hide skipped: module {Module}, visible {Visible}", module != null, module != null && module->IsUiVisible);
+            return;
+        }
         module->IsUiVisible = false;
         hiddenByUs = true;
+        Plugin.Log.Information("[ui] hidden; visible now {Visible}", module->IsUiVisible);
     });
 
     /// <summary>Shows the game UI again, only if we were the ones who hid it.</summary>
     public static void Restore() => Plugin.Framework.RunOnFrameworkThread(() =>
     {
-        if (!hiddenByUs) return;
-        hiddenByUs = false;
         var module = RaptureAtkModule.Instance();
-        if (module != null && !module->IsUiVisible) module->IsUiVisible = true;
+        var visible = module != null && module->IsUiVisible;
+        if (!hiddenByUs)
+        {
+            Plugin.Log.Information("[ui] restore skipped: not hidden by us, visible {Visible}", visible);
+            return;
+        }
+        hiddenByUs = false;
+        if (module != null && !visible) module->IsUiVisible = true;
+        Plugin.Log.Information("[ui] restored; was visible {Was}, visible now {Now}", visible, module != null && module->IsUiVisible);
     });
 }

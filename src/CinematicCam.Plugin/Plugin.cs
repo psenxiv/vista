@@ -35,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WindowSystem windows = new("CinematicCam");
     private float wheel;
     private bool escapeWasDown;
+    private static bool blockEscape;
     private readonly TestWindow testWindow;
 
     public Plugin()
@@ -51,7 +52,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.OpenMainUi += OpenTestWindow;
         Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
-        Input = new InputBlocker(() => Session.LocksInput);
+        Input = new InputBlocker(() => Session.LocksInput, () => blockEscape);
 
         Framework.Update += OnFrameworkUpdate;
         ClientState.TerritoryChanged += OnTerritoryChanged;
@@ -132,9 +133,16 @@ public sealed class Plugin : IDalamudPlugin
         Input.SyncHookState();
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
+        // The game's own Escape handling is held off while we hide its UI, and until that
+        // Escape is released, so it does not also open the system menu.
         var escape = KeyState[VirtualKey.ESCAPE];
-        if (escape && !escapeWasDown && Session.Mode == CameraMode.Live) GameUi.Restore();
+        if (escape && !escapeWasDown)
+        {
+            Log.Information("[ui] escape pressed: mode {Mode}, hidden by us {Hidden}", Session.Mode, GameUi.HiddenByUs);
+            if (Session.Mode == CameraMode.Live) GameUi.Restore();
+        }
         escapeWasDown = escape;
+        blockEscape = GameUi.HiddenByUs || (blockEscape && escape);
 
         if (!Session.OwnsCamera) return;
 

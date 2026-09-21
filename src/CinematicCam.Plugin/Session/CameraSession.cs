@@ -67,9 +67,15 @@ internal sealed class CameraSession
         Plugin.Log.Information("[ccam] mode: editing");
     }
 
-    /// <summary>Resumes a paused shot; otherwise goes live with the current track from its start.</summary>
+    /// <summary>Resumes a paused shot, re-hides the UI of a playing one, otherwise starts from the top.</summary>
     public void Play()
     {
+        if (Mode == CameraMode.Live && !director.IsPaused && !director.IsFinished)
+        {
+            GameUi.Hide();
+            return;
+        }
+
         if (Mode == CameraMode.Live && director.IsPaused && !director.IsFinished)
         {
             director.Resume();

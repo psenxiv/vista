@@ -30,10 +30,12 @@ internal sealed unsafe class InputBlocker : IDisposable
     private readonly Hook<GetMouseWheelDelegate>? mouseWheelHook;
 
     private readonly Func<bool> shouldBlock;
+    private readonly Func<bool> shouldBlockEscape;
 
-    public InputBlocker(Func<bool> shouldBlock)
+    public InputBlocker(Func<bool> shouldBlock, Func<bool> shouldBlockEscape)
     {
         this.shouldBlock = shouldBlock;
+        this.shouldBlockEscape = shouldBlockEscape;
 
         longPressHook = Hook(InputData.MemberFunctionPointers.IsInputIdHeld, LongPressDetour, "IsInputIdHeld");
         pressedHook = Hook(InputData.MemberFunctionPointers.IsInputIdPressed, PressedDetour, "IsInputIdPressed");
@@ -89,7 +91,9 @@ internal sealed unsafe class InputBlocker : IDisposable
     }
 
     private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
-        => shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);
+        => shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()))
+            ? (byte)0
+            : hook.Original(self, id);
 
     /// <summary>Enables the hooks only while they can do something. Call every frame.</summary>
     public void SyncHookState()
