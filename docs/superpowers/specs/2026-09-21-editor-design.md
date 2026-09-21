@@ -80,7 +80,7 @@ hides it, and Escape does not close it.
 
 ```
 ┌ Point 2 ──────────────────────────────────┐
-│ Gizmo  (•) Move  ( ) Rotate          [🗑] │
+│ Gizmo  (•) Move  ( ) Rotate  [⧉][📋][🗑] │
 │ X    [ -137.1 ]  Y     [ 3.3 ]  Z [ -154.3 ] │
 │ Yaw  [ 42.0° ]   Pitch [ -8.5° ]          │
 │ Roll [ 0.0° ]    FoV   [ 45.0° ]          │
@@ -94,6 +94,12 @@ The fields are drag fields, as in BDTHPlugin: drag left or right to change the v
 or double-click to type one. The point, its marker and the path move live while
 dragging, and each drag is one undo step, like a gizmo drag. Undo mid-drag reverts
 it. (Decided 2026-09-22. Leg and hold in the track editor stay typed fields.)
+
+**Copy and paste** icons sit beside the trash icon. Copy takes the point's position,
+yaw, pitch, roll and FoV into a clipboard inside the plugin; paste writes them onto
+the selected point as one undo step, keeping its leg and hold. Paste is disabled
+until something is copied, and the copy is forgotten when the plugin unloads.
+(Decided 2026-09-22.)
 
 Position is in yalms; yaw, pitch, roll and FoV in degrees, converted from the
 stored radians for display and entry only. A field applies when editing finishes,
