@@ -35,6 +35,14 @@ internal static unsafe class CameraAccess
         return (camera->DirH, camera->DirV);
     }
 
+    /// <summary>Sets the world camera's yaw and pitch in radians, as DirH and DirV. Probe 2 decides whether this is safe to use.</summary>
+    public static void WriteAngles(float yaw, float pitch)
+    {
+        if (!TryGetWorldCamera(out var camera)) return;
+        camera->DirH = yaw;
+        camera->DirV = pitch;
+    }
+
     /// <summary>Everything WriteState touches, so release can put it all back.</summary>
     public readonly record struct Snapshot(Vector3 Position, Vector3 LookAt, Vector3 Up, float Fov);
 

@@ -42,6 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     private static bool blockEscape;
     private readonly TestWindow testWindow;
     private readonly GizmoProbe gizmoProbe = new();
+    private readonly AimProbe aimProbe = new();
 
     public Plugin()
     {
@@ -95,8 +96,11 @@ public sealed class Plugin : IDalamudPlugin
             case "gizmo":
                 gizmoProbe.Toggle(words.ElementAtOrDefault(1) ?? "");
                 break;
+            case "aim":
+                aimProbe.Run(Session.Mode, words.Skip(1).ToArray());
+                break;
             default:
-                Log.Information("[probe] usage: /ccam probe gizmo [game|ours]");
+                Log.Information("[probe] usage: /ccam probe gizmo [game|ours] | aim <yaw> <pitch> | input");
                 break;
         }
     }
@@ -111,6 +115,8 @@ public sealed class Plugin : IDalamudPlugin
             Session.Release("hook error");
             Camera.ClearFault();
         }
+
+        aimProbe.Update();
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
