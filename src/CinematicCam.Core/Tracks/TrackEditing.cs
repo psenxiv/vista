@@ -188,6 +188,8 @@ public static class TrackEditing
     public static Track Replace(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "replace");
+        if (Equals(track.Points[index], point)) return track;
+
         var points = new List<ControlPoint>(track.Points) { [index] = point };
         return track with { Points = points };
     }

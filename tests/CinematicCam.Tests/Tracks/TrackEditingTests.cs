@@ -433,6 +433,15 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void ReplaceWithAnEqualPointReturnsTheSameTrack()
+    {
+        var track = Build3PointTrack();
+        var result = TrackEditing.Replace(track, 1, track.Points[1] with { });
+
+        Assert.Same(track, result);
+    }
+
+    [Fact]
     public void EditsRefuseTimingKeysBetweenPoints()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };

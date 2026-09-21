@@ -21,7 +21,7 @@ public sealed class SessionState
 
     private readonly EditHistory history = new();
 
-    /// <summary>The track Edit builds and Play plays. Changed only through <see cref="ChangeTrack"/>.</summary>
+    /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
     public Track Track { get; private set; } = TrackEditing.Empty();
 
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>

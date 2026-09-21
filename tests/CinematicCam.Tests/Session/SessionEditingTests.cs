@@ -73,6 +73,18 @@ public class SessionEditingTests
     }
 
     [Fact]
+    public void OverwritingWithAnEqualPointRecordsNoUndoStep()
+    {
+        var state = Editing();
+        state.Select(1);
+        state.OverwriteSelected(state.Track.Points[1] with { });
+
+        var steps = 0;
+        while (state.Undo()) steps++;
+        Assert.Equal(3, steps);
+    }
+
+    [Fact]
     public void ReplacePointKeepsTheSelection()
     {
         var state = Editing();
