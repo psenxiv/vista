@@ -25,23 +25,33 @@ arrive in phase 3.
 
 ```
 ┌ Cinematic Cam ─────────────────────────────────────────────┐
-│ Mode: Editing   [Edit] [Play] [Restart] [Stop] [Release]   │
-│ Fly speed [──●──] 1x        [↶ Undo] [↷ Redo]              │
-│ Aim [Recorded aim ▾]   Playback [Once ▾]   [New track]     │
+│ [Edit ▾] [▶] [⏮]   [↶] [↷]   [ + Add │ ▾ ]                 │
+│ Aim [Recorded aim ▾]   Playback [Once ▾]   [Clear track]   │
 ├────────────────────────────────────────────────────────────┤
-│ [ + Add │ ▾ ]                                              │
 │  #    Leg (s)  Hold (s)                                    │
 │  ≡ 1     –       0.0                                       │
 │  ≡ 2    5.0      0.0     ◀                                 │
 │  ≡ 3    5.0      2.0                                       │
 ├────────────────────────────────────────────────────────────┤
 │ 0.0 ━━━━━━━━━━━━●━━━━━━━━━━━━━━━━━━━━━━━━━ 12.0 s   6.3 s  │
-│ 3 points | total 12.0 s | editing                          │
+│ 3 points | total 12.0 s | editing       Fly speed [──●──]  │
 └────────────────────────────────────────────────────────────┘
 ```
 
-- The mode, fly speed, aim, playback and New track controls carry over from the
-  test window unchanged.
+Layout revised by the user on 2026-09-22 after using the first build:
+
+- **Top row.**
+  - **Mode drop-down:** Edit, Live and Off. It replaces the Mode text and the Edit
+    and Release buttons. Live plays the shot as Play did, and Off releases the
+    camera.
+  - **Play/Pause icon:** one icon that shows Pause while the shot is playing and
+    Play otherwise; Play from Edit or Off goes live.
+  - **Restart icon**, then **Undo** and **Redo** icons. Each icon has a tooltip
+    naming it.
+  - **Add split button.**
+- **Second row:** Aim and Playback, their labels aligned with their drop-downs, and
+  **Clear track** (was New track).
+- **Status row:** fly speed sits at its right end.
 - **Add split button.** The `+ Add` half adds to the end. The `▾` half opens a
   menu with each item's shortcut on the right:
 
