@@ -1,0 +1,188 @@
+using System.Numerics;
+using CinematicCam.Core;
+using Xunit;
+
+namespace CinematicCam.Tests;
+
+public class DirectorTests
+{
+    private static ControlPoint Point(float x, float y, float z)
+        => new(new Vector3(x, y, z), 0f, 0f, 1f);
+
+    private static TimingKey Key(float time, float position)
+        => new(time, position, TangentMode.Auto, 0f, 0f);
+
+    private static Track StraightTrack(PlaybackMode mode = PlaybackMode.Once)
+    {
+        var points = new[] { Point(0f, 0f, 0f), Point(5f, 0f, 0f), Point(10f, 0f, 0f) };
+        var timing = new[] { Key(0f, 0f), Key(10f, 2f) };
+        return new Track(points, timing, AimMode.PathTangent, mode);
+    }
+
+    private static SnapPoint Snap()
+        => new(new Vector3(1f, 2f, 3f), 0.4f, 0.1f, 1.2f);
+
+    [Fact]
+    public void TickIsNullBeforeGoingLive()
+    {
+        var director = new Director();
+        Assert.Null(director.Tick(1f / 60f));
+    }
+
+    [Fact]
+    public void TickIsNullAfterGoingOffline()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoOffline();
+
+        Assert.Null(director.Tick(1f / 60f));
+    }
+
+    [Fact]
+    public void GoLiveTurnsLiveModeOnAndClearsPause()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+
+        Assert.True(director.IsLive);
+        Assert.False(director.IsPaused);
+    }
+
+    [Fact]
+    public void GoOfflineTurnsLiveModeOffAndClearsPause()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        director.Pause();
+
+        director.GoOffline();
+
+        Assert.False(director.IsLive);
+        Assert.False(director.IsPaused);
+    }
+
+    [Fact]
+    public void PauseOnlyTakesEffectWhileLive()
+    {
+        var director = new Director();
+        director.Pause();
+
+        Assert.False(director.IsPaused);
+    }
+
+    [Fact]
+    public void PauseHoldsTheCurrentFrameOfATrackShot()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+
+        director.Tick(5f);
+        director.Pause();
+        var held = director.Tick(1f);
+        var heldAgain = director.Tick(2f);
+
+        Assert.Equal(held, heldAgain);
+    }
+
+    [Fact]
+    public void GoLiveRestartsATrackShotFromZero()
+    {
+        var director = new Director();
+        var shot = new TrackShot(StraightTrack());
+        director.GoLive(shot);
+        director.Tick(5f);
+
+        director.GoLive(shot);
+        var frame = director.Tick(0f);
+        var expected = new TrackEvaluator(shot.Track).Evaluate(0.0);
+
+        Assert.Equal(expected, frame);
+    }
+
+    [Fact]
+    public void CallingGoLiveWhileLiveRestarts()
+    {
+        var director = new Director();
+        var shot = new TrackShot(StraightTrack());
+        director.GoLive(shot);
+        director.Tick(5f);
+        director.Pause();
+
+        director.GoLive(shot);
+
+        Assert.False(director.IsPaused);
+        var frame = director.Tick(0f);
+        var expected = new TrackEvaluator(shot.Track).Evaluate(0.0);
+        Assert.Equal(expected, frame);
+    }
+
+    [Fact]
+    public void TickOnATrackShotAdvancesThePlayback()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+
+        var frame = director.Tick(5f);
+
+        var expected = new TrackEvaluator(StraightTrack()).Evaluate(5.0);
+        Assert.Equal(expected, frame);
+    }
+
+    [Fact]
+    public void TickOnASnapShotReturnsItsPoseEveryFrame()
+    {
+        var snap = Snap();
+        var director = new Director();
+        director.GoLive(new SnapShot(snap));
+
+        var expected = new CameraState(snap.Position, FreeCamMotion.LookAtFrom(snap.Position, snap.Yaw, snap.Pitch), snap.Fov);
+
+        Assert.Equal(expected, director.Tick(1f));
+        Assert.Equal(expected, director.Tick(100f));
+    }
+
+    [Fact]
+    public void TickOnAGameCameraShotIsAlwaysNull()
+    {
+        var director = new Director();
+        director.GoLive(new GameCameraShot());
+
+        Assert.Null(director.Tick(1f / 60f));
+        Assert.Null(director.Tick(1f));
+    }
+
+    [Fact]
+    public void TickOnATrackWithNoPointsIsNull()
+    {
+        var empty = new Track(Array.Empty<ControlPoint>(), Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
+        var director = new Director();
+        director.GoLive(new TrackShot(empty));
+
+        Assert.Null(director.Tick(1f / 60f));
+    }
+
+    [Fact]
+    public void IsFinishedIsFalseUntilAOnceTrackReachesItsEnd()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack(PlaybackMode.Once)));
+
+        Assert.False(director.IsFinished);
+        director.Tick(5f);
+        Assert.False(director.IsFinished);
+        director.Tick(20f);
+        Assert.True(director.IsFinished);
+    }
+
+    [Fact]
+    public void IsFinishedIsFalseForNonTrackShots()
+    {
+        var director = new Director();
+        director.GoLive(new SnapShot(Snap()));
+
+        director.Tick(100f);
+
+        Assert.False(director.IsFinished);
+    }
+}

@@ -1,0 +1,55 @@
+namespace CinematicCam.Core;
+
+/// <summary>Holds live mode and the shot on program; each tick says where the camera goes, or null to leave it be.</summary>
+public sealed class Director
+{
+    private Shot? _shot;
+    private TrackPlayback? _playback;
+
+    /// <summary>True once <see cref="GoLive"/> has been called and <see cref="GoOffline"/> has not.</summary>
+    public bool IsLive { get; private set; }
+
+    /// <summary>True while live and paused; frames stop advancing.</summary>
+    public bool IsPaused { get; private set; }
+
+    /// <summary>True once the current <see cref="TrackShot"/>'s playback has finished; false otherwise.</summary>
+    public bool IsFinished => _playback?.IsFinished ?? false;
+
+    /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero.</summary>
+    public void GoLive(Shot shot)
+    {
+        _shot = shot;
+        _playback = shot is TrackShot trackShot ? new TrackPlayback(trackShot.Track) : null;
+        IsLive = true;
+        IsPaused = false;
+    }
+
+    /// <summary>Holds the current frame. No effect unless live.</summary>
+    public void Pause()
+    {
+        if (IsLive) IsPaused = true;
+    }
+
+    /// <summary>Takes live mode off and clears pause. <see cref="Tick"/> returns null until the next <see cref="GoLive"/>.</summary>
+    public void GoOffline()
+    {
+        IsLive = false;
+        IsPaused = false;
+    }
+
+    /// <summary>Where the camera should be this frame, or null to leave the game camera alone.</summary>
+    public CameraState? Tick(float dt)
+    {
+        if (!IsLive) return null;
+
+        return _shot switch
+        {
+            SnapShot snap => new CameraState(
+                snap.Point.Position,
+                FreeCamMotion.LookAtFrom(snap.Point.Position, snap.Point.Yaw, snap.Point.Pitch),
+                snap.Point.Fov),
+            TrackShot => _playback!.Advance(IsPaused ? 0f : dt),
+            _ => null,
+        };
+    }
+}
