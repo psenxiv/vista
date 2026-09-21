@@ -122,6 +122,10 @@ snapping.
   selected.
 - One drag is one undo step, committed on release.
 - Gizmo drags do not reach the game, so the camera does not turn while dragging.
+- The arrows keep a fixed direction; they do not flip to face the camera
+  (`ImGuizmo.AllowAxisFlip(false)`).
+- The gizmo keeps a constant size on screen, if that is cheap to achieve; probe 1
+  showed it scaling with distance. If it is not cheap, it stays as it is.
 
 **Drawing and matrices.** BDTHPlugin (reference only, no licence) draws its gizmo
 in a transparent, input-less, full-screen ImGui window on the main viewport, and
