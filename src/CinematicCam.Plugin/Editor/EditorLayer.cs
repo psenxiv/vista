@@ -2,9 +2,11 @@ using System.Numerics;
 using CinematicCam.Core.Editing;
 using CinematicCam.Core.Session;
 using CinematicCam.Core.Tracks;
+using CinematicCam.Plugin.Game;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Bindings.ImGuizmo;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 
 namespace CinematicCam.Plugin.Editor;
@@ -55,8 +57,10 @@ internal sealed class EditorLayer
             ImGuizmo.BeginFrame();
             gizmo.Draw(view, session);
 
+            // Dalamud hides presses from ImGui unless it wants the mouse, so read the button itself.
             var overUi = io.WantCaptureMouse && !ImGui.IsWindowHovered();
-            Apply(clicks.Update(ImGui.IsMouseDown(ImGuiMouseButton.Left), io.MousePos, overUi, gizmo.Hot, hovered));
+            var look = CameraAccess.ReadAngles() ?? (0f, 0f);
+            Apply(clicks.Update(PhysicalKeys.IsDown(VirtualKey.LBUTTON), io.MousePos, look, overUi, gizmo.Hot, hovered));
         }
 
         ImGui.End();

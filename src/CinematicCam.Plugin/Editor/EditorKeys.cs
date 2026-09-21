@@ -38,6 +38,7 @@ internal sealed class EditorKeys
     {
         var refusal = key switch
         {
+            VirtualKey.OEM_3 when ctrl && alt => null,
             VirtualKey.OEM_3 when ctrl => session.OverwriteSelected(),
             VirtualKey.OEM_3 when alt => session.AddAfterSelected(),
             VirtualKey.OEM_3 => session.AddToEnd(),

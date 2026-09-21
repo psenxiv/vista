@@ -7,11 +7,12 @@ namespace CinematicCam.Tests.Editing;
 public class ClickSelectionTests
 {
     private static readonly Vector2 At = new(100f, 100f);
+    private static readonly (float Yaw, float Pitch) Level = (0f, 0f);
 
     private static ClickOutcome Click(ClickSelection clicks, int? marker, bool overUi = false, bool overGizmo = false, Vector2? releaseAt = null)
     {
-        Assert.Equal(ClickKind.None, clicks.Update(true, At, overUi, overGizmo, marker).Kind);
-        return clicks.Update(false, releaseAt ?? At, false, false, null);
+        Assert.Equal(ClickKind.None, clicks.Update(true, At, Level, overUi, overGizmo, marker).Kind);
+        return clicks.Update(false, releaseAt ?? At, Level, false, false, null);
     }
 
     [Fact]
@@ -26,18 +27,18 @@ public class ClickSelectionTests
     public void ADragIsNotAClick()
     {
         var clicks = new ClickSelection();
-        clicks.Update(true, At, false, false, 1);
-        clicks.Update(true, At + new Vector2(ClickSelection.MaxTravel + 1f, 0f), false, false, null);
-        Assert.Equal(ClickKind.None, clicks.Update(false, At, false, false, null).Kind);
+        clicks.Update(true, At, Level, false, false, 1);
+        clicks.Update(true, At + new Vector2(ClickSelection.MaxTravel + 1f, 0f), Level, false, false, null);
+        Assert.Equal(ClickKind.None, clicks.Update(false, At, Level, false, false, null).Kind);
     }
 
     [Fact]
     public void AWobbleUnderTheLimitIsStillAClick()
     {
         var clicks = new ClickSelection();
-        clicks.Update(true, At, false, false, 1);
-        clicks.Update(true, At + new Vector2(ClickSelection.MaxTravel - 1f, 0f), false, false, null);
-        Assert.Equal(ClickKind.Select, clicks.Update(false, At, false, false, null).Kind);
+        clicks.Update(true, At, Level, false, false, 1);
+        clicks.Update(true, At + new Vector2(ClickSelection.MaxTravel - 1f, 0f), Level, false, false, null);
+        Assert.Equal(ClickKind.Select, clicks.Update(false, At, Level, false, false, null).Kind);
     }
 
     [Fact]
@@ -52,9 +53,9 @@ public class ClickSelectionTests
     {
         var clicks = new ClickSelection();
         Assert.False(clicks.HoldingMarker);
-        clicks.Update(true, At, false, false, 0);
+        clicks.Update(true, At, Level, false, false, 0);
         Assert.True(clicks.HoldingMarker);
-        clicks.Update(false, At, false, false, null);
+        clicks.Update(false, At, Level, false, false, null);
         Assert.False(clicks.HoldingMarker);
     }
 
@@ -62,12 +63,39 @@ public class ClickSelectionTests
     public void ResetDropsAPressInProgress()
     {
         var clicks = new ClickSelection();
-        clicks.Update(true, At, false, false, 0);
+        clicks.Update(true, At, Level, false, false, 0);
         clicks.Reset();
-        Assert.Equal(ClickKind.None, clicks.Update(false, At, false, false, null).Kind);
+        Assert.Equal(ClickKind.None, clicks.Update(false, At, Level, false, false, null).Kind);
     }
 
     [Fact]
     public void NothingHappensWhileTheButtonStaysUp()
-        => Assert.Equal(ClickKind.None, new ClickSelection().Update(false, At, false, false, 3).Kind);
+        => Assert.Equal(ClickKind.None, new ClickSelection().Update(false, At, Level, false, false, 3).Kind);
+
+    [Fact]
+    public void TurningTheCameraWithTheCursorStillIsADragNotAClick()
+    {
+        var clicks = new ClickSelection();
+        clicks.Update(true, At, Level, false, false, null);
+        clicks.Update(true, At, (ClickSelection.MaxTurn * 2f, 0f), false, false, null);
+        Assert.Equal(ClickKind.None, clicks.Update(false, At, (ClickSelection.MaxTurn * 2f, 0f), false, false, null).Kind);
+    }
+
+    [Fact]
+    public void ATurnUnderTheLimitIsStillAClick()
+    {
+        var clicks = new ClickSelection();
+        clicks.Update(true, At, Level, false, false, null);
+        clicks.Update(true, At, (0f, ClickSelection.MaxTurn / 2f), false, false, null);
+        Assert.Equal(ClickKind.Deselect, clicks.Update(false, At, Level, false, false, null).Kind);
+    }
+
+    [Fact]
+    public void AYawWrappingPastAHalfTurnIsMeasuredTheShortWay()
+    {
+        var clicks = new ClickSelection();
+        clicks.Update(true, At, (MathF.PI - 0.0001f, 0f), false, false, null);
+        clicks.Update(true, At, (-MathF.PI + 0.0001f, 0f), false, false, null);
+        Assert.Equal(ClickKind.Deselect, clicks.Update(false, At, Level, false, false, null).Kind);
+    }
 }

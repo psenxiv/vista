@@ -9,53 +9,80 @@ public class GizmoEditTests
 {
     private static readonly ControlPoint Original = new(new Vector3(1f, 2f, 3f), 0.7f, 0.3f, 0.9f, 0.4f);
 
-    private static Matrix4x4 Pose(Vector3 position, float yaw, float pitch, float roll) => PoseMatrix.From(position, yaw, pitch, roll);
+    // ImGuizmo's local rotation: turn the frame about one of its own axes, keeping its origin.
+    private static Matrix4x4 Turn(Matrix4x4 frame, Matrix4x4 localRotation) => localRotation * frame;
+
+    private static float Delta(float a, float b) => MathF.IEEERemainder(a - b, MathF.Tau);
+
+    [Fact]
+    public void AnUnmovedMoveReturnsTheOriginal()
+    {
+        var frame = PoseMatrix.From(Original.Position, Original.Yaw, Original.Pitch, Original.Roll);
+        Assert.Same(Original, GizmoEdit.Move(Original, frame));
+    }
+
+    [Fact]
+    public void MoveTakesOnlyThePosition()
+    {
+        var dragged = PoseMatrix.From(new Vector3(5f, 6f, 7f), Original.Yaw + 0.2f, Original.Pitch, Original.Roll);
+        Assert.Equal(Original with { Position = new Vector3(5f, 6f, 7f) }, GizmoEdit.Move(Original, dragged));
+    }
 
     [Theory]
-    [InlineData(GizmoMode.Move, AimMode.AimKeys)]
-    [InlineData(GizmoMode.Rotate, AimMode.AimKeys)]
-    [InlineData(GizmoMode.Rotate, AimMode.PathTangent)]
-    public void AnUnmovedGizmoReturnsTheOriginal(GizmoMode mode, AimMode aim)
+    [InlineData(GimbalRing.Yaw)]
+    [InlineData(GimbalRing.Pitch)]
+    [InlineData(GimbalRing.Roll)]
+    public void AnUnturnedRingReturnsTheOriginal(GimbalRing ring)
+        => Assert.Same(Original, GizmoEdit.Rotate(Original, ring, GizmoEdit.RingFrame(Original, ring)));
+
+    [Fact]
+    public void TheYawRingLiesFlatAroundWorldUp()
     {
-        var dragged = Pose(Original.Position, Original.Yaw, Original.Pitch, Original.Roll);
-        Assert.Same(Original, GizmoEdit.Apply(Original, dragged, mode, aim));
+        var frame = GizmoEdit.RingFrame(Original, GimbalRing.Yaw);
+        Assert.Equal(1f, frame.M22, 5);
+    }
+
+    [Fact]
+    public void TheYawRingChangesOnlyYaw()
+    {
+        var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Yaw), Matrix4x4.CreateRotationY(0.3f));
+        var edited = GizmoEdit.Rotate(Original, GimbalRing.Yaw, dragged);
+        Assert.Equal(0.3f, MathF.Abs(Delta(edited.Yaw, Original.Yaw)), 4);
+        Assert.Equal(Original with { Yaw = edited.Yaw }, edited);
+    }
+
+    [Fact]
+    public void ThePitchRingChangesOnlyPitch()
+    {
+        var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(0.2f));
+        var edited = GizmoEdit.Rotate(Original, GimbalRing.Pitch, dragged);
+        Assert.Equal(0.2f, MathF.Abs(edited.Pitch - Original.Pitch), 4);
+        Assert.Equal(Original with { Pitch = edited.Pitch }, edited);
+    }
+
+    [Fact]
+    public void ThePitchRingStopsAtThePitchLimit()
+    {
+        var up = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(2f));
+        var down = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(-2f));
+        var pitches = new[] { GizmoEdit.Rotate(Original, GimbalRing.Pitch, up).Pitch, GizmoEdit.Rotate(Original, GimbalRing.Pitch, down).Pitch };
+        Assert.Contains(pitches, p => MathF.Abs(p - TrackAim.PitchLimit) < 1e-4f);
+        Assert.Contains(pitches, p => MathF.Abs(p + TrackAim.PitchLimit) < 1e-4f);
+    }
+
+    [Fact]
+    public void TheRollRingChangesOnlyRoll()
+    {
+        var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Roll), Matrix4x4.CreateRotationZ(0.5f));
+        var edited = GizmoEdit.Rotate(Original, GimbalRing.Roll, dragged);
+        Assert.Equal(0.5f, MathF.Abs(Delta(edited.Roll, Original.Roll)), 4);
+        Assert.Equal(Original with { Roll = edited.Roll }, edited);
     }
 
     [Fact]
     public void AYawThatWrappedAFullTurnCountsAsUnchanged()
     {
         var turned = Original with { Yaw = Original.Yaw + MathF.Tau };
-        var dragged = Pose(turned.Position, Original.Yaw, Original.Pitch, Original.Roll);
-        Assert.Same(turned, GizmoEdit.Apply(turned, dragged, GizmoMode.Rotate, AimMode.AimKeys));
-    }
-
-    [Fact]
-    public void MoveTakesOnlyThePosition()
-    {
-        var dragged = Pose(new Vector3(5f, 6f, 7f), Original.Yaw + 0.2f, Original.Pitch, Original.Roll);
-        var edited = GizmoEdit.Apply(Original, dragged, GizmoMode.Move, AimMode.AimKeys);
-        Assert.Equal(Original with { Position = new Vector3(5f, 6f, 7f) }, edited);
-    }
-
-    [Fact]
-    public void RotateWithRecordedAimTakesYawPitchAndRollButNotPosition()
-    {
-        var dragged = Pose(new Vector3(9f, 9f, 9f), 1.2f, -0.4f, 0.1f);
-        var edited = GizmoEdit.Apply(Original, dragged, GizmoMode.Rotate, AimMode.AimKeys);
-        Assert.Equal(Original.Position, edited.Position);
-        Assert.Equal(1.2f, edited.Yaw, 4);
-        Assert.Equal(-0.4f, edited.Pitch, 4);
-        Assert.Equal(0.1f, edited.Roll, 4);
-        Assert.Equal(Original.Fov, edited.Fov);
-    }
-
-    [Fact]
-    public void RotateWithDirectionOfTravelTakesOnlyRoll()
-    {
-        var dragged = Pose(Original.Position, Original.Yaw, Original.Pitch, Original.Roll + 0.5f);
-        var edited = GizmoEdit.Apply(Original, dragged, GizmoMode.Rotate, AimMode.PathTangent);
-        Assert.Equal(Original.Yaw, edited.Yaw);
-        Assert.Equal(Original.Pitch, edited.Pitch);
-        Assert.Equal(Original.Roll + 0.5f, edited.Roll, 4);
+        Assert.Same(turned, GizmoEdit.Rotate(turned, GimbalRing.Yaw, GizmoEdit.RingFrame(Original, GimbalRing.Yaw)));
     }
 }
