@@ -1,7 +1,6 @@
 using System.Collections.Frozen;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
-using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace CinematicCam.Plugin.Game;
 
@@ -31,9 +30,6 @@ internal sealed unsafe class InputBlocker : IDisposable
     private readonly Hook<GetMouseWheelDelegate>? mouseWheelHook;
 
     private readonly Func<bool> shouldBlock;
-
-    // Diagnostic only. The pointer the game passes our detours, to compare against ours.
-    private nint lastSelf;
 
     public InputBlocker(Func<bool> shouldBlock)
     {
@@ -93,44 +89,7 @@ internal sealed unsafe class InputBlocker : IDisposable
     }
 
     private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
-    {
-        lastSelf = (nint)self;
-        return shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);
-    }
-
-    /// <summary>Diagnostic. Reports which query, if any, sees a key we fly with.</summary>
-    public void LogDiagnostics()
-    {
-        var ours = Input();
-        Plugin.Log.Information("[diag] our InputData 0x{Ours:X}, game passed 0x{Theirs:X}, match {Match}",
-            (nint)ours, lastSelf, (nint)ours == lastSelf);
-
-        if (ours == null) return;
-
-        foreach (var id in new[] { InputId.MOVE_FORE, InputId.JUMP })
-        {
-            Plugin.Log.Information("[diag] {Id}: longPress {L}, down {D}, pressed {P}",
-                id,
-                longPressHook is null ? "-" : longPressHook.Original(ours, id).ToString(),
-                downHook is null ? "-" : downHook.Original(ours, id).ToString(),
-                pressedHook is null ? "-" : pressedHook.Original(ours, id).ToString());
-        }
-    }
-
-    /// <summary>True while the player holds that bind, read past our own block.</summary>
-    public bool IsDown(InputId id)
-    {
-        if (downHook is null) return false;
-
-        var input = Input();
-        return input != null && downHook.Original(input, id) != 0;
-    }
-
-    private static InputData* Input()
-    {
-        var ui = UIInputData.Instance();
-        return ui == null ? null : &ui->InputData;
-    }
+        => shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);
 
     /// <summary>Enables the hooks only while they can do something. Call every frame.</summary>
     public void SyncHookState()
