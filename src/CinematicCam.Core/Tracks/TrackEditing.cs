@@ -103,6 +103,8 @@ public static class TrackEditing
     private static void ValidateLegIndex(Track track, int index)
     {
         var n = track.Points.Count;
+        if (n < 2)
+            throw new ArgumentOutOfRangeException(null, "this track has no legs");
         if (index < 1 || index > n - 1)
             throw new ArgumentOutOfRangeException(null, $"leg index must be 1..{n - 1} for a {n}-point track");
     }
@@ -110,6 +112,8 @@ public static class TrackEditing
     private static void ValidatePointIndex(Track track, int index, string what)
     {
         var n = track.Points.Count;
+        if (n == 0)
+            throw new ArgumentOutOfRangeException(null, "this track has no points");
         if (index < 0 || index > n - 1)
             throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track");
     }
@@ -119,7 +123,7 @@ public static class TrackEditing
         for (var i = 0; i < keys.Count; i++)
             if (keys[i].Position == point) return i;
 
-        throw new InvalidOperationException($"no timing key found for point {point}");
+        throw new ArgumentException($"point {point} has no timing key");
     }
 
     private static int LastKeyIndex(IReadOnlyList<TimingKey> keys, int point)
@@ -129,7 +133,7 @@ public static class TrackEditing
             if (keys[i].Position == point) last = i;
 
         if (last < 0)
-            throw new InvalidOperationException($"no timing key found for point {point}");
+            throw new ArgumentException($"point {point} has no timing key");
 
         return last;
     }

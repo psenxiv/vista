@@ -229,6 +229,34 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void LegOnATrackWithFewerThanTwoPointsSaysItHasNoLegs()
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f, 0f, 0f));
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.LegSeconds(track, 1));
+        Assert.Equal("this track has no legs", ex.Message);
+    }
+
+    [Fact]
+    public void HoldOnAnEmptyTrackSaysItHasNoPoints()
+    {
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.HoldSeconds(TrackEditing.Empty(), 0));
+        Assert.Equal("this track has no points", ex.Message);
+    }
+
+    [Fact]
+    public void APointWithNoTimingKeyIsRefusedAsAnArgumentError()
+    {
+        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
+        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f) };
+        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
+
+        var leg = Assert.Throws<ArgumentException>(() => TrackEditing.LegSeconds(track, 1));
+        Assert.Equal("point 1 has no timing key", leg.Message);
+        var hold = Assert.Throws<ArgumentException>(() => TrackEditing.SetHold(track, 1, 2f));
+        Assert.Equal("point 1 has no timing key", hold.Message);
+    }
+
+    [Fact]
     public void SettingALegAfterAHoldKeepsTheHold()
     {
         var track = Build3PointTrack();
