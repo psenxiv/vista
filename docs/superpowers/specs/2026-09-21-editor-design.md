@@ -210,7 +210,7 @@ this.
 ## Undo
 
 - Every track change is one step: add, overwrite, delete, reorder, gizmo drag,
-  numeric field, leg, hold, aim mode, playback mode, New track.
+  numeric field, leg, hold, aim mode, playback mode, Clear track.
 - A new change clears redo.
 - Editing mode only. History survives switching to live and back, and is lost on
   unload.
