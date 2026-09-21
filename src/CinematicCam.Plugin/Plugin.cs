@@ -43,6 +43,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TestWindow testWindow;
     private readonly GizmoProbe gizmoProbe = new();
     private readonly AimProbe aimProbe = new();
+    private readonly InputProbe inputProbe = new();
 
     public Plugin()
     {
@@ -99,6 +100,9 @@ public sealed class Plugin : IDalamudPlugin
             case "aim":
                 aimProbe.Run(Session.Mode, words.Skip(1).ToArray());
                 break;
+            case "input":
+                inputProbe.Toggle();
+                break;
             default:
                 Log.Information("[probe] usage: /ccam probe gizmo [game|ours] | aim <yaw> <pitch> | input");
                 break;
@@ -117,6 +121,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         aimProbe.Update();
+        inputProbe.Update(Session.Mode);
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
@@ -163,6 +168,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         gizmoProbe.Draw(Session.LastFrame);
+        inputProbe.Draw(Session.Mode);
         windows.Draw();
     }
 
