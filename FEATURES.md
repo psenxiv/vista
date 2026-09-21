@@ -30,3 +30,10 @@ behaviour on air. Auto-advance needs sequence editing and a clear way to abort
 mid-sequence without the camera continuing to move.
 
 **Cost when picked up:** moderate.
+
+### LookAt aim
+A track's camera stays aimed at one fixed point in the world while it moves, such
+as a spot over a stage.
+
+**Why deferred:** cut from v1 on 2026-09-21. It needs a target placed with the
+gizmo, which arrives with the editor.
