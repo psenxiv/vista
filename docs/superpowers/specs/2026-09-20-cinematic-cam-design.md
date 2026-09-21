@@ -162,7 +162,8 @@ rather than a point will need to account for per-race height.
 ```csharp
 record ControlPoint(Vector3 Position, float Yaw, float Pitch, float Fov);
 record Track(IReadOnlyList<ControlPoint> Points, IReadOnlyList<TimingKey> Timing,
-             AimMode Aim, bool Loop);
+             AimMode Aim, PlaybackMode Playback);
+enum PlaybackMode { Once, Loop }
 ```
 
 Per-point FoV costs one float and enables push-ins during a move.
@@ -182,8 +183,8 @@ uniform Catmull-Rom produces on unevenly spaced points. A human dropping
 waypoints by hand always produces uneven spacing.
 
 Endpoints duplicate to supply the phantom points. A two-point track degenerates
-to a straight dolly, which is a legitimate shot. Looping tracks wrap the phantom
-points instead.
+to a straight dolly, which is a legitimate shot. The path is always open: its
+ends are never joined, whatever the playback mode.
 
 ### Arc-length reparameterisation
 
@@ -213,8 +214,7 @@ Separate yaw and pitch channels keep the horizon level.
 
 Yaw unwraps before interpolation: walk the key sequence adding or subtracting
 2π so no two consecutive values differ by more than π. Without this, a shot
-crossing due north whips the long way around. A looping track unwraps its closing
-segment too.
+crossing due north whips the long way around.
 
 Yaw, pitch and FoV are each splined between points by the fraction of the
 segment's arc length travelled, the same place on the path as position. They
@@ -241,9 +241,8 @@ fourth. Combined with arc-length evaluation, a straight line on this curve is
 constant world speed within a segment, however unevenly the points are spaced.
 
 Keys are anchored to control points so editing geometry never retimes a shot:
-moving or appending a point, or toggling loop, leaves every key in place.
-Inserting or deleting a point renumbers the keys after it, as does appending to a
-looping track, which inserts before the closing segment.
+moving or appending a point leaves every key in place. Inserting or deleting a
+point renumbers the keys after it.
 
 Every pacing decision is a shape in this curve:
 
@@ -258,9 +257,8 @@ rather than switching abruptly at it. `Flat` pins both tangents to zero and brin
 the camera to a stop at that key. `Linear` and `Manual` exist for the curve editor
 and are not reachable before it ships.
 
-`Auto` tangents at the first and last keys of an open track are one-sided, so a
-track starts at full speed and stops dead at its end. Easing in or out is the
-user's choice, made with a `Flat` key.
+`Auto` tangents at the first and last keys are one-sided: a track starts at full
+speed and stops dead at its end. Easing in or out is the user's, via a `Flat` key.
 
 **Position must never decrease.** A naive cubic through keys overshoots, which
 would make the camera reverse briefly — visible as a judder and easily mistaken
@@ -273,11 +271,12 @@ rather than being a special case.
 
 Total shot length is the time of the last key.
 
-**Looping.** The path closes — the last control point carries a segment back to
-the first — so for n points, position n is the same place as 0 and elapsed time
-wraps modulo the total. Auto tangents at the first and last keys are computed
-cyclically, treating the curve as periodic, so the seam is continuous in speed as
-well as in position. Without that the camera would lurch once per lap.
+**Playback mode.** How elapsed time maps onto the timing curve, per track. `Once`
+plays to the last key and holds. `Loop` cuts straight back to the first key when
+it reaches the last and plays again: a hard cut, not a transition. A seamless loop
+is the user's to build, by placing the last point and key to match the first.
+Future modes are new values here; they change only how elapsed time is mapped,
+never the path or the timing curve.
 
 Playback accumulates `IFramework.UpdateDelta` rather than counting frames, so a
 shot runs identically at 30 and 144 fps.
@@ -299,7 +298,7 @@ pitch and FoV, captured from the free-cam with one key. It stays a distinct type
 rather than a one-point track, which keeps degenerate cases out of the spline
 code.
 
-**A finished track holds its final frame.** It does not revert to the game
+**A finished `Once` track holds its final frame.** It does not revert to the game
 camera. Snapping back to the player's head mid-broadcast would be a disaster on
 stream. The camera freezes where the track ended and the UI reports it.
 
@@ -482,11 +481,11 @@ Tests that run on macOS with no game, covering where the real bugs live:
 - A flat section of the timing curve holds the camera still for its width.
 - The timing curve never decreases, including for keys a naive cubic would
   overshoot.
-- Appending a control point or toggling loop does not retime the existing ones.
-- The loop seam is continuous in position and in speed.
+- Appending a control point does not retime the existing ones.
+- A `Loop` track cuts back to its first frame after its last key.
 - Degenerate input — zero, one, two and coincident points — does not throw.
 - TAKE resets elapsed time; flip-flop swaps the slots.
-- A finished track holds its last frame.
+- A finished `Once` track holds its last frame.
 - `Tick` returns null whenever live mode is off.
 - Zone change releases control.
 - Config round-trips, `Vector3` included.
