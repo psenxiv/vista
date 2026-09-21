@@ -19,9 +19,6 @@ internal sealed class CameraSession
 
     public CameraMode Mode => state.Mode;
 
-    /// <summary>The frame last written to the camera, or null when the game has it.</summary>
-    public CameraState? LastFrame => lastFrame;
-
     /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
     public Track Track => state.Track;
 

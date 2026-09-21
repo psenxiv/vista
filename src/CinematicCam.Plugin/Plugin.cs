@@ -1,8 +1,6 @@
-using System.Linq;
 using CinematicCam.Core.Session;
 using CinematicCam.Plugin.Editor;
 using CinematicCam.Plugin.Game;
-using CinematicCam.Plugin.Probes;
 using CinematicCam.Plugin.Session;
 using CinematicCam.Plugin.Ui;
 using Dalamud.Bindings.ImGui;
@@ -29,8 +27,6 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
-    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
-    [PluginService] internal static IObjectTable Objects { get; private set; } = null!;
 
     internal static CameraController Camera { get; private set; } = null!;
     internal static InputBlocker Input { get; private set; } = null!;
@@ -44,9 +40,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TrackEditorWindow trackEditor;
     private readonly PointWindow pointWindow;
     private readonly PendingField fields;
-    private readonly GizmoProbe gizmoProbe = new();
-    private readonly AimProbe aimProbe = new();
-    private readonly InputProbe inputProbe = new();
     private readonly EditorKeys editorKeys = new();
     private readonly PointGizmo pointGizmo = new();
     private readonly EditorLayer editorLayer;
@@ -55,7 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the editor | release | probe gizmo|aim|input"
+            HelpMessage = "/ccam opens the editor | release"
         });
 
         Movement = new MovementLock();
@@ -90,31 +83,8 @@ public sealed class Plugin : IDalamudPlugin
             case "release":
                 Session.Release("command");
                 break;
-            case "probe":
-                OnProbe(args.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).ToArray());
-                break;
             default:
                 Log.Information("[ccam] unknown verb '{Verb}'.", verb);
-                break;
-        }
-    }
-
-    /// <summary>Temporary in-game probes for phase 2c-1; removed once they have answered.</summary>
-    private void OnProbe(string[] words)
-    {
-        switch (words.FirstOrDefault())
-        {
-            case "gizmo":
-                gizmoProbe.Toggle(words.ElementAtOrDefault(1) ?? "");
-                break;
-            case "aim":
-                aimProbe.Run(Session.Mode, words.Skip(1).ToArray());
-                break;
-            case "input":
-                inputProbe.Toggle();
-                break;
-            default:
-                Log.Information("[probe] usage: /ccam probe gizmo [game|ours] | aim <yaw> <pitch> | input");
                 break;
         }
     }
@@ -130,8 +100,6 @@ public sealed class Plugin : IDalamudPlugin
             Camera.ClearFault();
         }
 
-        aimProbe.Update();
-        inputProbe.Update(Session.Mode);
         editorKeys.Update(Session, pointGizmo);
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
@@ -179,8 +147,6 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         editorLayer.Draw();
-        gizmoProbe.Draw(Session.LastFrame);
-        inputProbe.Draw(Session.Mode);
         windows.Draw();
     }
 
