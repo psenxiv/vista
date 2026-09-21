@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
+using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace CinematicCam.Plugin.Game;
 
@@ -90,6 +91,21 @@ internal sealed unsafe class InputBlocker : IDisposable
 
     private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
         => shouldBlock() && Blocked.Contains(id) ? (byte)0 : hook.Original(self, id);
+
+    /// <summary>True while the player holds that bind, read past our own block.</summary>
+    public bool IsHeld(InputId id)
+    {
+        if (heldHook is null) return false;
+
+        var input = Input();
+        return input != null && heldHook.Original(input, id) != 0;
+    }
+
+    private static InputData* Input()
+    {
+        var ui = UIInputData.Instance();
+        return ui == null ? null : &ui->InputData;
+    }
 
     /// <summary>Enables the hooks only while they can do something. Call every frame.</summary>
     public void SyncHookState()

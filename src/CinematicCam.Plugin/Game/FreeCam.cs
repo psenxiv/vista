@@ -1,11 +1,12 @@
 using System.Numerics;
 using CinematicCam.Core;
 using Dalamud.Game.ClientState.Keys;
+using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace CinematicCam.Plugin.Game;
 
-/// <summary>Flies the camera with the movement keys. Mouse-look still steers.</summary>
+/// <summary>Flies the camera with the player's movement binds. Mouse-look still steers.</summary>
 internal sealed class FreeCam
 {
     private const float BaseSpeed = 8f;
@@ -51,19 +52,23 @@ internal sealed class FreeCam
         return module != null && module->IsTextInputActive();
     }
 
+    /// <summary>Reads the player's own movement binds rather than fixed keys.</summary>
     private static Vector3 ReadInput()
     {
+        var input = Plugin.Input;
         var forward = 0f;
         var up = 0f;
         var right = 0f;
 
-        if (Plugin.KeyState[VirtualKey.W]) forward += 1f;
-        if (Plugin.KeyState[VirtualKey.S]) forward -= 1f;
-        if (Plugin.KeyState[VirtualKey.D]) right += 1f;
-        if (Plugin.KeyState[VirtualKey.A]) right -= 1f;
-        if (Plugin.KeyState[VirtualKey.SPACE]) up += 1f;
-        // Under Wine, Cmd and Ctrl are indistinguishable; the game does not separate them either.
-        if (Plugin.KeyState[VirtualKey.CONTROL]) up -= 1f;
+        if (input.IsHeld(InputId.MOVE_FORE)) forward += 1f;
+        if (input.IsHeld(InputId.MOVE_BACK)) forward -= 1f;
+
+        // Turn and strafe binds both move sideways; a free cam has nothing to turn.
+        if (input.IsHeld(InputId.MOVE_RIGHT) || input.IsHeld(InputId.MOVE_STRIFE_R)) right += 1f;
+        if (input.IsHeld(InputId.MOVE_LEFT) || input.IsHeld(InputId.MOVE_STRIFE_L)) right -= 1f;
+
+        if (input.IsHeld(InputId.JUMP) || input.IsHeld(InputId.MOVE_RETENTION)) up += 1f;
+        if (input.IsHeld(InputId.MOVE_DESCENT)) up -= 1f;
 
         return new Vector3(forward, up, right);
     }
