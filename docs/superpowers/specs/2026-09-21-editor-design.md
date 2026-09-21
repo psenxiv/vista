@@ -284,6 +284,8 @@ with at most one or two unverified changes per round.
 - **Mouse-look ignores roll** (reported 2026-09-21). At roll 0, dragging right
   turns the view right; at 90° roll it turns the view up. Mouse-look drives the
   game's world-space `DirH`/`DirV`, which know nothing of our roll. A fix maps
-  mouse deltas into the rolled frame and writes the angles, so it depends on
-  probe 2. Planned with Part 2 if probe 2 passes; otherwise it goes back to the
-  user.
+  mouse deltas into the rolled frame and writes the angles, so it depended on
+  probe 2. Fixed after probe 2 passed: each frame the free-cam takes the game's
+  yaw and pitch change, rotates it by the roll (`FreeCamMotion.RollLook`), and
+  writes it back within the game's pitch limits. Unrolled, nothing is written.
+  Awaiting in-game confirmation.
