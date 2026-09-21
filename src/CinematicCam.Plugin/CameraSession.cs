@@ -9,6 +9,7 @@ internal sealed class CameraSession
     private readonly FreeCam freeCam = new();
     private readonly Director director = new();
     private readonly MovementLock movement;
+    private readonly CameraOwnership ownership = new();
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
 
@@ -16,13 +17,14 @@ internal sealed class CameraSession
 
     public CameraMode Mode { get; private set; }
 
-    /// <summary>The track Edit builds and Play plays. Only change it while editing.</summary>
-    public Track Track { get; set; } = TrackEditing.Empty();
+    /// <summary>The track Edit builds and Play plays. Changed only through <see cref="ChangeTrack"/>.</summary>
+    public Track Track { get; private set; } = TrackEditing.Empty();
 
     /// <summary>Read-only view of playback state. Check IsLive before IsPaused or IsFinished.</summary>
     public Director Director => director;
 
-    public CameraOwnership Ownership { get; } = new();
+    /// <summary>True while the plugin writes the camera.</summary>
+    public bool OwnsCamera => ownership.IsOwned;
 
     /// <summary>The <c>/ccam hold</c> debug state, used only while off.</summary>
     public CameraState? TestState { get; set; }
@@ -60,9 +62,13 @@ internal sealed class CameraSession
         Plugin.Log.Information("[ccam] mode: editing");
     }
 
-    /// <summary>Goes live with the current track from its start, taking the camera if off.</summary>
+    /// <summary>Goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
     public void Play()
     {
+        if (Track.Points.Count == 0) { Plugin.Log.Error("[ccam] cannot play a track with no points."); return; }
+
+        director.GoLive(new TrackShot(Track));
+
         if (Mode == CameraMode.Off)
         {
             movement.Hold();
@@ -70,7 +76,6 @@ internal sealed class CameraSession
         }
 
         freeCam.Disable();
-        director.GoLive(new TrackShot(Track));
         Mode = CameraMode.Live;
         Plugin.Log.Information("[ccam] mode: live, {Count} points", Track.Points.Count);
     }
@@ -86,7 +91,7 @@ internal sealed class CameraSession
     /// <summary>Turns the plugin off: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason)
     {
-        if (Mode == CameraMode.Off && !Ownership.IsOwned && TestState is null) return;
+        if (Mode == CameraMode.Off && !ownership.IsOwned && TestState is null) return;
 
         director.GoOffline();
         freeCam.Disable();
@@ -94,7 +99,7 @@ internal sealed class CameraSession
         movement.Release();
         TestState = null;
         lastFrame = null;
-        Ownership.Release(reason);
+        ownership.Release(reason);
 
         // Without this the game carries on from our values rather than its own,
         // which leaves the camera wrong long after we stop writing.
@@ -114,22 +119,40 @@ internal sealed class CameraSession
         TakeCamera();
     }
 
-    /// <summary>A control point from the current camera, or null if the camera cannot be read.</summary>
-    public static ControlPoint? CapturePoint()
+    /// <summary>Applies <paramref name="change"/> to the track. Returns why it was refused, or null once applied.</summary>
+    public string? ChangeTrack(Func<Track, Track> change)
     {
+        if (Mode != CameraMode.Editing) return "The track can only change while editing.";
+
+        try
+        {
+            Track = change(Track);
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    /// <summary>Appends the current camera as a control point. Returns why it was refused, or null once appended.</summary>
+    public string? CapturePoint()
+    {
+        if (Mode != CameraMode.Editing) return "Points can only be captured while editing.";
+
         var state = CameraAccess.ReadState();
         var angles = CameraAccess.ReadAngles();
-        if (state is null || angles is null) return null;
+        if (state is null || angles is null) return "Cannot read the camera.";
 
         var s = state.Value;
         var (yaw, pitch) = angles.Value;
-        return new ControlPoint(s.Position, yaw, pitch, s.Fov);
+        return ChangeTrack(track => TrackEditing.Append(track, new ControlPoint(s.Position, yaw, pitch, s.Fov)));
     }
 
     /// <summary>Where the camera goes this frame, or null to leave it to the game. Called from the camera hook.</summary>
     public CameraState? Frame(float dt)
     {
-        if (!Ownership.IsOwned) return null;
+        if (!ownership.IsOwned) return null;
 
         var state = Mode switch
         {
@@ -146,6 +169,6 @@ internal sealed class CameraSession
     private void TakeCamera()
     {
         snapshotBeforeTakeover ??= CameraAccess.Capture();
-        Ownership.Take();
+        ownership.Take();
     }
 }

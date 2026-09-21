@@ -119,7 +119,7 @@ public sealed class Plugin : IDalamudPlugin
         Camera.TryInstallHook();
         Input.SyncHookState();
 
-        if (!Session.Ownership.IsOwned) return;
+        if (!Session.OwnsCamera) return;
 
         // TerritoryChanged misses transitions that keep the same territory id, such as an
         // aethernet hop, a cutscene or a duty starting. This flag covers all of them.
