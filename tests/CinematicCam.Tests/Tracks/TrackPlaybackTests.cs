@@ -98,6 +98,21 @@ public class TrackPlaybackTests
     [Theory]
     [InlineData(PlaybackMode.Once)]
     [InlineData(PlaybackMode.Loop)]
+    public void NegativeFrameTimeDoesNotRunTimeBackwards(PlaybackMode mode)
+    {
+        var fresh = new TrackPlayback(StraightTrack(mode));
+        fresh.Advance(-1f);
+        Assert.Equal(0.0, fresh.Elapsed);
+
+        var playing = new TrackPlayback(StraightTrack(mode));
+        playing.Advance(2f);
+        playing.Advance(-1f);
+        Assert.Equal(2.0, playing.Elapsed, 5);
+    }
+
+    [Theory]
+    [InlineData(PlaybackMode.Once)]
+    [InlineData(PlaybackMode.Loop)]
     public void ZeroDurationKeepsElapsedAtZero(PlaybackMode mode)
     {
         var points = new[] { Point(0f, 0f, 0f), Point(5f, 0f, 0f) };

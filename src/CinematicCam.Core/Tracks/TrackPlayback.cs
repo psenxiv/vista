@@ -25,7 +25,7 @@ public sealed class TrackPlayback
     public CameraState? Advance(float dt)
     {
         var duration = _evaluator.Duration;
-        var next = Elapsed + dt;
+        var next = Elapsed + Math.Max(dt, 0f);
 
         if (_track.Playback == PlaybackMode.Loop)
         {
