@@ -75,7 +75,7 @@ internal sealed class CameraSession
     /// <summary>Turns the plugin off: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason)
     {
-        if (!state.Release()) return;
+        if (!state.Release() && !ownership.IsOwned) return;
 
         freeCam.Disable();
         GameUi.Restore();
