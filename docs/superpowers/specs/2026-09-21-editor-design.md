@@ -120,7 +120,7 @@ fields clamp to a sensible range instead of refusing:
 | Hold | 0 to 600 s |
 | Pitch | −89° to +89°, as the gizmo |
 | Yaw, roll | wrapped to −180° to +180° |
-| FoV | the game's own `Camera.MinFoV` to `Camera.MaxFoV` |
+| FoV | 5° to 120° (decided 2026-09-22) |
 | X, Y, Z | any finite value |
 
 There is no error line. Anything still refused, such as an unreadable camera, is
@@ -143,14 +143,20 @@ plane.
 - **Path** — the spline sampled densely along its length, drawn as a 3 px soft-white
   polyline so the coloured arrows stand out against it (changed from light blue,
   2026-09-22).
-- **Markers** — a numbered circle per point, 20 px in radius with the number sized
-  to match; the selected point is highlighted.
-- **Aim arrows** — a short arrow, with a head, from each point along its recorded
-  aim, drawn only in Recorded-aim mode.
-- **Up arrows** — a shorter, light-blue arrow from each point along the camera's up
-  direction there, so roll is visible. Drawn in both aim modes: in Direction-of-travel
-  mode the up direction is taken around the path's direction at the point. (Added
-  2026-09-22; both modes decided 2026-09-22.)
+- **Cameras** — a wireframe camera at each point, replacing the aim and up arrows
+  (2026-09-22): a pyramid 1 yalm deep from the point, opening along the aim to a
+  face sized by the point's FoV and the screen's aspect, with a filled light-blue tab
+  on its top edge showing up, so roll is visible. Recorded-aim mode uses the point's
+  aim; Direction-of-travel mode uses the path's direction there. The selected point's
+  camera is highlighted.
+- **Markers** — a numbered circle, 20 px in radius, on each point, over the camera's
+  tip (the user moved it there from above the camera, 2026-09-22). It is what a click
+  selects; the selected one is highlighted. Hidden when the point is behind the view.
+
+The roll tab is skipped when any corner of it is nearer than the near plane, where it
+would project wildly off screen.
+
+The user accepted the fixed world size and the face following FoV on 2026-09-22.
 
 Colours live in one place.
 
@@ -384,6 +390,18 @@ arrows. `dalamud.log` shows no warnings or errors from the plugin. Changes asked
 for: Live cues the shot paused at its start instead of playing, and the three
 decisions of 2026-09-22 (scrub head from Live, up arrows in both aim modes,
 deleting another point keeps the selection).
+
+FoV originally clamped to the game's `Camera.MinFoV` to `Camera.MaxFoV`. Those are the
+game's zoom range, about 39.5° to 44.7°, so the field snapped back to 44.7° (reported
+2026-09-22). The fixed range replaces them. We write `Camera.FoV` every frame we
+own the camera, so values outside the game's range should hold; the checklist confirms it.
+
+## Part 2b follow-up results (2026-09-22)
+
+In game, every follow-up check passed with no notes: Live cues the shot, Edit from
+Live keeps the scrub head, deleting another row keeps the selection, the wireframe
+cameras, and FoV from 5° to 120°. Change asked for: the number on the point, over
+the camera's tip, instead of above the camera.
 
 ## Open issues
 
