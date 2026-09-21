@@ -42,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the test window | release | hold | push <d> | nudge <x> <y> <z> | roll <degrees> | reset"
+            HelpMessage = "/ccam opens the test window | release | hold | push <d> | nudge <x> <y> <z> | reset"
         });
 
         Movement = new MovementLock();
@@ -98,18 +98,6 @@ public sealed class Plugin : IDalamudPlugin
                 var step = forward * distance;
                 Session.TestState = st with { Position = st.Position + step, LookAt = st.LookAt + step };
                 Log.Information("[ccam] pushed {Distance} along view to {Pos}", distance, Session.TestState.Value.Position);
-                break;
-            }
-            case "roll":
-            {
-                var parts = args.Trim().Split(' ');
-                if (parts.Length < 2 || !float.TryParse(parts[1], out var degrees))
-                {
-                    Log.Error("[ccam] usage: /ccam roll <degrees>");
-                    break;
-                }
-                CameraAccess.ProbeRoll = degrees * MathF.PI / 180f;
-                Log.Information("[ccam] roll probe set to {Degrees} degrees", degrees);
                 break;
             }
             case "nudge":

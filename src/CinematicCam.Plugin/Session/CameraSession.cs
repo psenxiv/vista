@@ -57,7 +57,7 @@ internal sealed class CameraSession
                 var start = lastFrame ?? CameraAccess.ReadState();
                 if (start is null) { Plugin.Log.Error("[ccam] cannot read camera state."); return; }
                 director.GoOffline();
-                freeCam.Enable(start.Value.Position);
+                freeCam.Enable(start.Value.Position, start.Value.Roll);
                 break;
             }
         }
@@ -122,7 +122,6 @@ internal sealed class CameraSession
         director.GoOffline();
         freeCam.Disable();
         Mode = CameraMode.Off;
-        CameraAccess.ProbeRoll = 0f;
         GameUi.Restore();
         movement.Release();
         TestState = null;
@@ -176,7 +175,7 @@ internal sealed class CameraSession
 
         var s = state.Value;
         var (yaw, pitch) = angles.Value;
-        return ChangeTrack(track => TrackEditing.Append(track, new ControlPoint(s.Position, yaw, pitch, s.Fov)));
+        return ChangeTrack(track => TrackEditing.Append(track, new ControlPoint(s.Position, yaw, pitch, s.Fov, freeCam.Roll)));
     }
 
     /// <summary>Where the camera goes this frame, or null to leave it to the game. Called from the camera hook.</summary>

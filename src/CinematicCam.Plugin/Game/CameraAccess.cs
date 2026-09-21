@@ -70,9 +70,6 @@ internal static unsafe class CameraAccess
         Plugin.Log.Information("[ccam] field of view reset to stock.");
     }
 
-    /// <summary>Roll in radians applied to every write; a probe for whether the renderer honours a rolled up vector.</summary>
-    public static float ProbeRoll { get; set; }
-
     /// <summary>Overwrites camera position and look-at.</summary>
     public static void WriteState(CameraState state)
     {
@@ -81,7 +78,7 @@ internal static unsafe class CameraAccess
         var scene = &camera->CameraBase.SceneCamera;
         scene->Object.Position = state.Position;
         scene->LookAtVector = state.LookAt;
-        scene->Vector_1 = CameraOrientation.UpFor(state.Position, state.LookAt, ProbeRoll);
+        scene->Vector_1 = CameraOrientation.UpFor(state.Position, state.LookAt, state.Roll);
         camera->FoV = state.Fov;
 
         // Distance and InterpDistance are deliberately NOT written. They are saved
