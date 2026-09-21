@@ -40,7 +40,7 @@ arrive in phase 3.
 Layout revised by the user on 2026-09-22 after using the first build:
 
 - **Top row.**
-  - **Mode drop-down:** Edit, Live and Off. It replaces the Mode text and the Edit
+  - **Mode drop-down:** Off, Edit and Live, in that order. It replaces the Mode text and the Edit
     and Release buttons. Live plays the shot as Play did, and Off releases the
     camera.
   - **Play/Pause icon:** one icon that shows Pause while the shot is playing and

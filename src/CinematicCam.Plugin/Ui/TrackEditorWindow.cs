@@ -16,7 +16,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "CCAM_POINT";
 
-    private static readonly string[] ModeNames = ["Edit", "Live", "Off"];
+    private static readonly string[] ModeNames = ["Off", "Edit", "Live"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
     private static readonly string[] PlaybackNames = ["Once", "Loop"];
     private static readonly Vector2 Spacing = new(8f, 7f);
@@ -103,18 +103,18 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>Edit, Live and Off; Live plays the shot and Off releases the camera.</summary>
+    /// <summary>Off, Edit and Live; Off releases the camera and Live plays the shot.</summary>
     private void DrawModeCombo()
     {
-        var current = session.Mode switch { CameraMode.Editing => 0, CameraMode.Live => 1, _ => 2 };
+        var current = session.Mode switch { CameraMode.Editing => 1, CameraMode.Live => 2, _ => 0 };
         ImGui.SetNextItemWidth(80f);
         if (!ImGui.BeginCombo("##mode", ModeNames[current])) return;
 
-        if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Edit(); }
+        if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
+        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Edit(); }
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Play(); }
+        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Play(); }
         ImGui.EndDisabled();
-        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Release("window"); }
         ImGui.EndCombo();
     }
 
