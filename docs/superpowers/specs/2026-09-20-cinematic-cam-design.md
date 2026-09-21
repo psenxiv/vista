@@ -237,8 +237,8 @@ record TimingKey(float Time, float Position, TangentMode Mode,
 `Position` is a place on the path in control-point units: the whole part is the
 segment, the fraction is how far along that segment's arc length. 0 is the first
 control point, 2 the third, 2.5 halfway along the segment from the third to the
-fourth. Combined with arc-length evaluation, a straight line on this curve is
-constant world speed within a segment, however unevenly the points are spaced.
+fourth. Playback evaluates the curve over distance along the path, so speed stays
+continuous through a point and a straight line between keys is constant speed.
 
 Keys are anchored to control points so editing geometry never retimes a shot:
 moving or appending a point leaves every key in place. Inserting or deleting a
@@ -477,8 +477,8 @@ Tests that run on macOS with no game, covering where the real bugs live:
   without arc-length reparameterisation, which is its purpose.
 - Yaw crossing ±180° takes the short way.
 - Position at t=5s matches under 60fps and 30fps delta sequences.
-- A straight timing curve gives constant world speed within a segment on
-  unevenly spaced points.
+- A straight timing curve gives constant world speed on unevenly spaced points,
+  and speed stays continuous through a key between unequal segments.
 - A flat section of the timing curve holds the camera still for its width.
 - The timing curve never decreases, including for keys a naive cubic would
   overshoot.
