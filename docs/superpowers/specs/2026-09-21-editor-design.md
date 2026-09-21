@@ -25,7 +25,7 @@ arrive in phase 3.
 
 ```
 ┌ Cinematic Cam ─────────────────────────────────────────────┐
-│ [Edit ▾] [▶] [⏮]   [↶] [↷]   [ + Add │ ▾ ]                 │
+│ [Edit ▾]   [ + Add │ ▾ ]   [↶] [↷]                          │
 │ [Aim: Recorded aim ▾] [Playback: Once ▾]              [🗑] │
 ├────────────────────────────────────────────────────────────┤
 │  #    Leg (s)  Hold (s)                                    │
@@ -33,21 +33,19 @@ arrive in phase 3.
 │  ≡ 2    5.0      0.0     (selected row highlighted)   [🗑] │
 │  ≡ 3    5.0      2.0                                  [🗑] │
 ├────────────────────────────────────────────────────────────┤
-│ [━━━━━━━━━━━━●━━━━━━━━━━  6.3 / 12.0 s ]   Speed [ 1x ]    │
+│ [▶] [⏮] [━━━━━━━━━●━━━━━━━━━  6.3 / 12.0 s ]  Speed [ 1x ] │
 └────────────────────────────────────────────────────────────┘
 ```
 
 Layout revised by the user on 2026-09-22 after using the first build:
 
-- **Top row.**
-  - **Mode drop-down:** Off, Edit and Live, in that order. It replaces the Mode text and the Edit
-    and Release buttons. Live plays the shot as Play did, and Off releases the
-    camera.
-  - **Play/Pause icon:** one icon that shows Pause while the shot is playing and
-    Play otherwise; Play from Edit or Off goes live.
-  - **Restart icon**, then **Undo** and **Redo** icons. Each icon has a tooltip
-    naming it.
-  - **Add split button.**
+- **Top row:** the **mode drop-down** (Off, Edit, Live), then the **Add split
+  button**, then **Undo** and **Redo** icons. The mode drop-down replaces the Mode
+  text and the Edit and Release buttons: Live plays the shot as Play did, and Off
+  releases the camera.
+- **Play/Pause and Restart icons** sit at the left of the scrub bar (moved there
+  2026-09-22). Play/Pause shows Pause while the shot is playing and Play otherwise;
+  Play from Edit or Off goes live. Every icon has a tooltip naming it.
 - **Second row:** Aim and Playback drop-downs that show their setting ("Aim: Recorded
   aim", "Playback: Once"), and **Clear track** as a trash icon at the right end.
 - **Bottom row:** the scrub bar shows current and total time in the bar itself;
