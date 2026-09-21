@@ -3,7 +3,7 @@ namespace CinematicCam.Plugin.Editor;
 /// <summary>Every editor colour, as ImGui ABGR.</summary>
 internal static class EditorColours
 {
-    public const uint Path = 0xC0FFD080;
+    public const uint Path = 0xC8F0F0F0;
     public const uint AimLine = 0xC080FFFF;
     public const uint UpLine = 0xE0FFA040;
     public const uint AxisX = 0xFF5A5AFF;

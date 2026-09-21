@@ -12,6 +12,7 @@ internal sealed class Overlay
     public const float MarkerRadius = 20f;
     private const float LabelScale = 2f;
     private const float PathSpacing = 0.25f;
+    private const float PathThickness = 3f;
     private const float AimLength = 1.5f;
     private const float UpLength = 0.75f;
     private const float ArrowHeadLength = 14f;
@@ -40,7 +41,7 @@ internal sealed class Overlay
         for (var i = 1; i < samples.Count; i++)
         {
             if (ScreenProjection.ProjectSegment(samples[i - 1], samples[i], view.ViewProjection, view.Size, view.Near) is { } s)
-                list.AddLine(view.Origin + s.Start, view.Origin + s.End, EditorColours.Path, 2f);
+                list.AddLine(view.Origin + s.Start, view.Origin + s.End, EditorColours.Path, PathThickness);
         }
     }
 
