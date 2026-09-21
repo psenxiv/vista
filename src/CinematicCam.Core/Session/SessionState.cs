@@ -15,6 +15,8 @@ public sealed class SessionState
 
     public Director Director { get; } = new();
 
+    private readonly EditHistory history = new();
+
     /// <summary>The track Edit builds and Play plays. Changed only through <see cref="ChangeTrack"/>.</summary>
     public Track Track { get; private set; } = TrackEditing.Empty();
 
@@ -79,21 +81,111 @@ public sealed class SessionState
         return true;
     }
 
+    /// <summary>The selected point's index, or null.</summary>
+    public int? Selected { get; private set; }
+
+    /// <summary>True while editing with a step to undo.</summary>
+    public bool CanUndo => Mode == CameraMode.Editing && history.CanUndo;
+
+    /// <summary>True while editing with a step to redo.</summary>
+    public bool CanRedo => Mode == CameraMode.Editing && history.CanRedo;
+
+    /// <summary>Selects a point while editing; null or an index out of range clears the selection.</summary>
+    public void Select(int? index)
+    {
+        if (Mode != CameraMode.Editing) return;
+        Selected = index is { } i && i >= 0 && i < Track.Points.Count ? i : null;
+    }
+
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change)
+        => Apply(change, result => Selected is { } s && s < result.Points.Count ? s : null);
+
+    /// <summary>Appends a point; the selection is unchanged.</summary>
+    public string? AddToEnd(ControlPoint point)
+        => Apply(t => TrackEditing.Append(t, point), _ => Selected);
+
+    /// <summary>Inserts a point after the selected one and selects it.</summary>
+    public string? AddAfterSelected(ControlPoint point)
+    {
+        if (SelectionRefusal() is { } refusal) return refusal;
+        var s = Selected!.Value;
+        return Apply(t => TrackEditing.InsertAfter(t, s, point), _ => s + 1);
+    }
+
+    /// <summary>Replaces the selected point, keeping its timing and the selection.</summary>
+    public string? OverwriteSelected(ControlPoint point)
+    {
+        if (SelectionRefusal() is { } refusal) return refusal;
+        return ReplacePoint(Selected!.Value, point);
+    }
+
+    /// <summary>Replaces point <paramref name="index"/>, keeping its timing and the selection.</summary>
+    public string? ReplacePoint(int index, ControlPoint point)
+        => Apply(t => TrackEditing.Replace(t, index, point), _ => Selected);
+
+    /// <summary>Deletes the selected point and clears the selection.</summary>
+    public string? DeleteSelected()
+    {
+        if (SelectionRefusal() is { } refusal) return refusal;
+        var s = Selected!.Value;
+        return Apply(t => TrackEditing.Delete(t, s), _ => null);
+    }
+
+    /// <summary>Moves a point in the order; the selection stays on the same point.</summary>
+    public string? MovePoint(int from, int to)
+    {
+        var selected = Selected;
+        return Apply(t => TrackEditing.Move(t, from, to), _ => selected is { } s ? Follow(s, from, to) : null);
+    }
+
+    /// <summary>Restores the track and selection before the last change. Returns false if nothing was undone.</summary>
+    public bool Undo() => Restore(Mode == CameraMode.Editing ? history.Undo(Current) : null);
+
+    /// <summary>Re-applies the last undone change. Returns false if nothing was redone.</summary>
+    public bool Redo() => Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
+
+    private EditSnapshot Current => new(Track, Selected);
+
+    private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter)
     {
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
 
         try
         {
             var result = change(Track);
+            if (ReferenceEquals(result, Track)) return null;
+
             _ = new TrackEvaluator(result);
+            history.Record(Current);
+            var selected = selectAfter(result);
             Track = result;
+            Selected = selected;
             return null;
         }
         catch (ArgumentException ex)
         {
             return ex.Message;
         }
+    }
+
+    private bool Restore(EditSnapshot? snapshot)
+    {
+        if (snapshot is not { } s) return false;
+        Track = s.Track;
+        Selected = s.Selected;
+        return true;
+    }
+
+    private string? SelectionRefusal()
+        => Mode != CameraMode.Editing ? "The track can only change while editing."
+         : Selected is null ? "Select a point first." : null;
+
+    private static int Follow(int selected, int from, int to)
+    {
+        if (selected == from) return to;
+        if (from < selected && selected <= to) return selected - 1;
+        if (to <= selected && selected < from) return selected + 1;
+        return selected;
     }
 }
