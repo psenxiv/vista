@@ -37,3 +37,10 @@ as a spot over a stage.
 
 **Why deferred:** cut from v1 on 2026-09-21. It needs a target placed with the
 gizmo, which arrives with the editor.
+
+## Under consideration
+
+Raised by the maintainer, not yet agreed as a feature.
+
+### OBS integration
+Control the switchboard from OBS, so camera cuts can follow the stream.
