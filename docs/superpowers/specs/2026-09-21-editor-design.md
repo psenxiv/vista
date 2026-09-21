@@ -231,11 +231,11 @@ timing does, so coincident points never divide by zero.
 
 These operations assume one timing key per point, which is all 2c-1 can produce.
 A track with keys between points is refused with a plain message; 2c-2 revisits
-this.
+this (`2026-09-22-curve-editor-design.md` allows them).
 
 Every key the editor makes is `Auto`, so pace blends between legs of different speeds
 and eases into and out of holds. Choosing linear or eased timing waits for 2c-2
-(decided 2026-09-22).
+(decided 2026-09-22; see `2026-09-22-curve-editor-design.md`).
 
 ## Undo
 
