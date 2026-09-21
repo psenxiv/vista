@@ -35,6 +35,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WindowSystem windows = new("CinematicCam");
     private float wheel;
     private bool escapeWasDown;
+    private bool wasGPosing;
+    private long probeCount;
+    private long probeTime;
     private static bool blockEscape;
     private readonly TestWindow testWindow;
 
@@ -50,6 +53,7 @@ public sealed class Plugin : IDalamudPlugin
         testWindow = new TestWindow(Session);
         windows.AddWindow(testWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
+        PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.OpenMainUi += OpenTestWindow;
         Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
         Input = new InputBlocker(() => Session.LocksInput, () => blockEscape);
@@ -128,6 +132,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         Camera.TryInstallHook();
         Input.SyncHookState();
+        ProbeGPose();
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
@@ -157,6 +162,31 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OpenTestWindow() => testWindow.IsOpen = true;
+
+    /// <summary>Probe: logs the active camera on entering and leaving GPose, and the hook's rate while in it.</summary>
+    private void ProbeGPose()
+    {
+        var gposing = ClientState.IsGPosing;
+        var now = Environment.TickCount64;
+
+        if (gposing != wasGPosing)
+        {
+            var (index, isWorld) = CameraAccess.ActiveCamera();
+            Log.Information("[gpose] {State}: active camera slot {Index}, is world camera {IsWorld}, mode {Mode}",
+                gposing ? "entered" : "left", index, isWorld, Session.Mode);
+            wasGPosing = gposing;
+            probeCount = Camera.UpdateCount;
+            probeTime = now;
+        }
+        else if (gposing && now - probeTime >= 5000)
+        {
+            var (index, isWorld) = CameraAccess.ActiveCamera();
+            Log.Information("[gpose] hook ran {Count} times in {Seconds:0.0} s; active slot {Index}, is world {IsWorld}, mode {Mode}",
+                Camera.UpdateCount - probeCount, (now - probeTime) / 1000.0, index, isWorld, Session.Mode);
+            probeCount = Camera.UpdateCount;
+            probeTime = now;
+        }
+    }
 
     /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
     private void OnDraw()

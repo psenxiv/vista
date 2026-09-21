@@ -19,6 +19,14 @@ internal static unsafe class CameraAccess
         return camera != null;
     }
 
+    /// <summary>Which camera slot the game is using, and whether that slot is the world camera we hook.</summary>
+    public static (int Index, bool IsWorldCamera) ActiveCamera()
+    {
+        var manager = CameraManager.Instance();
+        if (manager == null) return (-1, false);
+        return (manager->ActiveCameraIndex, manager->GetActiveCamera() == manager->Camera);
+    }
+
     /// <summary>Reads the camera's current position, look-at and field of view.</summary>
     public static CameraState? ReadState()
     {
