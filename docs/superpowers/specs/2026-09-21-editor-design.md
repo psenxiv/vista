@@ -108,7 +108,7 @@ Selection after track changes:
 | Overwrite selected | unchanged |
 | Delete | none |
 | Reorder | stays on the same point, wherever it ends up |
-| Undo / redo | kept if that point still exists, otherwise none |
+| Undo / redo | restored to what it was at that step |
 
 ## Gizmo
 
@@ -251,3 +251,11 @@ windows, scrub and jumps, undo.
 Core under TDD: insert, delete, move and replace with their timing; undo history;
 selection validity; hit-testing; seek. In game, a short checklist after each piece
 with at most one or two unverified changes per round.
+
+## Open issues
+
+- **Mouse-look ignores roll** (reported 2026-09-21). At roll 0, dragging right
+  turns the view right; at 90° roll it turns the view up. Mouse-look drives the
+  game's world-space `DirH`/`DirV`, which know nothing of our roll. A fix maps
+  mouse deltas into the rolled frame and writes the angles, so it depends on
+  probe 2. Not scheduled; the user decides when.
