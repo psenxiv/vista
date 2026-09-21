@@ -246,6 +246,10 @@ steps loses it.
 
 Steps 3, 5 and 6 are the ones only you can judge: whether the motion looks smooth.
 
+**Result, 2026-09-21:** every step passed. Curve shaping felt rough, put down to having no
+visual editor to see and adjust the path. Follow-up: Play now resumes after Stop, and a
+Restart button starts over.
+
 ## Choices the spec does not make
 
 Flagging rather than burying. Say if you would rather decide any of these.
@@ -265,7 +269,8 @@ Flagging rather than burying. Say if you would rather decide any of these.
   without naming a method. This is the standard one.
 
 Decided on 2026-09-21: 5 seconds per leg by default; full speed at the start and a dead stop
-at the end; keys anchored to control points; Stop pauses, Play restarts, Edit starts free-cam
+at the end; keys anchored to control points; Stop pauses, Play resumes (restarts when finished or coming from editing), Restart starts
+over, Edit starts free-cam
 from the current frame; nothing can be edited while live; a simple test window replaces the
 chat commands, with `/ccam release` kept as an escape.
 
