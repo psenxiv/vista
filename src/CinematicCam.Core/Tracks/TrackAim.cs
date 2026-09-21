@@ -43,6 +43,10 @@ public static class TrackAim
     /// <summary>Uniform Catmull-Rom on a scalar between <paramref name="segment"/> and the next, endpoints duplicated as phantoms like the path.</summary>
     public static float Channel(IReadOnlyList<float> values, int segment, float fraction)
     {
+        if (segment < 0 || segment > values.Count - 2)
+            throw new ArgumentOutOfRangeException(nameof(segment),
+                values.Count < 2 ? "a channel needs at least two values" : $"segment must be 0..{values.Count - 2}");
+
         var p0 = GetValue(values, segment - 1);
         var p1 = GetValue(values, segment);
         var p2 = GetValue(values, segment + 1);

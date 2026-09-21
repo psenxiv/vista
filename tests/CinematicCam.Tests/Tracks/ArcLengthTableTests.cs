@@ -75,50 +75,6 @@ public class ArcLengthTableTests
         Assert.Equal(1f, table.ParameterAt(1, 1f), 3);
     }
 
-    [Fact]
-    public void LocateClampsBelowZeroToTheStart()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread);
-        var (segment, fraction) = table.Locate(-3f);
-        Assert.Equal(0, segment);
-        Assert.Equal(0f, fraction);
-    }
-
-    [Fact]
-    public void LocateClampsAboveSegmentCountToTheEnd()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread);
-        var (segment, fraction) = table.Locate(table.SegmentCount + 4f);
-        Assert.Equal(table.SegmentCount - 1, segment);
-        Assert.Equal(1f, fraction);
-    }
-
-    [Fact]
-    public void LocateAtExactlySegmentCountReturnsLastSegmentAtFractionOne()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread);
-        var (segment, fraction) = table.Locate(table.SegmentCount);
-        Assert.Equal(table.SegmentCount - 1, segment);
-        Assert.Equal(1f, fraction);
-    }
-
-    [Fact]
-    public void LocateSplitsWholeAndFractionalParts()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread);
-        var (segment, fraction) = table.Locate(1.5f);
-        Assert.Equal(1, segment);
-        Assert.Equal(0.5f, fraction, 3);
-    }
-
-    [Fact]
-    public void LocateWithZeroSegmentsReturnsOriginRegardlessOfPosition()
-    {
-        var table = new ArcLengthTable(Array.Empty<Vector3>());
-        Assert.Equal((0, 0f), table.Locate(5f));
-        Assert.Equal((0, 0f), table.Locate(-5f));
-    }
-
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -142,6 +98,16 @@ public class ArcLengthTableTests
         Assert.Equal(0.37f, table.ParameterAt(0, 0.37f));
         Assert.Equal(0f, table.ParameterAt(0, 0f));
         Assert.Equal(1f, table.ParameterAt(0, 1f));
+    }
+
+    [Fact]
+    public void SegmentQueriesRejectAnOutOfRangeSegment()
+    {
+        var table = new ArcLengthTable(BunchedThenSpread);
+        Assert.Throws<ArgumentOutOfRangeException>(() => table.SegmentLength(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => table.SegmentLength(table.SegmentCount));
+        Assert.Throws<ArgumentOutOfRangeException>(() => table.ParameterAt(-1, 0.5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => table.ParameterAt(table.SegmentCount, 0.5f));
     }
 
     [Fact]

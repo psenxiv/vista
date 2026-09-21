@@ -210,7 +210,8 @@ public class TimingCurveTests
         {
             var t = 1.0 + (double)i / steps; // time in [1, 2], within segment 1
             var position = curve.PositionAt(t);
-            var (segment, fraction) = table.Locate(position);
+            var segment = (int)MathF.Floor(position);
+            var fraction = position - segment;
             var parameter = table.ParameterAt(segment, fraction);
             worldPositions[i] = CatmullRom.Evaluate(points, segment, parameter);
         }

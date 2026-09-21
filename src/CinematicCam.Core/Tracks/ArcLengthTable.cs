@@ -42,12 +42,12 @@ public sealed class ArcLengthTable
     }
 
     /// <summary>Arc length of one segment.</summary>
-    public float SegmentLength(int segment) => _cumulative[segment][^1];
+    public float SegmentLength(int segment) => _cumulative[CheckSegment(segment)][^1];
 
     /// <summary>Spline parameter t in [0, 1] whose arc distance from the segment start is fraction x SegmentLength.</summary>
     public float ParameterAt(int segment, float fraction)
     {
-        var samples = _cumulative[segment];
+        var samples = _cumulative[CheckSegment(segment)];
         var length = samples[^1];
         if (length <= 0f) return fraction;
 
@@ -66,15 +66,11 @@ public sealed class ArcLengthTable
         return (lo + local) / SamplesPerSegment;
     }
 
-    /// <summary>Splits a control-point-units position into a segment index and the arc fraction into it, clamped to [0, SegmentCount].</summary>
-    public (int Segment, float Fraction) Locate(float position)
+    private int CheckSegment(int segment)
     {
-        if (SegmentCount == 0) return (0, 0f);
-
-        var clamped = Math.Clamp(position, 0f, SegmentCount);
-        if (clamped >= SegmentCount) return (SegmentCount - 1, 1f);
-
-        var segment = (int)MathF.Floor(clamped);
-        return (segment, clamped - segment);
+        if (segment < 0 || segment >= SegmentCount)
+            throw new ArgumentOutOfRangeException(nameof(segment),
+                SegmentCount == 0 ? "the table has no segments" : $"segment must be 0..{SegmentCount - 1}");
+        return segment;
     }
 }

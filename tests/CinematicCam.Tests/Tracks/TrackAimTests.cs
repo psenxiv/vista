@@ -71,6 +71,15 @@ public class TrackAimTests
     }
 
     [Fact]
+    public void ChannelRejectsAnOutOfRangeSegment()
+    {
+        var values = new[] { 1f, 2f, 3f };
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackAim.Channel(values, -1, 0.5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackAim.Channel(values, 2, 0.5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackAim.Channel(new[] { 1f }, 0, 0.5f));
+    }
+
+    [Fact]
     public void PathTangentClampsPitchOnANearVerticalPath()
     {
         var points = new[]
