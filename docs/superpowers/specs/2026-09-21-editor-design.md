@@ -147,8 +147,9 @@ plane.
 - **Aim arrows** — a short arrow, with a head, from each point along its recorded
   aim, drawn only in Recorded-aim mode.
 - **Up arrows** — a shorter, light-blue arrow from each point along the camera's up
-  direction there, so roll is visible. Drawn with the aim arrows, in Recorded-aim
-  mode only. (Added 2026-09-22.)
+  direction there, so roll is visible. Drawn in both aim modes: in Direction-of-travel
+  mode the up direction is taken around the path's direction at the point. (Added
+  2026-09-22; both modes decided 2026-09-22.)
 
 Colours live in one place.
 
@@ -171,7 +172,8 @@ Selection after track changes:
 | Add to end | unchanged |
 | Add after selected | the new point |
 | Overwrite selected | unchanged |
-| Delete | none |
+| Delete the selected point | none |
+| Delete another point | stays on the same point, renumbered (decided 2026-09-22) |
 | Reorder | stays on the same point, wherever it ends up |
 | Undo / redo | restored to what it was at that step |
 
@@ -246,6 +248,8 @@ as a scrub release.
 **Live.** Dragging seeks: playback holds at the dragged moment while dragging, then
 continues in its prior state, playing or paused. Seeking a finished `Once` shot
 back un-finishes it. The scrub head shows playback time.
+Switching from Live to Edit moves the edit-mode scrub head to the playback time,
+so it matches the frame the free-cam starts from (decided 2026-09-22).
 
 **Aim on scrub release, jumps and Edit from Live** — the free-cam's aim comes from
 the game camera's `DirH`/`DirV`. If probe 2 proves they are runtime state, they are
