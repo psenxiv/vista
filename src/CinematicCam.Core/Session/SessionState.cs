@@ -1,3 +1,4 @@
+using CinematicCam.Core.Camera;
 using CinematicCam.Core.Tracks;
 
 namespace CinematicCam.Core.Session;
@@ -11,6 +12,9 @@ public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff }
 /// <summary>The mode, the Director and the track, and the rules for moving between modes.</summary>
 public sealed class SessionState
 {
+    private Track? evaluatedTrack;
+    private TrackEvaluator? evaluator;
+
     public CameraMode Mode { get; private set; }
 
     public Director Director { get; } = new();
@@ -187,5 +191,18 @@ public sealed class SessionState
         if (from < selected && selected <= to) return selected - 1;
         if (to <= selected && selected < from) return selected + 1;
         return selected;
+    }
+
+    /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
+    public CameraState? FrameAt(double time)
+    {
+        if (Track.Points.Count == 0) return null;
+        if (!ReferenceEquals(evaluatedTrack, Track))
+        {
+            evaluator = new TrackEvaluator(Track);
+            evaluatedTrack = Track;
+        }
+
+        return evaluator!.Evaluate(time);
     }
 }

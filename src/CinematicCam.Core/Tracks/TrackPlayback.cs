@@ -50,4 +50,18 @@ public sealed class TrackPlayback
         Elapsed = 0.0;
         IsFinished = false;
     }
+
+    /// <summary>Jumps to <paramref name="time"/>: <c>Once</c> clamps to the track and finishes at its end, <c>Loop</c> wraps.</summary>
+    public void Seek(double time)
+    {
+        var duration = _evaluator.Duration;
+        if (_track.Playback == PlaybackMode.Loop)
+        {
+            Elapsed = duration > 0.0 ? ((time % duration) + duration) % duration : 0.0;
+            return;
+        }
+
+        Elapsed = Math.Clamp(time, 0.0, duration);
+        IsFinished = Elapsed >= duration;
+    }
 }

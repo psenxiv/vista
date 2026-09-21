@@ -49,6 +49,12 @@ public sealed class Director
         IsPaused = false;
     }
 
+    /// <summary>Jumps the live track shot to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
+    public void Seek(double time)
+    {
+        if (IsLive) _playback?.Seek(time);
+    }
+
     /// <summary>Where the camera should be this frame, or null to leave the game camera alone.</summary>
     public CameraState? Tick(float dt)
     {

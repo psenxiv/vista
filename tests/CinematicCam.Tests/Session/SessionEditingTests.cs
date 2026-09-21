@@ -204,4 +204,14 @@ public class SessionEditingTests
         state.Edit();
         Assert.True(state.Undo());
     }
+
+    [Fact]
+    public void FrameAtMatchesTheEvaluatorAndIsNullForAnEmptyTrack()
+    {
+        Assert.Null(new SessionState().FrameAt(1.0));
+
+        var state = Editing();
+        var expected = new TrackEvaluator(state.Track).Evaluate(2.5);
+        Assert.Equal(expected, state.FrameAt(2.5));
+    }
 }

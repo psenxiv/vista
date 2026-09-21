@@ -122,4 +122,44 @@ public class TrackPlaybackTests
         playback.Advance(5f);
         Assert.Equal(0.0, playback.Elapsed);
     }
+
+    [Fact]
+    public void SeekOnceClampsAndFinishesAtTheEnd()
+    {
+        var playback = new TrackPlayback(StraightTrack(PlaybackMode.Once));
+        playback.Seek(4.0);
+        Assert.Equal(4.0, playback.Elapsed);
+        Assert.False(playback.IsFinished);
+
+        playback.Seek(99.0);
+        Assert.Equal(10.0, playback.Elapsed, 5);
+        Assert.True(playback.IsFinished);
+
+        playback.Seek(-3.0);
+        Assert.Equal(0.0, playback.Elapsed);
+    }
+
+    [Fact]
+    public void SeekingAFinishedShotBackUnfinishesIt()
+    {
+        var playback = new TrackPlayback(StraightTrack(PlaybackMode.Once));
+        playback.Advance(20f);
+        Assert.True(playback.IsFinished);
+
+        playback.Seek(3.0);
+        Assert.False(playback.IsFinished);
+        playback.Advance(1f);
+        Assert.Equal(4.0, playback.Elapsed, 5);
+    }
+
+    [Fact]
+    public void SeekLoopWraps()
+    {
+        var playback = new TrackPlayback(StraightTrack(PlaybackMode.Loop));
+        playback.Seek(23.0);
+        Assert.Equal(3.0, playback.Elapsed, 5);
+
+        playback.Seek(-1.0);
+        Assert.Equal(9.0, playback.Elapsed, 5);
+    }
 }

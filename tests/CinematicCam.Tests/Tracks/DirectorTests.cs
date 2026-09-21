@@ -294,4 +294,28 @@ public class DirectorTests
 
         Assert.Equal(0.4f, director.Tick(0.1f)!.Value.Roll);
     }
+
+    [Fact]
+    public void SeekMovesALiveTrackAndKeepsItsPause()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        director.Pause();
+
+        director.Seek(6.0);
+        Assert.Equal(6.0, director.Elapsed, 5);
+        Assert.True(director.IsPaused);
+    }
+
+    [Fact]
+    public void SeekDoesNothingOfflineOrForSnapShots()
+    {
+        var director = new Director();
+        director.Seek(3.0);
+        Assert.Equal(0.0, director.Elapsed);
+
+        director.GoLive(new SnapShot(Snap()));
+        director.Seek(3.0);
+        Assert.Equal(0.0, director.Elapsed);
+    }
 }
