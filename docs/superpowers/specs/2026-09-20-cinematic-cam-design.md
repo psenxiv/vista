@@ -86,10 +86,10 @@ Two consequences follow from writing after `Update()` returns:
 
 ### Roles and input
 
-The user is the director while authoring, and the camera operator while live:
-they watch the camera and run the switchboard, nothing else. Whenever the plugin
-owns the camera — authoring free-cam or live mode — the character is locked in
-place, and movement keys and zoom are blocked. Chat stays usable.
+The plugin is in editing mode, live mode, or off. In editing mode the user directs,
+flying the free-cam to build tracks; in live mode they operate the camera and run
+the switchboard, nothing else. In both, the character is locked in place, and
+movement keys and zoom are blocked. Chat stays usable.
 
 ### Resolved: what we write
 
