@@ -90,6 +90,11 @@ hides it, and Escape does not close it.
 The fields sit in an aligned grid, and Delete is a trash icon at the right of the
 top row.
 
+The fields are drag fields, as in BDTHPlugin: drag left or right to change the value,
+or double-click to type one. The point, its marker and the path move live while
+dragging, and each drag is one undo step, like a gizmo drag. Undo mid-drag reverts
+it. (Decided 2026-09-22. Leg and hold in the track editor stay typed fields.)
+
 Position is in yalms; yaw, pitch, roll and FoV in degrees, converted from the
 stored radians for display and entry only. A field applies when editing finishes,
 including when its window closes or a mode button is pressed first; ImGui never
