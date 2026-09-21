@@ -168,7 +168,18 @@ public sealed class Plugin : IDalamudPlugin
         // TerritoryChanged misses transitions that keep the same territory id, such as an
         // aethernet hop, a cutscene or a duty starting. This flag covers all of them.
         if (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51])
+        {
             ReleaseCamera("area transition");
+            return;
+        }
+
+        // Someone else reset the shared counter. Drop our hold rather than decrementing
+        // theirs later, and get out.
+        if (Movement.Held && Movement.Count == 0)
+        {
+            Movement.Forget();
+            ReleaseCamera("movement counter cleared elsewhere");
+        }
     }
 
     private void OnTerritoryChanged(uint territory)
