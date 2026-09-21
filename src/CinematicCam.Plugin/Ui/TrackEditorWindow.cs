@@ -6,6 +6,7 @@ using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
@@ -16,6 +17,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "CCAM_POINT";
 
+    private static readonly string[] ModeNames = ["Edit", "Live", "Off"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
     private static readonly string[] PlaybackNames = ["Once", "Loop"];
 
@@ -48,14 +50,12 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         var editing = session.Mode == CameraMode.Editing;
-        DrawModeRow();
-        DrawSpeedRow();
+        DrawTopRow(editing);
 
         ImGui.BeginDisabled(!editing);
         DrawTrackRow();
-        ImGui.Separator();
-        DrawAddButton();
         ImGui.EndDisabled();
+        ImGui.Separator();
 
         DrawPoints(editing);
         ImGui.Separator();
@@ -63,57 +63,71 @@ internal sealed unsafe class TrackEditorWindow : Window
         DrawStatus();
     }
 
-    private void DrawModeRow()
+    private void DrawTopRow(bool editing)
     {
-        ImGui.TextUnformatted($"Mode: {session.Mode}");
+        DrawModeCombo();
 
         ImGui.SameLine();
-        if (ImGui.Button("Edit")) { fields.Commit(); session.Edit(); }
-
-        ImGui.SameLine();
+        var playing = session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished;
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (ImGui.Button("Play")) { fields.Commit(); session.Play(); }
+        if (Icon("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
+        {
+            fields.Commit();
+            if (playing) session.Stop();
+            else session.Play();
+        }
+
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Mode != CameraMode.Live);
-        if (ImGui.Button("Restart")) { fields.Commit(); session.Restart(); }
+        if (Icon("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
         ImGui.EndDisabled();
 
-        ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode != CameraMode.Live || session.Director.IsPaused);
-        if (ImGui.Button("Stop")) { fields.Commit(); session.Stop(); }
-        ImGui.EndDisabled();
-
-        ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode == CameraMode.Off);
-        if (ImGui.Button("Release")) { fields.Commit(); session.Release("window"); }
-        ImGui.EndDisabled();
-    }
-
-    private void DrawSpeedRow()
-    {
-        var speed = session.Speed;
-        var step = speed.Index;
-        ImGui.TextUnformatted("Fly speed");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(150f);
-        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
-
-        ImGui.SameLine();
+        var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
+        ImGui.SameLine(0f, gap);
         ImGui.BeginDisabled(!session.CanUndo);
-        if (ImGui.Button("Undo")) { fields.Commit(); session.Undo(); }
+        if (Icon("undo", FontAwesomeIcon.Undo, "Undo")) { fields.Commit(); session.Undo(); }
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(!session.CanRedo);
-        if (ImGui.Button("Redo")) { fields.Commit(); session.Redo(); }
+        if (Icon("redo", FontAwesomeIcon.Redo, "Redo")) { fields.Commit(); session.Redo(); }
         ImGui.EndDisabled();
+
+        ImGui.SameLine(0f, gap);
+        ImGui.BeginDisabled(!editing);
+        DrawAddButton();
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>Edit, Live and Off; Live plays the shot and Off releases the camera.</summary>
+    private void DrawModeCombo()
+    {
+        var current = session.Mode switch { CameraMode.Editing => 0, CameraMode.Live => 1, _ => 2 };
+        ImGui.SetNextItemWidth(80f);
+        if (!ImGui.BeginCombo("##mode", ModeNames[current])) return;
+
+        if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Edit(); }
+        ImGui.BeginDisabled(session.Track.Points.Count == 0);
+        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Play(); }
+        ImGui.EndDisabled();
+        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Release("window"); }
+        ImGui.EndCombo();
+    }
+
+    /// <summary>An icon button with a tooltip naming it, shown even while disabled.</summary>
+    private static bool Icon(string id, FontAwesomeIcon icon, string tooltip)
+    {
+        var pressed = ImGuiComponents.IconButton(id, icon);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
+        return pressed;
     }
 
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
+        ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Aim");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(150f);
@@ -135,7 +149,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("New track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
+        if (ImGui.Button("Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
     }
 
     private void DrawAddButton()
@@ -246,10 +260,23 @@ internal sealed unsafe class TrackEditorWindow : Window
 
     private static void SetPayload(int index) => ImGui.SetDragDropPayload(PointPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
 
+    /// <summary>The status line, with fly speed at its right end.</summary>
     private void DrawStatus()
     {
+        const float sliderWidth = 120f;
         var count = session.Track.Points.Count;
+        ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted($"{count} point{(count == 1 ? "" : "s")} | total {session.Duration:0.0} s | {ModeText()}");
+
+        var width = ImGui.CalcTextSize("Fly speed").X + ImGui.GetStyle().ItemSpacing.X + sliderWidth;
+        ImGui.SameLine();
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - width));
+        ImGui.TextUnformatted("Fly speed");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(sliderWidth);
+        var speed = session.Speed;
+        var step = speed.Index;
+        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
     }
 
     private string ModeText() => session.Mode switch
