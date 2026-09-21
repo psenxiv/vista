@@ -35,12 +35,19 @@ internal static unsafe class CameraAccess
         return (camera->DirH, camera->DirV);
     }
 
-    /// <summary>Sets the world camera's yaw and pitch in radians, as DirH and DirV. Probe 2 decides whether this is safe to use.</summary>
+    /// <summary>Sets the world camera's yaw and pitch in radians, as DirH and DirV; probe 2 showed both are runtime state, not saved settings.</summary>
     public static void WriteAngles(float yaw, float pitch)
     {
         if (!TryGetWorldCamera(out var camera)) return;
         camera->DirH = yaw;
         camera->DirV = pitch;
+    }
+
+    /// <summary>The lowest and highest pitch the game allows, in radians.</summary>
+    public static (float Min, float Max)? ReadPitchLimits()
+    {
+        if (!TryGetWorldCamera(out var camera)) return null;
+        return (camera->DirVMin, camera->DirVMax);
     }
 
     /// <summary>Everything WriteState touches, so release can put it all back.</summary>

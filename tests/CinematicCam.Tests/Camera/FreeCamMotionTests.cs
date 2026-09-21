@@ -97,4 +97,37 @@ public class FreeCamMotionTests
         var raised = FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0.5f);
         Assert.True(raised.Y > level.Y);
     }
+
+    [Fact]
+    public void RollLookChangesNothingUnrolled()
+    {
+        var (yaw, pitch) = FreeCamMotion.RollLook(0.3f, -0.2f, 0f);
+        Assert.Equal(0.3f, yaw, 6);
+        Assert.Equal(-0.2f, pitch, 6);
+    }
+
+    [Fact]
+    public void RolledRightAQuarterTurnADragRightLooksDown()
+    {
+        // Unrolled, a right turn lowers yaw (FreeCamMotion's convention); rolled right 90 degrees, screen right is world down.
+        var (yaw, pitch) = FreeCamMotion.RollLook(-0.1f, 0f, MathF.PI / 2f);
+        Assert.Equal(0f, yaw, 5);
+        Assert.Equal(-0.1f, pitch, 5);
+    }
+
+    [Fact]
+    public void RolledRightAQuarterTurnADragUpTurnsRight()
+    {
+        var (yaw, pitch) = FreeCamMotion.RollLook(0f, 0.1f, MathF.PI / 2f);
+        Assert.Equal(-0.1f, yaw, 5);
+        Assert.Equal(0f, pitch, 5);
+    }
+
+    [Fact]
+    public void UpsideDownADragRightTurnsLeft()
+    {
+        var (yaw, pitch) = FreeCamMotion.RollLook(-0.1f, 0f, MathF.PI);
+        Assert.Equal(0.1f, yaw, 5);
+        Assert.Equal(0f, pitch, 5);
+    }
 }

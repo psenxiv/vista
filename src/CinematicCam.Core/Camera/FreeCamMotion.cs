@@ -25,6 +25,14 @@ public static class FreeCamMotion
         return position + (move * speed * deltaSeconds);
     }
 
+    /// <summary>Turns a mouse-look change in yaw and pitch so it follows the screen when the camera is rolled by <paramref name="roll"/> radians.</summary>
+    public static (float Yaw, float Pitch) RollLook(float yawDelta, float pitchDelta, float roll)
+    {
+        var cos = MathF.Cos(roll);
+        var sin = MathF.Sin(roll);
+        return ((yawDelta * cos) - (pitchDelta * sin), (yawDelta * sin) + (pitchDelta * cos));
+    }
+
     /// <summary>A point ahead of the camera along its facing.</summary>
     public static Vector3 LookAtFrom(Vector3 position, float yaw, float pitch)
         => position + (Direction(yaw, pitch) * LookAtDistance);

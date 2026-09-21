@@ -13,6 +13,7 @@ internal sealed class FreeCam
     private const float RollRate = MathF.PI / 3f;
 
     private Vector3 position;
+    private (float Yaw, float Pitch)? lastAngles;
 
     public bool Enabled { get; private set; }
 
@@ -26,6 +27,7 @@ internal sealed class FreeCam
     {
         position = startPosition;
         Roll = startRoll;
+        lastAngles = null;
         Enabled = true;
     }
 
@@ -35,7 +37,7 @@ internal sealed class FreeCam
     {
         if (!Enabled) return null;
 
-        var (yaw, pitch) = CameraAccess.ReadAngles() ?? (0f, 0f);
+        var (yaw, pitch) = LookAlongRoll(CameraAccess.ReadAngles() ?? (0f, 0f));
         var typing = IsTyping();
         var input = typing ? Vector3.Zero : ReadInput();
         if (!typing) Roll = Wrap(Roll + (ReadRoll() * RollRate * deltaSeconds));
@@ -47,6 +49,28 @@ internal sealed class FreeCam
             FreeCamMotion.LookAtFrom(position, yaw, pitch),
             CameraAccess.ReadState()?.Fov ?? 0.78f,
             Roll);
+    }
+
+    /// <summary>Re-applies this frame's mouse-look change along the rolled screen and writes it back; unrolled, the game's angles stand.</summary>
+    private (float Yaw, float Pitch) LookAlongRoll((float Yaw, float Pitch) read)
+    {
+        if (lastAngles is not { } last || Roll == 0f)
+        {
+            lastAngles = read;
+            return read;
+        }
+
+        var yawDelta = MathF.IEEERemainder(read.Yaw - last.Yaw, MathF.Tau);
+        var pitchDelta = read.Pitch - last.Pitch;
+        if (yawDelta == 0f && pitchDelta == 0f) return last;
+
+        var (turnYaw, turnPitch) = FreeCamMotion.RollLook(yawDelta, pitchDelta, Roll);
+        var (min, max) = CameraAccess.ReadPitchLimits() ?? (-MathF.PI / 2f, MathF.PI / 2f);
+        var result = (Wrap(last.Yaw + turnYaw), Math.Clamp(last.Pitch + turnPitch, min, max));
+
+        CameraAccess.WriteAngles(result.Item1, result.Item2);
+        lastAngles = result;
+        return result;
     }
 
     /// <summary>True while the player is typing, so chat does not fly the camera.</summary>
