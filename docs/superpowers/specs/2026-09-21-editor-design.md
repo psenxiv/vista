@@ -53,7 +53,7 @@ arrive in phase 3.
 
   The last two are disabled when nothing is selected. Overwrite has no
   confirmation step; undo covers it.
-- **Point list.** Click a row to select it. Double-click a row to jump the camera
+- **Point list.** Rows are numbered from 1, matching the markers. Click a row to select it. Double-click a row to jump the camera
   to that point (see Scrub and jumps). Drag the `≡` handle to reorder. Leg and hold
   fields work as in the test window.
 - **Scrub bar**, 0 to the shot's total length; see Scrub and jumps.
@@ -73,7 +73,9 @@ hides it, and Escape does not close it.
 ```
 
 Position is in yalms; yaw, pitch, roll and FoV in degrees, converted from the
-stored radians for display and entry only. A field applies when editing finishes.
+stored radians for display and entry only. A field applies when editing finishes,
+including when its window closes or a mode button is pressed first; ImGui never
+reports a closed window's field losing focus.
 In Direction-of-travel mode the Yaw and Pitch fields show the stored values but are
 disabled, matching the gizmo's roll-only ring.
 
