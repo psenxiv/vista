@@ -1,5 +1,4 @@
 using System.Numerics;
-using CinematicCam.Core;
 using CinematicCam.Plugin.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
@@ -25,12 +24,9 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
 
     internal static CameraController Camera { get; private set; } = null!;
-    internal static CameraState? TestState { get; set; }
-    internal static CameraOwnership Ownership { get; } = new();
-    internal static FreeCam FreeCamera { get; } = new();
     internal static InputBlocker Input { get; private set; } = null!;
     internal static MovementLock Movement { get; private set; } = null!;
-    private static CameraAccess.Snapshot? snapshotBeforeTakeover;
+    internal static CameraSession Session { get; private set; } = null!;
 
     public Plugin()
     {
@@ -39,14 +35,10 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "/ccam fly | selftest | hold | push <d> | nudge <x> <y> <z> | release | reset"
         });
 
-        Camera = new CameraController(() =>
-        {
-            if (!Ownership.IsOwned) return null;
-            return FreeCamera.Tick((float)Framework.UpdateDelta.TotalSeconds) ?? TestState;
-        });
-
-        Input = new InputBlocker(() => FreeCamera.Enabled);
         Movement = new MovementLock();
+        Session = new CameraSession(Movement);
+        Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
+        Input = new InputBlocker(() => Session.LocksInput);
 
         Framework.Update += OnFrameworkUpdate;
         ClientState.TerritoryChanged += OnTerritoryChanged;
@@ -64,17 +56,9 @@ public sealed class Plugin : IDalamudPlugin
                 CameraAccess.ResetToDefaults();
                 break;
             case "fly":
-            {
-                if (FreeCamera.Enabled) { ReleaseCamera("fly toggled off"); break; }
-
-                var start = CameraAccess.ReadState();
-                if (start is null) { Log.Error("[ccam] cannot read camera state."); break; }
-
-                FreeCamera.Enable(start.Value.Position);
-                Movement.Hold();
-                TakeCamera();
+                if (Session.Mode == CameraMode.Editing) Session.Release("fly toggled off");
+                else Session.Edit();
                 break;
-            }
             case "selftest":
                 SelfTest.Run();
                 break;
@@ -82,34 +66,33 @@ public sealed class Plugin : IDalamudPlugin
             {
                 var current = CameraAccess.ReadState();
                 if (current is null) { Log.Error("[ccam] cannot read camera state."); break; }
-                TestState = current;
-                TakeCamera();
+                Session.Hold(current.Value);
                 Log.Information("[ccam] holding at {Pos} looking at {Look}",
                     current.Value.Position, current.Value.LookAt);
                 break;
             }
             case "release":
-                ReleaseCamera("command");
+                Session.Release("command");
                 break;
             case "push":
             {
-                if (TestState is null) { Log.Error("[ccam] push requires /ccam hold first."); break; }
+                if (Session.TestState is null) { Log.Error("[ccam] push requires /ccam hold first."); break; }
                 var parts = args.Trim().Split(' ');
                 if (parts.Length < 2 || !float.TryParse(parts[1], out var distance))
                 {
                     Log.Error("[ccam] usage: /ccam push <distance>");
                     break;
                 }
-                var st = TestState.Value;
+                var st = Session.TestState.Value;
                 var forward = Vector3.Normalize(st.LookAt - st.Position);
                 var step = forward * distance;
-                TestState = st with { Position = st.Position + step, LookAt = st.LookAt + step };
-                Log.Information("[ccam] pushed {Distance} along view to {Pos}", distance, TestState.Value.Position);
+                Session.TestState = st with { Position = st.Position + step, LookAt = st.LookAt + step };
+                Log.Information("[ccam] pushed {Distance} along view to {Pos}", distance, Session.TestState.Value.Position);
                 break;
             }
             case "nudge":
             {
-                if (TestState is null) { Log.Error("[ccam] nudge requires /ccam hold first."); break; }
+                if (Session.TestState is null) { Log.Error("[ccam] nudge requires /ccam hold first."); break; }
                 var parts = args.Trim().Split(' ');
                 if (parts.Length < 4
                     || !float.TryParse(parts[1], out var dx)
@@ -119,10 +102,10 @@ public sealed class Plugin : IDalamudPlugin
                     Log.Error("[ccam] usage: /ccam nudge <dx> <dy> <dz>");
                     break;
                 }
-                var s = TestState.Value;
+                var s = Session.TestState.Value;
                 var delta = new Vector3(dx, dy, dz);
-                TestState = s with { Position = s.Position + delta, LookAt = s.LookAt + delta };
-                Log.Information("[ccam] nudged to {Pos}", TestState.Value.Position);
+                Session.TestState = s with { Position = s.Position + delta, LookAt = s.LookAt + delta };
+                Log.Information("[ccam] nudged to {Pos}", Session.TestState.Value.Position);
                 break;
             }
             default:
@@ -131,45 +114,18 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    /// <summary>Takes the camera, remembering what to put back on release.</summary>
-    private static void TakeCamera()
-    {
-        snapshotBeforeTakeover ??= CameraAccess.Capture();
-        Ownership.Take();
-    }
-
-    private static void ReleaseCamera(string reason)
-    {
-        if (!Ownership.IsOwned && TestState is null) return;
-
-        FreeCamera.Disable();
-        Movement.Release();
-        TestState = null;
-        Ownership.Release(reason);
-
-        // Without this the game carries on from our values rather than its own,
-        // which leaves the camera wrong long after we stop writing.
-        if (snapshotBeforeTakeover is { } snapshot)
-        {
-            CameraAccess.Restore(snapshot);
-            snapshotBeforeTakeover = null;
-        }
-
-        Log.Information("[ccam] camera released: {Reason}", reason);
-    }
-
     private void OnFrameworkUpdate(IFramework framework)
     {
         Camera.TryInstallHook();
         Input.SyncHookState();
 
-        if (!Ownership.IsOwned) return;
+        if (!Session.Ownership.IsOwned) return;
 
         // TerritoryChanged misses transitions that keep the same territory id, such as an
         // aethernet hop, a cutscene or a duty starting. This flag covers all of them.
         if (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51])
         {
-            ReleaseCamera("area transition");
+            Session.Release("area transition");
             return;
         }
 
@@ -179,17 +135,17 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnTerritoryChanged(uint territory)
-        => ReleaseCamera($"zone change to {territory}");
+        => Session.Release($"zone change to {territory}");
 
     private void OnLogout(int type, int code)
-        => ReleaseCamera("logout");
+        => Session.Release("logout");
 
     public void Dispose()
     {
         Framework.Update -= OnFrameworkUpdate;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         ClientState.Logout -= OnLogout;
-        ReleaseCamera("plugin unload");
+        Session?.Release("plugin unload");
         Movement?.Dispose();
         Input?.Dispose();
         Camera?.Dispose();

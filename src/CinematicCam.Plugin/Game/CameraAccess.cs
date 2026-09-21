@@ -28,6 +28,13 @@ internal static unsafe class CameraAccess
         return new CameraState(scene->Object.Position, scene->LookAtVector, camera->FoV);
     }
 
+    /// <summary>The world camera's yaw and pitch in radians, as DirH and DirV.</summary>
+    public static (float Yaw, float Pitch)? ReadAngles()
+    {
+        if (!TryGetWorldCamera(out var camera)) return null;
+        return (camera->DirH, camera->DirV);
+    }
+
     /// <summary>Everything WriteState touches, so release can put it all back.</summary>
     public readonly record struct Snapshot(Vector3 Position, Vector3 LookAt, Vector3 Up, float Fov);
 

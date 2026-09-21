@@ -33,7 +33,7 @@ internal sealed class FreeCam
     {
         if (!Enabled) return null;
 
-        var (yaw, pitch) = ReadCameraAngles();
+        var (yaw, pitch) = CameraAccess.ReadAngles() ?? (0f, 0f);
         var input = IsTyping() ? Vector3.Zero : ReadInput();
         var speed = BaseSpeed * (Plugin.KeyState[VirtualKey.SHIFT] ? SprintMultiplier : 1f);
         position = FreeCamMotion.Step(position, input, yaw, pitch, speed, deltaSeconds);
@@ -66,11 +66,5 @@ internal sealed class FreeCam
         if (Plugin.KeyState[VirtualKey.CONTROL]) up -= 1f;
 
         return new Vector3(forward, up, right);
-    }
-
-    private static unsafe (float Yaw, float Pitch) ReadCameraAngles()
-    {
-        if (!CameraAccess.TryGetWorldCamera(out var camera)) return (0f, 0f);
-        return (camera->DirH, camera->DirV);
     }
 }
