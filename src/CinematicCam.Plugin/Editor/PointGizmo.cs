@@ -9,14 +9,11 @@ namespace CinematicCam.Plugin.Editor;
 /// <summary>The move and rotate gizmo on the selected point; a drag commits on release.</summary>
 internal sealed unsafe class PointGizmo
 {
-    private const float ScreenSize = 0.1f;
-
     private Matrix4x4 matrix;
     private ControlPoint? dragStart;
     private int dragIndex;
     private Track? dragTrack;
     private bool waitForRelease;
-    private long lastLog;
 
     public GizmoMode Mode { get; set; } = GizmoMode.Move;
 
@@ -80,16 +77,6 @@ internal sealed unsafe class PointGizmo
 
         var gizmoView = view.GizmoView;
         var gizmoProjection = view.GizmoProjection;
-
-        var size = GizmoScale.ClipSize(point.Position, view.CameraRight, gizmoView * gizmoProjection, view.ViewProjection, ScreenSize);
-        ImGuizmo.SetGizmoSizeClipSpace(size);
-        var now = Environment.TickCount64;
-        if (now - lastLog >= 1000)
-        {
-            lastLog = now;
-            Plugin.Log.Debug("[editor] gizmo clip size {Size:0.0000} at {Distance:0.0} m", size, Vector3.Distance(point.Position, CameraPositionFrom(view)));
-        }
-
         fixed (float* m = &matrix.M11)
             ImGuizmo.Manipulate(&gizmoView.M11, &gizmoProjection.M11, operation, space, m, null, null, null, null);
 
@@ -119,7 +106,4 @@ internal sealed unsafe class PointGizmo
                 Plugin.Log.Warning("[editor] gizmo edit refused: {Refusal}", refusal);
         }
     }
-
-    private static Vector3 CameraPositionFrom(EditorView view)
-        => Matrix4x4.Invert(view.GizmoView, out var inverse) ? inverse.Translation : Vector3.Zero;
 }
