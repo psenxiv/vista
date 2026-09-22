@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Editing;
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Game;
@@ -22,6 +23,7 @@ internal sealed class EditorLayer
 
     private readonly CameraSession session;
     private readonly PointGizmo gizmo;
+    private readonly AnchorGizmo anchorGizmo;
     private readonly Overlay overlay = new();
     private readonly ClickSelection clicks = new();
 
@@ -29,12 +31,13 @@ internal sealed class EditorLayer
     {
         this.session = session;
         this.gizmo = gizmo;
+        anchorGizmo = new AnchorGizmo(gizmo);
     }
 
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
     {
-        if (session.Mode != CameraMode.Editing) { clicks.Reset(); gizmo.Cancel(); return; }
+        if (session.Mode != CameraMode.Editing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); return; }
         if (EditorView.Read() is not { } view) return;
 
         var scene = session.Scene;
@@ -45,7 +48,10 @@ internal sealed class EditorLayer
         foreach (var other in scene.Tracks)
         {
             if (other.Id == edited || scene.Hidden.Contains(other.Id)) continue;
-            AddMarkers(markers, other.Id, overlay.Draw(view, other, null, edited: false));
+            var otherWorld = session.WorldOf(other);
+            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false));
+            if (other.AnchorPlaced)
+                markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false), MarkerKind.TrackAnchor));
         }
 
         var track = gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
@@ -54,12 +60,18 @@ internal sealed class EditorLayer
         AddMarkers(markers, edited, overlay.Draw(view, track, session.Selected, edited: true));
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
+        var editedLocal = SceneEditing.Get(scene, edited);
+        if (editedLocal.AnchorPlaced)
+            markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.Track), MarkerKind.TrackAnchor));
+        if (scene.AnchorPlaced)
+            markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, session.SelectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
+
         var io = ImGui.GetIO();
         var hovered = TrackMarkerHitTest.Nearest(markers, edited, io.MousePos, HitRadius);
 
         // The window takes the mouse only over a marker, so those clicks never reach the game.
         var flags = BaseFlags;
-        if (hovered is null && !clicks.HoldingMarker && !gizmo.Hot) flags |= ImGuiWindowFlags.NoInputs;
+        if (hovered is null && !clicks.HoldingMarker && !(gizmo.Hot || anchorGizmo.Hot)) flags |= ImGuiWindowFlags.NoInputs;
 
         ImGuiHelpers.ForceNextWindowMainViewport();
         ImGui.SetNextWindowPos(view.Origin);
@@ -69,32 +81,47 @@ internal sealed class EditorLayer
         {
             ImGuizmo.BeginFrame();
             gizmo.Draw(view, session);
+            anchorGizmo.Draw(view, session);
 
             // Dalamud hides presses from ImGui unless it wants the mouse, so read the button itself.
             var overUi = io.WantCaptureMouse && !ImGui.IsWindowHovered();
             var look = CameraAccess.ReadAngles() ?? (0f, 0f);
-            Apply(clicks.Update(PhysicalKeys.IsDown(VirtualKey.LBUTTON), io.MousePos, look, overUi, gizmo.Hot, hovered), markers);
+            Apply(clicks.Update(PhysicalKeys.IsDown(VirtualKey.LBUTTON), io.MousePos, look, overUi, gizmo.Hot || anchorGizmo.Hot, hovered), markers);
         }
 
         ImGui.End();
         ImGui.PopStyleVar();
     }
 
-    /// <summary>Selects a clicked point, switching to its track first when it isn't the edited one; a click on empty space clears the selection.</summary>
+    /// <summary>Selects a clicked point or anchor, switching to its track first when it isn't the edited one; a click on empty space clears the selection.</summary>
     private void Apply(ClickOutcome outcome, IReadOnlyList<TrackMarker> markers)
     {
         switch (outcome.Kind)
         {
             case ClickKind.Select when outcome.Index < markers.Count:
                 var hit = markers[outcome.Index];
-                if (hit.Track == session.EditedTrackId) session.Select(hit.Point);
-                else Report(session.SelectPoint(hit.Track, hit.Point));
+                var refusal = hit.Kind switch
+                {
+                    MarkerKind.SceneAnchor => session.SelectSceneAnchor(),
+                    MarkerKind.TrackAnchor => session.SelectTrackAnchor(hit.Track),
+                    _ when hit.Track == session.EditedTrackId => Select(hit.Point),
+                    _ => session.SelectPoint(hit.Track, hit.Point),
+                };
+                Report(refusal);
                 break;
             case ClickKind.Deselect:
                 session.Select(null);
                 break;
         }
     }
+
+    private string? Select(int point)
+    {
+        session.Select(point);
+        return null;
+    }
+
+    private static Vector3? FirstPosition(Track world) => world.Points.Count > 0 ? world.Points[0].Position : null;
 
     private static void AddMarkers(List<TrackMarker> markers, Guid track, IReadOnlyList<Vector2?> screens)
     {

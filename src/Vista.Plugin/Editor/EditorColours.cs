@@ -22,4 +22,9 @@ internal static class EditorColours
     public const uint OtherMarker = 0xA0303030;
     public const uint OtherMarkerRing = 0x90B0B0B0;
     public const uint OtherMarkerText = 0xB0C8C8C8;
+    public const uint Anchor = 0xE0F0C040;
+    public const uint OtherAnchor = 0x78A0A0A0;
+    public const uint AnchorLink = 0x60F0C040;
+    public const uint OtherAnchorLink = 0x40A0A0A0;
+    public const uint SceneAnchor = 0xF0FF60C0;
 }

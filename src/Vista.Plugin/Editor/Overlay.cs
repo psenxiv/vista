@@ -16,6 +16,11 @@ internal sealed class Overlay
     private const float GlyphDepth = 1f;
     private const float GlyphThickness = 1.5f;
     private const float SelectedGlyphThickness = 2.5f;
+    private const float AnchorRadius = 0.5f;
+    private const float AnchorArrow = 0.9f;
+    private const float SceneAnchorRadius = 1f;
+    private const float SceneAnchorArrow = 1.6f;
+    private const int AnchorSegments = 24;
 
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
@@ -46,6 +51,52 @@ internal sealed class Overlay
     public void Prune(IReadOnlySet<Guid> ids)
     {
         foreach (var id in caches.Keys.Where(id => !ids.Contains(id)).ToList()) caches.Remove(id);
+    }
+
+    /// <summary>A track anchor: a ground ring, an arrow along its yaw and a faint line to the first point. Returns its centre on screen, or null.</summary>
+    public Vector2? DrawTrackAnchor(EditorView view, Anchor world, Vector3? firstPoint, bool edited, bool selected)
+    {
+        var list = ImGui.GetBackgroundDrawList();
+        var colour = selected ? EditorColours.Selected : edited ? EditorColours.Anchor : EditorColours.OtherAnchor;
+        if (firstPoint is { } first) DrawEdge(list, view, world.Position, first, edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink, GlyphThickness);
+
+        for (var i = 0; i < AnchorSegments; i++)
+        {
+            var a = MathF.Tau * i / AnchorSegments;
+            var b = MathF.Tau * (i + 1) / AnchorSegments;
+            DrawEdge(list, view, world.Position + Ring(a, AnchorRadius), world.Position + Ring(b, AnchorRadius), colour, selected ? SelectedGlyphThickness : GlyphThickness);
+        }
+
+        DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedGlyphThickness : GlyphThickness);
+        return view.ToScreen(world.Position);
+    }
+
+    /// <summary>The scene anchor: a ground diamond and an arrow along its yaw. Returns its centre on screen, or null.</summary>
+    public Vector2? DrawSceneAnchor(EditorView view, Anchor world, bool selected)
+    {
+        var list = ImGui.GetBackgroundDrawList();
+        var colour = selected ? EditorColours.Selected : EditorColours.SceneAnchor;
+        var thickness = selected ? SelectedGlyphThickness : PathThickness;
+        for (var i = 0; i < 4; i++)
+        {
+            var a = world.Yaw + (MathF.PI / 2f * i);
+            var b = world.Yaw + (MathF.PI / 2f * (i + 1));
+            DrawEdge(list, view, world.Position + Ring(a, SceneAnchorRadius), world.Position + Ring(b, SceneAnchorRadius), colour, thickness);
+        }
+
+        DrawArrow(list, view, world, SceneAnchorArrow, colour, thickness);
+        return view.ToScreen(world.Position);
+    }
+
+    /// <summary>An offset on the ground at angle <paramref name="angle"/>, measured like yaw.</summary>
+    private static Vector3 Ring(float angle, float radius) => Anchor.Turn(new Vector3(0f, 0f, -radius), angle);
+
+    private static void DrawArrow(ImDrawListPtr list, EditorView view, Anchor world, float length, uint colour, float thickness)
+    {
+        var tip = world.Position + Ring(world.Yaw, length);
+        DrawEdge(list, view, world.Position, tip, colour, thickness);
+        DrawEdge(list, view, tip, world.Position + Ring(world.Yaw - 0.4f, length * 0.7f), colour, thickness);
+        DrawEdge(list, view, tip, world.Position + Ring(world.Yaw + 0.4f, length * 0.7f), colour, thickness);
     }
 
     private static void DrawPath(ImDrawListPtr list, EditorView view, Track track, TrackCache cache, Palette palette)
