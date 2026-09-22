@@ -154,7 +154,7 @@ internal sealed class TimingWindow : Window
 
         ImGui.SameLine();
         ImGui.BeginDisabled(!Editing || role == KeyRole.Point);
-        if (IconButton.Draw("key-delete", FontAwesomeIcon.Trash, "Remove hold")) Report(session.RemoveHold(key));
+        if (IconButton.Draw("key-delete", FontAwesomeIcon.Trash, "Remove hold", danger: true)) Report(session.RemoveHold(key));
         ImGui.EndDisabled();
     }
 

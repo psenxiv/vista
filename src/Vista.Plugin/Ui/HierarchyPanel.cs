@@ -27,7 +27,8 @@ internal sealed unsafe class HierarchyPanel
     public void Draw(bool editing)
     {
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Scene");
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+            ImGui.TextUnformatted("Scene");
         ImGui.BeginDisabled(!editing);
         var buttons = IconButton.Width(FontAwesomeIcon.Anchor);
         ImGui.SameLine();
@@ -62,7 +63,7 @@ internal sealed unsafe class HierarchyPanel
         var hidden = scene.Hidden.Contains(track.Id);
 
         ImGui.BeginDisabled(isEdited);
-        if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide"))
+        if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide", hidden ? UiColours.Dim() : null))
             Report(session.SetTrackHidden(track.Id, !hidden));
         ImGui.EndDisabled();
         ImGui.SameLine();

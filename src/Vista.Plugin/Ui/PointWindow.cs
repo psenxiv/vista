@@ -87,7 +87,7 @@ internal sealed class PointWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        if (IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point"))
+        if (IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point", danger: true))
         {
             Report(session.DeleteSelected());
             return;

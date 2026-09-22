@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
@@ -5,23 +6,70 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>Icon buttons with a tooltip, and their width for right-aligning them.</summary>
+/// <summary>Frameless icon buttons with a tooltip, their toggle and row-action variants, and their width for right-aligning them.</summary>
 internal static class IconButton
 {
-    /// <summary>An icon button with a tooltip naming it, shown even while disabled. An optional icon colour never dims the tooltip.</summary>
-    public static bool Draw(string id, FontAwesomeIcon icon, string tooltip, uint? iconColour = null)
+    // The danger button hovered last frame, so its icon can be red while hovered.
+    private static uint? dangerHovered;
+
+    /// <summary>A frameless icon button with a tooltip, shown even while disabled; <paramref name="danger"/> turns the icon red on hover.</summary>
+    public static bool Draw(string id, FontAwesomeIcon icon, string tooltip, uint? iconColour = null, bool danger = false)
     {
+        var red = danger && dangerHovered == ImGui.GetID(id);
+        var colour = red ? UiColours.Red : iconColour;
         bool pressed;
-        using (ImRaii.PushColor(ImGuiCol.Text, iconColour ?? 0u, iconColour is not null))
+        using (Frameless())
+        using (ImRaii.PushColor(ImGuiCol.Text, colour ?? 0u, colour is not null))
             pressed = ImGuiComponents.IconButton(id, icon);
+        if (danger)
+        {
+            if (ImGui.IsItemHovered()) dangerHovered = ImGui.GetID(id);
+            else if (red) dangerHovered = null;
+        }
+
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
         return pressed;
     }
+
+    /// <summary>A toggle: the icon in the accent colour when on, dimmed when off.</summary>
+    public static bool Toggle(string id, FontAwesomeIcon icon, bool on, string tooltip)
+        => Draw(id, icon, tooltip, on ? UiColours.Accent : UiColours.Dim());
+
+    /// <summary>A row's action, drawn only while the row is hovered; otherwise its space stays empty.</summary>
+    public static bool RowAction(string id, FontAwesomeIcon icon, string tooltip, bool rowHovered, bool danger = false)
+    {
+        if (rowHovered) return Draw(id, icon, tooltip, danger: danger);
+        ImGui.Dummy(new Vector2(Width(icon), ImGui.GetFrameHeight()));
+        return false;
+    }
+
+    /// <summary>True when the mouse is over the rectangle and the window or one of its children is hovered.</summary>
+    public static bool RowHovered(Vector2 min, Vector2 max)
+        => ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows | ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) && ImGui.IsMouseHoveringRect(min, max, false);
 
     /// <summary>The width Dalamud gives an icon button: the glyph plus frame padding on both sides.</summary>
     public static float Width(FontAwesomeIcon icon)
     {
         using var font = ImRaii.PushFont(UiBuilder.IconFont);
         return ImGui.CalcTextSize(icon.ToIconString()).X + (ImGui.GetStyle().FramePadding.X * 2f);
+    }
+
+    /// <summary>No button background until hovered, then a soft rounded highlight.</summary>
+    private static FramelessScope Frameless()
+    {
+        var hovered = ImGui.GetColorU32(ImGuiCol.ButtonHovered, 0.35f);
+        var active = ImGui.GetColorU32(ImGuiCol.ButtonActive, 0.5f);
+        var colours = ImRaii.PushColor(ImGuiCol.Button, 0u).Push(ImGuiCol.ButtonHovered, hovered).Push(ImGuiCol.ButtonActive, active);
+        return new FramelessScope(colours, ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 4f));
+    }
+
+    /// <summary>The frameless colours and rounding, popped together.</summary>
+    private readonly struct FramelessScope(ImRaii.ColorDisposable colours, ImRaii.StyleDisposable style) : IDisposable
+    {
+        public void Dispose()
+        {
+            style.Dispose();
+            colours.Dispose();
+        }
     }
 }

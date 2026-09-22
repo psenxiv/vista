@@ -117,16 +117,14 @@ internal sealed unsafe class TrackEditorWindow : Window
 
     private void DrawTopRow(bool editing)
     {
-        var colour = showHierarchy ? (uint?)null : ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
-        if (IconButton.Draw("hierarchy", FontAwesomeIcon.Sitemap, showHierarchy ? "Hide hierarchy" : "Show hierarchy", colour))
+        if (IconButton.Toggle("hierarchy", FontAwesomeIcon.Sitemap, showHierarchy, showHierarchy ? "Hide hierarchy" : "Show hierarchy"))
         {
             showHierarchy = !showHierarchy;
             pendingWidth += showHierarchy ? HierarchyPanel.Width + Spacing.X : -(HierarchyPanel.Width + Spacing.X);
         }
 
         ImGui.SameLine();
-        var listColour = showPlaylist ? (uint?)null : ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
-        if (IconButton.Draw("playlist", FontAwesomeIcon.ListOl, showPlaylist ? "Hide playlist" : "Show playlist", listColour))
+        if (IconButton.Toggle("playlist", FontAwesomeIcon.ListOl, showPlaylist, showPlaylist ? "Hide playlist" : "Show playlist"))
         {
             showPlaylist = !showPlaylist;
             pendingWidth += showPlaylist ? PlaylistPanel.Width + Spacing.X : -(PlaylistPanel.Width + Spacing.X);
@@ -237,16 +235,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.SameLine();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(TrackEditing.Clear)); }
+        if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track", danger: true)) { fields.Clear(); Report(session.ChangeTrack(TrackEditing.Clear)); }
         ImGui.EndDisabled();
     }
 
-    /// <summary>The loop toggle: lit when the track loops, dimmed when it plays once.</summary>
+    /// <summary>The loop toggle: accent when the track loops, dimmed when it plays once.</summary>
     private void DrawLoop()
     {
         var loop = session.Track.Loop;
-        var colour = loop ? (uint?)null : ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
-        if (IconButton.Draw("loop", FontAwesomeIcon.Repeat, loop ? "Play once" : "Loop", colour))
+        if (IconButton.Toggle("loop", FontAwesomeIcon.Repeat, loop, loop ? "Play once" : "Loop"))
             Report(session.ChangeTrack(t => TrackEditing.SetLoop(t, !loop)));
     }
 
@@ -292,7 +289,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndChild();
     }
 
-    /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon deletes it.</summary>
+    /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon, shown on hover, deletes it.</summary>
     /// <remarks><paramref name="track"/> and <paramref name="evaluator"/> are a snapshot taken once for the whole list: an earlier row's delete or reorder must not change what a later row reads.</remarks>
     private void DrawPointRow(Track track, TrackEvaluator evaluator, int index, bool editing)
     {
@@ -302,6 +299,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.TableNextColumn();
         var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
         if (ImGui.Selectable($"##row{index}", session.Selected == index, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.Select(index);
+        var rowHovered = IconButton.RowHovered(ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
         if (editing && ImGui.BeginDragDropSource())
         {
@@ -333,11 +331,11 @@ internal sealed unsafe class TrackEditorWindow : Window
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v)))));
 
         ImGui.TableNextColumn();
-        if (index > 0) DrawPin(track, index);
+        if (index > 0) DrawPin(track, index, rowHovered);
 
         ImGui.TableNextColumn();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
-        if (IconButton.Draw($"delete{index}", FontAwesomeIcon.Trash, "Delete point"))
+        if (IconButton.RowAction($"delete{index}", FontAwesomeIcon.Trash, "Delete point", rowHovered, danger: true))
         {
             fields.Clear();
             Report(session.DeletePoint(index));
@@ -346,17 +344,17 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The leg's pin: lit and pinning when pinned, dimmed and following the track speed when not, always clickable to toggle.</summary>
-    private void DrawPin(Track track, int index)
+    /// <summary>The leg's pin: always shown in the accent colour when pinned, shown only on row hover when following the track speed.</summary>
+    private void DrawPin(Track track, int index, bool rowHovered)
     {
         if (TrackEditing.IsPinned(track, index))
         {
-            if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pin to Track speed"))
+            if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pin to Track speed", UiColours.Accent))
                 Report(session.ResetLeg(index));
             return;
         }
 
-        if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pin to Leg speed", ImGui.GetColorU32(ImGuiCol.Text, 0.4f)))
+        if (IconButton.RowAction($"pin{index}", FontAwesomeIcon.Thumbtack, "Pin to Leg speed", rowHovered))
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 

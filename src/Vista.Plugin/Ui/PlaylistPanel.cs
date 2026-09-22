@@ -18,7 +18,6 @@ internal sealed unsafe class PlaylistPanel
     // The Hierarchy's row payload: the dragged track's index in the scene.
     private const string TrackPayload = "VISTA_TRACK";
 
-    private const uint Amber = 0xFF40C0FF;
     private const float LoopWidth = 44f;
 
     private readonly CameraSession session;
@@ -36,10 +35,11 @@ internal sealed unsafe class PlaylistPanel
         var playing = session.PlayingEntry;
 
         ImGui.AlignTextToFramePadding();
-        if (playing is { } now)
-            ImGui.TextUnformatted($"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {scene.Playlist.Count} — {SceneEditing.Get(scene, now.TrackId).Name}");
-        else
-            ImGui.TextUnformatted("Playlist");
+        var header = playing is { } now
+            ? $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {scene.Playlist.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
+            : "Playlist";
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted(), playing is null))
+            ImGui.TextUnformatted(header);
         ImGui.Separator();
 
         ImGui.BeginDisabled(!editing);
@@ -75,7 +75,7 @@ internal sealed unsafe class PlaylistPanel
         ImGui.EndDisabled();
     }
 
-    /// <summary>One entry: its number and track, drag to reorder or drop a track on it, its loop cell and its remove button; greyed when never reached.</summary>
+    /// <summary>One entry: its number and track, drag to reorder or drop a track on it, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
     private void DrawRow(Scene scene, PlaylistEntry entry, int index, bool unreachable, Guid? playing, bool editing)
     {
         using var id = ImRaii.PushId(entry.Id.ToString());
@@ -86,6 +86,9 @@ internal sealed unsafe class PlaylistPanel
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f));
         var name = SceneEditing.Get(scene, entry.TrackId).Name;
         ImGui.Selectable($"{index + 1}  {name}", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(nameWidth, ImGui.GetFrameHeight()));
+        var rowMin = ImGui.GetItemRectMin();
+        var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);
+        var rowHovered = IconButton.RowHovered(rowMin, rowMax);
 
         if (editing && ImGui.BeginDragDropSource())
         {
@@ -100,7 +103,7 @@ internal sealed unsafe class PlaylistPanel
         DrawLoops(scene, entry);
 
         ImGui.SameLine();
-        if (IconButton.Draw("remove", FontAwesomeIcon.Times, "Remove from playlist")) Report(session.RemoveFromPlaylist(entry.Id));
+        if (IconButton.RowAction("remove", FontAwesomeIcon.Times, "Remove from playlist", rowHovered, danger: true)) Report(session.RemoveFromPlaylist(entry.Id));
     }
 
     /// <summary>The loop count: 0 follows the track (— or ∞ when it holds the playlist), otherwise ×N; set when let go.</summary>
@@ -110,7 +113,7 @@ internal sealed unsafe class PlaylistPanel
         var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
         var format = value > 0 ? "×%d" : holds ? "∞" : "—";
         ImGui.SetNextItemWidth(LoopWidth);
-        using (ImRaii.PushColor(ImGuiCol.Text, Amber, value > 0 || holds))
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Amber, value > 0 || holds))
             ImGui.DragInt("##loops", ref value, 0.05f, 0, PlaylistEditing.MaxLoops, format);
         if (ImGui.IsItemActive()) pendingLoops = (entry.Id, value);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
