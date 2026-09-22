@@ -395,7 +395,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var track = session.Track;
         var evaluator = session.Evaluator;
         var footer = ImGui.GetFrameHeightWithSpacing() + (ImGui.GetStyle().ItemSpacing.Y * 2f);
-        if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0)
+        if (ImGui.BeginChild("points", new Vector2(0f, -footer)))
         {
             using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
             if (ImGui.BeginTable("point-table", 6, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
