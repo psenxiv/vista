@@ -4,7 +4,7 @@ using Dalamud.Game.ClientState.Keys;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using GameFramework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Reads keys from their physical state, since Dalamud releases non-modifier keys in ImGui each frame, and hides them from the game.</summary>
 internal static unsafe class PhysicalKeys

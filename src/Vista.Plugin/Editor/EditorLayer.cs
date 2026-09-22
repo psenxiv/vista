@@ -1,15 +1,15 @@
 using System.Numerics;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Session;
-using CinematicCam.Core.Tracks;
-using CinematicCam.Plugin.Game;
-using CinematicCam.Plugin.Session;
+using Vista.Core.Editing;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Vista.Plugin.Game;
+using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 
-namespace CinematicCam.Plugin.Editor;
+namespace Vista.Plugin.Editor;
 
 /// <summary>Everything drawn over the game in editing mode: the overlay, marker clicks and the gizmo.</summary>
 internal sealed class EditorLayer
@@ -52,7 +52,7 @@ internal sealed class EditorLayer
         ImGui.SetNextWindowPos(view.Origin);
         ImGui.SetNextWindowSize(view.Size);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
-        if (ImGui.Begin("##ccam-editor", flags))
+        if (ImGui.Begin("##vista-editor", flags))
         {
             ImGuizmo.BeginFrame();
             gizmo.Draw(view, session);

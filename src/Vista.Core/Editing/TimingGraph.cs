@@ -1,7 +1,7 @@
 using System.Numerics;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>The timing graph's plot: time across, distance up, and the maths for its handles.</summary>
 public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Duration, float Distance)

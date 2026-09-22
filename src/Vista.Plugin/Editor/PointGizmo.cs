@@ -1,10 +1,10 @@
 using System.Numerics;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Tracks;
-using CinematicCam.Plugin.Session;
+using Vista.Core.Editing;
+using Vista.Core.Tracks;
+using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGuizmo;
 
-namespace CinematicCam.Plugin.Editor;
+namespace Vista.Plugin.Editor;
 
 /// <summary>The move gizmo and gimbal rotate rings on the selected point; a drag commits on release.</summary>
 internal sealed unsafe class PointGizmo

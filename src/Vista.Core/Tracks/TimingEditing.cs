@@ -1,4 +1,4 @@
-namespace CinematicCam.Core.Tracks;
+namespace Vista.Core.Tracks;
 
 /// <summary>Edits timing keys directly: their modes, times, handles, and keys between points.</summary>
 public static class TimingEditing

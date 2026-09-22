@@ -1,4 +1,4 @@
-namespace CinematicCam.Plugin.Editor;
+namespace Vista.Plugin.Editor;
 
 /// <summary>Every editor colour, as ImGui ABGR.</summary>
 internal static class EditorColours

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core.Camera;
+namespace Vista.Core.Camera;
 
 /// <summary>Projects world points to screen pixels with a row-vector view-projection matrix, as the game does.</summary>
 public static class ScreenProjection

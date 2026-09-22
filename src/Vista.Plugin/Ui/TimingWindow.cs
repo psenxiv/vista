@@ -1,14 +1,14 @@
 using System.Numerics;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Session;
-using CinematicCam.Core.Tracks;
-using CinematicCam.Plugin.Editor;
-using CinematicCam.Plugin.Session;
+using Vista.Core.Editing;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Vista.Plugin.Editor;
+using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
-namespace CinematicCam.Plugin.Ui;
+namespace Vista.Plugin.Ui;
 
 /// <summary>The timing graph: distance along the path against time, with its keys, legs and playhead.</summary>
 internal sealed class TimingWindow : Window
@@ -43,7 +43,7 @@ internal sealed class TimingWindow : Window
     private int? popupKey;
 
     public TimingWindow(CameraSession session)
-        : base("Timing###ccam-timing")
+        : base("Timing###vista-timing")
     {
         this.session = session;
         RespectCloseHotkey = false;

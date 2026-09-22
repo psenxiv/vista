@@ -1,9 +1,9 @@
-using CinematicCam.Core.Session;
-using CinematicCam.Plugin.Game;
-using CinematicCam.Plugin.Session;
+using Vista.Core.Session;
+using Vista.Plugin.Game;
+using Vista.Plugin.Session;
 using Dalamud.Game.ClientState.Keys;
 
-namespace CinematicCam.Plugin.Editor;
+namespace Vista.Plugin.Editor;
 
 /// <summary>The editing-mode key bindings, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys

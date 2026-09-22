@@ -1,8 +1,8 @@
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game;
 
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Owns the game camera by hooking CameraBase.Update (vfunc 3).</summary>
 internal sealed unsafe class CameraController : IDisposable

@@ -1,6 +1,6 @@
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 
-namespace CinematicCam.Core.Tracks;
+namespace Vista.Core.Tracks;
 
 /// <summary>Advances a track's elapsed time frame by frame according to its playback mode.</summary>
 public sealed class TrackPlayback

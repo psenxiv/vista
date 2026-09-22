@@ -1,6 +1,6 @@
-using CinematicCam.Core.Tracks;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>The ranges the editor's number fields clamp to, so invalid values never reach a track.</summary>
 public static class EditLimits

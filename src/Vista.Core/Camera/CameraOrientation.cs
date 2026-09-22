@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core.Camera;
+namespace Vista.Core.Camera;
 
 /// <summary>Derives the camera's up vector, which the game leaves rolled if we do not write it.</summary>
 public static class CameraOrientation

@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 using Xunit;
 
-namespace CinematicCam.Tests.Camera;
+namespace Vista.Tests.Camera;
 
 public class FreeCamMotionTests
 {

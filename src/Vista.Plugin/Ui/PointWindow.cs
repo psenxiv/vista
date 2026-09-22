@@ -1,15 +1,15 @@
 using System.Numerics;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Session;
-using CinematicCam.Core.Tracks;
-using CinematicCam.Plugin.Editor;
-using CinematicCam.Plugin.Session;
+using Vista.Core.Editing;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Vista.Plugin.Editor;
+using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-namespace CinematicCam.Plugin.Ui;
+namespace Vista.Plugin.Ui;
 
 /// <summary>The selected point's number fields, gizmo mode, copy, paste and delete; shown only while a point is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
@@ -26,7 +26,7 @@ internal sealed class PointWindow : Window
     private ControlPoint? copied;
 
     public PointWindow(CameraSession session, PointGizmo gizmo)
-        : base("Point###ccam-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
+        : base("Point###vista-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.session = session;
         this.gizmo = gizmo;
@@ -41,7 +41,7 @@ internal sealed class PointWindow : Window
         if (selected != shown) session.EndLiveEdit();
         shown = selected;
         IsOpen = selected is not null;
-        if (selected is { } index) WindowName = $"Point {index + 1}###ccam-point";
+        if (selected is { } index) WindowName = $"Point {index + 1}###vista-point";
     }
 
     /// <summary>Ends a drag in progress, since a closed window never reports the field letting go.</summary>

@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 using Dalamud.Game.ClientState.Keys;
 
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Flies the camera with WASD, space and C, and rolls it with Q and E. Mouse-look still steers.</summary>
 internal sealed class FreeCam

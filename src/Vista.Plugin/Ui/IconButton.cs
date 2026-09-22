@@ -3,7 +3,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 
-namespace CinematicCam.Plugin.Ui;
+namespace Vista.Plugin.Ui;
 
 /// <summary>Icon buttons with a tooltip, and their width for right-aligning them.</summary>
 internal static class IconButton

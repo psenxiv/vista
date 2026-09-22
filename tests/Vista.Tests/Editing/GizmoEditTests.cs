@@ -1,9 +1,9 @@
 using System.Numerics;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Editing;
+using Vista.Core.Tracks;
 using Xunit;
 
-namespace CinematicCam.Tests.Editing;
+namespace Vista.Tests.Editing;
 
 public class GizmoEditTests
 {

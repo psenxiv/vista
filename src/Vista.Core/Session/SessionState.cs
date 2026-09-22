@@ -1,7 +1,7 @@
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Camera;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Session;
+namespace Vista.Core.Session;
 
 /// <summary>How <see cref="SessionState.Edit"/> changed the mode.</summary>
 public enum EditOutcome { Unchanged, FromOff, FromLive }

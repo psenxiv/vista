@@ -1,4 +1,4 @@
-namespace CinematicCam.Core.Camera;
+namespace Vista.Core.Camera;
 
 /// <summary>Whether the plugin currently owns the camera. Releasing is always safe.</summary>
 public sealed class CameraOwnership

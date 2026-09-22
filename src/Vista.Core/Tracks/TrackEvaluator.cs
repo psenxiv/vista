@@ -1,7 +1,7 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 
-namespace CinematicCam.Core.Tracks;
+namespace Vista.Core.Tracks;
 
 /// <summary>Turns a track and a moment in time into where the camera is, looks and its field of view.</summary>
 public sealed class TrackEvaluator

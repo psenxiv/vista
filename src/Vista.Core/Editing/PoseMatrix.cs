@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Camera;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>Converts a camera pose to and from the matrix a gizmo edits: rows right, up, backward, then translation.</summary>
 public static class PoseMatrix

@@ -1,9 +1,9 @@
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Session;
-using CinematicCam.Core.Tracks;
-using CinematicCam.Plugin.Game;
+using Vista.Core.Camera;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Vista.Plugin.Game;
 
-namespace CinematicCam.Plugin.Session;
+namespace Vista.Plugin.Session;
 
 /// <summary>Carries out the session's mode changes in game: free-cam, movement lock, camera ownership and UI.</summary>
 internal sealed class CameraSession
@@ -40,7 +40,7 @@ internal sealed class CameraSession
         if (state.Mode == CameraMode.Editing) return;
 
         var start = state.Mode == CameraMode.Live ? lastFrame ?? CameraAccess.ReadState() : CameraAccess.ReadState();
-        if (start is null) { Plugin.Log.Error("[ccam] cannot read camera state."); return; }
+        if (start is null) { Plugin.Log.Error("[vista] cannot read camera state."); return; }
 
         switch (state.Edit())
         {
@@ -57,7 +57,7 @@ internal sealed class CameraSession
         }
 
         GameUi.Restore();
-        Plugin.Log.Information("[ccam] mode: editing");
+        Plugin.Log.Information("[vista] mode: editing");
     }
 
     /// <summary>Resumes a paused shot, re-hides the UI of a playing one, otherwise starts from the top.</summary>
@@ -72,7 +72,7 @@ internal sealed class CameraSession
     /// <summary>Holds the current frame and stays live. No effect unless live.</summary>
     public void Stop()
     {
-        if (state.Stop()) Plugin.Log.Information("[ccam] paused");
+        if (state.Stop()) Plugin.Log.Information("[vista] paused");
     }
 
     /// <summary>Turns the plugin off: stops playback and free-cam, unlocks, and hands the camera back.</summary>
@@ -94,7 +94,7 @@ internal sealed class CameraSession
             snapshotBeforeTakeover = null;
         }
 
-        Plugin.Log.Information("[ccam] camera released: {Reason}", reason);
+        Plugin.Log.Information("[vista] camera released: {Reason}", reason);
     }
 
     /// <summary>Applies <paramref name="change"/> to the track if the result can be played. Returns why it was refused, or null once applied.</summary>
@@ -258,14 +258,14 @@ internal sealed class CameraSession
         switch (outcome)
         {
             case PlayOutcome.Refused:
-                Plugin.Log.Error("[ccam] cannot play a track with no points.");
+                Plugin.Log.Error("[vista] cannot play a track with no points.");
                 return;
             case PlayOutcome.ReHid:
                 GameUi.Hide();
                 return;
             case PlayOutcome.Resumed:
                 GameUi.Hide();
-                Plugin.Log.Information("[ccam] resumed");
+                Plugin.Log.Information("[vista] resumed");
                 return;
             case PlayOutcome.StartedFromOff or PlayOutcome.CuedFromOff:
                 movement.Hold();
@@ -276,12 +276,12 @@ internal sealed class CameraSession
         freeCam.Disable();
         if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromOff)
         {
-            Plugin.Log.Information("[ccam] mode: live, cued, {Count} points", state.Track.Points.Count);
+            Plugin.Log.Information("[vista] mode: live, cued, {Count} points", state.Track.Points.Count);
             return;
         }
 
         GameUi.Hide();
-        Plugin.Log.Information("[ccam] mode: live, {Count} points", state.Track.Points.Count);
+        Plugin.Log.Information("[vista] mode: live, {Count} points", state.Track.Points.Count);
     }
 
     /// <summary>Takes the camera, remembering what to put back on release.</summary>

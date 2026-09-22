@@ -1,4 +1,4 @@
-namespace CinematicCam.Core.Session;
+namespace Vista.Core.Session;
 
 /// <summary>What the plugin is doing with the camera. Exactly one at a time.</summary>
 public enum CameraMode

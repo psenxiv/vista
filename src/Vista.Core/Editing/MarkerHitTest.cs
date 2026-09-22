@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>Finds which projected marker a click landed on.</summary>
 public static class MarkerHitTest

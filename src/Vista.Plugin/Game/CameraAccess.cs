@@ -1,9 +1,9 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Reads and writes the world camera.</summary>
 internal static unsafe class CameraAccess

@@ -1,6 +1,6 @@
 using Dalamud.Bindings.ImGui;
 
-namespace CinematicCam.Plugin.Ui;
+namespace Vista.Plugin.Ui;
 
 /// <summary>A number field's typed value, held until the field loses focus and then applied.</summary>
 internal sealed class PendingField(Func<bool> canApply)

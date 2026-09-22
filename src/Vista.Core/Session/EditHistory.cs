@@ -1,6 +1,6 @@
-using CinematicCam.Core.Tracks;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Session;
+namespace Vista.Core.Session;
 
 /// <summary>A track and the point selected with it, as one undo step restores them.</summary>
 public readonly record struct EditSnapshot(Track Track, int? Selected);

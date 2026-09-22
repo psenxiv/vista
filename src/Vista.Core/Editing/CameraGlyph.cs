@@ -1,7 +1,7 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
+using Vista.Core.Camera;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>A wireframe camera in world space: a pyramid from the apex opening along the aim, with an up tab on its top edge.</summary>
 /// <param name="Corners">The face's corners in outline order, the first two along the top edge.</param>

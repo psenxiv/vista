@@ -5,10 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Version>0.1.0.0</Version>
-    <AssemblyName>CinematicCam</AssemblyName>
-    <RootNamespace>CinematicCam.Plugin</RootNamespace>
+    <AssemblyName>Vista</AssemblyName>
+    <RootNamespace>Vista.Plugin</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../CinematicCam.Core/CinematicCam.Core.csproj" />
+    <ProjectReference Include="../Vista.Core/Vista.Core.csproj" />
   </ItemGroup>
 </Project>

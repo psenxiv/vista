@@ -1,4 +1,4 @@
-namespace CinematicCam.Core.Tracks;
+namespace Vista.Core.Tracks;
 
 /// <summary>Something the Director can put on program: a track, a snap point, or the game's own camera.</summary>
 public abstract record Shot;

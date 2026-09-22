@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace CinematicCam.Core.Tracks;
+namespace Vista.Core.Tracks;
 
 /// <summary>Cumulative arc-length samples per segment, for walking a track by distance instead of by spline parameter.</summary>
 public sealed class ArcLengthTable

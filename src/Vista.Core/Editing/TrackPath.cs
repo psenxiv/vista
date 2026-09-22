@@ -1,7 +1,7 @@
 using System.Numerics;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>Samples a track's path for drawing.</summary>
 public static class TrackPath

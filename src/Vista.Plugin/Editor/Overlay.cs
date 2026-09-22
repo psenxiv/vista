@@ -1,10 +1,10 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Camera;
+using Vista.Core.Editing;
+using Vista.Core.Tracks;
 using Dalamud.Bindings.ImGui;
 
-namespace CinematicCam.Plugin.Editor;
+namespace Vista.Plugin.Editor;
 
 /// <summary>Draws the track's path, and a wireframe camera per point with its number on the point.</summary>
 internal sealed class Overlay

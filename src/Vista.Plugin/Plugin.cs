@@ -1,8 +1,8 @@
-using CinematicCam.Core.Session;
-using CinematicCam.Plugin.Editor;
-using CinematicCam.Plugin.Game;
-using CinematicCam.Plugin.Session;
-using CinematicCam.Plugin.Ui;
+using Vista.Core.Session;
+using Vista.Plugin.Editor;
+using Vista.Plugin.Game;
+using Vista.Plugin.Session;
+using Vista.Plugin.Ui;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
@@ -12,11 +12,11 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
-namespace CinematicCam.Plugin;
+namespace Vista.Plugin;
 
 public sealed class Plugin : IDalamudPlugin
 {
-    private const string CommandName = "/ccam";
+    private const string CommandName = "/vista";
 
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
@@ -33,7 +33,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static MovementLock Movement { get; private set; } = null!;
     internal static CameraSession Session { get; private set; } = null!;
 
-    private readonly WindowSystem windows = new("CinematicCam");
+    private readonly WindowSystem windows = new("Vista");
     private float wheel;
     private bool escapeWasDown;
     private static bool blockEscape;
@@ -49,7 +49,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/ccam opens the editor | release"
+            HelpMessage = "/vista opens the editor | release"
         });
 
         Movement = new MovementLock();
@@ -72,7 +72,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.TerritoryChanged += OnTerritoryChanged;
         ClientState.Logout += OnLogout;
 
-        Log.Information("CinematicCam loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown");
+        Log.Information("Vista loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown");
     }
 
     private void OnCommand(string command, string args)
@@ -87,7 +87,7 @@ public sealed class Plugin : IDalamudPlugin
                 Session.Release("command");
                 break;
             default:
-                Log.Information("[ccam] unknown verb '{Verb}'.", verb);
+                Log.Information("[vista] unknown verb '{Verb}'.", verb);
                 break;
         }
     }
@@ -172,6 +172,6 @@ public sealed class Plugin : IDalamudPlugin
         Input?.Dispose();
         Camera?.Dispose();
         CommandManager.RemoveHandler(CommandName);
-        Log.Information("CinematicCam unloaded.");
+        Log.Information("Vista unloaded.");
     }
 }

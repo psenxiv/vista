@@ -1,9 +1,9 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Camera;
+using Vista.Core.Tracks;
 using Xunit;
 
-namespace CinematicCam.Tests.Tracks;
+namespace Vista.Tests.Tracks;
 
 public class DirectorTests
 {

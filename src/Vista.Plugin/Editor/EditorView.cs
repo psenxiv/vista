@@ -1,9 +1,9 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
-using CinematicCam.Plugin.Game;
+using Vista.Core.Camera;
+using Vista.Plugin.Game;
 using Dalamud.Interface.Utility;
 
-namespace CinematicCam.Plugin.Editor;
+namespace Vista.Plugin.Editor;
 
 /// <summary>This frame's world-camera matrices and the main viewport, for the overlay and the gizmo.</summary>
 internal readonly record struct EditorView(

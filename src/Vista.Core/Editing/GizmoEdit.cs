@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Camera;
+using Vista.Core.Tracks;
 
-namespace CinematicCam.Core.Editing;
+namespace Vista.Core.Editing;
 
 /// <summary>One gimbal rotate ring; each changes one angle of a point.</summary>
 public enum GimbalRing { Yaw, Pitch, Roll }

@@ -1,8 +1,8 @@
 using System.Numerics;
-using CinematicCam.Core.Editing;
+using Vista.Core.Editing;
 using Xunit;
 
-namespace CinematicCam.Tests.Editing;
+namespace Vista.Tests.Editing;
 
 public class MarkerHitTestTests
 {

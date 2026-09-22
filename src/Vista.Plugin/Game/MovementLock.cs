@@ -1,4 +1,4 @@
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Stops the character moving, without touching input.</summary>
 internal sealed unsafe class MovementLock : IDisposable

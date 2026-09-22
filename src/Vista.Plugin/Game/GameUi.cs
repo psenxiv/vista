@@ -1,6 +1,6 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Hides and restores the game UI, the same as the game's own UI toggle.</summary>
 internal static unsafe class GameUi

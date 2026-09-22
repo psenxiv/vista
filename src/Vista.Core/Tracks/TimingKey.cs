@@ -1,4 +1,4 @@
-namespace CinematicCam.Core.Tracks;
+namespace Vista.Core.Tracks;
 
 /// <summary>A point on the timing curve: at this time the camera is at this place on the path, with a tangent mode on each side.</summary>
 public sealed record TimingKey(

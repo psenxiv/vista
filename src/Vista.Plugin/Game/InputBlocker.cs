@@ -2,7 +2,7 @@ using System.Collections.Frozen;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 
-namespace CinematicCam.Plugin.Game;
+namespace Vista.Plugin.Game;
 
 /// <summary>Stops flight keys firing their usual actions while the plugin flies the camera.</summary>
 internal sealed unsafe class InputBlocker : IDisposable

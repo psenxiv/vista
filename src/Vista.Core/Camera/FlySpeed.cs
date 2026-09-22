@@ -1,4 +1,4 @@
-namespace CinematicCam.Core.Camera;
+namespace Vista.Core.Camera;
 
 /// <summary>The free-cam's speed setting, stepped through fixed multipliers and clamped at both ends.</summary>
 public sealed class FlySpeed

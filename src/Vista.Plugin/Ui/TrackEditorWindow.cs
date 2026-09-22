@@ -1,20 +1,20 @@
 using System.Numerics;
-using CinematicCam.Core.Camera;
-using CinematicCam.Core.Editing;
-using CinematicCam.Core.Session;
-using CinematicCam.Core.Tracks;
-using CinematicCam.Plugin.Session;
+using Vista.Core.Camera;
+using Vista.Core.Editing;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-namespace CinematicCam.Plugin.Ui;
+namespace Vista.Plugin.Ui;
 
 /// <summary>The main editor window: modes, track settings, the point list and the scrub bar.</summary>
 internal sealed unsafe class TrackEditorWindow : Window
 {
-    private const string PointPayload = "CCAM_POINT";
+    private const string PointPayload = "VISTA_POINT";
 
     private static readonly string[] ModeNames = ["Off", "Edit", "Live"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
@@ -30,7 +30,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private bool scrubbing;
 
     public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
-        : base("Cinematic Cam###ccam-track-editor")
+        : base("Vista###vista-track-editor")
     {
         this.session = session;
         this.fields = fields;

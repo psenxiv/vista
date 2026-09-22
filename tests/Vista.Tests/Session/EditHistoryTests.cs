@@ -1,8 +1,8 @@
-using CinematicCam.Core.Session;
-using CinematicCam.Core.Tracks;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
 using Xunit;
 
-namespace CinematicCam.Tests.Session;
+namespace Vista.Tests.Session;
 
 public class EditHistoryTests
 {

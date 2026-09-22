@@ -5,13 +5,13 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinematicCam.Core", "src\CinematicCam.Core\CinematicCam.Core.csproj", "{FB929F04-23A0-41A8-BE33-B739821AB453}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vista.Core", "src\Vista.Core\Vista.Core.csproj", "{FB929F04-23A0-41A8-BE33-B739821AB453}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinematicCam.Plugin", "src\CinematicCam.Plugin\CinematicCam.Plugin.csproj", "{B0F4B3CC-2516-4028-A715-FE21611F8046}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vista.Plugin", "src\Vista.Plugin\Vista.Plugin.csproj", "{B0F4B3CC-2516-4028-A715-FE21611F8046}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinematicCam.Tests", "tests\CinematicCam.Tests\CinematicCam.Tests.csproj", "{66171F25-49FB-4AF9-AFA8-07835A762B38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vista.Tests", "tests\Vista.Tests\Vista.Tests.csproj", "{66171F25-49FB-4AF9-AFA8-07835A762B38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
