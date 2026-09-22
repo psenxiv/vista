@@ -22,6 +22,7 @@ public class SessionStateTests
     private static SessionState Live()
     {
         var state = EditingWithTrack();
+        state.Cue();
         state.Play();
         return state;
     }
@@ -79,7 +80,8 @@ public class SessionStateTests
     public void PlayFromEditingGoesLive()
     {
         var state = EditingWithTrack();
-        Assert.Equal(PlayOutcome.Started, state.Play());
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Equal(PlayOutcome.Resumed, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
         Assert.True(state.Director.IsLive);
         Assert.True(state.LocksInput);

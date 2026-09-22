@@ -10,7 +10,7 @@ namespace Vista.Core.Session;
 public enum EditOutcome { Unchanged, FromOff, FromLive }
 
 /// <summary>What <see cref="SessionState.Play"/>, <see cref="SessionState.Restart"/> or <see cref="SessionState.Cue"/> did.</summary>
-public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff, Cued, CuedFromOff }
+public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff, Cued, CuedFromOff, Previewed }
 
 /// <summary>The mode, the Director, the scene and the edited track, and the rules for moving between modes.</summary>
 public sealed class SessionState
@@ -25,6 +25,10 @@ public sealed class SessionState
     private TrackEvaluator? liveStartEvaluator;
     private readonly Func<float?> footHeight;
     private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
+    private TrackPlayback? preview;
+
+    /// <summary>True while an Edit preview is playing.</summary>
+    public bool Previewing => preview is not null;
 
     public CameraMode Mode { get; private set; }
 
@@ -71,6 +75,7 @@ public sealed class SessionState
     /// <summary>Enters editing; from live, takes the Director offline.</summary>
     public EditOutcome Edit()
     {
+        StopPreview();
         switch (Mode)
         {
             case CameraMode.Editing:
@@ -88,9 +93,10 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>Resumes a paused shot, leaves a playing one alone, otherwise restarts.</summary>
+    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live.</summary>
     public PlayOutcome Play()
     {
+        if (Mode == CameraMode.Editing) return preview is not null ? PlayOutcome.Previewed : StartPreview(fromStart: false);
         if (Mode == CameraMode.Live && !Director.IsFinished)
         {
             if (!Director.IsPaused) return PlayOutcome.ReHid;
@@ -98,13 +104,53 @@ public sealed class SessionState
             return PlayOutcome.Resumed;
         }
 
-        return Restart();
+        return GoLive();
+    }
+
+    /// <summary>In Edit, previews from the beginning; otherwise goes live from the start. Refused with no points.</summary>
+    public PlayOutcome Restart() => Mode == CameraMode.Editing ? StartPreview(fromStart: true) : GoLive();
+
+    /// <summary>Goes live with the track paused at its start. Refused with no points.</summary>
+    public PlayOutcome Cue()
+    {
+        var outcome = GoLive();
+        if (outcome == PlayOutcome.Refused) return outcome;
+        Director.Pause();
+        return outcome == PlayOutcome.StartedFromOff ? PlayOutcome.CuedFromOff : PlayOutcome.Cued;
+    }
+
+    /// <summary>Live, holds the current frame; in Edit, stops a preview. Returns false when there was nothing to stop.</summary>
+    public bool Stop()
+    {
+        if (Mode == CameraMode.Editing) return StopPreview();
+        if (Mode != CameraMode.Live) return false;
+        Director.Pause();
+        return true;
+    }
+
+    /// <summary>Advances an Edit preview, stopping it at the end of a cycle that doesn't loop. Returns its frame, or null when not previewing.</summary>
+    public CameraState? AdvancePreview(float dt)
+    {
+        if (preview is not { } playback) return null;
+        var frame = playback.Advance(dt);
+        if (playback.IsFinished) StopPreview();
+        return frame;
+    }
+
+    /// <summary>Stops an Edit preview, leaving the scrub head at its shot time. Returns false if none was playing.</summary>
+    public bool StopPreview()
+    {
+        if (preview is not { } playback) return false;
+        scrubTime = playback.ShotTime;
+        preview = null;
+        return true;
     }
 
     /// <summary>Goes live with the track from its start. Refused with no points.</summary>
-    public PlayOutcome Restart()
+    private PlayOutcome GoLive()
     {
         if (Local.Points.Count == 0) return PlayOutcome.Refused;
+        StopPreview();
         Scrubbing = false;
         EndLiveEdit();
 
@@ -114,26 +160,28 @@ public sealed class SessionState
         return fromOff ? PlayOutcome.StartedFromOff : PlayOutcome.Started;
     }
 
-    /// <summary>Goes live with the track paused at its start. Refused with no points.</summary>
-    public PlayOutcome Cue()
+    /// <summary>Starts an Edit preview from the scrub head, or from the beginning when asked or when the scrub head is where the shot finishes.</summary>
+    private PlayOutcome StartPreview(bool fromStart)
     {
-        var outcome = Restart();
-        if (outcome == PlayOutcome.Refused) return outcome;
-        Director.Pause();
-        return outcome == PlayOutcome.StartedFromOff ? PlayOutcome.CuedFromOff : PlayOutcome.Cued;
-    }
+        if (Local.Points.Count == 0) return PlayOutcome.Refused;
+        EndLiveEdit();
+        Scrubbing = false;
 
-    /// <summary>Holds the current frame and stays live. Returns false unless live.</summary>
-    public bool Stop()
-    {
-        if (Mode != CameraMode.Live) return false;
-        Director.Pause();
-        return true;
+        var playback = new TrackPlayback(Track);
+        if (!fromStart)
+        {
+            playback.Seek(ScrubHead);
+            if (playback.IsFinished) playback.Restart();
+        }
+
+        preview = playback;
+        return PlayOutcome.Previewed;
     }
 
     /// <summary>Turns off and takes the Director offline. Returns false if already off.</summary>
     public bool Release()
     {
+        StopPreview();
         if (Mode == CameraMode.Off) return false;
         Scrubbing = false;
         EndLiveEdit();
@@ -250,6 +298,7 @@ public sealed class SessionState
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
     public bool Undo()
     {
+        StopPreview();
         EndLiveEdit();
         return Restore(Mode == CameraMode.Editing ? history.Undo(Current) : null);
     }
@@ -257,6 +306,7 @@ public sealed class SessionState
     /// <summary>Re-applies the last undone change. Returns false if nothing was redone.</summary>
     public bool Redo()
     {
+        StopPreview();
         EndLiveEdit();
         return Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
     }
@@ -332,6 +382,7 @@ public sealed class SessionState
     /// <summary>Edits track <paramref name="id"/>, showing it first if hidden. Not an undo step itself. Returns why it was refused, or null.</summary>
     public string? SwitchTrack(Guid id)
     {
+        StopPreview();
         if (Mode != CameraMode.Editing) return "Tracks can only be switched while editing.";
         if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
         if (Scene.Hidden.Contains(id) && SetTrackHidden(id, false) is { } refusal) return refusal;
@@ -346,6 +397,7 @@ public sealed class SessionState
     /// <summary>Starts a live edit: previews change the track at once and end as one undo step. Editing only.</summary>
     public void BeginLiveEdit()
     {
+        StopPreview();
         if (Mode == CameraMode.Editing && liveEditStart is null) liveEditStart = Current;
     }
 
@@ -518,6 +570,7 @@ public sealed class SessionState
     /// <summary>Applies a change to the scene as one undo step if the edited track can still be played. Returns why it was refused, or null.</summary>
     private string? CommitEdit(Func<Scene, Scene> change, Func<Track, int?> selectAfter)
     {
+        StopPreview();
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
         EndLiveEdit();
 
@@ -543,6 +596,7 @@ public sealed class SessionState
     /// <summary>Applies a scene change and the edited track it leaves, as one undo step. Returns why it was refused, or null.</summary>
     private string? CommitScene(Func<Scene, (Scene Scene, Guid Edited)> change)
     {
+        StopPreview();
         if (Mode != CameraMode.Editing) return "The scene can only change while editing.";
         EndLiveEdit();
 
@@ -674,12 +728,13 @@ public sealed class SessionState
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
     public bool Scrubbing { get; private set; }
 
-    /// <summary>Seconds under the scrub head: shot time while live, otherwise the last scrubbed or jumped-to time.</summary>
-    public double ScrubHead => Mode == CameraMode.Live ? Director.ShotTime : Math.Min(scrubTime, Duration);
+    /// <summary>Seconds under the scrub head: shot time while live or previewing, otherwise the last scrubbed or jumped-to time.</summary>
+    public double ScrubHead => Mode == CameraMode.Live ? Director.ShotTime : preview?.ShotTime ?? Math.Min(scrubTime, Duration);
 
     /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect when off.</summary>
     public void BeginScrub()
     {
+        StopPreview();
         if (Mode == CameraMode.Off || Scrubbing) return;
         Scrubbing = true;
         resumeAfterScrub = Mode == CameraMode.Live && !Director.IsPaused;
@@ -689,6 +744,7 @@ public sealed class SessionState
     /// <summary>Moves the scrub head to <paramref name="time"/> within the track; live, playback seeks there. No effect when off.</summary>
     public void ScrubTo(double time)
     {
+        if (Mode == CameraMode.Editing) StopPreview();
         if (Mode == CameraMode.Off) return;
         scrubTime = Math.Clamp(time, 0.0, Duration);
         if (Mode == CameraMode.Live) Director.Seek(scrubTime);

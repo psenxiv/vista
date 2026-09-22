@@ -141,6 +141,7 @@ public class SessionEditingTests
     public void EditFromLiveMovesTheScrubHeadToThePlaybackTime()
     {
         var state = Editing();
+        state.Cue();
         state.Play();
         state.Director.Tick(2f);
         state.Edit();
@@ -161,6 +162,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
+        state.Cue();
         state.Play();
         state.Director.Tick(2f);
         state.Edit();
@@ -172,6 +174,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.PingPong));
+        state.Cue();
         state.Play();
         state.Director.Tick(13f);
         Assert.Equal(7.0, state.ScrubHead, 3);
@@ -284,6 +287,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.Select(1);
+        state.Cue();
         state.Play();
 
         Assert.False(state.CanUndo);
@@ -349,6 +353,7 @@ public class SessionEditingTests
     public void ScrubbingLiveHoldsPlaybackThenResumesIt()
     {
         var state = Editing();
+        state.Cue();
         state.Play();
         state.BeginScrub();
         Assert.True(state.Director.IsPaused);
@@ -363,6 +368,7 @@ public class SessionEditingTests
     public void ScrubbingAPausedShotLeavesItPaused()
     {
         var state = Editing();
+        state.Cue();
         state.Play();
         state.Stop();
         state.BeginScrub();
@@ -376,6 +382,7 @@ public class SessionEditingTests
     public void ScrubbingAFinishedForwardShotBackUnfinishesIt()
     {
         var state = Editing();
+        state.Cue();
         state.Play();
         state.Director.Tick(20f);
         Assert.True(state.Director.IsFinished);
@@ -392,6 +399,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.BeginScrub();
+        state.Cue();
         state.Play();
         Assert.False(state.Scrubbing);
 

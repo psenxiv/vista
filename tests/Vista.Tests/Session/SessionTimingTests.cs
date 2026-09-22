@@ -210,6 +210,7 @@ public class SessionTimingTests
     public void TimingChangesOnlyWhileEditing()
     {
         var state = Editing();
+        state.Cue();
         state.Play();
         Assert.NotNull(state.SetEasing(1, Easing.Linear));
         Assert.NotNull(state.SetKeyMode(1, TangentMode.Flat));
@@ -259,6 +260,7 @@ public class SessionTimingTests
     public void SpeedDurationAndLegEditsOnlyWhileEditing()
     {
         var state = Editing();
+        state.Cue();
         state.Play();
         var before = state.Track;
         Assert.NotNull(state.SetTrackSpeed(5f));

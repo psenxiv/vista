@@ -239,6 +239,7 @@ public class SessionAnchorTests
     {
         var state = Editing();
         state.SelectSceneAnchor();
+        state.Cue();
         state.Play();
 
         Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
