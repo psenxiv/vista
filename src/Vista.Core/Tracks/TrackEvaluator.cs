@@ -163,13 +163,7 @@ public sealed class TrackEvaluator
 
     /// <summary>The key with its position moved from control-point units to distance along the path.</summary>
     private TimingKey ToDistance(TimingKey key)
-    {
-        if (_lengths.Length == 0) return key;
-
-        var position = Math.Clamp(key.Position, 0f, _lengths.Length);
-        var segment = Math.Min((int)MathF.Floor(position), _lengths.Length - 1);
-        return key with { Position = _distances[segment] + ((position - segment) * _lengths[segment]) };
-    }
+        => _lengths.Length == 0 ? key : key with { Position = DistanceOf(key.Position) };
 
     /// <summary>Splits a distance along the path into a segment index and the arc fraction into it.</summary>
     private (int Segment, float Fraction) LocateDistance(float distance)
