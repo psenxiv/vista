@@ -9,37 +9,11 @@ See `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md` for v1 scope.
 
 ## Deferred from v1
 
-On 2026-09-21 the user set phase 3, ahead of the switchboard and split into sub-stages:
-export/import, sessions holding multiple tracks, anchoring for tracks and sessions, playlists
-with auto-advance, and two more playback modes: Reverse and Ping-pong. Looping either one comes
-from the existing Loop mode. Details are settled after phase 2.
-
-On 2026-09-22 the user ordered it. **3.a** is Reverse and Ping-pong playback, since it stands
-alone. **3.a is done**, landed 2026-09-22. The rest is specced before it is ordered:
-export/import comes after the data models settle (anchors, multi-track sessions, playlists).
-
-### Export / import
-Tracks and snap points, exported as one portable JSON file so a director can
-build shots and hand them to operators to run. Switchboard import/export is a
-separate task, decided with the switchboard.
-
-**Why deferred:** the serialisable data model ships in v1 regardless, because
-the plugin config needs it. What export adds on top is file pickers, import
-validation and version migration, none of which help
-testing. As long as `Vista.Core` stays free of game types, adding this
-later is a UI layer rather than a refactor.
-
-**Cost when picked up:** small.
-
-### Playlists and auto-advance
-A finished track advances to the next slot automatically, so a planned sequence
-of shots runs unattended.
-
-**Why deferred:** v1 holds the final frame when a track ends, which is the safe
-behaviour on air. Auto-advance needs sequence editing and a clear way to abort
-mid-sequence without the camera continuing to move.
-
-**Cost when picked up:** moderate.
+On 2026-09-21 the user set phase 3, ahead of the switchboard. 3.a, Reverse and Ping-pong
+playback, was done on 2026-09-22. On the same day the rest of phase 3 was reshaped around
+Scenes, Tracks, anchors, a Playlist, saving and presets; `BRAINSPLAT.md` holds those
+requirements and the work order, and each step is specced as it comes up. Export/import was
+dropped: sharing a Scene means sharing its file.
 
 ### LookAt aim
 A track's camera stays aimed at one fixed point in the world while it moves, such
@@ -52,14 +26,6 @@ gizmo, which arrives with the editor.
 A track's camera stays aimed at a character or object as it moves.
 
 **Why deferred:** not a high priority.
-
-### Anchored tracks
-Every track hangs off a movable anchor instead of the world origin. Moving the anchor carries
-all its points with it, so a track can be repositioned or reused elsewhere. A track remembers
-the map it was made on, and importing it on a different map tells the user to adjust the anchor.
-
-**Why deferred:** agreed on 2026-09-21 as the intended direction for tying tracks to a place,
-but not yet scheduled. Until then tracks record no zone.
 
 ## Under consideration
 
