@@ -115,6 +115,18 @@ internal sealed class CameraSession
     /// <summary>During a live edit, moves the selected anchor. Returns why it was refused, or null.</summary>
     public string? PreviewAnchor(Anchor world, bool carry) => state.PreviewAnchor(world, carry);
 
+    /// <summary>Edits a track and selects its Look At point. Returns why it was refused, or null.</summary>
+    public string? SelectLookAt(Guid id) => state.SelectLookAt(id);
+
+    /// <summary>The selected Look At point in the world, or null.</summary>
+    public Vector3? SelectedLookAtInWorld => state.SelectedLookAtInWorld;
+
+    /// <summary>Moves the selected Look At point. Returns why it was refused, or null.</summary>
+    public string? MoveLookAt(Vector3 world) => state.MoveLookAt(world);
+
+    /// <summary>During a live edit, moves the selected Look At point. Returns why it was refused, or null.</summary>
+    public string? PreviewLookAt(Vector3 world) => state.PreviewLookAt(world);
+
     /// <summary>Makes a track the edited one, leaving the camera where it is. Returns why it was refused, or null.</summary>
     public string? SelectTrack(Guid id) => state.SwitchTrack(id);
 
@@ -280,6 +292,18 @@ internal sealed class CameraSession
     /// <summary>Joins a key's handles at the <paramref name="from"/> side's slope. Returns why it was refused, or null.</summary>
     public string? UnifyHandles(int key, KeySide from) => state.UnifyHandles(key, from);
 
+    /// <summary>Sets the aim mode; the first Look At with no points goes ahead of the camera. Returns why it was refused, or null.</summary>
+    public string? SetAim(AimMode aim) => CameraPoint() is { } camera ? state.SetAim(aim, camera) : "Cannot read the camera.";
+
+    /// <summary>Names the character to follow, or none. Returns why it was refused, or null.</summary>
+    public string? SetTarget(string? name) => state.SetTarget(name);
+
+    /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
+    public string? SetAimHeight(float yalms) => state.SetAimHeight(yalms);
+
+    /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
+    public string? SetSmoothing(float smoothing) => state.SetSmoothing(smoothing);
+
     /// <summary>During a live edit, drags a key towards a time. Returns why it was refused, or null.</summary>
     public string? PreviewKeyMove(int key, float time) => state.PreviewKeyMove(key, time);
 
@@ -367,20 +391,24 @@ internal sealed class CameraSession
     {
         if (state.Mode != CameraMode.Editing) return "Points can only be added while editing.";
         if (state.Scrubbing) return "Points cannot be added while scrubbing.";
+        return CameraPoint() is { } point ? edit(point) : "Cannot read the camera.";
+    }
 
+    /// <summary>The current camera as a control point, or the previewed frame while previewing; null when the camera can't be read.</summary>
+    private ControlPoint? CameraPoint()
+    {
         if (state.Previewing && lastFrame is { } previewed)
         {
             var (previewYaw, previewPitch) = TrackAim.FromDirection(previewed.LookAt - previewed.Position);
-            return edit(new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewed.Roll));
+            return new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewed.Roll);
         }
 
         var camera = CameraAccess.ReadState();
         var angles = CameraAccess.ReadAngles();
-        if (camera is null || angles is null) return "Cannot read the camera.";
+        if (camera is null || angles is null) return null;
 
-        var s = camera.Value;
         var (yaw, pitch) = angles.Value;
-        return edit(new ControlPoint(s.Position, yaw, pitch, s.Fov, freeCam.Roll));
+        return new ControlPoint(camera.Value.Position, yaw, pitch, camera.Value.Fov, freeCam.Roll);
     }
 
     /// <summary>Where the camera goes this frame, or null to leave it to the game. Called from the camera hook.</summary>

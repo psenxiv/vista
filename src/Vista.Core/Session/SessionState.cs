@@ -363,6 +363,25 @@ public sealed class SessionState
             return Collinear(joined, Evaluator, key, Evaluator.SideSlope(key, from), null);
         });
 
+    /// <summary>Sets the aim mode; the first Look At places its point from the first point, or from the world <paramref name="camera"/> with no points. Returns why it was refused, or null.</summary>
+    public string? SetAim(AimMode aim, ControlPoint camera)
+    {
+        var local = ToLocal(camera);
+        return ApplySetting(t => TrackEditing.SetAim(t, aim, local));
+    }
+
+    /// <summary>Names the character to follow, or none. Returns why it was refused, or null.</summary>
+    public string? SetTarget(string? name) => ApplySetting(t => TrackEditing.SetTarget(t, name));
+
+    /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
+    public string? SetAimHeight(float yalms) => ApplySetting(t => TrackEditing.SetAimHeight(t, yalms));
+
+    /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
+    public string? SetSmoothing(float smoothing) => ApplySetting(t => TrackEditing.SetSmoothing(t, smoothing));
+
+    /// <summary>Applies a change to the edited track's settings as one undo step, keeping the selection.</summary>
+    private string? ApplySetting(Func<Track, Track> change) => CommitEdit(ChangeEdited(change), _ => Selected);
+
     /// <summary>Adds an empty track at the end and edits it. Returns why it was refused, or null.</summary>
     public string? AddTrack() => CommitScene(scene => SceneEditing.Add(scene));
 
@@ -496,7 +515,7 @@ public sealed class SessionState
     /// <summary>The selected anchor, or null; never set together with a selected point.</summary>
     public AnchorKind? SelectedAnchor { get; private set; }
 
-    /// <summary>The selected anchor in the world, or null.</summary>
+    /// <summary>The selected scene or track anchor in the world, or null.</summary>
     public Anchor? SelectedAnchorInWorld => SelectedAnchor switch
     {
         AnchorKind.Scene => Scene.Anchor,
@@ -524,14 +543,31 @@ public sealed class SessionState
         return null;
     }
 
+    /// <summary>Edits track <paramref name="id"/> and selects its Look At point, clearing any point. Returns why it was refused, or null.</summary>
+    public string? SelectLookAt(Guid id)
+    {
+        if (Mode != CameraMode.Editing) return "The Look At point can only be selected while editing.";
+        if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
+        if (SceneEditing.Get(Scene, id) is not { Aim: AimMode.LookAt, LookAtPlaced: true }) return LookAtUnused;
+        if (SwitchTrack(id) is { } refusal) return refusal;
+        SelectAnchor(AnchorKind.LookAt);
+        return null;
+    }
+
+    /// <summary>The selected Look At point in the world, or null.</summary>
+    public Vector3? SelectedLookAtInWorld => SelectedAnchor == AnchorKind.LookAt ? Track.LookAt : null;
+
     private const string SceneAnchorUnplaced = "The scene anchor is placed with the scene's first point.";
     private const string TrackAnchorUnplaced = "A track's anchor is placed with its first point.";
+    private const string LookAtUnused = "The Look At point is used only while the track aims at it.";
 
-    /// <summary>Why the <paramref name="kind"/> anchor cannot be used yet because it is unplaced, or null.</summary>
-    private string? UnplacedRefusal(AnchorKind kind)
-        => kind == AnchorKind.Scene
-            ? (Scene.AnchorPlaced ? null : SceneAnchorUnplaced)
-            : (Local.AnchorPlaced ? null : TrackAnchorUnplaced);
+    /// <summary>Why the <paramref name="kind"/> selection cannot be used: an unplaced anchor, or a Look At point not in use.</summary>
+    private string? UnplacedRefusal(AnchorKind kind) => kind switch
+    {
+        AnchorKind.Scene => Scene.AnchorPlaced ? null : SceneAnchorUnplaced,
+        AnchorKind.Track => Local.AnchorPlaced ? null : TrackAnchorUnplaced,
+        _ => Local is { Aim: AimMode.LookAt, LookAtPlaced: true } ? null : LookAtUnused,
+    };
 
     private void SelectAnchor(AnchorKind kind)
     {
@@ -544,7 +580,7 @@ public sealed class SessionState
     /// <summary>Moves the selected anchor in the world, carrying what hangs off it or alone. Returns why it was refused, or null.</summary>
     public string? MoveAnchor(Anchor world, bool carry)
     {
-        if (SelectedAnchor is not { } kind) return "Select an anchor first.";
+        if (SelectedAnchor is not { } kind || kind == AnchorKind.LookAt) return "Select an anchor first.";
         if (UnplacedRefusal(kind) is { } unplaced) return unplaced;
         return CommitScene(scene => (Moved(scene, kind, world, carry), EditedTrackId));
     }
@@ -553,7 +589,7 @@ public sealed class SessionState
     public string? PreviewAnchor(Anchor world, bool carry)
     {
         if (liveEditStart is not { } start) return "No live edit is in progress.";
-        if (SelectedAnchor is not { } kind) return "Select an anchor first.";
+        if (SelectedAnchor is not { } kind || kind == AnchorKind.LookAt) return "Select an anchor first.";
         if (UnplacedRefusal(kind) is { } unplaced) return unplaced;
         Scene = Moved(start.Scene, kind, world, carry);
         return null;
@@ -563,6 +599,24 @@ public sealed class SessionState
         => kind == AnchorKind.Scene
             ? SceneGeometry.MoveSceneAnchor(scene, world, carry)
             : SceneGeometry.MoveTrackAnchor(scene, EditedTrackId, world, carry);
+
+    /// <summary>Moves the selected Look At point to <paramref name="world"/> as one undo step. Returns why it was refused, or null.</summary>
+    public string? MoveLookAt(Vector3 world)
+    {
+        if (SelectedAnchor != AnchorKind.LookAt) return "Select the Look At point first.";
+        var local = SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world);
+        return ApplySetting(t => TrackEditing.SetLookAt(t, local));
+    }
+
+    /// <summary>During a live edit, moves the selected Look At point to <paramref name="world"/>. Returns why it was refused, or null.</summary>
+    public string? PreviewLookAt(Vector3 world)
+    {
+        if (liveEditStart is null) return "No live edit is in progress.";
+        if (SelectedAnchor != AnchorKind.LookAt) return "Select the Look At point first.";
+        if (UnplacedRefusal(AnchorKind.LookAt) is { } unused) return unused;
+        Local = TrackEditing.SetLookAt(Local, SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world));
+        return null;
+    }
 
     private EditSnapshot Current => new(Scene, EditedTrackId, Selected);
 
@@ -616,6 +670,7 @@ public sealed class SessionState
             var selected = selectAfter(edited);
             Scene = result;
             Selected = selected;
+            if (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null) SelectedAnchor = null;
             return null;
         }
         catch (ArgumentException ex)

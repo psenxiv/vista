@@ -97,4 +97,32 @@ public class TrackMarkerHitTestTests
         Assert.Equal(1, TrackMarkerHitTest.Nearest(markers[..2], Edited, new Vector2(100f, 100f), 10f));
         Assert.Equal(0, TrackMarkerHitTest.Nearest(markers[..1], Edited, new Vector2(100f, 100f), 10f));
     }
+
+    [Fact]
+    public void TheEditedTracksLookAtComesAfterItsAnchorAndBeforeOtherTracks()
+    {
+        var markers = new[]
+        {
+            new TrackMarker(Edited, -1, new Vector2(100f, 100f), MarkerKind.LookAt),
+            new TrackMarker(Edited, -1, new Vector2(104f, 100f), MarkerKind.TrackAnchor),
+            new TrackMarker(Other, 0, new Vector2(100f, 100f)),
+        };
+
+        Assert.Equal(1, TrackMarkerHitTest.Nearest(markers, Edited, new Vector2(100f, 100f), 10f));
+        Assert.Equal(0, TrackMarkerHitTest.Nearest([markers[0], markers[2]], Edited, new Vector2(100f, 100f), 10f));
+    }
+
+    [Fact]
+    public void AnotherTracksLookAtComesAfterItsAnchorAndBeforeTheSceneAnchor()
+    {
+        var markers = new[]
+        {
+            new TrackMarker(Guid.Empty, -1, new Vector2(100f, 100f), MarkerKind.SceneAnchor),
+            new TrackMarker(Other, -1, new Vector2(105f, 100f), MarkerKind.LookAt),
+            new TrackMarker(Other, -1, new Vector2(108f, 100f), MarkerKind.TrackAnchor),
+        };
+
+        Assert.Equal(2, TrackMarkerHitTest.Nearest(markers, Edited, new Vector2(100f, 100f), 10f));
+        Assert.Equal(1, TrackMarkerHitTest.Nearest(markers[..2], Edited, new Vector2(100f, 100f), 10f));
+    }
 }
