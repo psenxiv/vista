@@ -7,10 +7,10 @@ using Vista.Core.Tracks;
 namespace Vista.Core.Session;
 
 /// <summary>How <see cref="SessionState.Edit"/> changed the mode.</summary>
-public enum EditOutcome { Unchanged, FromOff, FromLive }
+public enum EditOutcome { Unchanged, FromView, FromLive }
 
 /// <summary>What <see cref="SessionState.Play"/>, <see cref="SessionState.Restart"/> or <see cref="SessionState.Cue"/> did.</summary>
-public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff, Cued, CuedFromOff, Previewed }
+public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromView, Cued, CuedFromView, Previewed }
 
 /// <summary>The mode, the Director, the scene and the edited track, and the rules for moving between modes.</summary>
 public sealed class SessionState
@@ -75,7 +75,7 @@ public sealed class SessionState
     public double Duration => Evaluator.Duration;
 
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>
-    public bool LocksInput => Mode != CameraMode.Off;
+    public bool LocksInput => Mode != CameraMode.View;
 
     /// <summary>Enters editing; from live, takes the Director offline.</summary>
     public EditOutcome Edit()
@@ -94,7 +94,7 @@ public sealed class SessionState
             default:
                 Scrubbing = false;
                 Mode = CameraMode.Editing;
-                return EditOutcome.FromOff;
+                return EditOutcome.FromView;
         }
     }
 
@@ -121,7 +121,7 @@ public sealed class SessionState
         var outcome = GoLive();
         if (outcome == PlayOutcome.Refused) return outcome;
         Director.Pause();
-        return outcome == PlayOutcome.StartedFromOff ? PlayOutcome.CuedFromOff : PlayOutcome.Cued;
+        return outcome == PlayOutcome.StartedFromView ? PlayOutcome.CuedFromView : PlayOutcome.Cued;
     }
 
     /// <summary>Live, holds the current frame; in Edit, stops a preview. Returns false when there was nothing to stop.</summary>
@@ -165,9 +165,9 @@ public sealed class SessionState
         EndLiveEdit();
 
         Director.GoLive(new PlaylistShot(items, Scene.PlaylistLoops));
-        var fromOff = Mode == CameraMode.Off;
+        var fromView = Mode == CameraMode.View;
         Mode = CameraMode.Live;
-        return fromOff ? PlayOutcome.StartedFromOff : PlayOutcome.Started;
+        return fromView ? PlayOutcome.StartedFromView : PlayOutcome.Started;
     }
 
     /// <summary>Starts an Edit preview from the scrub head, or from the beginning when asked or when the scrub head is where the shot finishes.</summary>
@@ -188,15 +188,15 @@ public sealed class SessionState
         return PlayOutcome.Previewed;
     }
 
-    /// <summary>Turns off and takes the Director offline. Returns false if already off.</summary>
+    /// <summary>Goes to View and takes the Director offline. Returns false if already in View.</summary>
     public bool Release()
     {
         StopPreview();
-        if (Mode == CameraMode.Off) return false;
+        if (Mode == CameraMode.View) return false;
         Scrubbing = false;
         EndLiveEdit();
         Director.GoOffline();
-        Mode = CameraMode.Off;
+        Mode = CameraMode.View;
         return true;
     }
 
@@ -828,21 +828,21 @@ public sealed class SessionState
     /// <summary>Seconds under the scrub head: shot time while live or previewing, otherwise the last scrubbed or jumped-to time.</summary>
     public double ScrubHead => Mode == CameraMode.Live ? Director.ShotTime : preview?.ShotTime ?? Math.Min(scrubTime, Duration);
 
-    /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect when off.</summary>
+    /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect in View.</summary>
     public void BeginScrub()
     {
         StopPreview();
-        if (Mode == CameraMode.Off || Scrubbing) return;
+        if (Mode == CameraMode.View || Scrubbing) return;
         Scrubbing = true;
         resumeAfterScrub = Mode == CameraMode.Live && !Director.IsPaused;
         if (Mode == CameraMode.Live) Director.Pause();
     }
 
-    /// <summary>Moves the scrub head to <paramref name="time"/> within the track; live, playback seeks there. No effect when off.</summary>
+    /// <summary>Moves the scrub head to <paramref name="time"/> within the track; live, playback seeks there. No effect in View.</summary>
     public void ScrubTo(double time)
     {
         if (Mode == CameraMode.Editing) StopPreview();
-        if (Mode == CameraMode.Off) return;
+        if (Mode == CameraMode.View) return;
         scrubTime = Math.Clamp(time, 0.0, ScrubLength);
         if (Mode == CameraMode.Live) Director.Seek(scrubTime);
     }

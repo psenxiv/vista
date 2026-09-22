@@ -423,7 +423,7 @@ public class SessionEditingTests
     }
 
     [Fact]
-    public void ScrubbingDoesNothingWhenOff()
+    public void ScrubbingDoesNothingInView()
     {
         var state = new SessionState();
         state.BeginScrub();

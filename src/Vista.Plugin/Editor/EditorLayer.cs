@@ -12,7 +12,7 @@ using Dalamud.Interface.Utility;
 
 namespace Vista.Plugin.Editor;
 
-/// <summary>Everything drawn over the game in editing mode: every shown track, marker clicks and the gizmo.</summary>
+/// <summary>Everything drawn over the game in Edit and View: every shown track, and in Edit marker clicks and the gizmo.</summary>
 internal sealed class EditorLayer
 {
     private const float HitRadius = Overlay.MarkerRadius + 4f;
@@ -37,8 +37,11 @@ internal sealed class EditorLayer
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
     {
-        if (session.Mode != CameraMode.Editing || session.Previewing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); return; }
+        var editing = session.Mode == CameraMode.Editing && !session.Previewing;
+        if (!editing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); }
+        if (!editing && session.Mode != CameraMode.View) return;
         if (EditorView.Read() is not { } view) return;
+        var selectedAnchor = editing ? session.SelectedAnchor : null;
 
         var scene = session.Scene;
         var edited = session.EditedTrackId;
@@ -56,20 +59,21 @@ internal sealed class EditorLayer
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawLookAt(view, otherWorld.LookAt, FirstPosition(otherWorld), edited: false, selected: false), MarkerKind.LookAt));
         }
 
-        var track = gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
+        var track = editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
             ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
             : session.Track;
-        AddMarkers(markers, edited, overlay.Draw(view, track, session.Selected, edited: true));
+        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.Selected : null, edited: true));
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
         if (editedLocal.AnchorPlaced)
-            markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
+            markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
         if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
-            markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
+            markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
         if (session.CharacterAim(track) is { } characterAim) overlay.DrawTargetMarker(view, characterAim);
         if (scene.AnchorPlaced)
-            markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, session.SelectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
+            markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
+        if (!editing) return;
 
         var io = ImGui.GetIO();
         var hovered = TrackMarkerHitTest.Nearest(markers, edited, io.MousePos, HitRadius);

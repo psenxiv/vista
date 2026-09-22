@@ -105,16 +105,16 @@ public class SessionPlaylistTests
     }
 
     [Fact]
-    public void PlayAndRestartFromOffAreRefusedWhenNothingCanPlay()
+    public void PlayAndRestartFromViewAreRefusedWhenNothingCanPlay()
     {
         var state = Editing();
         state.Release();
 
         Assert.Equal(PlayOutcome.Refused, state.Play());
-        Assert.Equal(CameraMode.Off, state.Mode);
+        Assert.Equal(CameraMode.View, state.Mode);
 
         Assert.Equal(PlayOutcome.Refused, state.Restart());
-        Assert.Equal(CameraMode.Off, state.Mode);
+        Assert.Equal(CameraMode.View, state.Mode);
     }
 
     [Fact]

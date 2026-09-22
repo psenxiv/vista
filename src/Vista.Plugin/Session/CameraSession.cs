@@ -178,7 +178,7 @@ internal sealed class CameraSession
     /// <summary>The free-cam's speed setting.</summary>
     public FlySpeed Speed => freeCam.Speed;
 
-    /// <summary>Starts free-cam: from Off at the game camera, from Live at the current frame. No-op while editing.</summary>
+    /// <summary>Starts free-cam: from View at the game camera, from Live at the current frame. No-op while editing.</summary>
     public void Edit()
     {
         if (state.Mode == CameraMode.Editing) return;
@@ -188,7 +188,7 @@ internal sealed class CameraSession
 
         switch (state.Edit())
         {
-            case EditOutcome.FromOff:
+            case EditOutcome.FromView:
                 previewedLastFrame = false;
                 freeCam.Enable(start.Value.Position, 0f, start.Value.Fov);
                 movement.Hold();
@@ -212,7 +212,7 @@ internal sealed class CameraSession
         Apply(state.Play(), previewing);
     }
 
-    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start, taking the camera if off. Refused when nothing can play.</summary>
+    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start, taking the camera if in View. Refused when nothing can play.</summary>
     public void Restart()
     {
         var previewing = state.Mode == CameraMode.Editing;
@@ -232,7 +232,7 @@ internal sealed class CameraSession
     /// <summary>Stops an Edit preview; the free-cam takes over from the frame shown on the next frame.</summary>
     public void StopPreview() => state.StopPreview();
 
-    /// <summary>Turns the plugin off: stops playback and free-cam, unlocks, and hands the camera back.</summary>
+    /// <summary>Goes to View: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason)
     {
         if (!state.Release() && !ownership.IsOwned) return;
@@ -487,14 +487,14 @@ internal sealed class CameraSession
                 if (hideUiInLive) GameUi.Hide();
                 Plugin.Log.Information("[vista] resumed");
                 return;
-            case PlayOutcome.StartedFromOff or PlayOutcome.CuedFromOff:
+            case PlayOutcome.StartedFromView or PlayOutcome.CuedFromView:
                 movement.Hold();
                 TakeCamera();
                 break;
         }
 
         freeCam.Disable();
-        if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromOff)
+        if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromView)
         {
             Plugin.Log.Information("[vista] mode: live, cued, {Count} playlist entries", state.Scene.Playlist.Count);
             return;

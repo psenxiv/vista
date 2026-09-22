@@ -16,7 +16,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "VISTA_POINT";
 
-    private static readonly string[] ModeNames = ["Off", "Edit", "Live"];
+    private static readonly string[] ModeNames = ["View", "Edit", "Live"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel", "Look At", "Follow Target"];
     private static readonly AimMode[] AimModes = [AimMode.AimKeys, AimMode.PathTangent, AimMode.LookAt, AimMode.FollowTarget];
     private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
@@ -221,13 +221,13 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode == CameraMode.Off || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
+        ImGui.BeginDisabled(session.Mode == CameraMode.View || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
         if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
         ImGui.EndDisabled();
         ImGui.SameLine();
     }
 
-    /// <summary>Off, Edit and Live; Off releases the camera and Live cues the playlist paused at its first entry's start.</summary>
+    /// <summary>View, Edit and Live; View releases the camera and Live cues the playlist paused at its first entry's start.</summary>
     private void DrawModeCombo()
     {
         var current = session.Mode switch { CameraMode.Editing => 1, CameraMode.Live => 2, _ => 0 };
@@ -508,7 +508,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var head = (float)session.ScrubHead;
 
         DrawTransport();
-        ImGui.BeginDisabled(session.Mode == CameraMode.Off || duration <= 0f);
+        ImGui.BeginDisabled(session.Mode == CameraMode.View || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
         if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); scrubbing = session.Scrubbing; }

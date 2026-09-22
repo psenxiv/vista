@@ -29,19 +29,19 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void StartsOffWithAnEmptyTrackAndNothingLocked()
+    public void StartsInViewWithAnEmptyTrackAndNothingLocked()
     {
         var state = new SessionState();
-        Assert.Equal(CameraMode.Off, state.Mode);
+        Assert.Equal(CameraMode.View, state.Mode);
         Assert.Empty(state.Track.Points);
         Assert.False(state.LocksInput);
     }
 
     [Fact]
-    public void EditFromOffEntersEditingAndLocksInput()
+    public void EditFromViewEntersEditingAndLocksInput()
     {
         var state = new SessionState();
-        Assert.Equal(EditOutcome.FromOff, state.Edit());
+        Assert.Equal(EditOutcome.FromView, state.Edit());
         Assert.Equal(CameraMode.Editing, state.Mode);
         Assert.True(state.LocksInput);
     }
@@ -66,9 +66,9 @@ public class SessionStateTests
     [Fact]
     public void PlayWithNoPointsIsRefusedAndChangesNothing()
     {
-        var off = new SessionState();
-        Assert.Equal(PlayOutcome.Refused, off.Play());
-        Assert.Equal(CameraMode.Off, off.Mode);
+        var view = new SessionState();
+        Assert.Equal(PlayOutcome.Refused, view.Play());
+        Assert.Equal(CameraMode.View, view.Mode);
 
         var editing = new SessionState();
         editing.Edit();
@@ -90,12 +90,12 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void PlayFromOffSaysItStartedFromOff()
+    public void PlayFromViewSaysItStartedFromView()
     {
         var state = EditingWithTrack();
         state.AddToPlaylist(state.EditedTrackId);
         state.Release();
-        Assert.Equal(PlayOutcome.StartedFromOff, state.Play());
+        Assert.Equal(PlayOutcome.StartedFromView, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
     }
 
@@ -164,12 +164,12 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void CueFromOffSaysItCuedFromOff()
+    public void CueFromViewSaysItCuedFromView()
     {
         var state = EditingWithTrack();
         state.AddToPlaylist(state.EditedTrackId);
         state.Release();
-        Assert.Equal(PlayOutcome.CuedFromOff, state.Cue());
+        Assert.Equal(PlayOutcome.CuedFromView, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);
     }
 
@@ -204,17 +204,17 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void ReleaseTurnsEverythingOff()
+    public void ReleaseReturnsEverythingToView()
     {
         Assert.False(new SessionState().Release());
 
         var editing = EditingWithTrack();
         Assert.True(editing.Release());
-        Assert.Equal(CameraMode.Off, editing.Mode);
+        Assert.Equal(CameraMode.View, editing.Mode);
 
         var live = Live();
         Assert.True(live.Release());
-        Assert.Equal(CameraMode.Off, live.Mode);
+        Assert.Equal(CameraMode.View, live.Mode);
         Assert.False(live.Director.IsLive);
         Assert.Null(live.Director.Tick(1f / 60f));
     }
@@ -232,9 +232,9 @@ public class SessionStateTests
     {
         const string refused = "The track can only change while editing.";
 
-        var off = new SessionState();
-        Assert.Equal(refused, off.ChangeTrack(t => TrackEditing.Append(t, Point(0f))));
-        Assert.Empty(off.Track.Points);
+        var view = new SessionState();
+        Assert.Equal(refused, view.ChangeTrack(t => TrackEditing.Append(t, Point(0f))));
+        Assert.Empty(view.Track.Points);
 
         var live = Live();
         Assert.Equal(refused, live.ChangeTrack(t => TrackEditing.Append(t, Point(20f))));

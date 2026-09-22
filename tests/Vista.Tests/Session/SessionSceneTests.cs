@@ -330,7 +330,7 @@ public class SessionSceneTests
         Assert.Equal(10.0, state.ScrubLength, 3);
 
         state.Release();
-        Assert.Equal(PlayOutcome.StartedFromOff, state.Play());
+        Assert.Equal(PlayOutcome.StartedFromView, state.Play());
         Assert.Equal(first, state.PlayingEntry!.TrackId);
     }
 }

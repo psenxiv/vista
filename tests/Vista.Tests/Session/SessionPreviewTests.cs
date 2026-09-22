@@ -235,7 +235,7 @@ public class SessionPreviewTests
     }
 
     [Fact]
-    public void PlayFromOffStillGoesLive()
+    public void PlayFromViewStillGoesLive()
     {
         var state = new SessionState();
         state.Edit();
@@ -244,7 +244,7 @@ public class SessionPreviewTests
         state.AddToPlaylist(state.EditedTrackId);
         state.Release();
 
-        Assert.Equal(PlayOutcome.StartedFromOff, state.Play());
+        Assert.Equal(PlayOutcome.StartedFromView, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
     }
 }
