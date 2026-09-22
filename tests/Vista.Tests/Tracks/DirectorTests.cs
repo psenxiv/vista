@@ -289,4 +289,21 @@ public class DirectorTests
         Assert.Null(director.Playlist);
         Assert.Equal(10.0, director.ShotLength, 4);
     }
+
+    [Fact]
+    public void GoLiveWithTheGameCameraClearsAFinishedTracksState()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        director.Tick(20f);
+        Assert.True(director.IsFinished);
+
+        director.GoLive(new GameCameraShot());
+
+        Assert.False(director.IsFinished);
+        Assert.Equal(0.0, director.ShotTime);
+        Assert.Equal(0.0, director.ShotLength);
+        Assert.Null(director.Playlist);
+        Assert.Null(director.Tick(1f));
+    }
 }

@@ -109,6 +109,16 @@ public class PlaylistPlaybackTests
     }
 
     [Fact]
+    public void ALoopCountBelowOneActsAsOne()
+    {
+        var playback = new PlaylistPlayback([Item(Ten(loop: true), 0), Item(Ten())]);
+        playback.Advance(12f);
+
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(2.0, playback.ShotTime, 4);
+    }
+
+    [Fact]
     public void AZeroLengthEntryIsShownForOneFrame()
     {
         var playback = new PlaylistPlayback([Item(Ten()), Item(Snap(50f, 0f)), Item(Ten())]);
@@ -120,6 +130,25 @@ public class PlaylistPlaybackTests
         playback.Advance(0.5f);
         Assert.Equal(2, playback.Index);
         Assert.Equal(0.5, playback.ShotTime, 4);
+    }
+
+    [Fact]
+    public void AZeroLengthFirstEntryIsShownBeforeMovingOn()
+    {
+        var playback = new PlaylistPlayback([Item(Snap(50f, 0f)), Item(Ten())]);
+
+        var shown = playback.Advance(0.016f);
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(50f, shown!.Value.Position.X, 4);
+
+        playback.Advance(0.5f);
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(0.5, playback.ShotTime, 4);
+
+        playback.Restart();
+        var shownAgain = playback.Advance(0.016f);
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(50f, shownAgain!.Value.Position.X, 4);
     }
 
     [Fact]

@@ -11,6 +11,7 @@ public sealed class PlaylistPlayback : IPlayback
     private readonly IReadOnlyList<PlaylistItem> items;
     private readonly TrackEvaluator[] evaluators;
     private double clock;
+    private bool shownFirstFrame;
 
     /// <summary>Plays <paramref name="items"/> from the first; refused when empty.</summary>
     public PlaylistPlayback(IReadOnlyList<PlaylistItem> items)
@@ -38,6 +39,13 @@ public sealed class PlaylistPlayback : IPlayback
     /// <summary>Moves on by <paramref name="dt"/>, cutting to later entries as earlier ones finish, and returns the frame.</summary>
     public CameraState? Advance(float dt)
     {
+        // A zero-length first entry gets its own frame before time starts moving.
+        if (Index == 0 && !shownFirstFrame)
+        {
+            shownFirstFrame = true;
+            if (Total == 0) return evaluators[0].Evaluate(ShotTime);
+        }
+
         if (!IsFinished) clock += Math.Max(dt, 0f);
 
         while (!IsFinished && clock >= Total && (Total > 0 || clock > 0))
@@ -78,14 +86,15 @@ public sealed class PlaylistPlayback : IPlayback
         Index = 0;
         clock = 0;
         IsFinished = false;
+        shownFirstFrame = false;
     }
 
     private PlaybackDirection Direction => items[Index].Track.Direction;
 
     private double Cycle => PlaybackClock.CycleLength(Direction, ShotLength);
 
-    /// <summary>How long the playing entry plays: N cycles, one cycle, or for good when its track loops with no count.</summary>
-    private double Total => items[Index].Loops is { } n ? n * Cycle : items[Index].Track.Loop ? double.PositiveInfinity : Cycle;
+    /// <summary>How long the playing entry plays: N cycles (never fewer than one), one cycle, or for good when its track loops with no count.</summary>
+    private double Total => items[Index].Loops is { } n ? Math.Max(n, 1) * Cycle : items[Index].Track.Loop ? double.PositiveInfinity : Cycle;
 
     /// <summary>The clock within the loop pass the playing entry is on; a finished entry sits at the end of its last pass.</summary>
     private double PassClock
