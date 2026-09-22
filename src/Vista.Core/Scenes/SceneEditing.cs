@@ -6,7 +6,7 @@ namespace Vista.Core.Scenes;
 public static class SceneEditing
 {
     /// <summary>A scene holding one empty track, "Track 1".</summary>
-    public static Scene New() => new([TrackEditing.Empty()], new HashSet<Guid>());
+    public static Scene New() => new([TrackEditing.Empty()], new HashSet<Guid>(), []);
 
     /// <summary>The index of track <paramref name="id"/>, or −1.</summary>
     public static int IndexOf(Scene scene, Guid id)
@@ -56,7 +56,7 @@ public static class SceneEditing
         return (scene with { Tracks = tracks }, copy.Id);
     }
 
-    /// <summary>Deletes track <paramref name="id"/>, refusing the only track; names the track now at its place, or the new last.</summary>
+    /// <summary>Deletes track <paramref name="id"/> and its playlist entries, refusing the only track; names the track now at its place, or the new last.</summary>
     public static (Scene Scene, Guid Next) Delete(Scene scene, Guid id)
     {
         var index = Require(scene, id);
@@ -65,7 +65,7 @@ public static class SceneEditing
         tracks.RemoveAt(index);
         var hidden = new HashSet<Guid>(scene.Hidden);
         hidden.Remove(id);
-        return (scene with { Tracks = tracks, Hidden = hidden }, tracks[Math.Min(index, tracks.Count - 1)].Id);
+        return (scene with { Tracks = tracks, Hidden = hidden, Playlist = scene.Playlist.Where(e => e.TrackId != id).ToArray() }, tracks[Math.Min(index, tracks.Count - 1)].Id);
     }
 
     /// <summary>Moves the track at <paramref name="from"/> to <paramref name="to"/>.</summary>
