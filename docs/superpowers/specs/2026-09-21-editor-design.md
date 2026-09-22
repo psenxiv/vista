@@ -49,6 +49,8 @@ Layout revised by the user on 2026-09-22 after using the first build:
   Play from Edit or Off goes live. Every icon has a tooltip naming it.
 - **Second row:** Aim and Playback drop-downs that show their setting ("Aim: Recorded
   aim", "Playback: Once"), and **Clear track** as a trash icon at the right end.
+  Superseded by `2026-09-22-playback-direction-design.md`: the Playback drop-down
+  is replaced by that spec's Direction drop-down and a Loop toggle.
 - **Bottom row:** the scrub bar shows current and total time in the bar itself;
   **Speed** sits at its right, in Edit mode only. There is no status line: the
   mode drop-down and the Play/Pause icon show the state.
