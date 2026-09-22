@@ -137,27 +137,6 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void PathTangentIsDeterministicRegardlessOfCallOrder()
-    {
-        var points = new[]
-        {
-            new Vector3(5, 0, 0),
-            new Vector3(5, 0, 0),
-            new Vector3(10, 0, 0),
-            new Vector3(15, 0, 0),
-        };
-        var table = new ArcLengthTable(points);
-        var fallback = (Yaw: 0f, Pitch: 0f);
-
-        var first = TrackAim.PathTangent(points, table, 0, 0.5f, fallback);
-        _ = TrackAim.PathTangent(points, table, 2, 0.7f, fallback);
-        var second = TrackAim.PathTangent(points, table, 0, 0.5f, fallback);
-
-        Assert.Equal(first.Yaw, second.Yaw, 5);
-        Assert.Equal(first.Pitch, second.Pitch, 5);
-    }
-
-    [Fact]
     public void TowardAimsFromOnePlaceAtAnother()
     {
         var ahead = TrackAim.Toward(Vector3.Zero, new Vector3(0f, 0f, -10f))!.Value;

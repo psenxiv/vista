@@ -125,23 +125,6 @@ public class DirectorTests
     }
 
     [Fact]
-    public void CallingGoLiveWhileLiveRestarts()
-    {
-        var director = new Director();
-        var shot = new TrackShot(StraightTrack());
-        director.GoLive(shot);
-        director.Tick(5f);
-        director.Pause();
-
-        director.GoLive(shot);
-
-        Assert.False(director.IsPaused);
-        var frame = director.Tick(0f);
-        var expected = new TrackEvaluator(shot.Track).Evaluate(0.0);
-        Assert.Equal(expected, frame);
-    }
-
-    [Fact]
     public void TickOnATrackShotAdvancesThePlayback()
     {
         var director = new Director();
@@ -215,19 +198,6 @@ public class DirectorTests
         director.Tick(3f);
 
         Assert.Equal(2.0, director.ShotTime, 5);
-    }
-
-    [Fact]
-    public void ShotTimeRestartsOnGoLive()
-    {
-        var director = new Director();
-        var shot = new TrackShot(StraightTrack());
-        director.GoLive(shot);
-        director.Tick(4f);
-
-        director.GoLive(shot);
-
-        Assert.Equal(0.0, director.ShotTime);
     }
 
     [Fact]

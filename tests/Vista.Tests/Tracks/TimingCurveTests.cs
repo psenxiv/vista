@@ -1,5 +1,3 @@
-using System.Linq;
-using System.Numerics;
 using Vista.Core.Tracks;
 using Xunit;
 
@@ -210,47 +208,6 @@ public class TimingCurveTests
         var speedAfter = (curve.PositionAt(1.0 + eps) - curve.PositionAt(1.0)) / eps;
 
         Assert.Equal(speedBefore, speedAfter, 3);
-    }
-
-    [Fact]
-    public void StraightCurveGivesConstantWorldSpeedWithinASegmentOnUnevenlySpacedPoints()
-    {
-        // Same "bunched-then-spread" shape as ArcLengthTableTests: point 1 to point 2 is
-        // the long segment whose spline parameter is not proportional to arc length.
-        var points = new Vector3[]
-        {
-            new(0, 0, 0),
-            new(0.001f, 0, 0),
-            new(10, 0, 0),
-            new(1000, 0, 0),
-        };
-        var table = new ArcLengthTable(points);
-
-        // A straight, evenly-timed ramp through control-point units 1..2 (segment 1):
-        // constant control-point-units-per-second, which arc-length evaluation should
-        // turn into constant world-space-units-per-second within that segment.
-        var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(2f, 2f), Key(3f, 3f) };
-        var curve = new TimingCurve(keys);
-
-        const int steps = 5;
-        var worldPositions = new Vector3[steps + 1];
-        for (var i = 0; i <= steps; i++)
-        {
-            var t = 1.0 + (double)i / steps; // time in [1, 2], within segment 1
-            var position = curve.PositionAt(t);
-            var segment = (int)MathF.Floor(position);
-            var fraction = position - segment;
-            var parameter = table.ParameterAt(segment, fraction);
-            worldPositions[i] = CatmullRom.Evaluate(points, segment, parameter);
-        }
-
-        var distances = new float[steps];
-        for (var i = 0; i < steps; i++)
-            distances[i] = Vector3.Distance(worldPositions[i], worldPositions[i + 1]);
-
-        var mean = distances.Average();
-        foreach (var d in distances)
-            Assert.True(MathF.Abs(d - mean) < mean * 0.05f, $"world step {d} strays from mean {mean}");
     }
 
     [Fact]

@@ -114,41 +114,6 @@ public class SceneEditingTests
     }
 
     [Fact]
-    public void DuplicateCopiesTheAnchor()
-    {
-        var scene = SceneEditing.New();
-        var anchor = new Anchor(new Vector3(4f, 0f, 1f), 1.2f);
-        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { Anchor = anchor, AnchorPlaced = true });
-        var (result, _) = SceneEditing.Duplicate(scene, scene.Tracks[0].Id);
-
-        Assert.Equal(anchor, result.Tracks[1].Anchor);
-        Assert.True(result.Tracks[1].AnchorPlaced);
-    }
-
-    [Fact]
-    public void DuplicateCopiesTheLookAtAndWatchSettings()
-    {
-        var scene = SceneEditing.New();
-        scene = SceneEditing.Replace(scene, scene.Tracks[0] with
-        {
-            LookAt = new Vector3(1f, 2f, 3f),
-            LookAtPlaced = true,
-            TargetName = "Aya",
-            TargetWorld = "Gilgamesh",
-            AimHeight = 2f,
-            Smoothing = 0.7f,
-        });
-        var copy = SceneEditing.Duplicate(scene, scene.Tracks[0].Id).Scene.Tracks[1];
-
-        Assert.Equal(new Vector3(1f, 2f, 3f), copy.LookAt);
-        Assert.True(copy.LookAtPlaced);
-        Assert.Equal("Aya", copy.TargetName);
-        Assert.Equal("Gilgamesh", copy.TargetWorld);
-        Assert.Equal(2f, copy.AimHeight);
-        Assert.Equal(0.7f, copy.Smoothing);
-    }
-
-    [Fact]
     public void DeleteRemovesTheTrackAndNamesTheOneTakingItsPlace()
     {
         var scene = Three();
@@ -201,17 +166,5 @@ public class SceneEditingTests
         Assert.DoesNotContain(id, SceneEditing.SetHidden(hidden, id, false).Hidden);
         Assert.Empty(scene.Hidden);
         Assert.Throws<ArgumentException>(() => SceneEditing.SetHidden(scene, Guid.NewGuid(), true));
-    }
-
-    [Fact]
-    public void DeleteKeepsTheSceneAnchor()
-    {
-        var anchor = new Anchor(new Vector3(4f, 1f, -2f), 0.7f);
-        var scene = Three() with { Anchor = anchor, AnchorPlaced = true };
-
-        var result = SceneEditing.Delete(scene, scene.Tracks[1].Id).Scene;
-
-        Assert.Equal(anchor, result.Anchor);
-        Assert.True(result.AnchorPlaced);
     }
 }

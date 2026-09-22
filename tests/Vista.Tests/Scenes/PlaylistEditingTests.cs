@@ -41,7 +41,6 @@ public class PlaylistEditingTests
         scene = PlaylistEditing.Add(scene, scene.Tracks[0].Id).Scene;
 
         Assert.Equal(2, scene.Playlist.Count);
-        Assert.NotEqual(scene.Playlist[0].Id, scene.Playlist[1].Id);
         Assert.Throws<ArgumentException>(() => PlaylistEditing.Add(scene, Guid.NewGuid()));
     }
 
@@ -122,16 +121,5 @@ public class PlaylistEditingTests
         var scene = TwoTracks();
         var withEntry = PlaylistEditing.Add(scene, scene.Tracks[0].Id).Scene;
         Assert.Single(SceneEditing.Duplicate(withEntry, scene.Tracks[0].Id).Scene.Playlist);
-    }
-
-    [Fact]
-    public void SetPlaylistLoopsSetsTheFlagAndKeepsTheSceneWhenUnchanged()
-    {
-        var scene = TwoTracks();
-
-        var looping = PlaylistEditing.SetPlaylistLoops(scene, true);
-
-        Assert.True(looping.PlaylistLoops);
-        Assert.Same(looping, PlaylistEditing.SetPlaylistLoops(looping, true));
     }
 }

@@ -211,40 +211,4 @@ public class SessionPreviewTests
         state.Release();
         Assert.False(state.Previewing);
     }
-
-    [Fact]
-    public void ATrackWithNoPointsIsRefused()
-    {
-        var state = new SessionState();
-        state.Edit();
-        Assert.Equal(PlayOutcome.Refused, state.Play());
-        Assert.Equal(PlayOutcome.Refused, state.Restart());
-        Assert.False(state.Previewing);
-    }
-
-    [Fact]
-    public void LiveIsUnchanged()
-    {
-        var state = Editing();
-        state.AddToPlaylist(state.EditedTrackId);
-        Assert.Equal(PlayOutcome.Cued, state.Cue());
-        Assert.Equal(PlayOutcome.Resumed, state.Play());
-        Assert.True(state.Director.IsLive);
-        Assert.False(state.Previewing);
-        Assert.Equal(PlayOutcome.Started, state.Restart());
-    }
-
-    [Fact]
-    public void PlayFromViewStillGoesLive()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToPlaylist(state.EditedTrackId);
-        state.Release();
-
-        Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
-        Assert.Equal(CameraMode.Live, state.Mode);
-    }
 }

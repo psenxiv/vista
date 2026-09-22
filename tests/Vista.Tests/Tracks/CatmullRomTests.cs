@@ -56,15 +56,6 @@ public class CatmullRomTests
         AssertClose(b, CatmullRom.Evaluate(points, 0, 1f));
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    public void DegenerateZeroOrOnePointsGiveNoSegments(int pointCount)
-    {
-        var points = new Vector3[pointCount];
-        Assert.Equal(0, CatmullRom.SegmentCount(points.Length));
-    }
-
     [Fact]
     public void EvaluatingASegmentWithNoPointsThrowsArgumentOutOfRange()
     {

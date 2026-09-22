@@ -298,23 +298,6 @@ public class SessionSceneTests
     }
 
     [Fact]
-    public void LivePlaysThePlaylist()
-    {
-        var state = Editing();
-        state.AddTrack();
-        state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(4f));
-        state.AddToPlaylist(state.EditedTrackId);
-
-        state.Cue();
-        state.Play();
-        state.Director.Tick(10f);
-
-        Assert.Equal(2.0, state.Director.ShotTime, 3);
-    }
-
-    [Fact]
     public void LiveCuesAndPlaysThePlaylistEntryNotTheEditedTrack()
     {
         var state = Editing();

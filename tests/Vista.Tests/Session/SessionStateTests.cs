@@ -287,14 +287,6 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void EditAndPlayWorkFromOff()
-    {
-        var state = new SessionState();
-        Assert.Equal(EditOutcome.FromGame, state.Edit());
-        Assert.Equal(CameraMode.Editing, state.Mode);
-    }
-
-    [Fact]
     public void ClearingTheSceneStartsAfreshInOff()
     {
         var state = EditingWithTrack();

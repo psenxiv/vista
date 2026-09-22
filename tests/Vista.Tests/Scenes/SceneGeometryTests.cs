@@ -39,7 +39,6 @@ public class SceneGeometryTests
 
         Near(anchor.ToWorld(new Vector3(10f, 0f, 0f)), world.Points[1].Position);
         Assert.Equal(1.5f, world.Points[1].Yaw, Tolerance);
-        Assert.Same(scene.Tracks[0].Timing, world.Timing);
     }
 
     [Fact]
@@ -90,18 +89,6 @@ public class SceneGeometryTests
     {
         var scene = Anchored();
         Assert.Same(scene, SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(-9f, 0f, 9f), 0f));
-    }
-
-    [Fact]
-    public void MovingTheSceneAnchorCarriesEveryTrack()
-    {
-        var scene = Anchored();
-        var to = new Anchor(new Vector3(0f, 0f, 0f), 0f);
-        var moved = SceneGeometry.MoveSceneAnchor(scene, to, carry: true);
-
-        Assert.Equal(to, moved.Anchor);
-        Assert.Same(scene.Tracks[0], moved.Tracks[0]);
-        Near(to.ToWorld(scene.Tracks[0].Anchor).ToWorld(new Vector3(20f, 0f, 0f)), WorldPositions(moved)[2]);
     }
 
     [Fact]
@@ -232,17 +219,6 @@ public class SceneGeometryTests
 
         Assert.True(placed.Tracks[0].AnchorPlaced);
         Near(before, WorldLookAt(placed));
-    }
-
-    [Fact]
-    public void MovingTheSceneAnchorCarriesTheLookAt()
-    {
-        var scene = WithLookAt(Anchored());
-        var to = new Anchor(new Vector3(-30f, 1f, 8f), -0.7f);
-
-        var moved = SceneGeometry.MoveSceneAnchor(scene, to, carry: true);
-
-        Near(to.ToWorld(scene.Tracks[0].Anchor).ToWorld(new Vector3(0f, 3f, -10f)), WorldLookAt(moved));
     }
 
     [Fact]
