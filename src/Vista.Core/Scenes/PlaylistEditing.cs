@@ -49,6 +49,9 @@ public static class PlaylistEditing
         return scene with { Playlist = entries };
     }
 
+    /// <summary>Sets whether Live wraps from the last entry to the first.</summary>
+    public static Scene SetPlaylistLoops(Scene scene, bool loops) => scene.PlaylistLoops == loops ? scene : scene with { PlaylistLoops = loops };
+
     /// <summary>The index of entry <paramref name="entryId"/>, or −1.</summary>
     public static int IndexOf(Scene scene, Guid entryId)
     {

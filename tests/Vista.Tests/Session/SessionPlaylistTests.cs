@@ -248,4 +248,43 @@ public class SessionPlaylistTests
         state.AddToPlaylist(First(state));
         Assert.Null(state.PlayingEntry);
     }
+
+    [Fact]
+    public void SettingThePlaylistLoopIsOneUndoStep()
+    {
+        var state = Editing();
+
+        Assert.Null(state.SetPlaylistLoops(true));
+        Assert.True(state.Scene.PlaylistLoops);
+
+        state.Undo();
+        Assert.False(state.Scene.PlaylistLoops);
+    }
+
+    [Fact]
+    public void SettingThePlaylistLoopIsRefusedUnlessEditing()
+    {
+        var state = Editing();
+        state.AddToPlaylist(First(state));
+        state.Cue();
+
+        Assert.NotNull(state.SetPlaylistLoops(true));
+        Assert.False(state.Scene.PlaylistLoops);
+    }
+
+    [Fact]
+    public void LivePlaysALoopingPlaylistRoundAgain()
+    {
+        var state = Editing();
+        state.AddToPlaylist(Second(state));
+        state.SetPlaylistLoops(true);
+        state.Cue();
+        state.Play();
+
+        state.Director.Tick(3f);
+
+        Assert.False(state.Director.IsFinished);
+        Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
+        Assert.Equal(1.0, state.ScrubHead, 4);
+    }
 }

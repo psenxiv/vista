@@ -32,7 +32,7 @@ public sealed class Director
         var playback = shot switch
         {
             TrackShot t => (IPlayback)new TrackPlayback(t.Track),
-            PlaylistShot p => new PlaylistPlayback(p.Items),
+            PlaylistShot p => new PlaylistPlayback(p.Items, p.Loops),
             _ => null,
         };
         _shot = shot;

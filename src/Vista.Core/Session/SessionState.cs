@@ -159,7 +159,7 @@ public sealed class SessionState
         Scrubbing = false;
         EndLiveEdit();
 
-        Director.GoLive(new PlaylistShot(items));
+        Director.GoLive(new PlaylistShot(items, Scene.PlaylistLoops));
         var fromOff = Mode == CameraMode.Off;
         Mode = CameraMode.Live;
         return fromOff ? PlayOutcome.StartedFromOff : PlayOutcome.Started;
@@ -396,6 +396,9 @@ public sealed class SessionState
     /// <summary>Sets how many times an entry plays, or null to follow its track. Returns why it was refused, or null.</summary>
     public string? SetEntryLoops(Guid entryId, int? loops) => CommitScene(scene => (PlaylistEditing.SetLoops(scene, entryId, loops), EditedTrackId));
 
+    /// <summary>Sets whether Live loops the playlist, as one undo step. Returns why it was refused, or null.</summary>
+    public string? SetPlaylistLoops(bool loops) => CommitScene(scene => (PlaylistEditing.SetPlaylistLoops(scene, loops), EditedTrackId));
+
     /// <summary>True when the playlist has an entry whose track has points.</summary>
     public bool CanGoLive => PlaylistEditing.CanPlay(Scene);
 
@@ -467,10 +470,10 @@ public sealed class SessionState
         else history.Record(start);
     }
 
-    /// <summary>True when two scenes hold the same anchor, hidden set and tracks by value.</summary>
+    /// <summary>True when two scenes hold the same anchor, hidden set, playlist, playlist loop and tracks by value.</summary>
     private static bool SameValues(Scene a, Scene b)
     {
-        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.Tracks.Count != b.Tracks.Count || !a.Hidden.SetEquals(b.Hidden) || !a.Playlist.SequenceEqual(b.Playlist)) return false;
+        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.PlaylistLoops != b.PlaylistLoops || a.Tracks.Count != b.Tracks.Count || !a.Hidden.SetEquals(b.Hidden) || !a.Playlist.SequenceEqual(b.Playlist)) return false;
         for (var i = 0; i < a.Tracks.Count; i++)
         {
             var x = a.Tracks[i];

@@ -123,4 +123,15 @@ public class PlaylistEditingTests
         var withEntry = PlaylistEditing.Add(scene, scene.Tracks[0].Id).Scene;
         Assert.Single(SceneEditing.Duplicate(withEntry, scene.Tracks[0].Id).Scene.Playlist);
     }
+
+    [Fact]
+    public void SetPlaylistLoopsSetsTheFlagAndKeepsTheSceneWhenUnchanged()
+    {
+        var scene = TwoTracks();
+
+        var looping = PlaylistEditing.SetPlaylistLoops(scene, true);
+
+        Assert.True(looping.PlaylistLoops);
+        Assert.Same(looping, PlaylistEditing.SetPlaylistLoops(looping, true));
+    }
 }

@@ -5,19 +5,21 @@ namespace Vista.Core.Tracks;
 /// <summary>One playlist entry ready to play: its entry, its track in the world, and how many times (null follows the track).</summary>
 public sealed record PlaylistItem(Guid EntryId, Track Track, int? Loops);
 
-/// <summary>Plays playlist entries in turn with a cut between them, carrying time over, and holds the last frame at the end.</summary>
+/// <summary>Plays playlist entries in turn with a cut between them, carrying time over; at the end holds the last frame, or wraps to the first entry when looping.</summary>
 public sealed class PlaylistPlayback : IPlayback
 {
     private readonly IReadOnlyList<PlaylistItem> items;
     private readonly TrackEvaluator[] evaluators;
+    private readonly bool loops;
     private double clock;
     private bool shownFirstFrame;
 
-    /// <summary>Plays <paramref name="items"/> from the first; refused when empty.</summary>
-    public PlaylistPlayback(IReadOnlyList<PlaylistItem> items)
+    /// <summary>Plays <paramref name="items"/> from the first, wrapping at the end when <paramref name="loops"/>; refused when empty.</summary>
+    public PlaylistPlayback(IReadOnlyList<PlaylistItem> items, bool loops = false)
     {
         if (items.Count == 0) throw new ArgumentException("A playlist needs an entry to play.");
         this.items = items;
+        this.loops = loops;
         evaluators = items.Select(i => new TrackEvaluator(i.Track)).ToArray();
     }
 
@@ -48,17 +50,35 @@ public sealed class PlaylistPlayback : IPlayback
 
         if (!IsFinished) clock += Math.Max(dt, 0f);
 
+        var wrapped = false;
         while (!IsFinished && clock >= Total && (Total > 0 || clock > 0))
         {
             if (Index == items.Count - 1)
             {
-                clock = Total;
-                IsFinished = true;
-                break;
-            }
+                if (!loops)
+                {
+                    clock = Total;
+                    IsFinished = true;
+                    break;
+                }
 
-            clock -= Total;
-            Index++;
+                // One wrap per Advance, so a very long frame or a playlist with no length never spins.
+                if (wrapped)
+                {
+                    Index = 0;
+                    clock = 0;
+                    break;
+                }
+
+                wrapped = true;
+                clock -= Total;
+                Index = 0;
+            }
+            else
+            {
+                clock -= Total;
+                Index++;
+            }
 
             // A zero-length entry is shown for the frame it's reached on.
             if (Total == 0)
@@ -77,7 +97,7 @@ public sealed class PlaylistPlayback : IPlayback
         var pass = PassClock;
         var onReturn = PlaybackClock.OnReturnPass(Direction, ShotLength, pass);
         clock = clock - pass + PlaybackClock.ClockFor(Direction, ShotLength, time, onReturn);
-        IsFinished = Index == items.Count - 1 && clock >= Total;
+        IsFinished = !loops && Index == items.Count - 1 && clock >= Total;
     }
 
     /// <summary>Goes back to the first entry's start.</summary>

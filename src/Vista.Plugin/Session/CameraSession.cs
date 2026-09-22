@@ -60,6 +60,9 @@ internal sealed class CameraSession
     /// <summary>Sets an entry's loop count, or null to follow its track. Returns why it was refused, or null.</summary>
     public string? SetEntryLoops(Guid entryId, int? loops) => state.SetEntryLoops(entryId, loops);
 
+    /// <summary>Sets whether Live loops the playlist. Returns why it was refused, or null.</summary>
+    public string? SetPlaylistLoops(bool loops) => state.SetPlaylistLoops(loops);
+
     /// <summary>True when the playlist has something to play.</summary>
     public bool CanGoLive => state.CanGoLive;
 

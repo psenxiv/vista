@@ -218,4 +218,68 @@ public class PlaylistPlaybackTests
         Assert.False(playback.IsFinished);
         Assert.Equal(10.0, playback.ShotLength, 4);
     }
+
+    [Fact]
+    public void ALoopingPlaylistWrapsToTheFirstEntryCarryingTimeOver()
+    {
+        var items = new[] { Item(Ten()), Item(Ten()) };
+        var playback = new PlaylistPlayback(items, loops: true);
+
+        playback.Advance(23f);
+
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(3.0, playback.ShotTime, 4);
+        Assert.False(playback.IsFinished);
+    }
+
+    [Fact]
+    public void ALoopingPlaylistWrapsAtMostOncePerAdvance()
+    {
+        var playback = new PlaylistPlayback([Item(Ten()), Item(Ten())], loops: true);
+
+        playback.Advance(45f);
+
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(0.0, playback.ShotTime, 4);
+        Assert.False(playback.IsFinished);
+    }
+
+    [Fact]
+    public void AnEntryThatHoldsThePlaylistStillHoldsWhenItLoops()
+    {
+        var playback = new PlaylistPlayback([Item(Ten()), Item(Ten(loop: true))], loops: true);
+
+        playback.Advance(100f);
+
+        Assert.Equal(1, playback.Index);
+        Assert.False(playback.IsFinished);
+    }
+
+    [Fact]
+    public void ALoopingPlaylistOfZeroLengthEntriesShowsOneEntryPerAdvance()
+    {
+        var playback = new PlaylistPlayback([Item(Snap(0f, 0f)), Item(Snap(5f, 0f))], loops: true);
+
+        playback.Advance(0.1f);
+        var first = playback.Index;
+        playback.Advance(0.1f);
+        var second = playback.Index;
+        playback.Advance(0.1f);
+
+        Assert.Equal(0, first);
+        Assert.Equal(1, second);
+        Assert.Equal(0, playback.Index);
+        Assert.False(playback.IsFinished);
+    }
+
+    [Fact]
+    public void SeekingInTheLastEntryOfALoopingPlaylistNeverFinishesIt()
+    {
+        var playback = new PlaylistPlayback([Item(Ten()), Item(Ten())], loops: true);
+        playback.Advance(12f);
+
+        playback.Seek(10.0);
+
+        Assert.False(playback.IsFinished);
+    }
 }
