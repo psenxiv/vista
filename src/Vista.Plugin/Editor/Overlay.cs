@@ -21,6 +21,7 @@ internal sealed class Overlay
     private const float SceneAnchorRadius = 1f;
     private const float SceneAnchorArrow = 1.6f;
     private const int AnchorSegments = 24;
+    private const float NameGap = 4f;
 
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
@@ -53,8 +54,8 @@ internal sealed class Overlay
         foreach (var id in caches.Keys.Where(id => !ids.Contains(id)).ToList()) caches.Remove(id);
     }
 
-    /// <summary>A track anchor: a ground ring, an arrow along its yaw and a faint line to the first point. Returns its centre on screen, or null.</summary>
-    public Vector2? DrawTrackAnchor(EditorView view, Anchor world, Vector3? firstPoint, bool edited, bool selected)
+    /// <summary>A track anchor: a ground ring, an arrow along its yaw, a faint line to the first point and its name above. Returns its centre on screen, or null.</summary>
+    public Vector2? DrawTrackAnchor(EditorView view, Anchor world, Vector3? firstPoint, bool edited, bool selected, string? name)
     {
         var list = ImGui.GetBackgroundDrawList();
         var colour = selected ? EditorColours.Selected : edited ? EditorColours.Anchor : EditorColours.OtherAnchor;
@@ -68,6 +69,7 @@ internal sealed class Overlay
         }
 
         DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedGlyphThickness : GlyphThickness);
+        if (name is not null) DrawName(list, view, world.Position, name, colour);
         return view.ToScreen(world.Position);
     }
 
@@ -90,6 +92,20 @@ internal sealed class Overlay
 
     /// <summary>An offset on the ground at angle <paramref name="angle"/>, measured like yaw.</summary>
     private static Vector3 Ring(float angle, float radius) => Anchor.Turn(new Vector3(0f, 0f, -radius), angle);
+
+    /// <summary>Draws <paramref name="name"/> centred above the ring round <paramref name="centre"/>, unless the centre is behind the camera.</summary>
+    private static void DrawName(ImDrawListPtr list, EditorView view, Vector3 centre, string name, uint colour)
+    {
+        if (view.ToScreenBeyondNear(centre) is not { } at) return;
+        var top = at.Y;
+        for (var i = 0; i < AnchorSegments; i++)
+        {
+            if (view.ToScreenBeyondNear(centre + Ring(MathF.Tau * i / AnchorSegments, AnchorRadius)) is { } p) top = MathF.Min(top, p.Y);
+        }
+
+        var size = ImGui.CalcTextSize(name);
+        list.AddText(new Vector2(at.X - (size.X / 2f), top - NameGap - size.Y), colour, name);
+    }
 
     private static void DrawArrow(ImDrawListPtr list, EditorView view, Anchor world, float length, uint colour, float thickness)
     {

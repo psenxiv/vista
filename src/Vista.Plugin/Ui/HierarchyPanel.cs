@@ -55,17 +55,17 @@ internal sealed unsafe class HierarchyPanel
         ImGui.EndDisabled();
     }
 
-    /// <summary>The eye toggle and the name: click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
+    /// <summary>The name, then the anchor button and the eye: click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
     private void DrawRow(Scene scene, Track track, int index, Guid edited, bool editing)
     {
         using var id = ImRaii.PushId(track.Id.ToString());
         var isEdited = track.Id == edited;
         var hidden = scene.Hidden.Contains(track.Id);
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + IconButton.Width(FontAwesomeIcon.Eye) + (ImGui.GetStyle().ItemSpacing.X * 2f);
+        var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons);
 
-        ImGui.BeginDisabled(isEdited);
-        if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide", hidden ? UiColours.Dim() : null))
-            Report(session.SetTrackHidden(track.Id, !hidden));
-        ImGui.EndDisabled();
+        if (renaming == track.Id) DrawRename(track, nameWidth);
+        else DrawName(scene, track, index, isEdited, editing, nameWidth);
         ImGui.SameLine();
 
         ImGui.BeginDisabled(!track.AnchorPlaced);
@@ -73,13 +73,16 @@ internal sealed unsafe class HierarchyPanel
         ImGui.EndDisabled();
         ImGui.SameLine();
 
-        if (renaming == track.Id)
-        {
-            DrawRename(track);
-            return;
-        }
+        ImGui.BeginDisabled(isEdited);
+        if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide", hidden ? UiColours.Dim() : null))
+            Report(session.SetTrackHidden(track.Id, !hidden));
+        ImGui.EndDisabled();
+    }
 
-        if (ImGui.Selectable(track.Name, isEdited, ImGuiSelectableFlags.None, new Vector2(0f, ImGui.GetFrameHeight())))
+    /// <summary>The name as a selectable, carrying the row's clicks, drag and drop, and context menu.</summary>
+    private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float width)
+    {
+        if (ImGui.Selectable(track.Name, isEdited, ImGuiSelectableFlags.None, new Vector2(width, ImGui.GetFrameHeight())))
             Report(session.SelectTrack(track.Id));
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
@@ -109,7 +112,7 @@ internal sealed unsafe class HierarchyPanel
     }
 
     /// <summary>The name as a text field; Enter or clicking away renames, Escape cancels.</summary>
-    private void DrawRename(Track track)
+    private void DrawRename(Track track, float width)
     {
         if (focusRename)
         {
@@ -117,7 +120,7 @@ internal sealed unsafe class HierarchyPanel
             focusRename = false;
         }
 
-        ImGui.SetNextItemWidth(-1f);
+        ImGui.SetNextItemWidth(width);
         var entered = ImGui.InputText("##rename", ref renameText, 64, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
         if (ImGui.IsKeyPressed(ImGuiKey.Escape))
         {

@@ -137,7 +137,7 @@ internal sealed unsafe class PlaylistPanel
             if (ImGui.Selectable($"{text}##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight())))
                 StartLoops(entry);
         if (editing) ImGuiP.SetItemUsingMouseWheel();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeat Count");
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeats");
         if (!editing || !ImGui.IsItemHovered()) return;
         loopsHovered = true;
         StepLoops(entry);

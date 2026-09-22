@@ -51,7 +51,7 @@ internal sealed class EditorLayer
             var otherWorld = session.WorldOf(other);
             AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false));
             if (other.AnchorPlaced)
-                markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false), MarkerKind.TrackAnchor));
+                markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
         }
 
         var track = gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
@@ -62,7 +62,7 @@ internal sealed class EditorLayer
 
         var editedLocal = SceneEditing.Get(scene, edited);
         if (editedLocal.AnchorPlaced)
-            markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.Track), MarkerKind.TrackAnchor));
+            markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
         if (scene.AnchorPlaced)
             markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, session.SelectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
 
