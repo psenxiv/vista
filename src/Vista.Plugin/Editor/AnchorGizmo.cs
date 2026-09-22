@@ -44,7 +44,7 @@ internal sealed unsafe class AnchorGizmo
             session.EndLiveEdit();
             dragStart = null;
             waitForRelease = true;
-            Reset();
+            Gizmo.Reset();
         }
 
         if (session.SelectedAnchor is not { } kind || Shown(session, kind) is not { } anchor)
@@ -63,7 +63,7 @@ internal sealed unsafe class AnchorGizmo
         if (dragStart is null) matrix = PoseMatrix.From(shown.Position, shown.Yaw, 0f, 0f);
         var rotate = kind != AnchorKind.LookAt && (dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate);
         ImGuizmo.SetID(rotate ? YawId : MoveId);
-        Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate ? ImGuizmoMode.Local : ImGuizmoMode.World);
+        Gizmo.Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate ? ImGuizmoMode.Local : ImGuizmoMode.World, ref matrix);
         var usingNow = ImGuizmo.IsUsing();
         Hot = usingNow || ImGuizmo.IsOver();
 
@@ -95,7 +95,7 @@ internal sealed unsafe class AnchorGizmo
                 Plugin.Log.Warning("[editor] anchor drag abandoned: {Refusal}", refusal);
                 dragStart = null;
                 waitForRelease = true;
-                Reset();
+                Gizmo.Reset();
             }
 
             return;
@@ -113,19 +113,5 @@ internal sealed unsafe class AnchorGizmo
     {
         if (kind != AnchorKind.LookAt) return session.SelectedAnchorInWorld;
         return session.SelectedLookAtInWorld is { } point ? new Anchor(point, 0f) : null;
-    }
-
-    private void Manipulate(EditorView view, ImGuizmoOperation operation, ImGuizmoMode space)
-    {
-        var gizmoView = view.GizmoView;
-        var gizmoProjection = view.GizmoProjection;
-        fixed (float* m = &matrix.M11)
-            ImGuizmo.Manipulate(&gizmoView.M11, &gizmoProjection.M11, operation, space, m, null, null, null, null);
-    }
-
-    private static void Reset()
-    {
-        ImGuizmo.Enable(false);
-        ImGuizmo.Enable(true);
     }
 }

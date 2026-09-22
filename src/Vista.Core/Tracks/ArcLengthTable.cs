@@ -41,6 +41,14 @@ public sealed class ArcLengthTable
         TotalLength = total;
     }
 
+    /// <summary>Each segment's arc length, floored at <paramref name="minimum"/>.</summary>
+    public float[] SegmentLengths(float minimum)
+    {
+        var lengths = new float[SegmentCount];
+        for (var i = 0; i < lengths.Length; i++) lengths[i] = MathF.Max(SegmentLength(i), minimum);
+        return lengths;
+    }
+
     /// <summary>Arc length of one segment.</summary>
     public float SegmentLength(int segment) => _cumulative[CheckSegment(segment)][^1];
 
@@ -53,13 +61,8 @@ public sealed class ArcLengthTable
 
         var target = Math.Clamp(fraction, 0f, 1f) * length;
 
-        var lo = 0;
-        var hi = samples.Length - 1;
-        while (hi - lo > 1)
-        {
-            var mid = (lo + hi) / 2;
-            if (samples[mid] <= target) lo = mid; else hi = mid;
-        }
+        var lo = Search.LastAtOrBelow(samples, target, 0, samples.Length - 1);
+        var hi = lo + 1;
 
         var span = samples[hi] - samples[lo];
         var local = span <= 0f ? 0f : (target - samples[lo]) / span;

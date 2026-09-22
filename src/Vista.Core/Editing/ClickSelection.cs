@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 
 namespace Vista.Core.Editing;
 
@@ -57,6 +58,6 @@ public sealed class ClickSelection
     public void Reset() => down = false;
 
     private bool Turned((float Yaw, float Pitch) look)
-        => MathF.Abs(MathF.IEEERemainder(look.Yaw - startLook.Yaw, MathF.Tau)) > MaxTurn
+        => MathF.Abs(Angles.Wrap(look.Yaw - startLook.Yaw)) > MaxTurn
         || MathF.Abs(look.Pitch - startLook.Pitch) > MaxTurn;
 }

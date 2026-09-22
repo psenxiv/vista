@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 
 namespace Vista.Core.Tracks;
 
@@ -42,9 +43,7 @@ public static class TrackAim
         result[0] = yaws[0];
         for (var i = 1; i < yaws.Count; i++)
         {
-            var delta = yaws[i] - result[i - 1];
-            var wrapped = delta - (MathF.Tau * MathF.Round(delta / MathF.Tau));
-            result[i] = result[i - 1] + wrapped;
+            result[i] = result[i - 1] + Angles.Delta(result[i - 1], yaws[i]);
         }
 
         return result;

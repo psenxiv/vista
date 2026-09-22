@@ -17,11 +17,29 @@ internal sealed unsafe class TrackEditorWindow : Window
     private const string PointPayload = "VISTA_POINT";
 
     private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
-    private static readonly string[] AimNames = ["Recorded aim", "Direction of travel", "Look At", "Watch Target", "Follow Target"];
-    private static readonly AimMode[] AimModes = [AimMode.AimKeys, AimMode.PathTangent, AimMode.LookAt, AimMode.WatchTarget, AimMode.FollowTarget];
-    private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
-    private static readonly PlaybackDirection[] Directions = [PlaybackDirection.Forward, PlaybackDirection.Reverse, PlaybackDirection.PingPong];
-    private static readonly FontAwesomeIcon[] DirectionIcons = [FontAwesomeIcon.ArrowRight, FontAwesomeIcon.ArrowLeft, FontAwesomeIcon.ArrowsAltH];
+
+    /// <summary>One entry in the aim menu.</summary>
+    private readonly record struct AimChoice(AimMode Mode, string Name);
+
+    /// <summary>One entry in the direction menu.</summary>
+    private readonly record struct DirectionChoice(PlaybackDirection Direction, string Name, FontAwesomeIcon Icon);
+
+    private static readonly AimChoice[] Aims =
+    [
+        new(AimMode.AimKeys, "Recorded aim"),
+        new(AimMode.PathTangent, "Direction of travel"),
+        new(AimMode.LookAt, "Look At"),
+        new(AimMode.WatchTarget, "Watch Target"),
+        new(AimMode.FollowTarget, "Follow Target"),
+    ];
+
+    private static readonly DirectionChoice[] DirectionChoices =
+    [
+        new(PlaybackDirection.Forward, "Forward", FontAwesomeIcon.ArrowRight),
+        new(PlaybackDirection.Reverse, "Reverse", FontAwesomeIcon.ArrowLeft),
+        new(PlaybackDirection.PingPong, "Ping-pong", FontAwesomeIcon.ArrowsAltH),
+    ];
+
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
@@ -272,16 +290,16 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         DrawAim();
 
-        var direction = Array.IndexOf(Directions, session.Track.Direction);
+        var direction = Array.FindIndex(DirectionChoices, c => c.Direction == session.Track.Direction);
         ImGui.SameLine();
-        if (IconButton.Draw("direction", DirectionIcons[direction], $"Select direction ({DirectionNames[direction]})")) ImGui.OpenPopup("direction-menu");
+        if (IconButton.Draw("direction", DirectionChoices[direction].Icon, $"Select direction ({DirectionChoices[direction].Name})")) ImGui.OpenPopup("direction-menu");
         directionX = ImGui.GetItemRectMin().X;
         if (ImGui.BeginPopup("direction-menu"))
         {
-            for (var i = 0; i < DirectionNames.Length; i++)
+            for (var i = 0; i < DirectionChoices.Length; i++)
             {
-                if (!ImGui.Selectable(DirectionNames[i], i == direction) || i == direction) continue;
-                var chosen = Directions[i];
+                if (!ImGui.Selectable(DirectionChoices[i].Name, i == direction) || i == direction) continue;
+                var chosen = DirectionChoices[i].Direction;
                 Report(session.ChangeTrack(t => TrackEditing.SetDirection(t, chosen)));
             }
 
@@ -313,34 +331,34 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void DrawAim()
     {
         var track = session.Track;
-        var aim = Array.IndexOf(AimModes, track.Aim);
+        var aim = Array.FindIndex(Aims, c => c.Mode == track.Aim);
         var (colour, tooltip) = track.Aim switch
         {
             AimMode.WatchTarget => TargetState(track, "Watch Target", "using recorded aim"),
             AimMode.FollowTarget => TargetState(track, "Follow Target", null),
-            _ => ((uint?)null, $"Select aim ({AimNames[aim]})"),
+            _ => ((uint?)null, $"Select aim ({Aims[aim].Name})"),
         };
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour)) ImGui.OpenPopup("aim-menu");
         aimX = ImGui.GetItemRectMin().X;
         if (!ImGui.BeginPopup("aim-menu")) return;
 
         var pencil = IconButton.Width(FontAwesomeIcon.PencilAlt);
-        var width = AimNames.Max(n => ImGui.CalcTextSize(n).X) + ImGui.GetStyle().ItemSpacing.X + pencil;
-        for (var i = 0; i < AimNames.Length; i++)
+        var width = Aims.Max(c => ImGui.CalcTextSize(c.Name).X) + ImGui.GetStyle().ItemSpacing.X + pencil;
+        for (var i = 0; i < Aims.Length; i++)
         {
-            switch (AimModes[i])
+            switch (Aims[i].Mode)
             {
                 case AimMode.WatchTarget:
-                    DrawTargetEntry(AimMode.WatchTarget, AimNames[i], i == aim, width, pencil, watchTarget.Open, null);
+                    DrawTargetEntry(AimMode.WatchTarget, Aims[i].Name, i == aim, width, pencil, watchTarget.Open, null);
                     continue;
                 case AimMode.FollowTarget:
                     var refusal = track.Points.Count > 1 ? "Follow Target needs a track with one point" : null;
-                    DrawTargetEntry(AimMode.FollowTarget, AimNames[i], i == aim, width, pencil, followTarget.Open, refusal);
+                    DrawTargetEntry(AimMode.FollowTarget, Aims[i].Name, i == aim, width, pencil, followTarget.Open, refusal);
                     continue;
             }
 
-            if (!ImGui.Selectable(AimNames[i], i == aim) || i == aim) continue;
-            Report(session.SetAim(AimModes[i]));
+            if (!ImGui.Selectable(Aims[i].Name, i == aim) || i == aim) continue;
+            Report(session.SetAim(Aims[i].Mode));
         }
 
         ImGui.EndPopup();
@@ -523,7 +541,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static float TrackRowWidth()
     {
         var style = ImGui.GetStyle();
-        var direction = DirectionIcons.Max(IconButton.Width);
+        var direction = DirectionChoices.Max(c => IconButton.Width(c.Icon));
         var items = IconButton.Width(FontAwesomeIcon.Crosshairs) + direction + IconButton.Width(FontAwesomeIcon.Repeat)
             + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
             + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);

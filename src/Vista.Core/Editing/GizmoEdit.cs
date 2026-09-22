@@ -49,5 +49,5 @@ public static class GizmoEdit
         }
     }
 
-    private static bool Same(float a, float b) => MathF.Abs(MathF.IEEERemainder(a - b, MathF.Tau)) <= Tolerance;
+    private static bool Same(float a, float b) => MathF.Abs(Angles.Wrap(a - b)) <= Tolerance;
 }

@@ -85,7 +85,7 @@ internal sealed unsafe class PointGizmo
             if (dragStart is null)
             {
                 // A ring drag already under way when we saw it has no known ring; wait it out.
-                if (Mode == GizmoMode.Rotate && ring is null) { waitForRelease = true; ResetImGuizmo(); return; }
+                if (Mode == GizmoMode.Rotate && ring is null) { waitForRelease = true; Gizmo.Reset(); return; }
                 dragStart = point;
                 dragIndex = index;
                 dragTrack = session.StoredTrack;
@@ -113,7 +113,7 @@ internal sealed unsafe class PointGizmo
         if (!Dragging) moveMatrix = PoseMatrix.From(point.Position, point.Yaw, point.Pitch, point.Roll);
 
         ImGuizmo.SetID(MoveId);
-        Manipulate(view, ImGuizmoOperation.Translate, ImGuizmoMode.World, ref moveMatrix);
+        Gizmo.Manipulate(view, ImGuizmoOperation.Translate, ImGuizmoMode.World, ref moveMatrix);
         return (ImGuizmo.IsUsing(), ImGuizmo.IsOver(), null);
     }
 
@@ -131,7 +131,7 @@ internal sealed unsafe class PointGizmo
             if (!(Dragging && dragRing == ring)) ringFrames[slot] = GizmoEdit.RingFrame(shown, ring);
 
             ImGuizmo.SetID(FirstRingId + slot);
-            Manipulate(view, Operation(ring), ImGuizmoMode.Local, ref ringFrames[slot]);
+            Gizmo.Manipulate(view, Operation(ring), ImGuizmoMode.Local, ref ringFrames[slot]);
             over |= ImGuizmo.IsOver();
             if (usingNow || !ImGuizmo.IsUsing()) continue;
             usingNow = true;
@@ -139,14 +139,6 @@ internal sealed unsafe class PointGizmo
         }
 
         return (usingNow, over, started);
-    }
-
-    private static void Manipulate(EditorView view, ImGuizmoOperation operation, ImGuizmoMode space, ref Matrix4x4 matrix)
-    {
-        var gizmoView = view.GizmoView;
-        var gizmoProjection = view.GizmoProjection;
-        fixed (float* m = &matrix.M11)
-            ImGuizmo.Manipulate(&gizmoView.M11, &gizmoProjection.M11, operation, space, m, null, null, null, null);
     }
 
     private static ImGuizmoOperation Operation(GimbalRing ring) => ring switch
@@ -169,12 +161,6 @@ internal sealed unsafe class PointGizmo
         dragRing = null;
         dragTrack = null;
         Preview = null;
-        ResetImGuizmo();
-    }
-
-    private static void ResetImGuizmo()
-    {
-        ImGuizmo.Enable(false);
-        ImGuizmo.Enable(true);
+        Gizmo.Reset();
     }
 }

@@ -39,13 +39,9 @@ public sealed class TrackEvaluator
         _track = track;
         _positions = track.Points.Select(p => p.Position).ToArray();
         _table = new ArcLengthTable(_positions);
-        _lengths = new float[_table.SegmentCount];
-        _distances = new float[_table.SegmentCount + 1];
-        for (var i = 0; i < _table.SegmentCount; i++)
-        {
-            _lengths[i] = MathF.Max(_table.SegmentLength(i), MinTimingLength);
-            _distances[i + 1] = _distances[i] + _lengths[i];
-        }
+        _lengths = _table.SegmentLengths(MinTimingLength);
+        _distances = new float[_lengths.Length + 1];
+        for (var i = 0; i < _lengths.Length; i++) _distances[i + 1] = _distances[i] + _lengths[i];
 
         var legLengths = new float[track.Points.Count];
         for (var leg = 1; leg < legLengths.Length; leg++) legLengths[leg] = _lengths[leg - 1];
@@ -172,13 +168,7 @@ public sealed class TrackEvaluator
         if (distance >= _distances[^1]) return (last, 1f);
         if (distance <= 0f) return (0, 0f);
 
-        var lo = 0;
-        var hi = _lengths.Length;
-        while (hi - lo > 1)
-        {
-            var mid = (lo + hi) / 2;
-            if (_distances[mid] <= distance) lo = mid; else hi = mid;
-        }
+        var lo = Search.LastAtOrBelow(_distances, distance, 0, _lengths.Length);
 
         return (lo, Math.Clamp((distance - _distances[lo]) / _lengths[lo], 0f, 1f));
     }

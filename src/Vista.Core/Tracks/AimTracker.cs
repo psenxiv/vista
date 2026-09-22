@@ -98,8 +98,7 @@ public sealed class AimTracker
     {
         if (easedYaw is not { } from) return (easedYaw = target).Value;
         if (dt <= 0f) return from;
-        var delta = target - from;
-        delta -= MathF.Tau * MathF.Round(delta / MathF.Tau);
+        var delta = Angles.Delta(from, target);
         var timeConstant = Math.Clamp(smoothing, 0f, 1f) * AimSmoother.SecondsPerSmoothing;
         var next = timeConstant <= 0f ? from + delta : from + (delta * (1f - MathF.Exp(-dt / timeConstant)));
         easedYaw = next;

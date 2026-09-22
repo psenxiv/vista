@@ -1,3 +1,4 @@
+using Vista.Core.Camera;
 using Vista.Core.Tracks;
 
 namespace Vista.Core.Editing;
@@ -23,7 +24,7 @@ public static class EditLimits
     public static float Pitch(float radians) => float.IsFinite(radians) ? Math.Clamp(radians, -TrackAim.PitchLimit, TrackAim.PitchLimit) : 0f;
 
     /// <summary>A yaw or roll in radians wrapped to within half a turn; not a number becomes 0.</summary>
-    public static float Angle(float radians) => float.IsFinite(radians) ? MathF.IEEERemainder(radians, MathF.Tau) : 0f;
+    public static float Angle(float radians) => float.IsFinite(radians) ? Angles.Wrap(radians) : 0f;
 
     public const float MinFov = 5f * MathF.PI / 180f;
     public const float MaxFov = 120f * MathF.PI / 180f;

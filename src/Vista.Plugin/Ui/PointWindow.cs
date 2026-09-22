@@ -24,6 +24,7 @@ internal sealed class PointWindow : Window
     private (int? Point, AnchorKind? Anchor, Guid Track) shown;
     private float fieldsWidth;
     private ControlPoint? copied;
+    private bool dragging;
 
     public PointWindow(CameraSession session, PointGizmo gizmo)
         : base("Point###vista-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
@@ -53,7 +54,7 @@ internal sealed class PointWindow : Window
     }
 
     /// <summary>Ends a drag in progress, since a closed window never reports the field letting go.</summary>
-    public override void OnClose() => session.EndLiveEdit();
+    public override void OnClose() => LiveDrag.End(session, ref dragging);
 
     public override void Draw()
     {
@@ -186,10 +187,11 @@ internal sealed class PointWindow : Window
     {
         var edited = value;
         var changed = BorderedField(id, name, border, ref edited, speed, format);
-        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
         // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
-        if (changed && index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
-        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
+        LiveDrag.Handle(session, changed, () =>
+        {
+            if (index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
+        }, ref dragging);
     }
 
     /// <summary>An anchor's field: dragging moves it live, carrying what hangs off it, and each drag is one undo step.</summary>
@@ -197,9 +199,10 @@ internal sealed class PointWindow : Window
     {
         var edited = value;
         var changed = BorderedField(id, name, border, ref edited, speed, format);
-        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
-        if (changed && session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
-        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
+        LiveDrag.Handle(session, changed, () =>
+        {
+            if (session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
+        }, ref dragging);
     }
 
     /// <summary>A Look At point's field: dragging moves it live, and each drag is one undo step.</summary>
@@ -207,9 +210,10 @@ internal sealed class PointWindow : Window
     {
         var edited = value;
         var changed = BorderedField(id, name, border, ref edited, PositionSpeed, "%.2f");
-        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
-        if (changed && session.SelectedLookAtInWorld is { } current) _ = session.PreviewLookAt(set(current, edited));
-        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
+        LiveDrag.Handle(session, changed, () =>
+        {
+            if (session.SelectedLookAtInWorld is { } current) _ = session.PreviewLookAt(set(current, edited));
+        }, ref dragging);
     }
 
     /// <summary>A disabled field showing "—", for what an anchor does not have.</summary>

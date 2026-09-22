@@ -10,6 +10,7 @@ public sealed class TimingCurve
     private const float MonotoneBound = 3f;
 
     private readonly IReadOnlyList<TimingKey> _keys;
+    private readonly float[] _times;
     private readonly float[] _inTangent = Array.Empty<float>();
     private readonly float[] _outTangent = Array.Empty<float>();
 
@@ -21,6 +22,7 @@ public sealed class TimingCurve
     {
         Validate(keys);
         _keys = keys;
+        _times = keys.Select(k => k.Time).ToArray();
         Duration = keys.Count == 0 ? 0.0 : keys[^1].Time;
 
         if (keys.Count >= 2)
@@ -48,18 +50,7 @@ public sealed class TimingCurve
         return Hermite.At(k0.Position, k1.Position, m0, m1, localT);
     }
 
-    private int FindInterval(double t)
-    {
-        var lo = 0;
-        var hi = _keys.Count - 1;
-        while (hi - lo > 1)
-        {
-            var mid = (lo + hi) / 2;
-            if (_keys[mid].Time <= t) lo = mid; else hi = mid;
-        }
-
-        return lo;
-    }
+    private int FindInterval(double t) => Search.LastAtOrBelow(_times, t, 0, _keys.Count - 1);
 
     /// <summary>Raw (pre-clamp) in/out tangent per key, then a monotonicity clamp per interval.</summary>
     private static (float[] InTangent, float[] OutTangent) BuildTangents(IReadOnlyList<TimingKey> keys)

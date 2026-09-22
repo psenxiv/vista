@@ -84,9 +84,8 @@ public static class TrackEditing
         var lengths = new float[track.Points.Count];
         if (lengths.Length < 2) return lengths;
 
-        var table = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray());
-        for (var leg = 1; leg < lengths.Length; leg++)
-            lengths[leg] = MathF.Max(table.SegmentLength(leg - 1), TrackEvaluator.MinTimingLength);
+        var segments = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray()).SegmentLengths(TrackEvaluator.MinTimingLength);
+        for (var leg = 1; leg < lengths.Length; leg++) lengths[leg] = segments[leg - 1];
         return lengths;
     }
 
