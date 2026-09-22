@@ -225,13 +225,7 @@ internal sealed class PointWindow : Window
     private static bool BorderedField(string id, string name, uint? border, ref float value, float speed, string format)
     {
         ImGui.TableNextColumn();
-        ImGui.SetNextItemWidth(FieldWidth);
-        bool changed;
-        using (ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f, border is not null))
-        using (ImRaii.PushColor(ImGuiCol.Border, border ?? 0u, border is not null))
-            changed = ImGui.DragFloat($"##{id}", ref value, speed, 0f, 0f, format);
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(name);
-        return changed;
+        return Ui.BorderedField.Draw(id, name, border, ref value, speed, format, FieldWidth);
     }
 
     /// <summary>The row's icon at its right end, naming the row in its tooltip.</summary>

@@ -235,4 +235,44 @@ public class SessionFollowTests
 
         Assert.Same(stored, state.StoredTrack);
     }
+
+    [Fact]
+    public void TheOrbitReadsTheOffsetOnlyUnderFollowTarget()
+    {
+        var (state, _) = FollowingGuard();
+        var orbit = state.FollowOrbit!.Value;
+
+        Assert.Equal(5f, orbit.Distance, 3);
+        Assert.Equal(0f, orbit.Angle, 3);
+        Assert.Equal(2f, orbit.Height, 3);
+        Assert.Null(EditingWith(points: 1).State.FollowOrbit);
+    }
+
+    [Fact]
+    public void DraggingTheOrbitMovesThePointLiveAsOneUndoStep()
+    {
+        var (state, _) = FollowingGuard();
+        var before = state.Track.Points[0].Position;
+
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewFollowOrbit(new Orbit(5f, MathF.PI / 4f, 2f)));
+        Assert.Null(state.PreviewFollowOrbit(new Orbit(5f, MathF.PI / 2f, 2f)));
+        state.EndLiveEdit();
+
+        AssertNear(new Vector3(15f, 2f, 0f), state.Track.Points[0].Position);
+        Assert.Equal(MathF.PI / 2f, state.FollowOrbit!.Value.Angle, 3);
+        state.Undo();
+        AssertNear(before, state.Track.Points[0].Position);
+    }
+
+    [Fact]
+    public void TheOrbitIsRefusedOutsideALiveEditOrFollowTarget()
+    {
+        var (following, _) = FollowingGuard();
+        Assert.NotNull(following.PreviewFollowOrbit(new Orbit(5f, 0f, 2f)));
+
+        var (recorded, _) = EditingWith(points: 1);
+        recorded.BeginLiveEdit();
+        Assert.NotNull(recorded.PreviewFollowOrbit(new Orbit(5f, 0f, 2f)));
+    }
 }

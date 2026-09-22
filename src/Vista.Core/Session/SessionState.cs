@@ -536,6 +536,18 @@ public sealed class SessionState
         }
     }
 
+    /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
+    public Orbit? FollowOrbit => Local is { Aim: AimMode.FollowTarget, Points.Count: 1 } local ? Tracks.FollowOrbit.Of(local.Points[0]) : null;
+
+    /// <summary>During a live edit, moves the Follow Target point to <paramref name="orbit"/> without recording a step. Returns why it was refused, or null.</summary>
+    public string? PreviewFollowOrbit(Orbit orbit)
+    {
+        if (liveEditStart is null) return "No live edit is in progress.";
+        if (Local is not { Aim: AimMode.FollowTarget, Points.Count: 1 } local) return "Only a Follow Target track with its point has an orbit.";
+        Local = TrackEditing.Replace(local, 0, Tracks.FollowOrbit.With(local.Points[0], orbit));
+        return null;
+    }
+
     /// <summary>During a live edit, drags key <paramref name="key"/> towards <paramref name="time"/> from the track as the edit began.</summary>
     public string? PreviewKeyMove(int key, float time)
         => PreviewFromStart((start, evaluator) => TimingEditing.MoveKey(start, evaluator, key, time));

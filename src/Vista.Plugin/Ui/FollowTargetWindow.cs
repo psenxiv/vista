@@ -1,6 +1,7 @@
 using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
+using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -19,6 +20,7 @@ internal sealed class FollowTargetWindow : Window
     private string search = string.Empty;
     private float? smoothingDrag;
     private Guid openedFor;
+    private bool orbitDragging;
 
     public FollowTargetWindow(CameraSession session, PendingField fields)
         : base("Follow Target###vista-follow-target", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
@@ -42,11 +44,14 @@ internal sealed class FollowTargetWindow : Window
         if (session.Mode != CameraMode.Editing || session.EditedTrackId != openedFor || session.Track.Aim != AimMode.FollowTarget) IsOpen = false;
     }
 
-    /// <summary>Applies an unfinished aim height and drops an unfinished smoothing drag, since a closed window never reports either finishing.</summary>
+    /// <summary>Applies an unfinished aim height, drops an unfinished smoothing drag and ends an orbit drag, since a closed window never reports any of them finishing.</summary>
     public override void OnClose()
     {
         fields.Commit();
         smoothingDrag = null;
+        if (!orbitDragging) return;
+        orbitDragging = false;
+        session.EndLiveEdit();
     }
 
     public override void Draw()
@@ -61,6 +66,8 @@ internal sealed class FollowTargetWindow : Window
         DrawToggles();
         DrawAimHeight();
         DrawSmoothing();
+        ImGui.Separator();
+        DrawOrbit();
         ImGui.EndDisabled();
 
         ImGui.Separator();
@@ -81,6 +88,47 @@ internal sealed class FollowTargetWindow : Window
     {
         Label("Aim height");
         fields.Draw("follow-aim-height", session.Track.AimHeight, "%.1f", FieldWidth, v => Report(session.SetAimHeight(v)));
+    }
+
+    /// <summary>The orbit: distance, height and angle round the character, each dragged live as one undo step.</summary>
+    private void DrawOrbit()
+    {
+        var orbit = session.FollowOrbit;
+        var current = orbit ?? default;
+        var width = (ListWidth - (ImGui.GetStyle().ItemSpacing.X * 2f)) / 3f;
+        ImGui.BeginDisabled(orbit is null);
+
+        var distance = current.Distance;
+        var changed = BorderedField.Draw("orbit-distance", "Distance", EditorColours.AxisX, ref distance, 0.05f, "%.2f", width);
+        Live(changed, current with { Distance = distance });
+
+        ImGui.SameLine();
+        var height = current.Height;
+        changed = BorderedField.Draw("orbit-height", "Height", EditorColours.AxisY, ref height, 0.05f, "%.2f", width);
+        Live(changed, current with { Height = height });
+
+        ImGui.SameLine();
+        var degrees = current.Angle * 180f / MathF.PI;
+        changed = BorderedField.Draw("orbit-angle", "Angle", EditorColours.AxisZ, ref degrees, 0.5f, "%.0f°", width);
+        Live(changed, current with { Angle = degrees * MathF.PI / 180f });
+
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>Runs the last field's drag as a live edit: begun on grab, previewed on change, one undo step on release.</summary>
+    private void Live(bool changed, Orbit next)
+    {
+        if (ImGui.IsItemActivated())
+        {
+            session.BeginLiveEdit();
+            orbitDragging = true;
+        }
+
+        // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
+        if (changed) _ = session.PreviewFollowOrbit(next);
+        if (!ImGui.IsItemDeactivated()) return;
+        orbitDragging = false;
+        session.EndLiveEdit();
     }
 
     /// <summary>The smoothing slider; a drag is applied as one undo step when it lets go.</summary>

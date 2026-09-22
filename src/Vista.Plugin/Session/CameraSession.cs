@@ -424,6 +424,12 @@ internal sealed class CameraSession
     /// <summary>Ends a live edit as one undo step if anything changed.</summary>
     public void EndLiveEdit() => state.EndLiveEdit();
 
+    /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
+    public Orbit? FollowOrbit => state.FollowOrbit;
+
+    /// <summary>During a live edit, moves the Follow Target point to <paramref name="orbit"/>. Returns why it was refused, or null.</summary>
+    public string? PreviewFollowOrbit(Orbit orbit) => state.PreviewFollowOrbit(orbit);
+
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
