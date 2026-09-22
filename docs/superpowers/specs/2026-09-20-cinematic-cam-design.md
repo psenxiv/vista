@@ -280,7 +280,8 @@ plays to the last key and holds. `Loop` cuts straight back to the first key when
 it reaches the last and plays again: a hard cut, not a transition. A seamless loop
 is the user's to build, by placing the last point and key to match the first.
 Future modes are new values here; they change only how elapsed time is mapped,
-never the path or the timing curve.
+never the path or the timing curve. Superseded by `2026-09-22-playback-direction-design.md`:
+a Direction (Forward, Reverse, Ping-pong) and a Loop toggle replace `PlaybackMode`.
 
 Playback accumulates `IFramework.UpdateDelta` rather than counting frames, so a
 shot runs identically at 30 and 144 fps.
@@ -317,7 +318,7 @@ Nothing can be edited while live, paused included; leave live mode to edit.
 
 ## Switchboard
 
-**Provisional.** Every switchboard decision is made when phase 3 is planned. That
+**Provisional.** Every switchboard decision is made when the switchboard is planned. That
 phase starts by looking at how real switchers work, such as the Blackmagic ATEM
 Mini, and takes a simplified form of their switching patterns.
 
@@ -530,7 +531,10 @@ play it back. Most of the code, least of the risk.
 then the 3D overlay, click-to-select, gizmo editing, the scrub bar and undo
 (`2026-09-21-editor-design.md`). 2c-2: the curve editor.
 
-**Phase 3 — the switchboard.** Slots, program and preview, TAKE, hotkeys with
+**Phase 3** was reset on 2026-09-21 and ordered on 2026-09-22; `FEATURES.md` holds it.
+3.a is playback direction (`2026-09-22-playback-direction-design.md`).
+
+**The switchboard**, after phase 3. Slots, program and preview, TAKE, hotkeys with
 the text-focus guard, snap points on the bus, persistence. Ends with: cut between shots live.
 
 Phase 1 is small and dangerous; phase 2 is large and safe. Expect phase 1 to
