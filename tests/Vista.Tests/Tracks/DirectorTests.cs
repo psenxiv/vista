@@ -96,7 +96,7 @@ public class DirectorTests
         director.Tick(1f);
 
         Assert.False(director.IsPaused);
-        Assert.Equal(4.0, director.Elapsed, 5);
+        Assert.Equal(4.0, director.ShotTime, 5);
     }
 
     [Fact]
@@ -214,13 +214,13 @@ public class DirectorTests
         Assert.False(director.IsFinished);
     }
     [Fact]
-    public void ElapsedIsZeroBeforeGoingLive()
+    public void ShotTimeIsZeroBeforeGoingLive()
     {
-        Assert.Equal(0.0, new Director().Elapsed);
+        Assert.Equal(0.0, new Director().ShotTime);
     }
 
     [Fact]
-    public void ElapsedFollowsATrackShotsPlayback()
+    public void ShotTimeFollowsATrackShotsPlayback()
     {
         var director = new Director();
         director.GoLive(new TrackShot(StraightTrack()));
@@ -228,11 +228,11 @@ public class DirectorTests
         director.Tick(2f);
         director.Tick(1.5f);
 
-        Assert.Equal(3.5, director.Elapsed, 5);
+        Assert.Equal(3.5, director.ShotTime, 5);
     }
 
     [Fact]
-    public void ElapsedStopsWhilePaused()
+    public void ShotTimeStopsWhilePaused()
     {
         var director = new Director();
         director.GoLive(new TrackShot(StraightTrack()));
@@ -241,11 +241,11 @@ public class DirectorTests
         director.Pause();
         director.Tick(3f);
 
-        Assert.Equal(2.0, director.Elapsed, 5);
+        Assert.Equal(2.0, director.ShotTime, 5);
     }
 
     [Fact]
-    public void ElapsedRestartsOnGoLive()
+    public void ShotTimeRestartsOnGoLive()
     {
         var director = new Director();
         var shot = new TrackShot(StraightTrack());
@@ -254,18 +254,18 @@ public class DirectorTests
 
         director.GoLive(shot);
 
-        Assert.Equal(0.0, director.Elapsed);
+        Assert.Equal(0.0, director.ShotTime);
     }
 
     [Fact]
-    public void ElapsedIsZeroForNonTrackShots()
+    public void ShotTimeIsZeroForNonTrackShots()
     {
         var director = new Director();
         director.GoLive(new SnapShot(Snap()));
 
         director.Tick(3f);
 
-        Assert.Equal(0.0, director.Elapsed);
+        Assert.Equal(0.0, director.ShotTime);
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class DirectorTests
         director.Pause();
 
         director.Seek(6.0);
-        Assert.Equal(6.0, director.Elapsed, 5);
+        Assert.Equal(6.0, director.ShotTime, 5);
         Assert.True(director.IsPaused);
     }
 
@@ -309,10 +309,10 @@ public class DirectorTests
     {
         var director = new Director();
         director.Seek(3.0);
-        Assert.Equal(0.0, director.Elapsed);
+        Assert.Equal(0.0, director.ShotTime);
 
         director.GoLive(new SnapShot(Snap()));
         director.Seek(3.0);
-        Assert.Equal(0.0, director.Elapsed);
+        Assert.Equal(0.0, director.ShotTime);
     }
 }

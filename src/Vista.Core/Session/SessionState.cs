@@ -44,7 +44,7 @@ public sealed class SessionState
                 return EditOutcome.Unchanged;
             case CameraMode.Live:
                 Scrubbing = false;
-                scrubTime = Math.Clamp(Director.Elapsed, 0.0, Duration);
+                scrubTime = Math.Clamp(Director.ShotTime, 0.0, Duration);
                 Director.GoOffline();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
@@ -436,7 +436,7 @@ public sealed class SessionState
     public bool Scrubbing { get; private set; }
 
     /// <summary>Seconds under the scrub head: playback time while live, otherwise the last scrubbed or jumped-to time.</summary>
-    public double ScrubHead => Mode == CameraMode.Live ? Director.Elapsed : Math.Min(scrubTime, Duration);
+    public double ScrubHead => Mode == CameraMode.Live ? Director.ShotTime : Math.Min(scrubTime, Duration);
 
     /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect when off.</summary>
     public void BeginScrub()

@@ -2,66 +2,73 @@ using Vista.Core.Camera;
 
 namespace Vista.Core.Tracks;
 
-/// <summary>Advances a track's elapsed time frame by frame according to its playback mode.</summary>
+/// <summary>Advances a track's playback clock frame by frame, by its direction and loop setting.</summary>
 public sealed class TrackPlayback
 {
     private readonly Track _track;
     private readonly TrackEvaluator _evaluator;
+    private double _clock;
 
-    /// <summary>Seconds into the track. Clamps at <see cref="TrackEvaluator.Duration"/>, or wraps modulo it when the track loops.</summary>
-    public double Elapsed { get; private set; }
+    /// <summary>Where the camera is in the shot, from 0 to <see cref="TrackEvaluator.Duration"/>.</summary>
+    public double ShotTime => PlaybackClock.ShotTime(_track.Direction, _evaluator.Duration, _clock);
 
-    /// <summary>True once a track that doesn't loop has reached its duration; never true for one that loops.</summary>
+    /// <summary>True once a track that doesn't loop has reached the end of its cycle; never true for one that loops.</summary>
     public bool IsFinished { get; private set; }
 
-    /// <summary>Starts <paramref name="track"/> at elapsed zero.</summary>
+    /// <summary>Starts <paramref name="track"/> at the start of its cycle.</summary>
     public TrackPlayback(Track track)
     {
         _track = track;
         _evaluator = new TrackEvaluator(track);
     }
 
-    /// <summary>Adds <paramref name="dt"/> to elapsed time, applies the track's playback mode, and evaluates the result.</summary>
+    /// <summary>Adds <paramref name="dt"/> to the clock, stops or wraps it at the end of the cycle, and evaluates the shot time.</summary>
     public CameraState? Advance(float dt)
     {
-        var duration = _evaluator.Duration;
-        var next = Elapsed + Math.Max(dt, 0f);
+        var cycle = Cycle;
+        var next = _clock + Math.Max(dt, 0f);
 
         if (_track.Loop)
         {
-            Elapsed = duration > 0.0 ? next % duration : 0.0;
+            _clock = cycle > 0.0 ? next % cycle : 0.0;
         }
-        else if (next >= duration)
+        else if (next >= cycle)
         {
-            Elapsed = duration;
+            _clock = cycle;
             IsFinished = true;
         }
         else
         {
-            Elapsed = next;
+            _clock = next;
         }
 
-        return _evaluator.Evaluate(Elapsed);
+        return _evaluator.Evaluate(ShotTime);
     }
 
-    /// <summary>Resets elapsed time to zero and clears <see cref="IsFinished"/>.</summary>
+    /// <summary>Puts the clock back to the start of the cycle and clears <see cref="IsFinished"/>.</summary>
     public void Restart()
     {
-        Elapsed = 0.0;
+        _clock = 0.0;
         IsFinished = false;
     }
 
-    /// <summary>Jumps to <paramref name="time"/>: clamps to the track and finishes at its end, or wraps when the track loops.</summary>
+    /// <summary>Jumps to shot time <paramref name="time"/>, clamped to the shot, keeping a Ping-pong shot's pass.</summary>
     public void Seek(double time)
     {
-        var duration = _evaluator.Duration;
+        var length = _evaluator.Duration;
+        var cycle = Cycle;
+        var onReturn = PlaybackClock.OnReturnPass(_track.Direction, length, _clock);
+        var clock = PlaybackClock.ClockFor(_track.Direction, length, time, onReturn);
+
         if (_track.Loop)
         {
-            Elapsed = duration > 0.0 ? ((time % duration) + duration) % duration : 0.0;
+            _clock = cycle > 0.0 ? clock % cycle : 0.0;
             return;
         }
 
-        Elapsed = Math.Clamp(time, 0.0, duration);
-        IsFinished = Elapsed >= duration;
+        _clock = clock;
+        IsFinished = _clock >= cycle;
     }
+
+    private double Cycle => PlaybackClock.CycleLength(_track.Direction, _evaluator.Duration);
 }

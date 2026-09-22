@@ -100,7 +100,7 @@ public class SessionStateTests
         var state = Live();
         state.Director.Tick(1f);
         Assert.Equal(PlayOutcome.ReHid, state.Play());
-        Assert.Equal(1.0, state.Director.Elapsed, 5);
+        Assert.Equal(1.0, state.Director.ShotTime, 5);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class SessionStateTests
         state.Stop();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         Assert.False(state.Director.IsPaused);
-        Assert.Equal(1.0, state.Director.Elapsed, 5);
+        Assert.Equal(1.0, state.Director.ShotTime, 5);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class SessionStateTests
         state.Director.Tick(6f);
         Assert.True(state.Director.IsFinished);
         Assert.Equal(PlayOutcome.Started, state.Play());
-        Assert.Equal(0.0, state.Director.Elapsed);
+        Assert.Equal(0.0, state.Director.ShotTime);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class SessionStateTests
         state.Stop();
         Assert.Equal(PlayOutcome.Started, state.Play());
         Assert.False(state.Director.IsPaused);
-        Assert.Equal(0.0, state.Director.Elapsed);
+        Assert.Equal(0.0, state.Director.ShotTime);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class SessionStateTests
         Assert.Equal(CameraMode.Live, state.Mode);
         Assert.True(state.Director.IsPaused);
         state.Director.Tick(1f);
-        Assert.Equal(0.0, state.Director.Elapsed);
+        Assert.Equal(0.0, state.Director.ShotTime);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class SessionStateTests
         state.Cue();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         state.Director.Tick(1f);
-        Assert.Equal(1.0, state.Director.Elapsed, 5);
+        Assert.Equal(1.0, state.Director.ShotTime, 5);
     }
 
     [Fact]
@@ -180,7 +180,7 @@ public class SessionStateTests
         var state = Live();
         state.Director.Tick(2f);
         Assert.Equal(PlayOutcome.Started, state.Restart());
-        Assert.Equal(0.0, state.Director.Elapsed);
+        Assert.Equal(0.0, state.Director.ShotTime);
     }
 
     [Fact]

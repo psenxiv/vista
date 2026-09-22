@@ -147,6 +147,42 @@ public class SessionEditingTests
         Assert.Equal(2.0, state.ScrubHead, 5);
     }
 
+    [Fact]
+    public void CueingAReverseShotPutsTheScrubHeadAtTheEnd()
+    {
+        var state = Editing();
+        state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
+        state.Cue();
+        Assert.Equal(10.0, state.ScrubHead, 5);
+    }
+
+    [Fact]
+    public void EditFromALiveReverseShotTakesItsShotTime()
+    {
+        var state = Editing();
+        state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
+        state.Play();
+        state.Director.Tick(2f);
+        state.Edit();
+        Assert.Equal(8.0, state.ScrubHead, 5);
+    }
+
+    [Fact]
+    public void ScrubbingALivePingPongShotOnItsWayBackKeepsItGoingBack()
+    {
+        var state = Editing();
+        state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.PingPong));
+        state.Play();
+        state.Director.Tick(13f);
+        Assert.Equal(7.0, state.ScrubHead, 3);
+
+        state.BeginScrub();
+        state.ScrubTo(4.0);
+        state.EndScrub();
+        state.Director.Tick(1f);
+        Assert.Equal(3.0, state.ScrubHead, 3);
+    }
+
     [Theory]
     [InlineData(1, 1, 3, 3)] // the selected point itself moves
     [InlineData(1, 0, 2, 0)] // a point before it moves past it
