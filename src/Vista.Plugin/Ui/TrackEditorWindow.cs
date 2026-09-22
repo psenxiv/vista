@@ -24,6 +24,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
+    private const float ModeWidth = 80f;
     private const float FieldWidth = 70f;
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
@@ -51,8 +52,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         SetMinimumWidth(MinWidth);
     }
 
-    /// <summary>Widens the minimum size to fit the track row and any open compartment, so Clear track stays on screen.</summary>
-    public override void PreDraw() => SetMinimumWidth(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth());
+    /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, so Hide UI and Clear track stay on screen.</summary>
+    public override void PreDraw() => SetMinimumWidth(MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth()));
 
     /// <summary>The width the open compartments beside the track editor take, with their gap.</summary>
     private float CompartmentsWidth()
@@ -211,7 +212,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void DrawModeCombo()
     {
         var current = session.Mode switch { CameraMode.Editing => 1, CameraMode.Live => 2, _ => 0 };
-        ImGui.SetNextItemWidth(80f);
+        ImGui.SetNextItemWidth(ModeWidth);
         if (!ImGui.BeginCombo("##mode", ModeNames[current])) return;
 
         if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
@@ -424,6 +425,18 @@ internal sealed unsafe class TrackEditorWindow : Window
             + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
             + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);
         return items + (Spacing.X * 8f) + (style.WindowPadding.X * 2f);
+    }
+
+    /// <summary>The top bar's full width: its items, the larger of LIVE and fly speed, the gaps between them, and the window padding.</summary>
+    private static float TopRowWidth()
+    {
+        var style = ImGui.GetStyle();
+        var items = IconButton.Width(FontAwesomeIcon.Sitemap) + IconButton.Width(FontAwesomeIcon.ListOl) + ModeWidth
+            + IconButton.Width(FontAwesomeIcon.Undo) + IconButton.Width(FontAwesomeIcon.Redo) + IconButton.Width(FontAwesomeIcon.ChartLine)
+            + IconButton.Width(FontAwesomeIcon.EyeSlash);
+        var live = ImGui.CalcTextSize("LIVE").X + Spacing.X;
+        var flySpeed = (Spacing.X * 3f) + IconWidth(FontAwesomeIcon.Feather) + Spacing.X + SpeedWidth;
+        return items + MathF.Max(live, flySpeed) + (Spacing.X * 8f) + (style.WindowPadding.X * 2f);
     }
 
     /// <summary>The width of an icon drawn as text in the icon font.</summary>
