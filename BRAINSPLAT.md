@@ -490,6 +490,10 @@ saving, so the file format is written once.
 4. **3.e Playlist and Live.** Playlist entries (Track, loop count, Cut), the Playlist
    compartment, Live playing the Playlist, loop indicators, and snap points folded into
    single-point Tracks.
+4a. **3.e.1–3.e.3 Polish and aim.** UI polish, editor refinements, and the Look At and Follow
+   Target aim modes (moved up from the backlog on 2026-09-22).
+4b. **3.e.4 First tester release.** Publish the unsaved build as an experimental plugin through a
+   custom plugin repository, so testers can get a feel for it before saving exists.
 5. **3.f Saving and loading.** The `vistaxiv` folder and its up-front choice, Scene files with
    debounced saving, and the Scene selector.
 6. **3.g Presets.**
