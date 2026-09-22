@@ -114,6 +114,18 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void DuplicateCopiesTheAnchor()
+    {
+        var scene = SceneEditing.New();
+        var anchor = new Anchor(new Vector3(4f, 0f, 1f), 1.2f);
+        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { Anchor = anchor, AnchorPlaced = true });
+        var (result, _) = SceneEditing.Duplicate(scene, scene.Tracks[0].Id);
+
+        Assert.Equal(anchor, result.Tracks[1].Anchor);
+        Assert.True(result.Tracks[1].AnchorPlaced);
+    }
+
+    [Fact]
     public void DeleteRemovesTheTrackAndNamesTheOneTakingItsPlace()
     {
         var scene = Three();

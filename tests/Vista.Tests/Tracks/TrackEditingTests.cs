@@ -72,6 +72,17 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void ClearKeepsTheAnchor()
+    {
+        var anchor = new Anchor(new Vector3(1f, 2f, 3f), 0.5f);
+        var track = TrackEditing.Append(TrackEditing.Empty() with { Anchor = anchor, AnchorPlaced = true }, Point(1f, 2f, 3f));
+        var cleared = TrackEditing.Clear(track);
+
+        Assert.Equal(anchor, cleared.Anchor);
+        Assert.True(cleared.AnchorPlaced);
+    }
+
+    [Fact]
     public void AppendFirstPointGetsKeyAtTimeZero()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(), Point(1f, 2f, 3f));
