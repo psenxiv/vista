@@ -47,6 +47,7 @@ Layout revised by the user on 2026-09-22 after using the first build:
 - **Play/Pause and Restart icons** sit at the left of the scrub bar (moved there
   2026-09-22). Play/Pause shows Pause while the shot is playing and Play otherwise;
   Play from Edit or Off goes live. Every icon has a tooltip naming it.
+  Superseded by `2026-09-22-edit-preview-design.md`: Play in Edit previews in place.
 - **Second row:** Aim and Playback drop-downs that show their setting ("Aim: Recorded
   aim", "Playback: Once"), and **Clear track** as a trash icon at the right end.
   Superseded by `2026-09-22-playback-direction-design.md`: the Playback drop-down

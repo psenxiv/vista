@@ -16,6 +16,7 @@ Out of scope: the Playlist and Live playing it (3.e). Until then Live is unchang
 - It plays from the scrub head. If the scrub head is where the shot finishes (the end for
   Forward, 0 for Reverse and Ping-pong), it starts from the beginning instead.
 - Direction and Loop apply as they do in Live.
+- A Ping-pong preview resumes on its outward pass from the scrub head (decided 2026-09-22).
 - **Restart** is enabled in Edit mode and previews from the beginning.
 - A track with no points can't be previewed, as it can't be played.
 
@@ -32,10 +33,13 @@ the scrub head stays there, as a scrub release does (decided 2026-09-22):
 
 - Pause;
 - a track that doesn't loop reaching the end of its cycle;
-- any flight key: movement, fly-down, roll, or the fly-speed wheel. Turning the camera with
-  the mouse doesn't count;
+- any flight key held: movement, fly-down, roll, or the fly-speed wheel. One already held
+  when Play is pressed stops the preview on its first frame too. Turning the camera with
+  the mouse doesn't count (decided 2026-09-22);
 - any edit to the scene or the edited track, including undo and redo, beginning a gizmo or
   field drag, and switching tracks;
+- adding a point (backtick and its variants, or + Add) stops it and captures the frame
+  shown (decided 2026-09-22);
 - dragging the scrub bar, which then scrubs as usual.
 
 Leaving Edit mode ends the preview. A preview never records an undo step.
