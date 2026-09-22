@@ -41,17 +41,6 @@ public class NearbyCharactersTests
     }
 
     [Fact]
-    public void NearestToSortsByDistance()
-    {
-        var characters = With(
-            new LoadedCharacter("Far", new Vector3(30f, 0f, 0f)),
-            new LoadedCharacter("Near", new Vector3(2f, 0f, 0f)),
-            new LoadedCharacter("Middle", new Vector3(0f, 0f, 10f)));
-
-        Assert.Equal(new[] { "Near", "Middle", "Far" }, characters.NearestTo(Vector3.Zero).Select(c => c.Name));
-    }
-
-    [Fact]
     public void UpdateKeepsItsOwnCopyOfTheCharacters()
     {
         var loaded = new List<LoadedCharacter> { new("Guard", new Vector3(3f, 0f, 4f)) };

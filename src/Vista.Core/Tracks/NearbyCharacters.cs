@@ -31,8 +31,4 @@ public sealed class NearbyCharacters : IAimTargets
 
         return best;
     }
-
-    /// <summary>Every character, nearest <paramref name="place"/> first.</summary>
-    public IReadOnlyList<LoadedCharacter> NearestTo(Vector3 place)
-        => characters.OrderBy(c => Vector3.DistanceSquared(c.Position, place)).ToArray();
 }

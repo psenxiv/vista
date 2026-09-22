@@ -25,6 +25,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
+    private const float CharacterListWidth = 260f;
+    private const float CharacterListHeight = 320f;
     private const float ModeWidth = 80f;
     private const float FieldWidth = 70f;
     private const float MaxCharacterWidth = 220f;
@@ -43,6 +45,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
+    private string characterSearch = string.Empty;
     private float? smoothingDrag;
 
     public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
@@ -320,7 +323,11 @@ internal sealed unsafe class TrackEditorWindow : Window
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red, lost))
             pressed = ImGui.Button($"{label}##character", new Vector2(CharacterWidth(label), 0f));
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(lost ? IconButton.NotFoundTooltip : "Choose a character");
-        if (pressed) ImGui.OpenPopup("character-menu");
+        if (pressed)
+        {
+            characterSearch = string.Empty;
+            ImGui.OpenPopup("character-menu");
+        }
         DrawCharacterMenu(track.TargetName);
     }
 
@@ -340,26 +347,47 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>The character button's width: its label and frame padding.</summary>
     private static float CharacterWidth(string label) => ImGui.CalcTextSize(label).X + (ImGui.GetStyle().FramePadding.X * 2f);
 
-    /// <summary>The characters loaded nearby, nearest the camera first, each with its distance; picking one follows it.</summary>
+    /// <summary>The characters loaded nearby, by name, each with its distance, filtered by a search; picking one follows it.</summary>
     private void DrawCharacterMenu(string? chosen)
     {
         if (!ImGui.BeginPopup("character-menu")) return;
 
+        if (ImGui.IsWindowAppearing()) ImGui.SetKeyboardFocusHere();
+        ImGui.SetNextItemWidth(CharacterListWidth);
+        ImGui.InputTextWithHint("##character-search", "Search", ref characterSearch, 64);
+
         var origin = session.CameraPosition ?? session.PlayerPosition;
-        var nearby = session.Characters.NearestTo(origin ?? Vector3.Zero);
-        if (nearby.Count == 0)
+        var search = characterSearch.Trim();
+        var listed = session.Characters.All
+            .Where(c => search.Length == 0 || c.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => origin is { } from ? Vector3.DistanceSquared(c.Position, from) : 0f)
+            .ToList();
+
+        if (listed.Count == 0)
         {
             using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-                ImGui.TextUnformatted("No characters nearby");
+                ImGui.TextUnformatted(search.Length == 0 ? "No characters nearby" : "No matches");
         }
-
-        for (var i = 0; i < nearby.Count; i++)
+        else
         {
-            var character = nearby[i];
-            using var id = ImRaii.PushId($"character{i}");
-            var text = origin is { } from ? $"{character.Name}  ({Vector3.Distance(character.Position, from):0.0} yalms)" : character.Name;
-            if (ImGui.Selectable(text, character.Name == chosen))
-                Report(session.SetTarget(character.Name));
+            var height = MathF.Min(listed.Count * ImGui.GetTextLineHeightWithSpacing(), CharacterListHeight);
+            if (ImGui.BeginChild("characters", new Vector2(CharacterListWidth, height)))
+            {
+                for (var i = 0; i < listed.Count; i++)
+                {
+                    var character = listed[i];
+                    using var id = ImRaii.PushId($"character{i}");
+                    var text = origin is { } from ? $"{character.Name}  ({Vector3.Distance(character.Position, from):0.0} yalms)" : character.Name;
+                    if (ImGui.Selectable(text, character.Name == chosen))
+                    {
+                        Report(session.SetTarget(character.Name));
+                        ImGui.CloseCurrentPopup();
+                    }
+                }
+            }
+
+            ImGui.EndChild();
         }
 
         ImGui.EndPopup();
