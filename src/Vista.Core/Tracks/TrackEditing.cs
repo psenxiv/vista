@@ -26,9 +26,12 @@ public static class TrackEditing
 
     private const int DurationSteps = 60;
 
-    /// <summary>A track with no points at the default speed, playing forward once.</summary>
-    public static Track Empty(AimMode aim = AimMode.AimKeys)
-        => new([], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
+    /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
+    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1")
+        => new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
+
+    /// <summary>An empty track that keeps <paramref name="track"/>'s Id and Name.</summary>
+    public static Track Clear(Track track) => Empty(name: track.Name) with { Id = track.Id };
 
     /// <summary>How many timing keys the track compiles to.</summary>
     public static int KeyCount(Track track) => track.Points.Count + track.Timing.Count(t => t.Hold > 0f);

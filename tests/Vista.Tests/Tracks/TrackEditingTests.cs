@@ -48,6 +48,30 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void EmptyGivesEachTrackANewIdAndTheNameAsked()
+    {
+        var first = TrackEditing.Empty();
+        var second = TrackEditing.Empty(name: "Crane");
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.Equal("Track 1", first.Name);
+        Assert.Equal("Crane", second.Name);
+    }
+
+    [Fact]
+    public void ClearEmptiesTheTrackButKeepsItsIdAndName()
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent, "Crane"), Point(1f, 2f, 3f));
+        var cleared = TrackEditing.Clear(track);
+
+        Assert.Equal(track.Id, cleared.Id);
+        Assert.Equal("Crane", cleared.Name);
+        Assert.Empty(cleared.Points);
+        Assert.Empty(cleared.Timing);
+        Assert.Equal(AimMode.AimKeys, cleared.Aim);
+    }
+
+    [Fact]
     public void AppendFirstPointGetsKeyAtTimeZero()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(), Point(1f, 2f, 3f));
