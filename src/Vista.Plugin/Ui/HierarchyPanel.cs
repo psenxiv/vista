@@ -30,13 +30,13 @@ internal sealed unsafe class HierarchyPanel
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
             ImGui.TextUnformatted("Scene");
         ImGui.BeginDisabled(!editing);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + IconButton.Width(FontAwesomeIcon.Plus) + ImGui.GetStyle().ItemSpacing.X;
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + LastSlot() + ImGui.GetStyle().ItemSpacing.X;
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
         ImGui.EndDisabled();
-        ImGui.SameLine();
+        CentreInLastSlot(FontAwesomeIcon.Plus);
         if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track")) Report(session.AddTrack());
         ImGui.EndDisabled();
         ImGui.Separator();
@@ -61,7 +61,7 @@ internal sealed unsafe class HierarchyPanel
         using var id = ImRaii.PushId(track.Id.ToString());
         var isEdited = track.Id == edited;
         var hidden = scene.Hidden.Contains(track.Id);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + MathF.Max(IconButton.Width(FontAwesomeIcon.Eye), IconButton.Width(FontAwesomeIcon.EyeSlash)) + (ImGui.GetStyle().ItemSpacing.X * 2f);
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + LastSlot() + (ImGui.GetStyle().ItemSpacing.X * 2f);
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons);
 
         if (renaming == track.Id) DrawRename(track, nameWidth);
@@ -71,13 +71,22 @@ internal sealed unsafe class HierarchyPanel
         ImGui.BeginDisabled(!track.AnchorPlaced);
         if (IconButton.Draw("anchor", FontAwesomeIcon.Anchor, "Select track anchor")) Report(session.SelectTrackAnchor(track.Id));
         ImGui.EndDisabled();
-        ImGui.SameLine();
+        var eye = hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye;
+        CentreInLastSlot(eye);
 
         ImGui.BeginDisabled(isEdited);
         if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide", hidden ? UiColours.Dim() : null))
             Report(session.SetTrackHidden(track.Id, !hidden));
         ImGui.EndDisabled();
     }
+
+    /// <summary>The width kept for the rightmost button in the header and every row, so the anchors above it line up.</summary>
+    private static float LastSlot()
+        => MathF.Max(IconButton.Width(FontAwesomeIcon.Plus), MathF.Max(IconButton.Width(FontAwesomeIcon.Eye), IconButton.Width(FontAwesomeIcon.EyeSlash)));
+
+    /// <summary>Continues the line so <paramref name="icon"/>'s button sits centred in the last slot.</summary>
+    private static void CentreInLastSlot(FontAwesomeIcon icon)
+        => ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X + ((LastSlot() - IconButton.Width(icon)) * 0.5f));
 
     /// <summary>Text inside the row just drawn: centred on its height, inset by twice the frame padding and clipped to the row.</summary>
     private static void DrawRowText(string text)
