@@ -65,7 +65,7 @@ public static class SceneEditing
         tracks.RemoveAt(index);
         var hidden = new HashSet<Guid>(scene.Hidden);
         hidden.Remove(id);
-        return (new Scene(tracks, hidden), tracks[Math.Min(index, tracks.Count - 1)].Id);
+        return (scene with { Tracks = tracks, Hidden = hidden }, tracks[Math.Min(index, tracks.Count - 1)].Id);
     }
 
     /// <summary>Moves the track at <paramref name="from"/> to <paramref name="to"/>.</summary>

@@ -296,4 +296,23 @@ public class SessionAnchorTests
         Assert.True(state.Undo());
         Assert.Equal(2, state.Track.Points.Count);
     }
+
+    [Fact]
+    public void DeletingAnotherTrackLeavesTheEditedTrackWhereItIs()
+    {
+        var state = Editing();
+        var first = state.EditedTrackId;
+        state.AddTrack();
+        state.AddToEnd(Point(40f));
+        var second = state.EditedTrackId;
+        state.SwitchTrack(first);
+        state.SelectSceneAnchor();
+        state.MoveAnchor(new Anchor(new Vector3(-7f, 2f, 11f), 0.8f), carry: true);
+        var before = state.Track.Points.Select(p => p.Position).ToList();
+
+        Assert.Null(state.DeleteTrack(second));
+
+        Assert.True(state.Scene.AnchorPlaced);
+        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position);
+    }
 }

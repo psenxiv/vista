@@ -179,4 +179,16 @@ public class SceneEditingTests
         Assert.Empty(scene.Hidden);
         Assert.Throws<ArgumentException>(() => SceneEditing.SetHidden(scene, Guid.NewGuid(), true));
     }
+
+    [Fact]
+    public void DeleteKeepsTheSceneAnchor()
+    {
+        var anchor = new Anchor(new Vector3(4f, 1f, -2f), 0.7f);
+        var scene = Three() with { Anchor = anchor, AnchorPlaced = true };
+
+        var result = SceneEditing.Delete(scene, scene.Tracks[1].Id).Scene;
+
+        Assert.Equal(anchor, result.Anchor);
+        Assert.True(result.AnchorPlaced);
+    }
 }
