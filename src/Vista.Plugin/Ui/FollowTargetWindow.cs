@@ -12,7 +12,6 @@ namespace Vista.Plugin.Ui;
 internal sealed class FollowTargetWindow : Window
 {
     private const float ListWidth = 260f;
-    private const float ListHeight = 320f;
     private const float FieldWidth = 70f;
 
     private readonly CameraSession session;
@@ -29,10 +28,9 @@ internal sealed class FollowTargetWindow : Window
         RespectCloseHotkey = false;
     }
 
-    /// <summary>Opens the window for the edited track with an empty search.</summary>
+    /// <summary>Opens the window for the edited track.</summary>
     public void Open()
     {
-        if (!IsOpen) search = string.Empty;
         openedFor = session.EditedTrackId;
         IsOpen = true;
     }
@@ -60,7 +58,6 @@ internal sealed class FollowTargetWindow : Window
 
         ImGui.BeginDisabled(session.Mode != CameraMode.Editing);
         DrawCharacters();
-        ImGui.Separator();
         DrawAimHeight();
         DrawSmoothing();
         ImGui.EndDisabled();
@@ -69,44 +66,47 @@ internal sealed class FollowTargetWindow : Window
         if (ImGui.Button("Done", new Vector2(ListWidth, 0f))) IsOpen = false;
     }
 
-    /// <summary>The search box and the characters loaded nearby, by name; picking one follows it.</summary>
+    /// <summary>A drop-down naming the character followed; it opens on a search box and the characters loaded nearby, by name, once each.</summary>
     private void DrawCharacters()
     {
-        if (ImGui.IsWindowAppearing()) ImGui.SetKeyboardFocusHere();
+        var track = session.Track;
+        var chosen = track.TargetName is { } name ? $"{name} · {track.TargetWorld ?? "NPC"}" : "Choose a character";
         ImGui.SetNextItemWidth(ListWidth);
+        if (!ImGui.BeginCombo("##character", chosen, ImGuiComboFlags.HeightLarge)) return;
+
+        if (ImGui.IsWindowAppearing())
+        {
+            search = string.Empty;
+            ImGui.SetKeyboardFocusHere();
+        }
+
+        ImGui.SetNextItemWidth(-1f);
         ImGui.InputTextWithHint("##search", "Search", ref search, 64);
 
-        var track = session.Track;
-        var origin = session.CameraPosition ?? session.PlayerPosition;
         var filter = search.Trim();
         var listed = session.Characters.All
             .Where(c => filter.Length == 0 || c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            .DistinctBy(c => (c.Name, c.World))
             .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(c => c.World ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => origin is { } from ? Vector3.DistanceSquared(c.Position, from) : 0f)
             .ToList();
 
         if (listed.Count == 0)
         {
             using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
                 ImGui.TextUnformatted(filter.Length == 0 ? "No characters nearby" : "No matches");
-            return;
         }
 
-        var height = MathF.Min(listed.Count * ImGui.GetTextLineHeightWithSpacing(), ListHeight);
-        if (ImGui.BeginChild("characters", new Vector2(ListWidth, height)))
+        for (var i = 0; i < listed.Count; i++)
         {
-            for (var i = 0; i < listed.Count; i++)
-            {
-                var character = listed[i];
-                using var id = ImRaii.PushId($"character{i}");
-                var followed = character.Name == track.TargetName && character.World == track.TargetWorld;
-                if (ImGui.Selectable($"{character.Name} · {character.World ?? "NPC"}###character", followed))
-                    Report(session.SetTarget(character.Name, character.World));
-            }
+            var character = listed[i];
+            using var id = ImRaii.PushId($"character{i}");
+            var followed = character.Name == track.TargetName && character.World == track.TargetWorld;
+            if (ImGui.Selectable($"{character.Name} · {character.World ?? "NPC"}###character", followed))
+                Report(session.SetTarget(character.Name, character.World));
         }
 
-        ImGui.EndChild();
+        ImGui.EndCombo();
     }
 
     /// <summary>The aim height above the character's feet, as a labelled field.</summary>
@@ -114,7 +114,6 @@ internal sealed class FollowTargetWindow : Window
     {
         Label("Aim height");
         fields.Draw("aim-height", session.Track.AimHeight, "%.1f", FieldWidth, v => Report(session.SetAimHeight(v)));
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Aim height above the character's feet, in yalms, from 0 to 3");
     }
 
     /// <summary>The smoothing slider; a drag is applied as one undo step when it lets go.</summary>
@@ -124,7 +123,6 @@ internal sealed class FollowTargetWindow : Window
         var value = smoothingDrag ?? session.Track.Smoothing;
         ImGui.SetNextItemWidth(FieldWidth);
         if (ImGui.SliderFloat("##smoothing", ref value, 0f, 1f, "%.2f")) smoothingDrag = value;
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Smoothing: 0 exact, 1 heavy");
         if (ImGui.IsItemActive() || smoothingDrag is not { } done) return;
         smoothingDrag = null;
         Report(session.SetSmoothing(done));
