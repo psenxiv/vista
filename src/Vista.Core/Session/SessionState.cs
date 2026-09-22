@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
@@ -22,6 +23,8 @@ public sealed class SessionState
     private EditSnapshot? liveEditStart;
     private Track? evaluatedStart;
     private TrackEvaluator? liveStartEvaluator;
+    private readonly Func<float?> footHeight;
+    private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
 
     public CameraMode Mode { get; private set; }
 
@@ -33,14 +36,31 @@ public sealed class SessionState
     /// <summary>The Id of the track the editor works on.</summary>
     public Guid EditedTrackId { get; private set; }
 
-    /// <summary>The edited track: Edit builds it and Play plays it. Changed only through the edit methods and undo.</summary>
-    public Track Track
+    /// <summary>The edited track as stored, local to its anchor.</summary>
+    private Track Local
     {
         get => SceneEditing.Get(Scene, EditedTrackId);
-        private set => Scene = SceneEditing.Replace(Scene, value);
+        set => Scene = SceneEditing.Replace(Scene, value);
     }
 
-    public SessionState() => EditedTrackId = Scene.Tracks[0].Id;
+    /// <summary>The edited track in the world: Edit builds it and Play plays it. Changed only through the edit methods and undo.</summary>
+    public Track Track => WorldOf(Local);
+
+    /// <summary>A scene track in the world; the same instance until the track or the scene anchor changes.</summary>
+    public Track WorldOf(Track local)
+    {
+        if (worlds.TryGetValue(local.Id, out var cached) && ReferenceEquals(cached.Local, local) && cached.Scene == Scene.Anchor) return cached.World;
+        var world = SceneGeometry.InWorld(Scene, local);
+        worlds[local.Id] = (local, Scene.Anchor, world);
+        return world;
+    }
+
+    /// <summary>A session; <paramref name="footHeight"/> reads the character's feet, or null when it can't.</summary>
+    public SessionState(Func<float?>? footHeight = null)
+    {
+        this.footHeight = footHeight ?? (() => null);
+        EditedTrackId = Scene.Tracks[0].Id;
+    }
 
     /// <summary>The track's length in seconds: its last compiled key, or 0 with no points.</summary>
     public double Duration => Evaluator.Duration;
@@ -84,7 +104,7 @@ public sealed class SessionState
     /// <summary>Goes live with the track from its start. Refused with no points.</summary>
     public PlayOutcome Restart()
     {
-        if (Track.Points.Count == 0) return PlayOutcome.Refused;
+        if (Local.Points.Count == 0) return PlayOutcome.Refused;
         Scrubbing = false;
         EndLiveEdit();
 
@@ -141,7 +161,8 @@ public sealed class SessionState
     public void Select(int? index)
     {
         if (Mode != CameraMode.Editing) return;
-        Selected = index is { } i && i >= 0 && i < Track.Points.Count ? i : null;
+        SelectedAnchor = null;
+        Selected = index is { } i && i >= 0 && i < Local.Points.Count ? i : null;
         SyncKeyToPoint();
     }
 
@@ -150,8 +171,12 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing) return;
         SelectedLeg = null;
-        SelectedKey = key is { } k && k >= 0 && k < TrackEditing.KeyCount(Track) ? k : null;
-        if (SelectedKey is { } s && TrackEditing.RoleOf(Track, s) == KeyRole.Point) Selected = TrackEditing.PointOf(Track, s);
+        SelectedKey = key is { } k && k >= 0 && k < TrackEditing.KeyCount(Local) ? k : null;
+        if (SelectedKey is { } s && TrackEditing.RoleOf(Local, s) == KeyRole.Point)
+        {
+            Selected = TrackEditing.PointOf(Local, s);
+            SelectedAnchor = null;
+        }
     }
 
     /// <summary>Selects a leg while editing, leaving the point selection alone.</summary>
@@ -159,23 +184,23 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing) return;
         SelectedKey = null;
-        SelectedLeg = leg is { } l && l >= 1 && l < Track.Points.Count ? l : null;
+        SelectedLeg = leg is { } l && l >= 1 && l < Local.Points.Count ? l : null;
     }
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change)
         => Apply(change, result => Selected is { } s && s < result.Points.Count ? s : null);
 
-    /// <summary>Appends a point; the selection is unchanged.</summary>
+    /// <summary>Appends a world point, placing the anchors under a first point; the selection is unchanged.</summary>
     public string? AddToEnd(ControlPoint point)
-        => Apply(t => TrackEditing.Append(t, point), _ => Selected);
+        => ApplyScene(scene => WithPoint(scene, point, TrackEditing.Append), _ => Selected);
 
-    /// <summary>Inserts a point after the selected one and selects it.</summary>
+    /// <summary>Inserts a world point after the selected one and selects it.</summary>
     public string? AddAfterSelected(ControlPoint point)
     {
         if (SelectionRefusal() is { } refusal) return refusal;
         var s = Selected!.Value;
-        return Apply(t => TrackEditing.InsertAfter(t, s, point), _ => s + 1);
+        return ApplyScene(scene => WithPoint(scene, point, (t, p) => TrackEditing.InsertAfter(t, s, p)), _ => s + 1);
     }
 
     /// <summary>Replaces the selected point, keeping its timing and the selection.</summary>
@@ -185,9 +210,20 @@ public sealed class SessionState
         return ReplacePoint(Selected!.Value, point);
     }
 
-    /// <summary>Replaces point <paramref name="index"/>, keeping its timing and the selection.</summary>
+    /// <summary>Replaces point <paramref name="index"/> with a world point, keeping its timing and the selection.</summary>
     public string? ReplacePoint(int index, ControlPoint point)
-        => Apply(t => TrackEditing.Replace(t, index, point), _ => Selected);
+        => Apply(t => TrackEditing.Replace(t, index, ToLocal(point)), _ => Selected);
+
+    /// <summary>A world point as the edited track stores it.</summary>
+    private ControlPoint ToLocal(ControlPoint world) => SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world);
+
+    /// <summary>Places the anchors under a first point if needed, then adds the world point to the edited track with <paramref name="add"/>.</summary>
+    private Scene WithPoint(Scene scene, ControlPoint world, Func<Track, ControlPoint, Track> add)
+    {
+        var placed = SceneGeometry.PlaceFor(scene, EditedTrackId, world.Position, footHeight() ?? world.Position.Y);
+        var track = SceneEditing.Get(placed, EditedTrackId);
+        return SceneEditing.Replace(placed, add(track, SceneGeometry.WorldAnchor(placed, track).ToLocal(world)));
+    }
 
     /// <summary>Deletes the selected point and clears the selection.</summary>
     public string? DeleteSelected()
@@ -199,7 +235,7 @@ public sealed class SessionState
     /// <summary>Deletes point <paramref name="index"/>; any other selected point stays selected.</summary>
     public string? DeletePoint(int index)
     {
-        if (index < 0 || index >= Track.Points.Count) return "There is no such point.";
+        if (index < 0 || index >= Local.Points.Count) return "There is no such point.";
         var selected = Selected;
         return Apply(t => TrackEditing.Delete(t, index), _ => selected is { } s && s != index ? (s > index ? s - 1 : s) : null);
     }
@@ -319,9 +355,9 @@ public sealed class SessionState
         if (liveEditStart is null) return "No live edit is in progress.";
         try
         {
-            var result = TrackEditing.Replace(Track, index, point);
+            var result = TrackEditing.Replace(Local, index, ToLocal(point));
             _ = new TrackEvaluator(result);
-            Track = result;
+            Local = result;
             return null;
         }
         catch (ArgumentException ex)
@@ -338,25 +374,110 @@ public sealed class SessionState
     public string? PreviewHandle(int key, KeySide side, float distancePerSecond)
         => PreviewFromStart((start, evaluator) => Collinear(start, evaluator, key, distancePerSecond, start.Timing[TrackEditing.PointOf(start, key)].Broken ? side : null));
 
-    /// <summary>Ends a live edit, recording it as one undo step if the track changed.</summary>
+    /// <summary>Ends a live edit, recording it as one undo step if the scene changed.</summary>
     public void EndLiveEdit()
     {
         if (liveEditStart is not { } start) return;
         liveEditStart = null;
-        var startTrack = SceneEditing.Get(start.Scene, start.Edited);
-        if (ReferenceEquals(startTrack, Track)) return;
+        if (ReferenceEquals(start.Scene, Scene)) return;
 
         // Previews rebuild the lists, so compare values: a drag back to the start is no step.
-        if (startTrack.Points.SequenceEqual(Track.Points) && startTrack.Timing.SequenceEqual(Track.Timing) && startTrack.Speed == Track.Speed) Track = startTrack;
+        if (SameValues(start.Scene, Scene)) Scene = start.Scene;
         else history.Record(start);
     }
 
+    /// <summary>True when two scenes hold the same anchor and tracks by value.</summary>
+    private static bool SameValues(Scene a, Scene b)
+    {
+        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.Tracks.Count != b.Tracks.Count) return false;
+        for (var i = 0; i < a.Tracks.Count; i++)
+        {
+            var x = a.Tracks[i];
+            var y = b.Tracks[i];
+            if (ReferenceEquals(x, y)) continue;
+            if (x.Id != y.Id || x.Anchor != y.Anchor || x.AnchorPlaced != y.AnchorPlaced || x.Speed != y.Speed
+                || !x.Points.SequenceEqual(y.Points) || !x.Timing.SequenceEqual(y.Timing)) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>The selected anchor, or null; never set together with a selected point.</summary>
+    public AnchorKind? SelectedAnchor { get; private set; }
+
+    /// <summary>The selected anchor in the world, or null.</summary>
+    public Anchor? SelectedAnchorInWorld => SelectedAnchor switch
+    {
+        AnchorKind.Scene => Scene.Anchor,
+        AnchorKind.Track => SceneGeometry.WorldAnchor(Scene, Local),
+        _ => null,
+    };
+
+    /// <summary>Selects the scene anchor, clearing any point. Returns why it was refused, or null.</summary>
+    public string? SelectSceneAnchor()
+    {
+        if (Mode != CameraMode.Editing) return "Anchors can only be selected while editing.";
+        if (!Scene.AnchorPlaced) return "The scene anchor is placed with the scene's first point.";
+        SelectAnchor(AnchorKind.Scene);
+        return null;
+    }
+
+    /// <summary>Edits track <paramref name="id"/> and selects its anchor, clearing any point. Returns why it was refused, or null.</summary>
+    public string? SelectTrackAnchor(Guid id)
+    {
+        if (Mode != CameraMode.Editing) return "Anchors can only be selected while editing.";
+        if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
+        if (!SceneEditing.Get(Scene, id).AnchorPlaced) return "A track's anchor is placed with its first point.";
+        if (SwitchTrack(id) is { } refusal) return refusal;
+        SelectAnchor(AnchorKind.Track);
+        return null;
+    }
+
+    private void SelectAnchor(AnchorKind kind)
+    {
+        EndLiveEdit();
+        Selected = null;
+        SyncKeyToPoint();
+        SelectedAnchor = kind;
+    }
+
+    /// <summary>Moves the selected anchor in the world, carrying what hangs off it or alone. Returns why it was refused, or null.</summary>
+    public string? MoveAnchor(Anchor world, bool carry)
+    {
+        if (SelectedAnchor is not { } kind) return "Select an anchor first.";
+        return CommitScene(scene => (Moved(scene, kind, world, carry), EditedTrackId));
+    }
+
+    /// <summary>During a live edit, moves the selected anchor from where it was when the edit began. Returns why it was refused, or null.</summary>
+    public string? PreviewAnchor(Anchor world, bool carry)
+    {
+        if (liveEditStart is not { } start) return "No live edit is in progress.";
+        if (SelectedAnchor is not { } kind) return "Select an anchor first.";
+        Scene = Moved(start.Scene, kind, world, carry);
+        return null;
+    }
+
+    /// <summary>Moves the scene anchor to the camera's X and Z at foot height, keeping its yaw and carrying every track. Returns why it was refused, or null.</summary>
+    public string? BringScene(Vector3 camera)
+    {
+        var height = footHeight() ?? Scene.Anchor.Position.Y;
+        return CommitScene(scene => (SceneGeometry.MoveSceneAnchor(scene, scene.Anchor with { Position = new Vector3(camera.X, height, camera.Z) }, carry: true), EditedTrackId));
+    }
+
+    private Scene Moved(Scene scene, AnchorKind kind, Anchor world, bool carry)
+        => kind == AnchorKind.Scene
+            ? SceneGeometry.MoveSceneAnchor(scene, world, carry)
+            : SceneGeometry.MoveTrackAnchor(scene, EditedTrackId, world, carry);
+
     private EditSnapshot Current => new(Scene, EditedTrackId, Selected);
 
-    private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter)
+    private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter) => ApplyScene(ChangeEdited(change), selectAfter);
+
+    /// <summary>Applies a scene change to the edited track's points, keeping the timing selection in step.</summary>
+    private string? ApplyScene(Func<Scene, Scene> change, Func<Track, int?> selectAfter)
     {
-        var pointsBefore = Track.Points;
-        var refusal = Commit(change, selectAfter);
+        var pointsBefore = Local.Points;
+        var refusal = CommitEdit(change, selectAfter);
         if (refusal is null) RefreshTimingSelection(pointsBefore);
         return refusal;
     }
@@ -364,28 +485,40 @@ public sealed class SessionState
     /// <summary>Applies a timing change, keeping the point selection and any timing selection still in range.</summary>
     private string? ApplyTiming(Func<Track, Track> change)
     {
-        var refusal = Commit(change, _ => Selected);
+        var refusal = CommitEdit(ChangeEdited(change), _ => Selected);
         if (refusal is not null) return refusal;
-        if (SelectedKey is { } key && key >= TrackEditing.KeyCount(Track)) SelectedKey = null;
-        if (SelectedLeg is { } leg && leg >= Track.Points.Count) SelectedLeg = null;
+        if (SelectedKey is { } key && key >= TrackEditing.KeyCount(Local)) SelectedKey = null;
+        if (SelectedLeg is { } leg && leg >= Local.Points.Count) SelectedLeg = null;
         return null;
     }
 
-    private string? Commit(Func<Track, Track> change, Func<Track, int?> selectAfter)
+    /// <summary>A scene change that applies <paramref name="change"/> to the edited track, refusing one that swaps the track.</summary>
+    private Func<Scene, Scene> ChangeEdited(Func<Track, Track> change)
+        => scene =>
+        {
+            var before = SceneEditing.Get(scene, EditedTrackId);
+            var result = change(before);
+            if (ReferenceEquals(result, before)) return scene;
+            if (result.Id != EditedTrackId) throw new ArgumentException("A change cannot replace the track.");
+            return SceneEditing.Replace(scene, result);
+        };
+
+    /// <summary>Applies a change to the scene as one undo step if the edited track can still be played. Returns why it was refused, or null.</summary>
+    private string? CommitEdit(Func<Scene, Scene> change, Func<Track, int?> selectAfter)
     {
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
         EndLiveEdit();
 
         try
         {
-            var result = change(Track);
-            if (ReferenceEquals(result, Track)) return null;
-            if (result.Id != EditedTrackId) return "A change cannot replace the track.";
+            var result = change(Scene);
+            if (ReferenceEquals(result, Scene)) return null;
 
-            _ = new TrackEvaluator(result);
+            var edited = SceneEditing.Get(result, EditedTrackId);
+            _ = new TrackEvaluator(edited);
             history.Record(Current);
-            var selected = selectAfter(result);
-            Track = result;
+            var selected = selectAfter(edited);
+            Scene = result;
             Selected = selected;
             return null;
         }
@@ -424,17 +557,19 @@ public sealed class SessionState
         Selected = null;
         SelectedKey = null;
         SelectedLeg = null;
+        SelectedAnchor = null;
         scrubTime = 0.0;
     }
 
     private bool Restore(EditSnapshot? snapshot)
     {
         if (snapshot is not { } s) return false;
-        var pointsBefore = Track.Points;
+        var pointsBefore = Local.Points;
         if (s.Edited != EditedTrackId) ClearForSwitch();
         Scene = s.Scene;
         EditedTrackId = s.Edited;
         Selected = s.Selected;
+        if (Selected is not null) SelectedAnchor = null;
         RefreshTimingSelection(pointsBefore);
         return true;
     }
@@ -444,10 +579,10 @@ public sealed class SessionState
     {
         if (Selected is { } point)
         {
-            SelectedKey = TrackEditing.PointKey(Track, point);
+            SelectedKey = TrackEditing.PointKey(Local, point);
             SelectedLeg = null;
         }
-        else if (SelectedKey is { } key && (key >= TrackEditing.KeyCount(Track) || TrackEditing.RoleOf(Track, key) == KeyRole.Point))
+        else if (SelectedKey is { } key && (key >= TrackEditing.KeyCount(Local) || TrackEditing.RoleOf(Local, key) == KeyRole.Point))
         {
             SelectedKey = null;
         }
@@ -456,9 +591,9 @@ public sealed class SessionState
     /// <summary>After a point edit: a point key follows its point, and any other timing selection clears unless it's a leg and the points are unchanged.</summary>
     private void RefreshTimingSelection(IReadOnlyList<ControlPoint> pointsBefore)
     {
-        if (!ReferenceEquals(pointsBefore, Track.Points) && !pointsBefore.SequenceEqual(Track.Points)) SelectedLeg = null;
-        if (SelectedKey is { } key && (Selected is null || key >= TrackEditing.KeyCount(Track) || TrackEditing.RoleOf(Track, key) != KeyRole.Point)) SelectedKey = null;
-        if (Selected is not null && SelectedLeg is null) SelectedKey = TrackEditing.PointKey(Track, Selected.Value);
+        if (!ReferenceEquals(pointsBefore, Local.Points) && !pointsBefore.SequenceEqual(Local.Points)) SelectedLeg = null;
+        if (SelectedKey is { } key && (Selected is null || key >= TrackEditing.KeyCount(Local) || TrackEditing.RoleOf(Local, key) != KeyRole.Point)) SelectedKey = null;
+        if (Selected is not null && SelectedLeg is null) SelectedKey = TrackEditing.PointKey(Local, Selected.Value);
     }
 
     /// <summary>Sets Manual slopes from one graph slope on the handled sides: <paramref name="only"/> alone, or both when null.</summary>
@@ -485,7 +620,7 @@ public sealed class SessionState
         {
             var result = change(startTrack, liveStartEvaluator!);
             _ = new TrackEvaluator(result);
-            Track = result;
+            Local = result;
             return null;
         }
         catch (ArgumentException ex)
@@ -522,7 +657,7 @@ public sealed class SessionState
     }
 
     /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
-    public CameraState? FrameAt(double time) => Track.Points.Count == 0 ? null : Evaluator.Evaluate(time);
+    public CameraState? FrameAt(double time) => Local.Points.Count == 0 ? null : Evaluator.Evaluate(time);
 
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
     public bool Scrubbing { get; private set; }

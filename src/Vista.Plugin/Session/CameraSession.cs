@@ -9,7 +9,7 @@ namespace Vista.Plugin.Session;
 /// <summary>Carries out the session's mode changes in game: free-cam, movement lock, camera ownership and UI.</summary>
 internal sealed class CameraSession
 {
-    private readonly SessionState state = new();
+    private readonly SessionState state = new(() => Plugin.ObjectTable.LocalPlayer?.Position.Y);
     private readonly FreeCam freeCam = new();
     private readonly MovementLock movement;
     private readonly CameraOwnership ownership = new();
@@ -47,12 +47,43 @@ internal sealed class CameraSession
     /// <summary>Hides or shows a track. Returns why it was refused, or null.</summary>
     public string? SetTrackHidden(Guid id, bool hidden) => state.SetTrackHidden(id, hidden);
 
-    /// <summary>Edits a track and flies the editor camera to its first point. Returns why it was refused, or null.</summary>
+    /// <summary>A scene track in the world.</summary>
+    public Track WorldOf(Track local) => state.WorldOf(local);
+
+    /// <summary>The selected anchor, or null.</summary>
+    public AnchorKind? SelectedAnchor => state.SelectedAnchor;
+
+    /// <summary>The selected anchor in the world, or null.</summary>
+    public Anchor? SelectedAnchorInWorld => state.SelectedAnchorInWorld;
+
+    /// <summary>Selects the scene anchor. Returns why it was refused, or null.</summary>
+    public string? SelectSceneAnchor() => state.SelectSceneAnchor();
+
+    /// <summary>Edits a track and selects its anchor, leaving the camera where it is. Returns why it was refused, or null.</summary>
+    public string? SelectTrackAnchor(Guid id) => state.SelectTrackAnchor(id);
+
+    /// <summary>Moves the selected anchor. Returns why it was refused, or null.</summary>
+    public string? MoveAnchor(Anchor world, bool carry) => state.MoveAnchor(world, carry);
+
+    /// <summary>During a live edit, moves the selected anchor. Returns why it was refused, or null.</summary>
+    public string? PreviewAnchor(Anchor world, bool carry) => state.PreviewAnchor(world, carry);
+
+    /// <summary>Moves the scene anchor to the editor camera, at the character's feet. Returns why it was refused, or null.</summary>
+    public string? BringSceneToMe()
+        => CameraAccess.ReadState() is { } camera ? state.BringScene(camera.Position) : "Cannot read the camera.";
+
+    /// <summary>Edits a track and flies the editor camera to look at its anchor. Returns why it was refused, or null.</summary>
     public string? OpenTrack(Guid id)
     {
         var refusal = state.SwitchTrack(id);
-        if (refusal is null) JumpToPoint(0);
-        return refusal;
+        if (refusal is not null) return refusal;
+
+        var track = SceneEditing.Get(state.Scene, id);
+        if (!track.AnchorPlaced) return null;
+        var (position, lookAt) = SceneGeometry.ViewOf(SceneGeometry.WorldAnchor(state.Scene, track));
+        var fov = CameraAccess.ReadState()?.Fov ?? lastFrame?.Fov ?? 1f;
+        FlyFrom(new CameraState(position, lookAt, fov));
+        return null;
     }
 
     /// <summary>Edits a track and selects one of its points, leaving the camera where it is. Returns why it was refused, or null.</summary>

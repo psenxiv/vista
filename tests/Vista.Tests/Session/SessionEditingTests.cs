@@ -42,7 +42,7 @@ public class SessionEditingTests
 
         Assert.Null(state.AddAfterSelected(point));
         Assert.Equal(1, state.Selected);
-        Assert.Same(point, state.Track.Points[1]);
+        Assert.Equal(point, state.Track.Points[1]);
 
         state.AddAfterSelected(Point(7f));
         Assert.Equal(2, state.Selected);

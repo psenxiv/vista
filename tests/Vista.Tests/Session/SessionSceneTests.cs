@@ -42,7 +42,7 @@ public class SessionSceneTests
 
         Assert.Equal(3, state.Scene.Tracks[0].Points.Count);
         Assert.Single(state.Scene.Tracks[1].Points);
-        Assert.Same(state.Scene.Tracks[1], state.Track);
+        Assert.Same(state.WorldOf(state.Scene.Tracks[1]), state.Track);
     }
 
     [Fact]
