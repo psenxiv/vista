@@ -31,6 +31,7 @@ public static class TimingEditing
             var low = prev.Position + PositionGap;
             var high = next.Position - PositionGap;
             var p = low <= high ? Math.Clamp(position, low, high) : keys[key].Position;
+            if (t == keys[key].Time && p == keys[key].Position) return track;
             return WithKey(track, key, keys[key] with { Time = t, Position = p });
         }
 
@@ -73,6 +74,7 @@ public static class TimingEditing
         var keys = track.Timing;
         var index = 0;
         while (index < keys.Count && keys[index].Time <= time) index++;
+        if (index <= 0 || index >= keys.Count) throw new ArgumentException("too close to another key");
         var prev = keys[index - 1];
         var next = keys[index];
         if (time - prev.Time < TrackEditing.MinKeyGap || next.Time - time < TrackEditing.MinKeyGap)
@@ -82,7 +84,7 @@ public static class TimingEditing
         var high = MathF.Min(next.Position, leg) - PositionGap;
         if (low > high) throw new ArgumentException("no room for a key here");
 
-        var s = float.IsFinite(slope) ? MathF.Max(slope, 0f) : 0f;
+        var s = Slope(slope);
         var timing = keys.ToList();
         timing.Insert(index, new TimingKey(time, Math.Clamp(position, low, high), TangentMode.Manual, TangentMode.Manual, s, s));
         return (track with { Timing = timing }, index);

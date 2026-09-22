@@ -90,6 +90,13 @@ public class TimingEditingTests
     }
 
     [Fact]
+    public void MovingAnInnerKeyToItsCurrentPlaceReturnsTheSameInstance()
+    {
+        var track = WithInner(Build3PointTrack(), 2f, 0.5f);
+        Assert.Same(track, TimingEditing.MoveKey(track, 1, 2f, 0.5f));
+    }
+
+    [Fact]
     public void AnInnerKeyIsAddedWithUnbrokenManualHandles()
     {
         var (track, key) = TimingEditing.AddInnerKey(Build3PointTrack(), 2f, 0.4f, 0.2f);
@@ -104,6 +111,14 @@ public class TimingEditingTests
         Assert.Throws<ArgumentException>(() => TimingEditing.AddInnerKey(held, 6f, 1f, 0f));
         Assert.Throws<ArgumentException>(() => TimingEditing.AddInnerKey(Build3PointTrack(), 4.98f, 0.99f, 0f));
     }
+
+    [Fact]
+    public void AnInnerKeyRefusesAtTheLastKeysTime()
+        => Assert.Throws<ArgumentException>(() => TimingEditing.AddInnerKey(Build3PointTrack(), 10f, 2f, 0f));
+
+    [Fact]
+    public void AnInnerKeyRefusesAtAnInteriorPointsTime()
+        => Assert.Throws<ArgumentException>(() => TimingEditing.AddInnerKey(Build3PointTrack(), 5f, 1f, 0f));
 
     [Fact]
     public void DeletingKeys()
