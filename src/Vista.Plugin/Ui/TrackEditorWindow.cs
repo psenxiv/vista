@@ -18,13 +18,14 @@ internal sealed unsafe class TrackEditorWindow : Window
 
     private static readonly string[] ModeNames = ["Off", "Edit", "Live"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
-    private static readonly string[] PlaybackNames = ["Once", "Loop"];
+    private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
+    private static readonly PlaybackDirection[] Directions = [PlaybackDirection.Forward, PlaybackDirection.Reverse, PlaybackDirection.PingPong];
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
     private const float FieldWidth = 70f;
     private const float AimWidth = 200f;
-    private const float PlaybackWidth = 140f;
+    private const float DirectionWidth = 180f;
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
 
@@ -136,7 +137,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndCombo();
     }
 
-    /// <summary>Aim and playback drop-downs, track Speed and Duration, and Clear track as a trash icon at the right end.</summary>
+    /// <summary>Aim and direction drop-downs, the loop toggle, track Speed and Duration, and Clear track as a trash icon at the right end.</summary>
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
@@ -153,20 +154,23 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.EndCombo();
         }
 
-        var playback = session.Track.Playback == PlaybackMode.Once ? 0 : 1;
+        var direction = Array.IndexOf(Directions, session.Track.Direction);
         ImGui.SameLine();
-        ImGui.SetNextItemWidth(PlaybackWidth);
-        if (ImGui.BeginCombo("##playback", $"Playback: {PlaybackNames[playback]}"))
+        ImGui.SetNextItemWidth(DirectionWidth);
+        if (ImGui.BeginCombo("##direction", $"Direction: {DirectionNames[direction]}"))
         {
-            for (var i = 0; i < PlaybackNames.Length; i++)
+            for (var i = 0; i < DirectionNames.Length; i++)
             {
-                if (!ImGui.Selectable(PlaybackNames[i], i == playback) || i == playback) continue;
-                var mode = i == 0 ? PlaybackMode.Once : PlaybackMode.Loop;
-                Report(session.ChangeTrack(t => TrackEditing.SetPlayback(t, mode)));
+                if (!ImGui.Selectable(DirectionNames[i], i == direction) || i == direction) continue;
+                var chosen = Directions[i];
+                Report(session.ChangeTrack(t => TrackEditing.SetDirection(t, chosen)));
             }
 
             ImGui.EndCombo();
         }
+
+        ImGui.SameLine();
+        DrawLoop();
 
         ImGui.BeginDisabled(TrackEditing.AllPinned(session.Track));
         ImGui.SameLine();
@@ -180,6 +184,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
         ImGui.EndDisabled();
+    }
+
+    /// <summary>The loop toggle: lit when the track loops, dimmed when it plays once.</summary>
+    private void DrawLoop()
+    {
+        var loop = session.Track.Loop;
+        var colour = loop ? (uint?)null : ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
+        if (IconButton.Draw("loop", FontAwesomeIcon.Repeat, loop ? "Play once" : "Loop", colour))
+            Report(session.ChangeTrack(t => TrackEditing.SetLoop(t, !loop)));
     }
 
     private void DrawAddButton()
@@ -320,13 +333,13 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
     }
 
-    /// <summary>The track row's full width: its items, the six gaps between them, and the window padding.</summary>
+    /// <summary>The track row's full width: its items, the seven gaps between them, and the window padding.</summary>
     private static float TrackRowWidth()
     {
         var style = ImGui.GetStyle();
-        var items = AimWidth + PlaybackWidth + ImGui.CalcTextSize("Speed").X + ImGui.CalcTextSize("Duration").X
-            + (FieldWidth * 2f) + IconButton.Width(FontAwesomeIcon.Trash);
-        return items + (Spacing.X * 6f) + (style.WindowPadding.X * 2f);
+        var items = AimWidth + DirectionWidth + IconButton.Width(FontAwesomeIcon.Repeat) + ImGui.CalcTextSize("Speed").X
+            + ImGui.CalcTextSize("Duration").X + (FieldWidth * 2f) + IconButton.Width(FontAwesomeIcon.Trash);
+        return items + (Spacing.X * 7f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width)

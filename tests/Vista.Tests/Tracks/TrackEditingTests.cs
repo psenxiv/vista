@@ -35,7 +35,8 @@ public class TrackEditingTests
         Assert.Empty(track.Timing);
         Assert.Empty(Keys(track));
         Assert.Equal(TrackEditing.DefaultSpeed, track.Speed);
-        Assert.Equal(PlaybackMode.Once, track.Playback);
+        Assert.Equal(PlaybackDirection.Forward, track.Direction);
+        Assert.False(track.Loop);
         Assert.Equal(AimMode.AimKeys, track.Aim);
     }
 
@@ -292,15 +293,29 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void SetPlaybackChangesModeWithoutTouchingPointsOrKeys()
+    public void SetDirectionChangesItWithoutTouchingPointsOrTiming()
     {
         var track = Build3PointTrack();
-        var updated = TrackEditing.SetPlayback(track, PlaybackMode.Loop);
+        var updated = TrackEditing.SetDirection(track, PlaybackDirection.PingPong);
 
-        Assert.Equal(PlaybackMode.Loop, updated.Playback);
+        Assert.Equal(PlaybackDirection.PingPong, updated.Direction);
         Assert.Equal(track.Points, updated.Points);
         Assert.Equal(track.Timing, updated.Timing);
         Assert.Equal(track.Speed, updated.Speed);
+        Assert.Same(updated, TrackEditing.SetDirection(updated, PlaybackDirection.PingPong));
+    }
+
+    [Fact]
+    public void SetLoopChangesItWithoutTouchingPointsOrTiming()
+    {
+        var track = Build3PointTrack();
+        var updated = TrackEditing.SetLoop(track, true);
+
+        Assert.True(updated.Loop);
+        Assert.Equal(track.Points, updated.Points);
+        Assert.Equal(track.Timing, updated.Timing);
+        Assert.Equal(track.Speed, updated.Speed);
+        Assert.Same(updated, TrackEditing.SetLoop(updated, true));
     }
 
     [Fact]
@@ -390,13 +405,14 @@ public class TrackEditingTests
     public void DeletingTheOnlyPointEmptiesTheTrackButKeepsItsModesAndSpeed()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f, 0f, 0f));
-        track = TrackEditing.SetSpeed(TrackEditing.SetPlayback(track, PlaybackMode.Loop), 7f);
+        track = TrackEditing.SetSpeed(TrackEditing.SetLoop(TrackEditing.SetDirection(track, PlaybackDirection.Reverse), true), 7f);
         var result = TrackEditing.Delete(track, 0);
 
         Assert.Empty(result.Points);
         Assert.Empty(result.Timing);
         Assert.Equal(AimMode.PathTangent, result.Aim);
-        Assert.Equal(PlaybackMode.Loop, result.Playback);
+        Assert.Equal(PlaybackDirection.Reverse, result.Direction);
+        Assert.True(result.Loop);
         Assert.Equal(7f, result.Speed);
     }
 

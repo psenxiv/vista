@@ -26,9 +26,9 @@ public static class TrackEditing
 
     private const int DurationSteps = 60;
 
-    /// <summary>A track with no points at the default speed, playing <see cref="PlaybackMode.Once"/>.</summary>
+    /// <summary>A track with no points at the default speed, playing forward once.</summary>
     public static Track Empty(AimMode aim = AimMode.AimKeys)
-        => new([], [], DefaultSpeed, aim, PlaybackMode.Once);
+        => new([], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
 
     /// <summary>How many timing keys the track compiles to.</summary>
     public static int KeyCount(Track track) => track.Points.Count + track.Timing.Count(t => t.Hold > 0f);
@@ -190,9 +190,13 @@ public static class TrackEditing
         return WithTiming(track, index, track.Timing[index] with { Hold = clamped });
     }
 
-    /// <summary>Sets the playback mode; never touches points or timing.</summary>
-    public static Track SetPlayback(Track track, PlaybackMode mode)
-        => track.Playback == mode ? track : track with { Playback = mode };
+    /// <summary>Sets which way the track plays; never touches points or timing.</summary>
+    public static Track SetDirection(Track track, PlaybackDirection direction)
+        => track.Direction == direction ? track : track with { Direction = direction };
+
+    /// <summary>Sets whether the track loops; never touches points or timing.</summary>
+    public static Track SetLoop(Track track, bool loop)
+        => track.Loop == loop ? track : track with { Loop = loop };
 
     /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
     public static Track SetSpeed(Track track, float speed)

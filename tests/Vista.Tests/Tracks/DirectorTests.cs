@@ -10,9 +10,9 @@ public class DirectorTests
     private static ControlPoint Point(float x, float y, float z)
         => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
-    private static Track StraightTrack(PlaybackMode mode = PlaybackMode.Once)
+    private static Track StraightTrack(bool loop = false)
     {
-        var track = TrackEditing.SetPlayback(TrackEditing.Empty(AimMode.PathTangent), mode);
+        var track = TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop);
         foreach (var x in new[] { 0f, 5f, 10f }) track = TrackEditing.Append(track, Point(x, 0f, 0f));
         return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
     }
@@ -194,7 +194,7 @@ public class DirectorTests
     public void IsFinishedIsFalseUntilAOnceTrackReachesItsEnd()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack(PlaybackMode.Once)));
+        director.GoLive(new TrackShot(StraightTrack()));
 
         Assert.False(director.IsFinished);
         director.Tick(5f);

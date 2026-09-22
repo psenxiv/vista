@@ -8,10 +8,10 @@ public sealed class TrackPlayback
     private readonly Track _track;
     private readonly TrackEvaluator _evaluator;
 
-    /// <summary>Seconds into the track. <c>Once</c> clamps at <see cref="TrackEvaluator.Duration"/>; <c>Loop</c> wraps modulo it.</summary>
+    /// <summary>Seconds into the track. Clamps at <see cref="TrackEvaluator.Duration"/>, or wraps modulo it when the track loops.</summary>
     public double Elapsed { get; private set; }
 
-    /// <summary>True once a <c>Once</c> track has reached its duration; never true for <c>Loop</c>.</summary>
+    /// <summary>True once a track that doesn't loop has reached its duration; never true for one that loops.</summary>
     public bool IsFinished { get; private set; }
 
     /// <summary>Starts <paramref name="track"/> at elapsed zero.</summary>
@@ -27,7 +27,7 @@ public sealed class TrackPlayback
         var duration = _evaluator.Duration;
         var next = Elapsed + Math.Max(dt, 0f);
 
-        if (_track.Playback == PlaybackMode.Loop)
+        if (_track.Loop)
         {
             Elapsed = duration > 0.0 ? next % duration : 0.0;
         }
@@ -51,11 +51,11 @@ public sealed class TrackPlayback
         IsFinished = false;
     }
 
-    /// <summary>Jumps to <paramref name="time"/>: <c>Once</c> clamps to the track and finishes at its end, <c>Loop</c> wraps.</summary>
+    /// <summary>Jumps to <paramref name="time"/>: clamps to the track and finishes at its end, or wraps when the track loops.</summary>
     public void Seek(double time)
     {
         var duration = _evaluator.Duration;
-        if (_track.Playback == PlaybackMode.Loop)
+        if (_track.Loop)
         {
             Elapsed = duration > 0.0 ? ((time % duration) + duration) % duration : 0.0;
             return;
