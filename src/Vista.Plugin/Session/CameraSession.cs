@@ -293,7 +293,12 @@ internal sealed class CameraSession
     public string? UnifyHandles(int key, KeySide from) => state.UnifyHandles(key, from);
 
     /// <summary>Sets the aim mode; the first Look At with no points goes ahead of the camera. Returns why it was refused, or null.</summary>
-    public string? SetAim(AimMode aim) => CameraPoint() is { } camera ? state.SetAim(aim, camera) : "Cannot read the camera.";
+    public string? SetAim(AimMode aim)
+    {
+        if (CameraPoint() is { } camera) return state.SetAim(aim, camera);
+        var placesFromCamera = aim == AimMode.LookAt && state.Track is { Points.Count: 0, LookAtPlaced: false };
+        return state.Mode == CameraMode.Editing && placesFromCamera ? "Cannot read the camera." : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
+    }
 
     /// <summary>Names the character to follow, or none. Returns why it was refused, or null.</summary>
     public string? SetTarget(string? name) => state.SetTarget(name);

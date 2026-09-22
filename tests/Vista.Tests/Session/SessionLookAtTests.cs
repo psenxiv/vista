@@ -93,7 +93,70 @@ public class SessionLookAtTests
 
         Assert.NotNull(state.SetAim(AimMode.LookAt, Camera));
         Assert.NotNull(state.SetTarget("Guard"));
+        Assert.NotNull(state.SetAimHeight(2f));
+        Assert.NotNull(state.SetSmoothing(0.8f));
         Assert.NotNull(state.SelectLookAt(state.EditedTrackId));
+        Assert.NotNull(state.MoveLookAt(Vector3.Zero));
+    }
+
+    [Fact]
+    public void ASettingThatChangesNothingIsNoUndoStep()
+    {
+        var state = new SessionState();
+        state.Edit();
+
+        Assert.Null(state.SetSmoothing(0.3f));
+
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void UndoingLookAtDropsItsSelectionAndRedoLeavesItDropped()
+    {
+        var state = Looking();
+        state.SelectLookAt(state.EditedTrackId);
+
+        Assert.True(state.Undo());
+        Assert.Null(state.SelectedAnchor);
+        Assert.Null(state.SelectedLookAtInWorld);
+
+        Assert.True(state.Redo());
+        Assert.Equal(AimMode.LookAt, state.Track.Aim);
+        Assert.Null(state.SelectedAnchor);
+    }
+
+    [Fact]
+    public void ALookAtDragBackToItsStartIsNoUndoStep()
+    {
+        var state = Looking();
+        state.SelectLookAt(state.EditedTrackId);
+        var start = state.SelectedLookAtInWorld!.Value;
+        var couldUndo = state.CanUndo;
+
+        state.BeginLiveEdit();
+        state.PreviewLookAt(new Vector3(3f, 5f, 0f));
+        state.PreviewLookAt(start);
+        state.EndLiveEdit();
+
+        Assert.Equal(couldUndo, state.CanUndo);
+        Assert.True(state.Undo());
+        Assert.Equal(AimMode.AimKeys, state.Track.Aim);
+    }
+
+    [Fact]
+    public void UndoDuringALookAtDragPutsThePointBack()
+    {
+        var state = Looking();
+        state.SelectLookAt(state.EditedTrackId);
+        var start = state.Track.LookAt;
+
+        state.BeginLiveEdit();
+        state.PreviewLookAt(new Vector3(3f, 5f, 0f));
+        Assert.True(state.Undo());
+        Assert.NotNull(state.PreviewLookAt(new Vector3(6f, 5f, 0f)));
+        state.EndLiveEdit();
+
+        Near(start, state.Track.LookAt);
     }
 
     [Fact]
