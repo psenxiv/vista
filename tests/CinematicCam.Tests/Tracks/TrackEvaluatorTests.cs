@@ -210,4 +210,54 @@ public class TrackEvaluatorTests
 
         Assert.Equal(0.3f, new TrackEvaluator(track).Evaluate(0.0)!.Value.Roll);
     }
+
+    // Points on a line at x = 0, 10, 20; Linear keys at 0, 5, 10 s.
+    private static TrackEvaluator StraightLinear()
+    {
+        var points = new[] { 0f, 10f, 20f }.Select(x => new ControlPoint(new Vector3(x, 0f, 0f), 0f, 0f, 1f)).ToArray();
+        var keys = new[]
+        {
+            new TimingKey(0f, 0f, TangentMode.Linear, TangentMode.Linear),
+            new TimingKey(5f, 1f, TangentMode.Linear, TangentMode.Linear),
+            new TimingKey(10f, 2f, TangentMode.Linear, TangentMode.Linear),
+        };
+        return new TrackEvaluator(new Track(points, keys, AimMode.AimKeys, PlaybackMode.Once));
+    }
+
+    [Fact]
+    public void DistanceQueriesFollowThePath()
+    {
+        var evaluator = StraightLinear();
+        Assert.Equal(20f, evaluator.TotalDistance, 1);
+        Assert.Equal(5f, evaluator.DistanceAt(2.5), 1);
+        Assert.Equal(2f, evaluator.SlopeAt(2.5), 1);
+        Assert.Equal(15f, evaluator.DistanceOf(1.5f), 1);
+        Assert.Equal(1.5f, evaluator.PositionOf(15f), 2);
+    }
+
+    [Fact]
+    public void SideSlopesAreInDistancePerSecond()
+    {
+        var evaluator = StraightLinear();
+        Assert.Equal(2f, evaluator.SideSlope(1, KeySide.Out), 1);
+        Assert.Equal(2f, evaluator.SideSlope(1, KeySide.In), 1);
+    }
+
+    [Fact]
+    public void StoredSlopesConvertBySegmentLength()
+    {
+        var evaluator = StraightLinear();
+        Assert.Equal(0.2f, evaluator.ToStoredSlope(1f, KeySide.Out, 2f), 2);
+        Assert.Equal(2f, evaluator.FromStoredSlope(1f, KeySide.In, 0.2f), 1);
+    }
+
+    [Fact]
+    public void AOnePointTrackHasNoDistance()
+    {
+        var point = new ControlPoint(Vector3.Zero, 0f, 0f, 1f);
+        var evaluator = new TrackEvaluator(new Track(new[] { point }, new[] { new TimingKey(0f, 0f) }, AimMode.AimKeys, PlaybackMode.Once));
+        Assert.Equal(0f, evaluator.TotalDistance);
+        Assert.Equal(0f, evaluator.DistanceAt(1.0));
+        Assert.Equal(0f, evaluator.PositionOf(3f));
+    }
 }

@@ -25,6 +25,9 @@ public sealed class TrackEvaluator
     /// <summary>Total shot length: the timing curve's last key, 0 with no keys.</summary>
     public double Duration => _curve.Duration;
 
+    /// <summary>The path's length as timing measures it, each segment at least <see cref="MinTimingLength"/>.</summary>
+    public float TotalDistance => _distances[^1];
+
     /// <summary>Builds the spline, arc-length table, distance timing curve and unwrapped yaw once for <paramref name="track"/>.</summary>
     public TrackEvaluator(Track track)
     {
@@ -71,6 +74,48 @@ public sealed class TrackEvaluator
         var roll = TrackAim.Channel(_rolls, segment, fraction);
 
         return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov, roll);
+    }
+
+    /// <summary>Distance along the path at <paramref name="time"/>.</summary>
+    public float DistanceAt(double time) => _curve.PositionAt(time);
+
+    /// <summary>Speed along the path at <paramref name="time"/>, in distance per second.</summary>
+    public float SlopeAt(double time) => _curve.SlopeAt(time);
+
+    /// <summary>The resolved slope on one side of timing key <paramref name="key"/>, in distance per second.</summary>
+    public float SideSlope(int key, KeySide side) => _curve.SideSlope(key, side);
+
+    /// <summary>Distance along the path of a place in control-point units.</summary>
+    public float DistanceOf(float position)
+    {
+        if (_lengths.Length == 0) return 0f;
+        var clamped = Math.Clamp(position, 0f, _lengths.Length);
+        var segment = Math.Min((int)MathF.Floor(clamped), _lengths.Length - 1);
+        return _distances[segment] + ((clamped - segment) * _lengths[segment]);
+    }
+
+    /// <summary>The place in control-point units at <paramref name="distance"/> along the path.</summary>
+    public float PositionOf(float distance)
+    {
+        if (_lengths.Length == 0) return 0f;
+        var (segment, fraction) = LocateDistance(distance);
+        return segment + fraction;
+    }
+
+    /// <summary>A slope on one side of <paramref name="position"/>, from distance per second to stored control points per second.</summary>
+    public float ToStoredSlope(float position, KeySide side, float distancePerSecond) => distancePerSecond / SideLength(position, side);
+
+    /// <summary>A slope on one side of <paramref name="position"/>, from stored control points per second to distance per second.</summary>
+    public float FromStoredSlope(float position, KeySide side, float stored) => stored * SideLength(position, side);
+
+    /// <summary>The timing length of the segment on one side of a place: the one before it for In at a point, else the one it is in.</summary>
+    private float SideLength(float position, KeySide side)
+    {
+        if (_lengths.Length == 0) return 1f;
+        var clamped = Math.Clamp(position, 0f, _lengths.Length);
+        var segment = Math.Min((int)MathF.Floor(clamped), _lengths.Length - 1);
+        if (side == KeySide.In && clamped - segment == 0f && segment > 0) segment--;
+        return _lengths[segment];
     }
 
     /// <summary>The key with its position and tangents moved from control-point units to distance along the path.</summary>
