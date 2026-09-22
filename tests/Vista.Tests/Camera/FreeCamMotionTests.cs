@@ -50,32 +50,24 @@ public class FreeCamMotionTests
         Assert.Equal(3f, result.Y, 4);
     }
 
-    [Fact]
-    public void ForwardInputMovesAlongTheViewDirection()
+    // Measured in game: yaw 0 looks along -Z and yaw pi/2 along -X, so the view direction is
+    // (-sin yaw cos pitch, sin pitch, -cos yaw cos pitch) and the strafe axis is level at
+    // (cos yaw, 0, -sin yaw). At yaw 45 and pitch 30 degrees, one second at speed 1 moves
+    // (-0.6123724, 0.5, -0.6123724) forward and (0.7071068, 0, -0.7071068) right.
+    [Theory]
+    [InlineData(1f, 0f, 0f, -0.6123724f, 0.5f, -0.6123724f)]
+    [InlineData(-1f, 0f, 0f, 0.6123724f, -0.5f, 0.6123724f)]
+    [InlineData(0f, 0f, 1f, 0.7071068f, 0f, -0.7071068f)]
+    [InlineData(0f, 0f, -1f, -0.7071068f, 0f, 0.7071068f)]
+    [InlineData(0f, 1f, 0f, 0f, 1f, 0f)]
+    [InlineData(0f, -1f, 0f, 0f, -1f, 0f)]
+    public void OneSecondOfInputMovesAlongTheHandComputedAxes(float forward, float up, float right, float x, float y, float z)
     {
-        const float yaw = 1.2f;
-        const float pitch = -0.3f;
+        var moved = FreeCamMotion.Step(Vector3.Zero, new Vector3(forward, up, right), MathF.PI / 4f, MathF.PI / 6f, 1f, 1f);
 
-        var moved = FreeCamMotion.Step(Vector3.Zero, new Vector3(1, 0, 0), yaw, pitch, 5f, 1f);
-        var lookAt = FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch);
-
-        var movedDir = Vector3.Normalize(moved);
-        var lookDir = Vector3.Normalize(lookAt);
-
-        Assert.Equal(1f, Vector3.Dot(movedDir, lookDir), 4);
-    }
-
-    [Fact]
-    public void StrafeIsPerpendicularToTheViewDirection()
-    {
-        const float yaw = 1.2f;
-        const float pitch = -0.3f;
-
-        var strafed = FreeCamMotion.Step(Vector3.Zero, new Vector3(0, 0, 1), yaw, pitch, 5f, 1f);
-        var lookDir = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
-
-        Assert.Equal(0f, Vector3.Dot(Vector3.Normalize(strafed), lookDir), 4);
-        Assert.Equal(0f, strafed.Y, 4);
+        Assert.Equal(x, moved.X, 5);
+        Assert.Equal(y, moved.Y, 5);
+        Assert.Equal(z, moved.Z, 5);
     }
 
     [Fact]
@@ -88,9 +80,13 @@ public class FreeCamMotionTests
     [Fact]
     public void LookAtUsesTheGameDirectionConvention()
     {
-        // Measured in game: yaw 0 looks along -Z, yaw pi/2 looks along -X.
-        Assert.True(FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0f).Z < 0);
-        Assert.True(FreeCamMotion.LookAtFrom(Vector3.Zero, MathF.PI / 2f, 0f).X < 0);
+        // Measured in game: yaw 0 looks along -Z, yaw pi/2 looks along -X. Ten units ahead at
+        // yaw 45 and pitch 30 degrees is therefore (-6.1237244, 5, -6.1237244).
+        var ahead = FreeCamMotion.LookAtFrom(Vector3.Zero, MathF.PI / 4f, MathF.PI / 6f);
+
+        Assert.Equal(-6.1237244f, ahead.X, 4);
+        Assert.Equal(5f, ahead.Y, 4);
+        Assert.Equal(-6.1237244f, ahead.Z, 4);
     }
 
     [Fact]
