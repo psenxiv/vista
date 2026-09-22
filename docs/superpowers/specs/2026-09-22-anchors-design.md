@@ -1,7 +1,7 @@
 # Vista — Anchors (Phase 3.c)
 
 Date: 2026-09-22
-Status: Approved design, awaiting spec review
+Status: Approved
 
 The scene and each track get an anchor: a position and a yaw that everything attached to it
 hangs off. Moving or turning an anchor carries its content, so a setup can be repositioned or

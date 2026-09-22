@@ -315,4 +315,53 @@ public class SessionAnchorTests
         Assert.True(state.Scene.AnchorPlaced);
         for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position);
     }
+
+    // Editing() with both anchors moved and turned by different, non-zero yaws.
+    private static SessionState EditingWithTurnedAnchors()
+    {
+        var state = Editing();
+        state.SelectSceneAnchor();
+        state.MoveAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
+        state.SelectTrackAnchor(state.EditedTrackId);
+        state.MoveAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
+        return state;
+    }
+
+    [Fact]
+    public void AddingToTheEndLandsWhereItWasPutUnderTurnedAnchors()
+    {
+        var state = EditingWithTurnedAnchors();
+        var target = new ControlPoint(new Vector3(123f, 4f, -56f), 1.234f, 0f, 1f);
+
+        Assert.Null(state.AddToEnd(target));
+
+        Near(target.Position, state.Track.Points[^1].Position);
+        Assert.Equal(target.Yaw, state.Track.Points[^1].Yaw, Tolerance);
+    }
+
+    [Fact]
+    public void AddingAfterSelectedLandsWhereItWasPutUnderTurnedAnchors()
+    {
+        var state = EditingWithTurnedAnchors();
+        state.Select(1);
+        var target = new ControlPoint(new Vector3(-30f, 2f, 77f), -0.4f, 0f, 1f);
+
+        Assert.Null(state.AddAfterSelected(target));
+
+        Near(target.Position, state.Track.Points[2].Position);
+        Assert.Equal(target.Yaw, state.Track.Points[2].Yaw, Tolerance);
+    }
+
+    [Fact]
+    public void ALivePreviewLandsWhereItWasPutUnderTurnedAnchors()
+    {
+        var state = EditingWithTurnedAnchors();
+        var target = new ControlPoint(new Vector3(15f, 9f, -3f), 2.5f, 0f, 1f);
+
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewPoint(0, target));
+        Near(target.Position, state.Track.Points[0].Position);
+        Assert.Equal(target.Yaw, state.Track.Points[0].Yaw, Tolerance);
+        state.EndLiveEdit();
+    }
 }
