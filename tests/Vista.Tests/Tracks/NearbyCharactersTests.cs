@@ -14,11 +14,11 @@ public class NearbyCharactersTests
     }
 
     [Fact]
-    public void FindGivesTheNamedCharactersFeet()
+    public void FindCharacterGivesTheNamedCharactersFeet()
     {
         var characters = With(new LoadedCharacter("Guard", null, new Vector3(3f, 0f, 4f)), new LoadedCharacter("Merchant", null, new Vector3(9f, 0f, 9f)));
 
-        Assert.Equal(new Vector3(3f, 0f, 4f), characters.Find("Guard", null, Vector3.Zero));
+        Assert.Equal(new Vector3(3f, 0f, 4f), characters.FindCharacter("Guard", null, Vector3.Zero)?.Position);
     }
 
     [Fact]
@@ -26,9 +26,9 @@ public class NearbyCharactersTests
     {
         var characters = With(new LoadedCharacter("Guard", null, Vector3.Zero));
 
-        Assert.Null(characters.Find("Merchant", null, Vector3.Zero));
-        Assert.Null(characters.Find("guard", null, Vector3.Zero));
-        Assert.Null(new NearbyCharacters().Find("Guard", null, Vector3.Zero));
+        Assert.Null(characters.FindCharacter("Merchant", null, Vector3.Zero));
+        Assert.Null(characters.FindCharacter("guard", null, Vector3.Zero));
+        Assert.Null(new NearbyCharacters().FindCharacter("Guard", null, Vector3.Zero));
     }
 
     [Fact]
@@ -36,8 +36,8 @@ public class NearbyCharactersTests
     {
         var characters = With(new LoadedCharacter("Guard", null, new Vector3(-20f, 0f, 0f)), new LoadedCharacter("Guard", null, new Vector3(20f, 0f, 0f)));
 
-        Assert.Equal(new Vector3(20f, 0f, 0f), characters.Find("Guard", null, new Vector3(15f, 0f, 0f)));
-        Assert.Equal(new Vector3(-20f, 0f, 0f), characters.Find("Guard", null, new Vector3(-1f, 0f, 0f)));
+        Assert.Equal(new Vector3(20f, 0f, 0f), characters.FindCharacter("Guard", null, new Vector3(15f, 0f, 0f))?.Position);
+        Assert.Equal(new Vector3(-20f, 0f, 0f), characters.FindCharacter("Guard", null, new Vector3(-1f, 0f, 0f))?.Position);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class NearbyCharactersTests
 
         loaded.Clear();
 
-        Assert.Equal(new Vector3(3f, 0f, 4f), characters.Find("Guard", null, Vector3.Zero));
+        Assert.Equal(new Vector3(3f, 0f, 4f), characters.FindCharacter("Guard", null, Vector3.Zero)?.Position);
         Assert.Single(characters.All);
     }
 
@@ -58,9 +58,9 @@ public class NearbyCharactersTests
     {
         var characters = With(new LoadedCharacter("Aya", "Gilgamesh", new Vector3(1f, 0f, 0f)), new LoadedCharacter("Aya", "Cactuar", new Vector3(30f, 0f, 0f)));
 
-        Assert.Equal(new Vector3(30f, 0f, 0f), characters.Find("Aya", "Cactuar", Vector3.Zero));
-        Assert.Equal(new Vector3(1f, 0f, 0f), characters.Find("Aya", "Gilgamesh", new Vector3(30f, 0f, 0f)));
-        Assert.Null(characters.Find("Aya", "Sargatanas", Vector3.Zero));
+        Assert.Equal(new Vector3(30f, 0f, 0f), characters.FindCharacter("Aya", "Cactuar", Vector3.Zero)?.Position);
+        Assert.Equal(new Vector3(1f, 0f, 0f), characters.FindCharacter("Aya", "Gilgamesh", new Vector3(30f, 0f, 0f))?.Position);
+        Assert.Null(characters.FindCharacter("Aya", "Sargatanas", Vector3.Zero));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class NearbyCharactersTests
     {
         var characters = With(new LoadedCharacter("Guard", null, Vector3.Zero));
 
-        Assert.Null(characters.Find("Guard", "Gilgamesh", Vector3.Zero));
+        Assert.Null(characters.FindCharacter("Guard", "Gilgamesh", Vector3.Zero));
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public class NearbyCharactersTests
     {
         var characters = With(new LoadedCharacter("Aya", "Gilgamesh", new Vector3(20f, 0f, 0f)), new LoadedCharacter("Aya", null, new Vector3(-20f, 0f, 0f)));
 
-        Assert.Equal(new Vector3(20f, 0f, 0f), characters.Find("Aya", null, new Vector3(15f, 0f, 0f)));
-        Assert.Equal(new Vector3(-20f, 0f, 0f), characters.Find("Aya", null, new Vector3(-15f, 0f, 0f)));
+        Assert.Equal(new Vector3(20f, 0f, 0f), characters.FindCharacter("Aya", null, new Vector3(15f, 0f, 0f))?.Position);
+        Assert.Equal(new Vector3(-20f, 0f, 0f), characters.FindCharacter("Aya", null, new Vector3(-15f, 0f, 0f))?.Position);
     }
 
     [Fact]

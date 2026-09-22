@@ -16,8 +16,6 @@ public sealed class NearbyCharacters : IAimTargets
     /// <summary>Replaces the characters with a copy of <paramref name="loaded"/>.</summary>
     public void Update(IReadOnlyList<LoadedCharacter> loaded) => characters = loaded.ToArray();
 
-    public Vector3? Find(string name, string? world, Vector3 near) => FindCharacter(name, world, near)?.Position;
-
     public LoadedCharacter? FindCharacter(string name, string? world, Vector3 near)
     {
         LoadedCharacter? best = null;
