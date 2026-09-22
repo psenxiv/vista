@@ -9,22 +9,29 @@ public static class SceneGeometry
     /// <summary>A track's anchor in the world.</summary>
     public static Anchor WorldAnchor(Scene scene, Track track) => scene.Anchor.ToWorld(track.Anchor);
 
-    /// <summary>The track with its points in the world; the track itself when nothing moves it. Only the points are world values.</summary>
+    /// <summary>The track with its anchor, points and Look At point in the world; the track itself when nothing moves it.</summary>
     public static Track InWorld(Scene scene, Track track)
     {
         var anchor = WorldAnchor(scene, track);
-        if (anchor == Anchor.Origin || track.Points.Count == 0) return track;
-        return track with { Points = track.Points.Select(anchor.ToWorld).ToArray() };
+        if (anchor == Anchor.Origin && track.Anchor == Anchor.Origin) return track;
+        return track with { Anchor = anchor, Points = track.Points.Select(anchor.ToWorld).ToArray(), LookAt = anchor.ToWorld(track.LookAt) };
     }
 
-    /// <summary>Places the scene's and the track's anchors under a first point at ground height, yaw 0, where not placed yet.</summary>
+    /// <summary>Places the scene's and the track's anchors under a first point at ground height, yaw 0, where not placed yet; a Look At point already placed stays in the world.</summary>
     public static Scene PlaceFor(Scene scene, Guid trackId, Vector3 worldPosition, float groundHeight)
     {
         var ground = new Anchor(worldPosition with { Y = groundHeight }, 0f);
-        var result = scene.AnchorPlaced ? scene : scene with { Anchor = ground, AnchorPlaced = true };
+        var result = scene;
+        if (!scene.AnchorPlaced)
+        {
+            var placed = scene with { Anchor = ground, AnchorPlaced = true };
+            result = placed with { Tracks = scene.Tracks.Select(t => KeepLookAt(t, WorldAnchor(scene, t), WorldAnchor(placed, t))).ToArray() };
+        }
+
         var track = SceneEditing.Get(result, trackId);
         if (track.AnchorPlaced) return result;
-        return SceneEditing.Replace(result, track with { Anchor = result.Anchor.ToLocal(ground), AnchorPlaced = true });
+        var anchored = track with { Anchor = result.Anchor.ToLocal(ground), AnchorPlaced = true };
+        return SceneEditing.Replace(result, KeepLookAt(anchored, WorldAnchor(result, track), WorldAnchor(result, anchored)));
     }
 
     /// <summary>Moves the scene anchor to <paramref name="to"/>, carrying every track, or alone so every point stays where it is.</summary>
@@ -35,7 +42,7 @@ public static class SceneGeometry
         return scene with { Tracks = tracks, Anchor = to, AnchorPlaced = true };
     }
 
-    /// <summary>Moves a track's anchor to <paramref name="toWorld"/>, carrying its points, or alone so they stay where they are.</summary>
+    /// <summary>Moves a track's anchor to <paramref name="toWorld"/>, carrying its points and Look At point, or alone so they stay where they are.</summary>
     public static Scene MoveTrackAnchor(Scene scene, Guid trackId, Anchor toWorld, bool carry)
     {
         var track = SceneEditing.Get(scene, trackId);
@@ -43,9 +50,13 @@ public static class SceneGeometry
         if (!carry)
         {
             var from = WorldAnchor(scene, track);
-            moved = moved with { Points = track.Points.Select(p => toWorld.ToLocal(from.ToWorld(p))).ToArray() };
+            moved = KeepLookAt(moved with { Points = track.Points.Select(p => toWorld.ToLocal(from.ToWorld(p))).ToArray() }, from, toWorld);
         }
 
         return SceneEditing.Replace(scene, moved);
     }
+
+    /// <summary>The track with its placed Look At point re-expressed so it stays in the world when its anchor goes from <paramref name="from"/> to <paramref name="to"/>.</summary>
+    private static Track KeepLookAt(Track track, Anchor from, Anchor to)
+        => track.LookAtPlaced ? track with { LookAt = to.ToLocal(from.ToWorld(track.LookAt)) } : track;
 }

@@ -1,3 +1,6 @@
+using System.Numerics;
+using Vista.Core.Camera;
+
 namespace Vista.Core.Tracks;
 
 /// <summary>Edits a track's points and timing: the track speed, pinned legs and holds.</summary>
@@ -23,6 +26,15 @@ public static class TrackEditing
 
     /// <summary>Keys stay at least this many seconds apart.</summary>
     public const float MinKeyGap = 0.05f;
+
+    /// <summary>A new track's aim height above its character's feet, in yalms.</summary>
+    public const float DefaultAimHeight = 1.3f;
+
+    /// <summary>The highest aim height, in yalms.</summary>
+    public const float MaxAimHeight = 3f;
+
+    /// <summary>A new track's smoothing, from 0 (exact) to 1 (heavy).</summary>
+    public const float DefaultSmoothing = 0.3f;
 
     private const int DurationSteps = 60;
 
@@ -201,6 +213,44 @@ public static class TrackEditing
     /// <summary>Sets whether the track loops; never touches points or timing.</summary>
     public static Track SetLoop(Track track, bool loop)
         => track.Loop == loop ? track : track with { Loop = loop };
+
+    /// <summary>Sets the aim mode; the first Look At places its point 10 yalms along the first point's aim, or <paramref name="camera"/>'s with no points.</summary>
+    public static Track SetAim(Track track, AimMode aim, ControlPoint camera)
+    {
+        if (track.Aim == aim) return track;
+        var result = track with { Aim = aim };
+        if (aim != AimMode.LookAt || track.LookAtPlaced) return result;
+
+        var from = track.Points.Count > 0 ? track.Points[0] : camera;
+        return result with { LookAt = FreeCamMotion.LookAtFrom(from.Position, from.Yaw, from.Pitch), LookAtPlaced = true };
+    }
+
+    /// <summary>Puts the Look At point at <paramref name="local"/>, relative to the track's anchor.</summary>
+    public static Track SetLookAt(Track track, Vector3 local)
+        => track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
+
+    /// <summary>Names the character to follow; null or blank chooses none.</summary>
+    public static Track SetTarget(Track track, string? name)
+    {
+        var chosen = string.IsNullOrWhiteSpace(name) ? null : name;
+        return track.TargetName == chosen ? track : track with { TargetName = chosen };
+    }
+
+    /// <summary>Sets the aim height above the character's feet, clamped to 0 to <see cref="MaxAimHeight"/>.</summary>
+    public static Track SetAimHeight(Track track, float yalms)
+    {
+        if (!float.IsFinite(yalms)) return track;
+        var clamped = Math.Clamp(yalms, 0f, MaxAimHeight);
+        return clamped == track.AimHeight ? track : track with { AimHeight = clamped };
+    }
+
+    /// <summary>Sets how heavily the aim eases onto the character, clamped to 0 to 1.</summary>
+    public static Track SetSmoothing(Track track, float smoothing)
+    {
+        if (!float.IsFinite(smoothing)) return track;
+        var clamped = Math.Clamp(smoothing, 0f, 1f);
+        return clamped == track.Smoothing ? track : track with { Smoothing = clamped };
+    }
 
     /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
     public static Track SetSpeed(Track track, float speed)
