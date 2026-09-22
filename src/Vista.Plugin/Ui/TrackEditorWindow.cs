@@ -25,19 +25,15 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
-    private const float CharacterListWidth = 260f;
-    private const float CharacterListHeight = 320f;
     private const float ModeWidth = 80f;
     private const float FieldWidth = 70f;
-    private const float MaxCharacterWidth = 220f;
-    private const string NotFound = " (Not found)";
-    private const float SmallFieldWidth = 50f;
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
 
     private readonly CameraSession session;
     private readonly PendingField fields;
     private readonly TimingWindow timing;
+    private readonly FollowTargetWindow followTarget;
     private readonly HierarchyPanel hierarchy;
     private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
@@ -45,21 +41,20 @@ internal sealed unsafe class TrackEditorWindow : Window
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
-    private string characterSearch = string.Empty;
 
     // Where last frame's track row put its buttons, in screen X, so the top bar can line up with them.
     private float? aimX;
     private float? directionX;
     private float? loopX;
     private float? trashRight;
-    private float? smoothingDrag;
 
-    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
+    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, FollowTargetWindow followTarget)
         : base("Vista###vista-track-editor")
     {
         this.session = session;
         this.fields = fields;
         this.timing = timing;
+        this.followTarget = followTarget;
         hierarchy = new HierarchyPanel(session);
         playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
@@ -70,7 +65,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
     public override void PreDraw()
     {
-        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth(session.Track.Aim == AimMode.FollowTarget ? CharacterWidth(CharacterLabel()) : null)) + CompartmentsWidth(), TopRowWidth());
+        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth());
         SetMinimumWidth(width);
         Size = new Vector2(width, MinHeight);
     }
@@ -269,32 +264,10 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndCombo();
     }
 
-    /// <summary>Aim and direction icons with their menus, the character, aim height and smoothing under Follow Target, the loop toggle, the Speed and Duration fields, the add button and its menu, and Clear track at the right end.</summary>
+    /// <summary>Aim and direction icons with their menus, the loop toggle, the Speed and Duration fields, the add button and its menu, and Clear track at the right end.</summary>
     private void DrawTrackRow()
     {
-        var aim = Array.IndexOf(AimModes, session.Track.Aim);
-        if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, $"Select aim ({AimNames[aim]})")) ImGui.OpenPopup("aim-menu");
-        aimX = ImGui.GetItemRectMin().X;
-        if (ImGui.BeginPopup("aim-menu"))
-        {
-            for (var i = 0; i < AimNames.Length; i++)
-            {
-                if (!ImGui.Selectable(AimNames[i], i == aim) || i == aim) continue;
-                Report(session.SetAim(AimModes[i]));
-            }
-
-            ImGui.EndPopup();
-        }
-
-        if (session.Track.Aim == AimMode.FollowTarget)
-        {
-            ImGui.SameLine();
-            DrawCharacter();
-            ImGui.SameLine();
-            DrawAimHeight();
-            ImGui.SameLine();
-            DrawSmoothing();
-        }
+        DrawAim();
 
         var direction = Array.IndexOf(Directions, session.Track.Direction);
         ImGui.SameLine();
@@ -333,110 +306,53 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The followed character's button: its name, or red with a warning and "(Not found)" when not loaded; opens the nearby list.</summary>
-    private void DrawCharacter()
+    /// <summary>The aim icon, coloured and captioned by the followed character under Follow Target, and its menu.</summary>
+    private void DrawAim()
     {
         var track = session.Track;
-        var lost = session.TargetLost(track);
-        if (lost)
+        var aim = Array.IndexOf(AimModes, track.Aim);
+        var (colour, tooltip) = track.Aim != AimMode.FollowTarget
+            ? ((uint?)null, $"Select aim ({AimNames[aim]})")
+            : track.TargetName is not { } name
+                ? (UiColours.Red, "Follow Target: choose a character")
+                : session.TargetLost(track)
+                    ? (UiColours.Red, $"{name} (Not found): using recorded aim")
+                    : (UiColours.Accent, $"Follow Target: {name}");
+        if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour)) ImGui.OpenPopup("aim-menu");
+        aimX = ImGui.GetItemRectMin().X;
+        if (!ImGui.BeginPopup("aim-menu")) return;
+
+        var pencil = IconButton.Width(FontAwesomeIcon.PencilAlt);
+        var width = AimNames.Max(n => ImGui.CalcTextSize(n).X) + ImGui.GetStyle().ItemSpacing.X + pencil;
+        for (var i = 0; i < AimNames.Length; i++)
         {
-            IconButton.TargetNotFound();
-            ImGui.SameLine(0f, 4f);
-        }
-
-        var label = CharacterLabel();
-        bool pressed;
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red, lost))
-            pressed = ImGui.Button($"{label}##character", new Vector2(CharacterWidth(label), 0f));
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(lost ? IconButton.NotFoundTooltip : "Choose a character");
-        if (pressed)
-        {
-            characterSearch = string.Empty;
-            ImGui.OpenPopup("character-menu");
-        }
-        DrawCharacterMenu(track.TargetName);
-    }
-
-    /// <summary>The character button's label, its name shortened with an ellipsis so the button fits the cap with " (Not found)" in full.</summary>
-    private string CharacterLabel()
-    {
-        var track = session.Track;
-        if (track.TargetName is not { } name) return "Choose a character";
-        var suffix = session.TargetLost(track) ? NotFound : "";
-        var room = MaxCharacterWidth - (ImGui.GetStyle().FramePadding.X * 2f) - ImGui.CalcTextSize(suffix).X;
-        if (ImGui.CalcTextSize(name).X <= room) return name + suffix;
-        var cut = name.Length;
-        while (cut > 0 && ImGui.CalcTextSize(name[..cut] + "…").X > room) cut--;
-        return name[..cut].TrimEnd() + "…" + suffix;
-    }
-
-    /// <summary>The character button's width: its label and frame padding.</summary>
-    private static float CharacterWidth(string label) => ImGui.CalcTextSize(label).X + (ImGui.GetStyle().FramePadding.X * 2f);
-
-    /// <summary>The characters loaded nearby, by name, each with its distance, filtered by a search; picking one follows it.</summary>
-    private void DrawCharacterMenu(string? chosen)
-    {
-        if (!ImGui.BeginPopup("character-menu")) return;
-
-        if (ImGui.IsWindowAppearing()) ImGui.SetKeyboardFocusHere();
-        ImGui.SetNextItemWidth(CharacterListWidth);
-        ImGui.InputTextWithHint("##character-search", "Search", ref characterSearch, 64);
-
-        var origin = session.CameraPosition ?? session.PlayerPosition;
-        var search = characterSearch.Trim();
-        var listed = session.Characters.All
-            .Where(c => search.Length == 0 || c.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => origin is { } from ? Vector3.DistanceSquared(c.Position, from) : 0f)
-            .ToList();
-
-        if (listed.Count == 0)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-                ImGui.TextUnformatted(search.Length == 0 ? "No characters nearby" : "No matches");
-        }
-        else
-        {
-            var height = MathF.Min(listed.Count * ImGui.GetTextLineHeightWithSpacing(), CharacterListHeight);
-            if (ImGui.BeginChild("characters", new Vector2(CharacterListWidth, height)))
+            if (AimModes[i] == AimMode.FollowTarget)
             {
-                for (var i = 0; i < listed.Count; i++)
-                {
-                    var character = listed[i];
-                    using var id = ImRaii.PushId($"character{i}");
-                    // The distance changes as characters move, so the ID mustn't include it or a click never lands.
-                    var text = origin is { } from ? $"{character.Name}  ({Vector3.Distance(character.Position, from):0.0} yalms)" : character.Name;
-                    if (ImGui.Selectable($"{text}###character", character.Name == chosen))
-                    {
-                        Report(session.SetTarget(character.Name, character.World));
-                        ImGui.CloseCurrentPopup();
-                    }
-                }
+                DrawFollowTargetEntry(i == aim, width, pencil);
+                continue;
             }
 
-            ImGui.EndChild();
+            if (!ImGui.Selectable(AimNames[i], i == aim) || i == aim) continue;
+            Report(session.SetAim(AimModes[i]));
         }
 
         ImGui.EndPopup();
     }
 
-    /// <summary>The aim height above the character's feet, as a small field.</summary>
-    private void DrawAimHeight()
+    /// <summary>The aim menu's Follow Target entry, which opens the dialog when no character is chosen, and its pencil, which always opens it.</summary>
+    private void DrawFollowTargetEntry(bool chosen, float width, float pencil)
     {
-        fields.Draw("aim-height", session.Track.AimHeight, "%.1f", SmallFieldWidth, v => Report(session.SetAimHeight(v)));
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Aim height above the character's feet, in yalms");
-    }
+        var start = ImGui.GetCursorPosX();
+        var picked = ImGui.Selectable("Follow Target", chosen, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(width, 0f));
+        ImGui.SameLine(start + width - pencil);
+        bool edit;
+        using (ImRaii.PushStyle(ImGuiStyleVar.FramePadding, ImGui.GetStyle().FramePadding with { Y = 0f }))
+            edit = IconButton.Draw("edit-follow-target", FontAwesomeIcon.PencilAlt, "Edit Follow Target");
+        if (!picked && !edit) return;
 
-    /// <summary>The smoothing slider; a drag is applied as one undo step when it lets go.</summary>
-    private void DrawSmoothing()
-    {
-        var value = smoothingDrag ?? session.Track.Smoothing;
-        ImGui.SetNextItemWidth(SmallFieldWidth);
-        if (ImGui.SliderFloat("##smoothing", ref value, 0f, 1f, "%.2f")) smoothingDrag = value;
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Smoothing: 0 exact, 1 heavy");
-        if (ImGui.IsItemActive() || smoothingDrag is not { } done) return;
-        smoothingDrag = null;
-        Report(session.SetSmoothing(done));
+        if (!chosen) Report(session.SetAim(AimMode.FollowTarget));
+        if (session.Track.Aim == AimMode.FollowTarget && (edit || session.Track.TargetName is null)) followTarget.Open();
+        ImGui.CloseCurrentPopup();
     }
 
     /// <summary>The loop toggle: accent when the track loops, dimmed when it plays once.</summary>
@@ -574,16 +490,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The track row's full width: its items, the Follow Target items when <paramref name="character"/> is given, the gaps between them, and the window's and the editor's padding.</summary>
-    private static float TrackRowWidth(float? character)
+    /// <summary>The track row's full width: its items, the eight gaps between them, and the window's and the editor's padding.</summary>
+    private static float TrackRowWidth()
     {
         var style = ImGui.GetStyle();
         var direction = DirectionIcons.Max(IconButton.Width);
         var items = IconButton.Width(FontAwesomeIcon.Crosshairs) + direction + IconButton.Width(FontAwesomeIcon.Repeat)
             + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
             + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);
-        var follow = character is { } width ? IconButton.WarningWidth() + 4f + width + (SmallFieldWidth * 2f) + (Spacing.X * 3f) : 0f;
-        return items + follow + (Spacing.X * 8f) + (style.WindowPadding.X * 4f);
+        return items + (Spacing.X * 8f) + (style.WindowPadding.X * 4f);
     }
 
     /// <summary>The top bar's full width: its items, the larger of LIVE and fly speed, the gaps between them, and the window padding.</summary>
