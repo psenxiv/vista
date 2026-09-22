@@ -95,7 +95,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         var editorWidth = showPlaylist ? -(PlaylistPanel.Width + Spacing.X) : 0f;
-        if (ImGui.BeginChild("track-editor", new Vector2(editorWidth, 0f)))
+        // The same inner padding as the bordered compartments, so the rows and separators line up.
+        if (ImGui.BeginChild("track-editor", new Vector2(editorWidth, 0f), false, ImGuiWindowFlags.AlwaysUseWindowPadding))
         {
             ImGui.BeginDisabled(!editing);
             DrawTrackRow();
@@ -423,7 +424,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The track row's full width: its items, the eight gaps between them, and the window padding.</summary>
+    /// <summary>The track row's full width: its items, the eight gaps between them, and the window's and the editor's padding.</summary>
     private static float TrackRowWidth()
     {
         var style = ImGui.GetStyle();
@@ -431,7 +432,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var items = IconButton.Width(FontAwesomeIcon.Crosshairs) + direction + IconButton.Width(FontAwesomeIcon.Repeat)
             + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
             + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);
-        return items + (Spacing.X * 8f) + (style.WindowPadding.X * 2f);
+        return items + (Spacing.X * 8f) + (style.WindowPadding.X * 4f);
     }
 
     /// <summary>The top bar's full width: its items, the larger of LIVE and fly speed, the gaps between them, and the window padding.</summary>
