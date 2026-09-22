@@ -80,8 +80,10 @@ becomes a fixed camera that pans to follow.
 
 - A floating window titled "Follow Target" holds the settings, so the track row keeps its fixed
   layout. It stays open while scrubbing and previewing, so the shot can be checked while tuning.
-- It opens when Follow Target is chosen in the aim menu, and when the aim icon is right-clicked
-  while the track is under Follow Target. It closes with its Done button or its close button, and
+- In the aim menu, the Follow Target entry has a pencil icon at its right end (tooltip "Edit Follow
+  Target"). Clicking the pencil opens the dialog, switching the track to Follow Target if it isn't
+  already. Choosing the entry itself switches to Follow Target and opens the dialog when no
+  character has been chosen yet. It closes with its Done button or its close button, and
   when the edited track leaves Follow Target or another track is edited.
 - It holds, top to bottom:
   - a search box, focused when the dialog opens, filtering by any part of the name, ignoring case;
@@ -96,9 +98,8 @@ becomes a fixed camera that pans to follow.
 
 - The aim icon is drawn in the accent colour while the track follows a character that is found,
   and in red while it follows one that isn't, or none is chosen.
-- Its tooltip names the state: "Follow Target: Name. Right-click to edit.", or
-  "Name (Not found): using recorded aim. Right-click to edit.", or "Follow Target: choose a
-  character. Right-click to edit."
+- Its tooltip names the state: "Follow Target: Name", or "Name (Not found): using recorded aim",
+  or "Follow Target: choose a character".
 - Look At and the other modes keep the plain icon.
 
 **When the character can't be found**
@@ -155,7 +156,7 @@ smoothing are each one undo step, as any track edit is.
 - An `IAimTargets` implementation over Dalamud's object table: players and NPCs by name, nearest
   to `near`.
 - A nearby-character list for the picker, sorted by distance to the camera.
-- `TrackEditorWindow` gains the aim modes and the aim icon's colour, tooltip and right-click; a
+- `TrackEditorWindow` gains the aim modes, the menu's pencil, and the aim icon's colour and tooltip; a
   `FollowTargetWindow` holds the character list, aim height and smoothing.
 - `PointWindow` handles the Look At point.
 - `Overlay`/`EditorLayer` draw the Look At point and the character marker, and click the Look At
