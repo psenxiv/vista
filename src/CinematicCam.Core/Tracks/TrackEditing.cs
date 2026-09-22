@@ -38,23 +38,46 @@ public static class TrackEditing
         return keys[FirstKeyIndex(keys, index)].Time - keys[LastKeyIndex(keys, index - 1)].Time;
     }
 
-    /// <summary>Sets leg i, shifting every key at or after point i's first key by the difference.</summary>
+    /// <summary>Sets leg i, shifting every key at or after point i's first key by the difference and spreading its inner keys.</summary>
     public static Track SetLeg(Track track, int index, float seconds)
     {
         ValidateLegIndex(track, index);
+        RequireValidKeys(track);
         if (!float.IsFinite(seconds) || seconds <= 0f)
             throw new ArgumentOutOfRangeException(null, "leg seconds must be > 0");
 
+        seconds = MathF.Max(seconds, MinLegFor(track, index));
         var keys = track.Timing;
         var prevLastIndex = LastKeyIndex(keys, index - 1);
         var currFirstIndex = FirstKeyIndex(keys, index);
-        var diff = seconds - (keys[currFirstIndex].Time - keys[prevLastIndex].Time);
+        var start = keys[prevLastIndex].Time;
+        var oldLeg = keys[currFirstIndex].Time - start;
+        var diff = seconds - oldLeg;
 
         var result = new List<TimingKey>(keys.Count);
         for (var i = 0; i < keys.Count; i++)
-            result.Add(i >= currFirstIndex ? keys[i] with { Time = keys[i].Time + diff } : keys[i]);
+        {
+            if (i > prevLastIndex && i < currFirstIndex)
+                result.Add(keys[i] with { Time = start + ((keys[i].Time - start) * seconds / oldLeg) });
+            else
+                result.Add(i >= currFirstIndex ? keys[i] with { Time = keys[i].Time + diff } : keys[i]);
+        }
 
         return track with { Timing = result };
+    }
+
+    /// <summary>The shortest leg <paramref name="leg"/> can be while its inner keys stay <see cref="MinKeyGap"/> apart.</summary>
+    public static float MinLegFor(Track track, int leg)
+    {
+        var start = LegStartKey(track, leg);
+        var end = LegEndKey(track, leg);
+        if (end - start < 2) return MinLegSeconds;
+
+        var keys = track.Timing;
+        var smallest = float.MaxValue;
+        for (var i = start; i < end; i++) smallest = MathF.Min(smallest, keys[i + 1].Time - keys[i].Time);
+        var length = keys[end].Time - keys[start].Time;
+        return MathF.Max(MinLegSeconds, length * MinKeyGap / smallest);
     }
 
     /// <summary>The time between point i's two keys, 0 when it has no second key.</summary>
@@ -171,7 +194,7 @@ public static class TrackEditing
     public static Track InsertAfter(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "insert");
-        RequireKeyPerPoint(track);
+        RequireValidKeys(track);
         if (index == track.Points.Count - 1) return Append(track, point);
 
         var points = new List<ControlPoint>(track.Points);
@@ -180,38 +203,71 @@ public static class TrackEditing
         var table = new ArcLengthTable(points.Select(p => p.Position).ToArray());
         var before = MathF.Max(table.SegmentLength(index), TrackEvaluator.MinTimingLength);
         var after = MathF.Max(table.SegmentLength(index + 1), TrackEvaluator.MinTimingLength);
+        var share = before / (before + after);
 
         var keys = track.Timing;
-        var start = keys[LastKeyIndex(keys, index)].Time;
-        var leg = keys[FirstKeyIndex(keys, index + 1)].Time - start;
-        var inserted = new TimingKey(start + (leg * before / (before + after)), index + 1);
+        var startIndex = LastKeyIndex(keys, index);
+        var endIndex = FirstKeyIndex(keys, index + 1);
+        var start = keys[startIndex].Time;
+        var time = start + ((keys[endIndex].Time - start) * share);
 
         var timing = new List<TimingKey>(keys.Count + 1);
-        timing.AddRange(keys.Where(k => k.Position <= index));
-        timing.Add(inserted);
-        timing.AddRange(keys.Where(k => k.Position > index).Select(k => k with { Position = k.Position + 1 }));
+        timing.AddRange(keys.Take(startIndex + 1));
+        var second = new List<TimingKey>();
+        for (var i = startIndex + 1; i < endIndex; i++)
+        {
+            var key = keys[i];
+            if (MathF.Abs(key.Time - time) < MinKeyGap) continue;
+            var fraction = key.Position - index;
+            if (key.Time < time) timing.Add(key with { Position = index + InsideLeg(fraction / share) });
+            else second.Add(key with { Position = index + 1 + InsideLeg((fraction - share) / (1f - share)) });
+        }
 
+        timing.Add(new TimingKey(time, index + 1));
+        timing.AddRange(second);
+        timing.AddRange(keys.Skip(endIndex).Select(k => k with { Position = k.Position + 1 }));
         return track with { Points = points, Timing = timing };
     }
+
+    /// <summary>A fraction of a leg kept strictly inside it.</summary>
+    private static float InsideLeg(float fraction) => Math.Clamp(fraction, 0.001f, 0.999f);
 
     /// <summary>Removes point <paramref name="index"/>: a middle point's legs and hold merge, an end point's leg and hold go.</summary>
     public static Track Delete(Track track, int index)
     {
         ValidatePointIndex(track, index, "delete");
-        RequireKeyPerPoint(track);
+        RequireValidKeys(track);
         if (track.Points.Count == 1)
             return track with { Points = Array.Empty<ControlPoint>(), Timing = Array.Empty<TimingKey>() };
 
         var keys = track.Timing;
-        var shift = index == 0 ? keys[FirstKeyIndex(keys, 1)].Time - keys[0].Time : 0f;
-
+        var n = track.Points.Count;
         var points = new List<ControlPoint>(track.Points);
         points.RemoveAt(index);
 
-        var timing = keys
-            .Where(k => k.Position != index)
-            .Select(k => k with { Time = k.Time - shift, Position = k.Position > index ? k.Position - 1 : k.Position })
-            .ToList();
+        if (index == 0)
+        {
+            var shift = keys[FirstKeyIndex(keys, 1)].Time;
+            return track with { Points = points, Timing = keys.Where(k => k.Position >= 1f).Select(k => k with { Time = k.Time - shift, Position = k.Position - 1 }).ToList() };
+        }
+
+        if (index == n - 1)
+            return track with { Points = points, Timing = keys.Where(k => k.Position <= n - 2).ToList() };
+
+        var table = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray());
+        var before = MathF.Max(table.SegmentLength(index - 1), TrackEvaluator.MinTimingLength);
+        var after = MathF.Max(table.SegmentLength(index), TrackEvaluator.MinTimingLength);
+        var total = before + after;
+
+        var timing = new List<TimingKey>(keys.Count);
+        foreach (var key in keys)
+        {
+            if (key.Position <= index - 1) timing.Add(key);
+            else if (key.Position < index) timing.Add(key with { Position = index - 1 + ((key.Position - (index - 1)) * before / total) });
+            else if (key.Position == index) continue;
+            else if (key.Position < index + 1) timing.Add(key with { Position = index - 1 + ((before + ((key.Position - index) * after)) / total) });
+            else timing.Add(key with { Position = key.Position - 1 });
+        }
 
         return track with { Points = points, Timing = timing };
     }
@@ -221,7 +277,7 @@ public static class TrackEditing
     {
         ValidatePointIndex(track, from, "move");
         ValidatePointIndex(track, to, "move");
-        RequireKeyPerPoint(track);
+        RequireValidKeys(track);
         if (from == to) return track;
 
         var n = track.Points.Count;
@@ -237,15 +293,31 @@ public static class TrackEditing
         var time = keys[0].Time;
         for (var slot = 0; slot < n; slot++)
         {
-            var firstIndex = FirstKeyIndex(keys, order[slot]);
-            var lastIndex = LastKeyIndex(keys, order[slot]);
-            if (slot > 0) time += legs[slot];
+            var moved = order[slot];
+            var movedFirst = keys[FirstKeyIndex(keys, moved)];
+            var movedLastIndex = LastKeyIndex(keys, moved);
+            var hasHold = movedLastIndex != FirstKeyIndex(keys, moved);
+            var slotFirst = keys[FirstKeyIndex(keys, slot)];
+            var slotLast = keys[LastKeyIndex(keys, slot)];
 
-            timing.Add(keys[firstIndex] with { Time = time, Position = slot });
-            if (lastIndex == firstIndex) continue;
+            if (slot > 0)
+            {
+                var originalStart = keys[LastKeyIndex(keys, slot - 1)].Time;
+                foreach (var inner in keys.Where(k => k.Position > slot - 1 && k.Position < slot))
+                    timing.Add(inner with { Time = time + (inner.Time - originalStart) });
+                time += legs[slot];
+            }
 
-            time += keys[lastIndex].Time - keys[firstIndex].Time;
-            timing.Add(keys[lastIndex] with { Time = time, Position = slot });
+            var arrival = movedFirst with { Time = time, Position = slot, InMode = slotFirst.InMode, InTangent = slotFirst.InTangent, Broken = slotFirst.Broken };
+            if (!hasHold)
+            {
+                timing.Add(arrival with { OutMode = slotLast.OutMode, OutTangent = slotLast.OutTangent });
+                continue;
+            }
+
+            timing.Add(arrival);
+            time += keys[movedLastIndex].Time - movedFirst.Time;
+            timing.Add(keys[movedLastIndex] with { Time = time, Position = slot, OutMode = slotLast.OutMode, OutTangent = slotLast.OutTangent });
         }
 
         return track with { Points = order.Select(i => track.Points[i]).ToList(), Timing = timing };
@@ -299,18 +371,25 @@ public static class TrackEditing
         return last;
     }
 
-    private static void RequireKeyPerPoint(Track track)
+    /// <summary>Checks each point has one or two keys of its own and every other key lies between the first and last point.</summary>
+    private static void RequireValidKeys(Track track)
     {
         var counts = new int[track.Points.Count];
         foreach (var key in track.Timing)
         {
-            var position = (int)key.Position;
-            if (key.Position != position || position < 0 || position >= counts.Length)
-                throw new ArgumentException("timing keys between points are not supported yet");
-            counts[position]++;
+            var whole = MathF.Floor(key.Position);
+            if (key.Position != whole)
+            {
+                if (key.Position <= 0f || key.Position >= track.Points.Count - 1)
+                    throw new ArgumentException("a timing key lies outside the track");
+                continue;
+            }
+
+            var point = (int)whole;
+            if (point < 0 || point >= counts.Length) throw new ArgumentException("a timing key lies outside the track");
+            counts[point]++;
         }
 
-        if (counts.Any(c => c is < 1 or > 2))
-            throw new ArgumentException("timing keys between points are not supported yet");
+        if (counts.Any(c => c is < 1 or > 2)) throw new ArgumentException("every point needs one or two timing keys");
     }
 }

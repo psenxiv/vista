@@ -442,31 +442,13 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void EditsRefuseTimingKeysBetweenPoints()
-    {
-        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[]
-        {
-            new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-            new TimingKey(2f, 0.5f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-            new TimingKey(5f, 1f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-        };
-        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
-
-        const string message = "timing keys between points are not supported yet";
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
-    }
-
-    [Fact]
     public void EditsRefuseAPointWithNoTimingKey()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
         var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f) };
         var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
 
-        const string message = "timing keys between points are not supported yet";
+        const string message = "every point needs one or two timing keys";
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
@@ -485,7 +467,7 @@ public class TrackEditingTests
         };
         var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
 
-        const string message = "timing keys between points are not supported yet";
+        const string message = "every point needs one or two timing keys";
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
@@ -557,5 +539,106 @@ public class TrackEditingTests
         Assert.Null(TrackEditing.LegAt(track, 6f));
         Assert.Equal(2, TrackEditing.LegAt(track, 9f));
         Assert.Null(TrackEditing.LegAt(track, 13f));
+    }
+
+    // Adds a key at the given time and position, keeping keys in time order.
+    private static Track WithInner(Track track, float time, float position)
+    {
+        var timing = track.Timing.Append(new TimingKey(time, position)).OrderBy(k => k.Time).ToList();
+        return track with { Timing = timing };
+    }
+
+    [Fact]
+    public void SetLegSpreadsInnerKeysInProportion()
+    {
+        var track = WithInner(Build3PointTrack(), 2f, 0.3f);        // leg 1 is 0..5 s
+        track = TrackEditing.SetLeg(track, 1, 10f);
+
+        Assert.Equal(new[] { 0f, 4f, 10f, 15f }, track.Timing.Select(k => k.Time));
+        Assert.Equal(0.3f, track.Timing[1].Position);
+    }
+
+    [Fact]
+    public void SetLegClampsUpSoInnerKeysKeepTheirSpacing()
+    {
+        var track = WithInner(Build3PointTrack(), 0.5f, 0.3f);      // spans 0.5 and 4.5 s
+        track = TrackEditing.SetLeg(track, 1, 0.1f);
+
+        Assert.Equal(0.5f, TrackEditing.LegSeconds(track, 1), 3);    // the 0.5 s span may only shrink to 0.05 s
+        Assert.Equal(TrackEditing.MinLegSeconds, TrackEditing.MinLegFor(Build3PointTrack(), 1));
+    }
+
+    [Fact]
+    public void AddAfterSelectedSortsInnerKeysIntoTheHalvesByTime()
+    {
+        // Points at x = 0, 10, 20. Inserting (5, 0, 0) after point 0 splits leg 1 (0..5 s) at 2.5 s, half the distance.
+        var track = WithInner(WithInner(Build3PointTrack(), 1f, 0.2f), 4f, 0.8f);
+        track = TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f));
+
+        Assert.Equal(new[] { 0f, 1f, 2.5f, 4f, 5f, 10f }, track.Timing.Select(k => k.Time));
+        Assert.Equal(0.4f, track.Timing[1].Position, 2);
+        Assert.Equal(1f, track.Timing[2].Position);
+        Assert.Equal(1.6f, track.Timing[3].Position, 2);
+        Assert.Equal(2f, track.Timing[4].Position);
+        Assert.Equal(3f, track.Timing[5].Position);
+    }
+
+    [Fact]
+    public void AddAfterSelectedDropsAnInnerKeyTooCloseToTheNewPoint()
+    {
+        var track = WithInner(Build3PointTrack(), 2.52f, 0.5f);
+        track = TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f));
+        Assert.Equal(new[] { 0f, 2.5f, 5f, 10f }, track.Timing.Select(k => k.Time));
+    }
+
+    [Fact]
+    public void AddAfterSelectedKeepsTheLegsEasingOnItsOuterSides()
+    {
+        var track = TrackEditing.InsertAfter(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseInOut), 0, Point(5f, 0f, 0f));
+        Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 1));
+        Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 2));
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointMergesBothLegsInnerKeysByDistance()
+    {
+        // Legs 0..5 and 5..10 s, each 10 long; merged, point 1's place sits at half the distance.
+        var track = WithInner(WithInner(Build3PointTrack(), 2f, 0.5f), 7f, 1.5f);
+        track = TrackEditing.Delete(track, 1);
+
+        Assert.Equal(new[] { 0f, 2f, 7f, 10f }, track.Timing.Select(k => k.Time));
+        Assert.Equal(0.25f, track.Timing[1].Position, 2);
+        Assert.Equal(0.75f, track.Timing[2].Position, 2);
+        Assert.Equal(1f, track.Timing[3].Position);
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointKeepsTheMergedLegsOuterEasing()
+    {
+        var track = LegEasing.Set(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseIn), 2, Easing.EaseOut);
+        Assert.Equal(Easing.EaseInOut, LegEasing.Read(TrackEditing.Delete(track, 1), 1));
+    }
+
+    [Fact]
+    public void DeletingAnEndPointTakesItsLegsInnerKeys()
+    {
+        var first = TrackEditing.Delete(WithInner(Build3PointTrack(), 2f, 0.5f), 0);
+        Assert.Equal(new[] { 0f, 5f }, first.Timing.Select(k => k.Time));
+
+        var last = TrackEditing.Delete(WithInner(Build3PointTrack(), 7f, 1.5f), 2);
+        Assert.Equal(new[] { 0f, 5f }, last.Timing.Select(k => k.Time));
+    }
+
+    [Fact]
+    public void ReorderKeepsLegTimesEasingAndInnerKeysInTheirSlots()
+    {
+        var track = LegEasing.Set(WithInner(Build3PointTrack(), 2f, 0.5f), 1, Easing.EaseOut);
+        track = TrackEditing.SetHold(track, 2, 3f);                  // point 2 holds 10..13 s
+        track = TrackEditing.Move(track, 2, 0);
+
+        Assert.Equal(new[] { 0f, 3f, 5f, 8f, 13f }, track.Timing.Select(k => k.Time));
+        Assert.Equal(new[] { 0f, 0f, 0.5f, 1f, 2f }, track.Timing.Select(k => k.Position));
+        Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 1));
+        Assert.Equal(new Vector3(20f, 0f, 0f), track.Points[0].Position);
     }
 }
