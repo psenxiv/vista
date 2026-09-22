@@ -210,6 +210,7 @@ public class SessionTimingTests
     public void TimingChangesOnlyWhileEditing()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         Assert.NotNull(state.SetEasing(1, Easing.Linear));
@@ -260,6 +261,7 @@ public class SessionTimingTests
     public void SpeedDurationAndLegEditsOnlyWhileEditing()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         var before = state.Track;

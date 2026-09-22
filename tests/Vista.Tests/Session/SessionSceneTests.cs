@@ -271,6 +271,7 @@ public class SessionSceneTests
         var first = First(state);
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
+        state.AddToPlaylist(first);
         state.Cue();
         state.Play();
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -302,6 +303,7 @@ public class SessionSceneTests
         state.AddTrack();
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
+        state.AddToPlaylist(state.EditedTrackId);
 
         state.Cue();
         state.Play();

@@ -82,7 +82,7 @@ public sealed class SessionState
                 return EditOutcome.Unchanged;
             case CameraMode.Live:
                 Scrubbing = false;
-                scrubTime = Math.Clamp(Director.ShotTime, 0.0, Duration);
+                scrubTime = PlayingEntry?.TrackId == EditedTrackId ? Math.Clamp(Director.ShotTime, 0.0, Duration) : 0.0;
                 Director.GoOffline();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
@@ -93,7 +93,7 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live.</summary>
+    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live with the playlist.</summary>
     public PlayOutcome Play()
     {
         if (Mode == CameraMode.Editing) return preview is not null ? PlayOutcome.Previewed : StartPreview(fromStart: false);
@@ -107,10 +107,10 @@ public sealed class SessionState
         return GoLive();
     }
 
-    /// <summary>In Edit, previews from the beginning; otherwise goes live from the start. Refused with no points.</summary>
+    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start. Refused when nothing can play.</summary>
     public PlayOutcome Restart() => Mode == CameraMode.Editing ? StartPreview(fromStart: true) : GoLive();
 
-    /// <summary>Goes live with the track paused at its start. Refused with no points.</summary>
+    /// <summary>Goes live with the playlist paused at its start. Refused when nothing can play.</summary>
     public PlayOutcome Cue()
     {
         var outcome = GoLive();
@@ -146,15 +146,20 @@ public sealed class SessionState
         return true;
     }
 
-    /// <summary>Goes live with the track from its start. Refused with no points.</summary>
+    /// <summary>Goes live with the playlist from its start. Refused when nothing can play.</summary>
     private PlayOutcome GoLive()
     {
-        if (Local.Points.Count == 0) return PlayOutcome.Refused;
+        var items = Scene.Playlist
+            .Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
+            .Where(x => x.Track.Points.Count > 0)
+            .Select(x => new PlaylistItem(x.Entry.Id, WorldOf(x.Track), x.Entry.Loops))
+            .ToList();
+        if (items.Count == 0) return PlayOutcome.Refused;
         StopPreview();
         Scrubbing = false;
         EndLiveEdit();
 
-        Director.GoLive(new TrackShot(Track));
+        Director.GoLive(new PlaylistShot(items));
         var fromOff = Mode == CameraMode.Off;
         Mode = CameraMode.Live;
         return fromOff ? PlayOutcome.StartedFromOff : PlayOutcome.Started;
@@ -379,6 +384,30 @@ public sealed class SessionState
         return CommitScene(scene => (SceneEditing.SetHidden(scene, id, hidden), EditedTrackId));
     }
 
+    /// <summary>Adds an entry for a track at <paramref name="index"/>, or at the end. Returns why it was refused, or null.</summary>
+    public string? AddToPlaylist(Guid trackId, int? index = null) => CommitScene(scene => (PlaylistEditing.Add(scene, trackId, index).Scene, EditedTrackId));
+
+    /// <summary>Removes a playlist entry. Returns why it was refused, or null.</summary>
+    public string? RemoveFromPlaylist(Guid entryId) => CommitScene(scene => (PlaylistEditing.Remove(scene, entryId), EditedTrackId));
+
+    /// <summary>Moves a playlist entry. Returns why it was refused, or null.</summary>
+    public string? MovePlaylistEntry(int from, int to) => CommitScene(scene => (PlaylistEditing.Move(scene, from, to), EditedTrackId));
+
+    /// <summary>Sets how many times an entry plays, or null to follow its track. Returns why it was refused, or null.</summary>
+    public string? SetEntryLoops(Guid entryId, int? loops) => CommitScene(scene => (PlaylistEditing.SetLoops(scene, entryId, loops), EditedTrackId));
+
+    /// <summary>True when the playlist has an entry whose track has points.</summary>
+    public bool CanGoLive => PlaylistEditing.CanPlay(Scene);
+
+    /// <summary>The entry playing while live, or null.</summary>
+    public PlaylistEntry? PlayingEntry
+        => Mode == CameraMode.Live && Director.Playlist is { } playing
+            ? Scene.Playlist.FirstOrDefault(e => e.Id == playing.EntryId)
+            : null;
+
+    /// <summary>The scrub bar's length: the playing entry's while live, otherwise the edited track's.</summary>
+    public double ScrubLength => Mode == CameraMode.Live ? Director.ShotLength : Duration;
+
     /// <summary>Edits track <paramref name="id"/>, showing it first if hidden. Not an undo step itself. Returns why it was refused, or null.</summary>
     public string? SwitchTrack(Guid id)
     {
@@ -441,7 +470,7 @@ public sealed class SessionState
     /// <summary>True when two scenes hold the same anchor, hidden set and tracks by value.</summary>
     private static bool SameValues(Scene a, Scene b)
     {
-        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.Tracks.Count != b.Tracks.Count || !a.Hidden.SetEquals(b.Hidden)) return false;
+        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.Tracks.Count != b.Tracks.Count || !a.Hidden.SetEquals(b.Hidden) || !a.Playlist.SequenceEqual(b.Playlist)) return false;
         for (var i = 0; i < a.Tracks.Count; i++)
         {
             var x = a.Tracks[i];
@@ -746,7 +775,7 @@ public sealed class SessionState
     {
         if (Mode == CameraMode.Editing) StopPreview();
         if (Mode == CameraMode.Off) return;
-        scrubTime = Math.Clamp(time, 0.0, Duration);
+        scrubTime = Math.Clamp(time, 0.0, ScrubLength);
         if (Mode == CameraMode.Live) Director.Seek(scrubTime);
     }
 

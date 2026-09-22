@@ -48,6 +48,27 @@ internal sealed class CameraSession
     /// <summary>Hides or shows a track. Returns why it was refused, or null.</summary>
     public string? SetTrackHidden(Guid id, bool hidden) => state.SetTrackHidden(id, hidden);
 
+    /// <summary>Adds a playlist entry for a track. Returns why it was refused, or null.</summary>
+    public string? AddToPlaylist(Guid trackId, int? index = null) => state.AddToPlaylist(trackId, index);
+
+    /// <summary>Removes a playlist entry. Returns why it was refused, or null.</summary>
+    public string? RemoveFromPlaylist(Guid entryId) => state.RemoveFromPlaylist(entryId);
+
+    /// <summary>Moves a playlist entry. Returns why it was refused, or null.</summary>
+    public string? MovePlaylistEntry(int from, int to) => state.MovePlaylistEntry(from, to);
+
+    /// <summary>Sets an entry's loop count, or null to follow its track. Returns why it was refused, or null.</summary>
+    public string? SetEntryLoops(Guid entryId, int? loops) => state.SetEntryLoops(entryId, loops);
+
+    /// <summary>True when the playlist has something to play.</summary>
+    public bool CanGoLive => state.CanGoLive;
+
+    /// <summary>The entry playing while live, or null.</summary>
+    public PlaylistEntry? PlayingEntry => state.PlayingEntry;
+
+    /// <summary>The scrub bar's length in seconds.</summary>
+    public double ScrubLength => state.ScrubLength;
+
     /// <summary>A scene track in the world.</summary>
     public Track WorldOf(Track local) => state.WorldOf(local);
 
@@ -380,7 +401,9 @@ internal sealed class CameraSession
                 Plugin.Log.Information("[vista] preview");
                 return;
             case PlayOutcome.Refused:
-                Plugin.Log.Error("[vista] cannot play a track with no points.");
+                Plugin.Log.Error(state.Mode == CameraMode.Editing
+                    ? "[vista] cannot preview a track with no points."
+                    : "[vista] nothing to play: add a track with points to the playlist.");
                 return;
             case PlayOutcome.ReHid:
                 GameUi.Hide();

@@ -141,6 +141,7 @@ public class SessionEditingTests
     public void EditFromLiveMovesTheScrubHeadToThePlaybackTime()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         state.Director.Tick(2f);
@@ -152,6 +153,7 @@ public class SessionEditingTests
     public void CueingAReverseShotPutsTheScrubHeadAtTheEnd()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
         state.Cue();
         Assert.Equal(10.0, state.ScrubHead, 5);
@@ -161,6 +163,7 @@ public class SessionEditingTests
     public void EditFromALiveReverseShotTakesItsShotTime()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
         state.Cue();
         state.Play();
@@ -173,6 +176,7 @@ public class SessionEditingTests
     public void ScrubbingALivePingPongShotOnItsWayBackKeepsItGoingBack()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.PingPong));
         state.Cue();
         state.Play();
@@ -286,6 +290,7 @@ public class SessionEditingTests
     public void UndoRedoAndSelectWorkOnlyWhileEditing()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Select(1);
         state.Cue();
         state.Play();
@@ -353,6 +358,7 @@ public class SessionEditingTests
     public void ScrubbingLiveHoldsPlaybackThenResumesIt()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         state.BeginScrub();
@@ -368,6 +374,7 @@ public class SessionEditingTests
     public void ScrubbingAPausedShotLeavesItPaused()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         state.Stop();
@@ -382,6 +389,7 @@ public class SessionEditingTests
     public void ScrubbingAFinishedForwardShotBackUnfinishesIt()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         state.Director.Tick(20f);
@@ -398,6 +406,7 @@ public class SessionEditingTests
     public void ModeChangesEndAScrub()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.BeginScrub();
         state.Cue();
         state.Play();

@@ -22,6 +22,7 @@ public class SessionStateTests
     private static SessionState Live()
     {
         var state = EditingWithTrack();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
         return state;
@@ -80,6 +81,7 @@ public class SessionStateTests
     public void CueThenPlayFromEditingGoesLive()
     {
         var state = EditingWithTrack();
+        state.AddToPlaylist(state.EditedTrackId);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -91,6 +93,7 @@ public class SessionStateTests
     public void PlayFromOffSaysItStartedFromOff()
     {
         var state = EditingWithTrack();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Release();
         Assert.Equal(PlayOutcome.StartedFromOff, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -141,6 +144,7 @@ public class SessionStateTests
     public void CueFromEditingGoesLivePausedAtTheStart()
     {
         var state = EditingWithTrack();
+        state.AddToPlaylist(state.EditedTrackId);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);
         Assert.True(state.Director.IsPaused);
@@ -152,6 +156,7 @@ public class SessionStateTests
     public void PlayAfterCueStartsTheShot()
     {
         var state = EditingWithTrack();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         state.Director.Tick(1f);
@@ -162,6 +167,7 @@ public class SessionStateTests
     public void CueFromOffSaysItCuedFromOff()
     {
         var state = EditingWithTrack();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Release();
         Assert.Equal(PlayOutcome.CuedFromOff, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);

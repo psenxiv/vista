@@ -197,6 +197,7 @@ public class SessionPreviewTests
     public void LeavingEditEndsThePreview()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.Play();
 
         state.Cue();
@@ -223,6 +224,7 @@ public class SessionPreviewTests
     public void LiveIsUnchanged()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         Assert.True(state.Director.IsLive);
@@ -237,6 +239,7 @@ public class SessionPreviewTests
         state.Edit();
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
+        state.AddToPlaylist(state.EditedTrackId);
         state.Release();
 
         Assert.Equal(PlayOutcome.StartedFromOff, state.Play());

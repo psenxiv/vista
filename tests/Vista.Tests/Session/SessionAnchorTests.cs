@@ -238,6 +238,7 @@ public class SessionAnchorTests
     public void AnchorEditsAreRefusedUnlessEditing()
     {
         var state = Editing();
+        state.AddToPlaylist(state.EditedTrackId);
         state.SelectSceneAnchor();
         state.Cue();
         state.Play();
