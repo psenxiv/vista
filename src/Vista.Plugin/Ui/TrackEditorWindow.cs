@@ -170,7 +170,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode == CameraMode.Off || session.Track.Points.Count == 0);
+        ImGui.BeginDisabled(session.Mode == CameraMode.Off || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
         if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
         ImGui.EndDisabled();
         ImGui.SameLine();
