@@ -114,16 +114,28 @@ public class SessionFollowTests
     }
 
     [Fact]
-    public void ChoosingANewCharacterKeepsTheCameraWhereItIs()
+    public void ChoosingANewCharacterKeepsTheOrbit()
     {
         var (state, characters) = FollowingGuard();
-        characters.Update([Guard(new Vector3(10f, 0f, 0f)), new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 1f)]);
-        var before = state.Track.Points[0];
+        characters.Update([Guard(new Vector3(10f, 0f, 0f)), new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 0f)]);
+        var stored = state.StoredTrack.Points[0];
 
         state.SetTarget("Scout", null);
 
+        Assert.Equal(stored, state.StoredTrack.Points[0]);
+        AssertNear(new Vector3(-5f, 2f, 13f), state.Track.Points[0].Position);
+    }
+
+    [Fact]
+    public void ChoosingTheFirstCharacterKeepsTheCameraWhereItIs()
+    {
+        var (state, _) = EditingWith(points: 1);
+        state.SetAim(AimMode.FollowTarget, Camera);
+        var before = state.Track.Points[0];
+
+        state.SetTarget("Guard", null);
+
         AssertNear(before.Position, state.Track.Points[0].Position);
-        Assert.Equal(before.Yaw, state.Track.Points[0].Yaw, 3);
     }
 
     [Fact]
@@ -157,17 +169,17 @@ public class SessionFollowTests
 
         Assert.Null(state.SetFollowTurns(false));
         Assert.False(state.Track.FollowTurns);
-        Assert.Null(state.SetFollowLooks(true));
-        Assert.True(state.Track.FollowLooks);
+        Assert.Null(state.SetFollowLooks(false));
+        Assert.False(state.Track.FollowLooks);
 
         Assert.True(state.Undo());
-        Assert.False(state.Track.FollowLooks);
+        Assert.True(state.Track.FollowLooks);
         Assert.True(state.Undo());
         Assert.True(state.Track.FollowTurns);
 
         state.Release();
         Assert.NotNull(state.SetFollowTurns(false));
-        Assert.NotNull(state.SetFollowLooks(true));
+        Assert.NotNull(state.SetFollowLooks(false));
     }
 
     [Fact]
@@ -198,18 +210,18 @@ public class SessionFollowTests
     }
 
     [Fact]
-    public void UndoingANewCharacterRestoresThePointsNumbers()
+    public void UndoingTheFirstCharacterRestoresThePointsNumbers()
     {
-        var (state, characters) = FollowingGuard();
-        characters.Update([Guard(new Vector3(10f, 0f, 0f)), new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 1f)]);
+        var (state, _) = EditingWith(points: 1);
+        state.SetAim(AimMode.FollowTarget, Camera);
         var stored = state.StoredTrack.Points[0];
-        state.SetTarget("Scout", null);
+        state.SetTarget("Guard", null);
         Assert.NotEqual(stored, state.StoredTrack.Points[0]);
 
         Assert.True(state.Undo());
 
         Assert.Equal(stored, state.StoredTrack.Points[0]);
-        Assert.Equal("Guard", state.StoredTrack.TargetName);
+        Assert.Null(state.StoredTrack.TargetName);
     }
 
     [Fact]

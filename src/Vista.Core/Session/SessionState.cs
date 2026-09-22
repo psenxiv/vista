@@ -413,14 +413,15 @@ public sealed class SessionState
         });
     }
 
-    /// <summary>Names the character to watch or follow by name and home world, or none; a Follow point stays where it is shown. Returns why it was refused, or null.</summary>
+    /// <summary>Names the character to watch or follow by name and home world, or none; a Follow point stays where it is shown for a first character and keeps its orbit for a new one. Returns why it was refused, or null.</summary>
     public string? SetTarget(string? name, string? world)
     {
         var shown = ShownPoint;
         return ApplySetting(t =>
         {
             var result = TrackEditing.SetTarget(t, name, world);
-            return !ReferenceEquals(result, t) && shown is { } s && FollowFrame(Scene, result) is { } frame ? TrackEditing.Replace(result, 0, frame.ToLocal(s)) : result;
+            // A first character takes the camera where it is; a new one keeps the orbit, so the shot moves with the choice.
+            return !ReferenceEquals(result, t) && t.TargetName is null && shown is { } s && FollowFrame(Scene, result) is { } frame ? TrackEditing.Replace(result, 0, frame.ToLocal(s)) : result;
         });
     }
 

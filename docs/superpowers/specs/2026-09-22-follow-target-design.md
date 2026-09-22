@@ -41,9 +41,12 @@ shows a pencil that reopens its dialog; the other entries show none.
 - Capturing the point (Backtick or + Add) while under Follow Target records the camera relative to
   the character where they stand now. It is refused with "Choose a character to follow" when no
   character is chosen, and with "Character not found" when they can't be found.
-- **Switching to Follow Target, or choosing a new character, keeps the camera where it is:** when
-  the track has its point and the character is found, the point is re-expressed relative to them
-  as they stand now. When they can't be found, the point's numbers are kept and read as an offset.
+- **Switching to Follow Target, or choosing the first character, keeps the camera where it is:**
+  when the track has its point and the character is found, the point is re-expressed relative to
+  them as they stand now. When they can't be found, the point's numbers are kept and read as an
+  offset.
+- **Choosing a different character keeps the orbit:** the offset is unchanged, so the camera takes
+  the same distance, height and angle from the new character.
 - Editing the point (the gizmo, the Point window, overwrite) edits it where it is drawn, relative
   to the character where they stand now.
 
@@ -54,7 +57,7 @@ shows a pencil that reopens its dialog; the other entries show none.
   - **Turn with character** (on by default): on, the offset turns as they turn (a chase camera);
     off, the offset keeps the facing the character had when playback, a preview or a scrub
     started, so the camera only moves with them.
-  - **Look at character** (off by default): on, the camera always points at the character at the
+  - **Look at character** (on by default): on, the camera always points at the character at the
     aim height, as Watch Target does; off, it keeps the point's recorded aim, turned with the
     character when Turn with character is on.
   - **Aim height**, used when Look at character is on.

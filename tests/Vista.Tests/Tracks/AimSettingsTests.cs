@@ -130,11 +130,11 @@ public class AimSettingsTests
     }
 
     [Fact]
-    public void FollowSwitchesDefaultToTurningAndNotLooking()
+    public void FollowSwitchesDefaultToTurningAndLooking()
     {
         var track = TrackEditing.Empty();
         Assert.True(track.FollowTurns);
-        Assert.False(track.FollowLooks);
+        Assert.True(track.FollowLooks);
     }
 
     [Fact]
@@ -144,6 +144,6 @@ public class AimSettingsTests
         var off = TrackEditing.SetFollowTurns(track, false);
         Assert.False(off.FollowTurns);
         Assert.Same(off, TrackEditing.SetFollowTurns(off, false));
-        Assert.True(TrackEditing.SetFollowLooks(track, true).FollowLooks);
+        Assert.False(TrackEditing.SetFollowLooks(track, false).FollowLooks);
     }
 }
