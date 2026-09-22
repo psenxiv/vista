@@ -83,6 +83,7 @@ internal sealed class CameraSession
         if (!track.AnchorPlaced) return null;
         var (position, lookAt) = SceneGeometry.ViewOf(SceneGeometry.WorldAnchor(state.Scene, track));
         var fov = CameraAccess.ReadState()?.Fov ?? lastFrame?.Fov ?? 1f;
+        state.StopPreview();
         FlyFrom(new CameraState(position, lookAt, fov));
         return null;
     }
@@ -137,7 +138,7 @@ internal sealed class CameraSession
         Plugin.Log.Information("[vista] mode: editing");
     }
 
-    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or re-hides the UI of a playing one.</summary>
+    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live.</summary>
     public void Play() => Apply(state.Play());
 
     /// <summary>In Edit, previews from the beginning; live, goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
@@ -315,11 +316,17 @@ internal sealed class CameraSession
     /// <summary>Ends a live edit as one undo step if anything changed.</summary>
     public void EndLiveEdit() => state.EndLiveEdit();
 
-    /// <summary>Runs <paramref name="edit"/> with the current camera as a control point.</summary>
+    /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
         if (state.Mode != CameraMode.Editing) return "Points can only be added while editing.";
         if (state.Scrubbing) return "Points cannot be added while scrubbing.";
+
+        if (state.Previewing && lastFrame is { } previewed)
+        {
+            var (previewYaw, previewPitch) = TrackAim.FromDirection(previewed.LookAt - previewed.Position);
+            return edit(new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewed.Roll));
+        }
 
         var camera = CameraAccess.ReadState();
         var angles = CameraAccess.ReadAngles();
