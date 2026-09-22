@@ -257,16 +257,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (index > 0) fields.Draw($"leg{index}", evaluator.LegSeconds(index), "%.1f", FieldWidth, v => Report(session.SetLegDuration(index, v)));
 
         ImGui.TableNextColumn();
-        if (index > 0) fields.Draw($"leg-speed{index}", TrackEditing.LegSpeed(track, index), "%.2f", FieldWidth, v => Report(session.SetLegSpeed(index, v)));
+        if (index > 0)
+            fields.Draw($"leg-speed{index}", evaluator.LegLength(index) / evaluator.LegSeconds(index), "%.2f", FieldWidth, v => Report(session.SetLegSpeed(index, v)));
 
         ImGui.TableNextColumn();
         fields.Draw($"hold{index}", TrackEditing.HoldSeconds(track, index), "%.1f", FieldWidth,
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v)))));
 
         ImGui.TableNextColumn();
-        if (index > 0 && TrackEditing.IsPinned(track, index)
-            && IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pinned: click to follow the track speed"))
-            Report(session.ResetLeg(index));
+        if (index > 0) DrawPin(track, index);
 
         ImGui.TableNextColumn();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
@@ -277,6 +276,21 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         ImGui.EndDisabled();
+    }
+
+    /// <summary>The leg's pin: lit and pinning when pinned, dimmed and following the track speed when not, always clickable to toggle.</summary>
+    private void DrawPin(Track track, int index)
+    {
+        if (TrackEditing.IsPinned(track, index))
+        {
+            if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pinned: click to follow the track speed"))
+                Report(session.ResetLeg(index));
+            return;
+        }
+
+        using var dim = ImRaii.PushColor(ImGuiCol.Text, ImGui.GetColorU32(ImGuiCol.Text, 0.4f));
+        if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Following the track speed: click to pin at this speed"))
+            Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 
     /// <summary>Play/Pause and Restart, the scrub bar showing current and total time, and fly speed at its right while editing.</summary>
