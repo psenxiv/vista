@@ -15,22 +15,10 @@ Scenes, Tracks, anchors, a Playlist, saving and presets; `BRAINSPLAT.md` holds t
 requirements and the work order, and each step is specced as it comes up. Export/import was
 dropped: sharing a Scene means sharing its file.
 
-### LookAt aim
-A track's camera stays aimed at one fixed point in the world while it moves, such
-as a spot over a stage.
-
-**Why deferred:** cut from v1 on 2026-09-21. It needs a target placed with the
-gizmo, which arrives with the editor.
-
 ### Manual
 A manual for Vista, opened from a `?` icon in the window.
 
 **Why deferred:** raised on 2026-09-22 during 3.e.2; to be specced on its own later.
-
-### Aim tracking a game entity
-A track's camera stays aimed at a character or object as it moves.
-
-**Why deferred:** not a high priority.
 
 ## Under consideration
 
