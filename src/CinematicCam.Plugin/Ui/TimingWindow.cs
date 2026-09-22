@@ -1,9 +1,11 @@
 using System.Numerics;
 using CinematicCam.Core.Editing;
+using CinematicCam.Core.Session;
 using CinematicCam.Core.Tracks;
 using CinematicCam.Plugin.Editor;
 using CinematicCam.Plugin.Session;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
 namespace CinematicCam.Plugin.Ui;
@@ -23,11 +25,22 @@ internal sealed class TimingWindow : Window
     private const float KeyHitRadius = 10f;
     private const float CurveHitDistance = 8f;
     private const float TickLength = 4f;
+    private const float HandleLength = 40f;
+    private const float HandleRadius = 5f;
+    private const float HandleHitRadius = 8f;
+    private const float EasingWidth = 130f;
     private const string EmptyText = "Add two points to shape timing.";
+    private const string KeyPopup = "##timing-key";
+
+    private static readonly Easing[] Presets = [Easing.Smooth, Easing.Linear, Easing.EaseIn, Easing.EaseOut, Easing.EaseInOut];
+    private static readonly KeySide[] Sides = [KeySide.In, KeySide.Out];
 
     private readonly CameraSession session;
     private readonly List<Vector2?> keyScreens = [];
+    private readonly List<(KeySide Side, Vector2 End)> handleEnds = [];
     private bool scrubbing;
+    private Drag? drag;
+    private int? popupKey;
 
     public TimingWindow(CameraSession session)
         : base("Timing###ccam-timing")
@@ -37,8 +50,12 @@ internal sealed class TimingWindow : Window
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(360f, 200f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
     }
 
-    /// <summary>Ends a scrub, since a closed window never reports the mouse letting go.</summary>
-    public override void OnClose() => EndScrub();
+    /// <summary>Ends a scrub or a drag, since a closed window never reports the mouse letting go.</summary>
+    public override void OnClose()
+    {
+        EndScrub();
+        EndDrag();
+    }
 
     public override void Draw()
     {
@@ -52,8 +69,11 @@ internal sealed class TimingWindow : Window
         if (session.Track.Points.Count < 2)
         {
             EndScrub();
+            EndDrag();
             keyScreens.Clear();
+            handleEnds.Clear();
             list.AddText(topLeft + ((region - ImGui.CalcTextSize(EmptyText)) / 2f), ImGui.GetColorU32(ImGuiCol.Text), EmptyText);
+            DrawKeyPopup();
             return;
         }
 
@@ -63,21 +83,72 @@ internal sealed class TimingWindow : Window
         var stripBottom = topLeft.Y + region.Y;
 
         UpdateKeyScreens(graph);
+        UpdateHandleEnds(graph);
         DrawPlot(list, graph);
         DrawTimeAxis(list, graph, stripBottom);
         DrawCurve(list, graph, 0f, graph.Duration, EditorColours.Path);
         if (SelectedLegSpan() is var (start, end)) DrawCurve(list, graph, start, end, EditorColours.Selected);
         DrawPlayhead(list, graph, stripBottom);
+        DrawHandles(list);
         DrawKeys(list);
 
         HandleMouse(graph, stripBottom);
+        DrawKeyPopup();
     }
 
-    /// <summary>The selected key's time, read-only.</summary>
+    private bool Editing => session.Mode == CameraMode.Editing;
+
+    /// <summary>The selected leg's easing drop-down, or the selected key's time and its buttons.</summary>
     private void DrawTopRow()
     {
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(SelectedKeyIndex() is { } key ? $"Key: {session.Track.Timing[key].Time:0.0} s" : string.Empty);
+        if (SelectedLegIndex() is { } leg) DrawLegControls(leg);
+        else if (SelectedKeyIndex() is { } key) DrawKeyControls(key);
+        else ImGui.TextUnformatted(string.Empty);
+    }
+
+    /// <summary>The leg's name and a drop-down of easing presets, showing Custom when it matches none.</summary>
+    private void DrawLegControls(int leg)
+    {
+        ImGui.TextUnformatted($"Leg {leg} → {leg + 1}");
+        ImGui.SameLine();
+
+        var current = LegEasing.Read(session.Track, leg);
+        ImGui.BeginDisabled(!Editing);
+        ImGui.SetNextItemWidth(EasingWidth);
+        if (ImGui.BeginCombo("##easing", EasingName(current)))
+        {
+            foreach (var preset in Presets)
+            {
+                if (!ImGui.Selectable(EasingName(preset), preset == current) || preset == current) continue;
+                Report(session.SetEasing(leg, preset));
+            }
+
+            ImGui.EndCombo();
+        }
+
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>The key's time, the Smooth, Linear and Flat buttons, and a trash icon for an inner key or hold end.</summary>
+    private void DrawKeyControls(int key)
+    {
+        var role = TrackEditing.RoleOf(session.Track, key);
+        ImGui.TextUnformatted($"Key: {session.Track.Timing[key].Time:0.00} s");
+
+        ImGui.BeginDisabled(!Editing);
+        ImGui.SameLine();
+        if (IconButton.Draw("key-smooth", FontAwesomeIcon.BezierCurve, "Smooth")) Report(session.SetKeyMode(key, TangentMode.Auto));
+        ImGui.SameLine();
+        if (IconButton.Draw("key-linear", FontAwesomeIcon.Slash, "Linear")) Report(session.SetKeyMode(key, TangentMode.Linear));
+        ImGui.SameLine();
+        if (IconButton.Draw("key-flat", FontAwesomeIcon.GripLines, "Flat")) Report(session.SetKeyMode(key, TangentMode.Flat));
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        ImGui.BeginDisabled(!Editing || role == KeyRole.Point);
+        if (IconButton.Draw("key-delete", FontAwesomeIcon.Trash, role == KeyRole.HoldEnd ? "Remove hold" : "Delete key")) Report(session.DeleteKey(key));
+        ImGui.EndDisabled();
     }
 
     /// <summary>Works out where each key sits on screen this frame.</summary>
@@ -86,6 +157,18 @@ internal sealed class TimingWindow : Window
         keyScreens.Clear();
         foreach (var key in session.Track.Timing)
             keyScreens.Add(graph.ToScreen(key.Time, session.Evaluator.DistanceOf(key.Position)));
+    }
+
+    /// <summary>Works out where the selected key's handles end this frame, while editing.</summary>
+    private void UpdateHandleEnds(TimingGraph graph)
+    {
+        handleEnds.Clear();
+        if (!Editing || SelectedKeyIndex() is not { } key || keyScreens[key] is not { } at) return;
+        foreach (var side in Sides)
+        {
+            if (!TimingEditing.HasHandle(session.Track, key, side)) continue;
+            handleEnds.Add((side, graph.HandleEnd(at, side, session.Evaluator.SideSlope(key, side), HandleLength)));
+        }
     }
 
     /// <summary>The plot's background, and each point's line and number.</summary>
@@ -150,7 +233,18 @@ internal sealed class TimingWindow : Window
         list.AddLine(new Vector2(x, graph.Origin.Y), new Vector2(x, stripBottom), EditorColours.Playhead);
     }
 
-    /// <summary>Point keys as numbered dots, hold ends as plain dots and inner keys as diamonds.</summary>
+    /// <summary>A line from the selected key to each handle, with a dot at its end.</summary>
+    private void DrawHandles(ImDrawListPtr list)
+    {
+        if (SelectedKeyIndex() is not { } key || keyScreens[key] is not { } at) return;
+        foreach (var (_, end) in handleEnds)
+        {
+            list.AddLine(at, end, EditorColours.UpLine);
+            list.AddCircleFilled(end, HandleRadius, EditorColours.UpLine);
+        }
+    }
+
+    /// <summary>Point keys as numbered dots, hold ends as plain dots and inner keys as diamonds; a selected hold end or inner key is filled.</summary>
     private void DrawKeys(ImDrawListPtr list)
     {
         var track = session.Track;
@@ -160,6 +254,7 @@ internal sealed class TimingWindow : Window
             if (keyScreens[i] is not { } at) continue;
             var ring = i == selected ? EditorColours.Selected : EditorColours.MarkerRing;
             var thickness = i == selected ? 2.5f : 1.5f;
+            var fill = i == selected ? EditorColours.Selected : EditorColours.Marker;
 
             switch (TrackEditing.RoleOf(track, i))
             {
@@ -170,7 +265,7 @@ internal sealed class TimingWindow : Window
                     list.AddText(at - (ImGui.CalcTextSize(label) / 2f), EditorColours.MarkerText, label);
                     break;
                 case KeyRole.HoldEnd:
-                    list.AddCircleFilled(at, HoldEndRadius, EditorColours.Marker);
+                    list.AddCircleFilled(at, HoldEndRadius, fill);
                     list.AddCircle(at, HoldEndRadius, ring, 0, thickness);
                     break;
                 default:
@@ -178,14 +273,14 @@ internal sealed class TimingWindow : Window
                     var rightCorner = at with { X = at.X + InnerKeyHalfSize };
                     var down = at with { Y = at.Y + InnerKeyHalfSize };
                     var leftCorner = at with { X = at.X - InnerKeyHalfSize };
-                    list.AddQuadFilled(up, rightCorner, down, leftCorner, EditorColours.Marker);
+                    list.AddQuadFilled(up, rightCorner, down, leftCorner, fill);
                     list.AddQuad(up, rightCorner, down, leftCorner, ring, thickness);
                     break;
             }
         }
     }
 
-    /// <summary>Carries on or ends a scrub, then acts on a left press: a handle, then a key, then the curve, then the time axis.</summary>
+    /// <summary>Carries on or ends a scrub or a drag, acts on a right press over a key, then on a left press: a handle, then a key, then the curve, then the time axis.</summary>
     private void HandleMouse(TimingGraph graph, float stripBottom)
     {
         if (scrubbing)
@@ -194,24 +289,42 @@ internal sealed class TimingWindow : Window
             else EndScrub();
         }
 
-        if (!ImGui.IsItemClicked(ImGuiMouseButton.Left)) return;
+        ContinueDrag();
+
         var mouse = ImGui.GetMousePos();
-        if (ClickHandle(mouse) || ClickKey(mouse) || ClickCurve(graph, mouse)) return;
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Right)) RightClickKey(mouse);
+        if (!ImGui.IsItemClicked(ImGuiMouseButton.Left)) return;
+        if (ClickHandle(graph, mouse) || ClickKey(graph, mouse) || ClickCurve(graph, mouse)) return;
         ClickTimeAxis(graph, mouse, stripBottom);
     }
 
-    /// <summary>Acts on a handle under the cursor. There are none yet.</summary>
-    private static bool ClickHandle(Vector2 mouse) => false;
-
-    /// <summary>Selects the key under the cursor.</summary>
-    private bool ClickKey(Vector2 mouse)
+    /// <summary>Starts dragging the selected key's handle under the cursor, while editing.</summary>
+    private bool ClickHandle(TimingGraph graph, Vector2 mouse)
     {
-        if (MarkerHitTest.Nearest(keyScreens, mouse, KeyHitRadius) is not { } key) return false;
-        session.SelectKey(key);
+        if (SelectedKeyIndex() is not { } key || keyScreens[key] is not { } at) return false;
+
+        (KeySide Side, float Distance)? best = null;
+        foreach (var (side, end) in handleEnds)
+        {
+            var distance = Vector2.Distance(end, mouse);
+            if (distance <= HandleHitRadius && (best is null || distance < best.Value.Distance)) best = (side, distance);
+        }
+
+        if (best is not { } hit) return false;
+        BeginDrag(new Drag(key, hit.Side, at, graph));
         return true;
     }
 
-    /// <summary>Selects the leg under the cursor when it is close to the curve.</summary>
+    /// <summary>Selects the key under the cursor and, while editing, starts dragging it.</summary>
+    private bool ClickKey(TimingGraph graph, Vector2 mouse)
+    {
+        if (MarkerHitTest.Nearest(keyScreens, mouse, KeyHitRadius) is not { } key) return false;
+        session.SelectKey(key);
+        if (keyScreens[key] is { } at) BeginDrag(new Drag(key, null, at, graph));
+        return true;
+    }
+
+    /// <summary>Adds an inner key on a double-click near the curve while editing; otherwise selects the leg under the cursor.</summary>
     private bool ClickCurve(TimingGraph graph, Vector2 mouse)
     {
         var inside = mouse.X >= graph.Origin.X && mouse.X <= graph.Origin.X + graph.Size.X
@@ -220,9 +333,88 @@ internal sealed class TimingWindow : Window
 
         var time = graph.TimeAt(mouse.X);
         if (MathF.Abs(CurvePoint(graph, time).Y - mouse.Y) > CurveHitDistance) return false;
+        if (Editing && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+        {
+            Report(session.AddInnerKey(time));
+            return true;
+        }
+
         if (TrackEditing.LegAt(session.Track, time) is not { } leg) return false;
         session.SelectLeg(leg);
         return true;
+    }
+
+    /// <summary>Selects the key under the cursor and opens its menu, while editing.</summary>
+    private void RightClickKey(Vector2 mouse)
+    {
+        if (!Editing || drag is not null || MarkerHitTest.Nearest(keyScreens, mouse, KeyHitRadius) is not { } key) return;
+        session.SelectKey(key);
+
+        var track = session.Track;
+        var hasHandle = TimingEditing.HasHandle(track, key, KeySide.In) || TimingEditing.HasHandle(track, key, KeySide.Out);
+        if (TrackEditing.RoleOf(track, key) == KeyRole.Point && !track.Timing[key].Broken && !hasHandle) return;
+        popupKey = key;
+        ImGui.OpenPopup(KeyPopup);
+    }
+
+    /// <summary>The key menu: delete or remove hold, and break or unify handles.</summary>
+    private void DrawKeyPopup()
+    {
+        if (!ImGui.BeginPopup(KeyPopup)) return;
+        if (!Editing || popupKey is not { } key || key >= session.Track.Timing.Count)
+        {
+            ImGui.CloseCurrentPopup();
+            ImGui.EndPopup();
+            return;
+        }
+
+        var track = session.Track;
+        var role = TrackEditing.RoleOf(track, key);
+        var broken = track.Timing[key].Broken;
+        var hasIn = TimingEditing.HasHandle(track, key, KeySide.In);
+        var hasOut = TimingEditing.HasHandle(track, key, KeySide.Out);
+
+        if (role == KeyRole.Inner && ImGui.MenuItem("Delete key")) Report(session.DeleteKey(key));
+        if (role == KeyRole.HoldEnd && ImGui.MenuItem("Remove hold")) Report(session.DeleteKey(key));
+        if (!broken && (hasIn || hasOut) && ImGui.MenuItem("Break handles")) Report(session.BreakHandles(key));
+        if (broken && ImGui.MenuItem("Unify handles")) Report(session.UnifyHandles(key, hasOut ? KeySide.Out : KeySide.In));
+        ImGui.EndPopup();
+    }
+
+    /// <summary>Starts a live edit for a drag, while editing.</summary>
+    private void BeginDrag(Drag started)
+    {
+        if (!Editing) return;
+        EndDrag();
+        session.BeginLiveEdit();
+        drag = started;
+    }
+
+    /// <summary>Previews the drag once the mouse has moved, until the button is let go or a preview is refused.</summary>
+    private void ContinueDrag()
+    {
+        if (drag is not { } d) return;
+        if (!ImGui.IsItemActive() || !Editing)
+        {
+            EndDrag();
+            return;
+        }
+
+        d.Moved |= ImGui.IsMouseDragging(ImGuiMouseButton.Left);
+        if (!d.Moved || d.Refused) return;
+
+        var mouse = ImGui.GetMousePos();
+        var refusal = d.Side is { } side
+            ? session.PreviewHandle(d.Key, side, d.Graph.SlopeFromHandle(d.KeyScreen, side, mouse))
+            : session.PreviewKeyMove(d.Key, DragTime(d.Graph, mouse.X), d.Graph.DistanceAt(mouse.Y));
+        d.Refused = refusal is not null;
+    }
+
+    private void EndDrag()
+    {
+        if (drag is null) return;
+        drag = null;
+        session.EndLiveEdit();
     }
 
     /// <summary>Starts a scrub when the cursor is in the bottom strip.</summary>
@@ -243,15 +435,54 @@ internal sealed class TimingWindow : Window
 
     private Vector2 CurvePoint(TimingGraph graph, float time) => graph.ToScreen(time, session.Evaluator.DistanceAt(time));
 
+    /// <summary>The time under pixel column <paramref name="x"/>, running on past the shot's end so the last key can lengthen it.</summary>
+    private static float DragTime(TimingGraph graph, float x)
+        => x > graph.Origin.X + graph.Size.X ? (x - graph.Origin.X) / graph.Size.X * graph.Duration : graph.TimeAt(x);
+
+    private static string EasingName(Easing easing) => easing switch
+    {
+        Easing.Smooth => "Smooth",
+        Easing.Linear => "Linear",
+        Easing.EaseIn => "Ease in",
+        Easing.EaseOut => "Ease out",
+        Easing.EaseInOut => "Ease in-out",
+        _ => "Custom",
+    };
+
+    private static void Report(string? refusal)
+    {
+        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
+    }
+
     /// <summary>The selected key's index, or null when none is selected or it is out of range.</summary>
     private int? SelectedKeyIndex()
         => session.SelectedKey is { } key && key < session.Track.Timing.Count ? key : null;
 
+    /// <summary>The selected leg, or null when none is selected or it is out of range.</summary>
+    private int? SelectedLegIndex()
+        => session.SelectedLeg is { } leg && leg >= 1 && leg < session.Track.Points.Count ? leg : null;
+
     /// <summary>The selected leg's start and end times, or null.</summary>
     private (float Start, float End)? SelectedLegSpan()
     {
-        if (session.SelectedLeg is not { } leg || leg < 1 || leg >= session.Track.Points.Count) return null;
+        if (SelectedLegIndex() is not { } leg) return null;
         var track = session.Track;
         return (track.Timing[TrackEditing.LegStartKey(track, leg)].Time, track.Timing[TrackEditing.LegEndKey(track, leg)].Time);
+    }
+
+    /// <summary>A key or handle being dragged, with the graph and key position from the frame it began.</summary>
+    private sealed class Drag(int key, KeySide? side, Vector2 keyScreen, TimingGraph graph)
+    {
+        public int Key { get; } = key;
+
+        public KeySide? Side { get; } = side;
+
+        public Vector2 KeyScreen { get; } = keyScreen;
+
+        public TimingGraph Graph { get; } = graph;
+
+        public bool Moved { get; set; }
+
+        public bool Refused { get; set; }
     }
 }
