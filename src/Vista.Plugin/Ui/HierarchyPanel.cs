@@ -79,11 +79,25 @@ internal sealed unsafe class HierarchyPanel
         ImGui.EndDisabled();
     }
 
+    /// <summary>Text inside the row just drawn: centred on its height and inset like a field's, clipped to the row.</summary>
+    private static void DrawRowText(string text)
+    {
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        var padding = ImGui.GetStyle().FramePadding.X;
+        var at = new Vector2(min.X + padding, min.Y + ((max.Y - min.Y - ImGui.GetTextLineHeight()) * 0.5f));
+        var list = ImGui.GetWindowDrawList();
+        list.PushClipRect(min, max with { X = max.X - padding }, true);
+        list.AddText(at, ImGui.GetColorU32(ImGuiCol.Text), text);
+        list.PopClipRect();
+    }
+
     /// <summary>The name as a selectable, carrying the row's clicks, drag and drop, and context menu.</summary>
     private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float width)
     {
-        if (ImGui.Selectable(track.Name, isEdited, ImGuiSelectableFlags.None, new Vector2(width, ImGui.GetFrameHeight())))
+        if (ImGui.Selectable("##name", isEdited, ImGuiSelectableFlags.None, new Vector2(width, ImGui.GetFrameHeight())))
             Report(session.SelectTrack(track.Id));
+        DrawRowText(track.Name);
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
