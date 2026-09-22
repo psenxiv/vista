@@ -6,6 +6,15 @@ public static class TrackEditing
     /// <summary>Seconds a leg takes when a point is appended without one being set explicitly.</summary>
     public const float DefaultLegSeconds = 5f;
 
+    /// <summary>Keys stay at least this many seconds apart.</summary>
+    public const float MinKeyGap = 0.05f;
+
+    /// <summary>The shortest leg, in seconds.</summary>
+    public const float MinLegSeconds = 0.1f;
+
+    /// <summary>The longest leg or hold, in seconds.</summary>
+    public const float MaxSeconds = 600f;
+
     /// <summary>A track with no points, no keys, and <see cref="PlaybackMode.Once"/>.</summary>
     public static Track Empty(AimMode aim = AimMode.AimKeys)
         => new(Array.Empty<ControlPoint>(), Array.Empty<TimingKey>(), aim, PlaybackMode.Once);
@@ -77,7 +86,7 @@ public static class TrackEditing
         {
             if (hasHold && i == lastIndex)
             {
-                if (seconds == 0f) continue; // drop the hold key
+                if (seconds == 0f) continue;
                 result.Add(keys[i] with { Time = keys[i].Time + diff });
                 continue;
             }
@@ -88,9 +97,20 @@ public static class TrackEditing
                 continue;
             }
 
+            if (i == firstIndex && hasHold && seconds == 0f)
+            {
+                result.Add(keys[i] with { OutMode = keys[lastIndex].OutMode, OutTangent = keys[lastIndex].OutTangent });
+                continue;
+            }
+
+            if (i == firstIndex && !hasHold && seconds > 0f)
+            {
+                result.Add(keys[i] with { OutMode = TangentMode.Auto, OutTangent = 0f });
+                result.Add(new TimingKey(keys[i].Time + seconds, index, OutMode: keys[i].OutMode, OutTangent: keys[i].OutTangent));
+                continue;
+            }
+
             result.Add(keys[i]);
-            if (!hasHold && i == firstIndex && seconds > 0f)
-                result.Add(new TimingKey(keys[i].Time + seconds, index));
         }
 
         return track with { Timing = result };
@@ -101,6 +121,46 @@ public static class TrackEditing
     {
         ValidatePointIndex(track, index, "time");
         return track.Timing[FirstKeyIndex(track.Timing, index)].Time;
+    }
+
+    /// <summary>What timing key <paramref name="key"/> is.</summary>
+    public static KeyRole RoleOf(Track track, int key)
+    {
+        var position = track.Timing[key].Position;
+        if (position != MathF.Floor(position)) return KeyRole.Inner;
+        return key > 0 && track.Timing[key - 1].Position == position ? KeyRole.HoldEnd : KeyRole.Point;
+    }
+
+    /// <summary>Index of point <paramref name="point"/>'s first key.</summary>
+    public static int PointKey(Track track, int point)
+    {
+        ValidatePointIndex(track, point, "point");
+        return FirstKeyIndex(track.Timing, point);
+    }
+
+    /// <summary>Index of the key leg <paramref name="leg"/> leaves from: the last key of the point before it.</summary>
+    public static int LegStartKey(Track track, int leg)
+    {
+        ValidateLegIndex(track, leg);
+        return LastKeyIndex(track.Timing, leg - 1);
+    }
+
+    /// <summary>Index of the key leg <paramref name="leg"/> arrives at: its point's first key.</summary>
+    public static int LegEndKey(Track track, int leg)
+    {
+        ValidateLegIndex(track, leg);
+        return FirstKeyIndex(track.Timing, leg);
+    }
+
+    /// <summary>The leg whose time span holds <paramref name="time"/>, or null in a hold or outside the shot.</summary>
+    public static int? LegAt(Track track, float time)
+    {
+        for (var leg = 1; leg < track.Points.Count; leg++)
+        {
+            if (time >= track.Timing[LegStartKey(track, leg)].Time && time <= track.Timing[LegEndKey(track, leg)].Time) return leg;
+        }
+
+        return null;
     }
 
     /// <summary>Sets the playback mode; never touches points or keys.</summary>

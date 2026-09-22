@@ -510,4 +510,52 @@ public class TrackEditingTests
         Assert.Equal(12f, TrackEditing.PointSeconds(track, 2));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.PointSeconds(track, 3));
     }
+
+    [Fact]
+    public void AddingAHoldMovesTheNextLegsEasingOntoTheHoldEnd()
+    {
+        var track = LegEasing.Set(Build3PointTrack(), 2, Easing.EaseIn);
+        track = TrackEditing.SetHold(track, 1, 2f);
+
+        Assert.Equal(TangentMode.Auto, track.Timing[1].OutMode);
+        Assert.Equal(TangentMode.Flat, track.Timing[2].OutMode);
+        Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 2));
+    }
+
+    [Fact]
+    public void RemovingAHoldMovesTheEasingBack()
+    {
+        var track = TrackEditing.SetHold(LegEasing.Set(Build3PointTrack(), 2, Easing.EaseIn), 1, 2f);
+        track = TrackEditing.SetHold(track, 1, 0f);
+
+        Assert.Equal(3, track.Timing.Count);
+        Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 2));
+    }
+
+    [Fact]
+    public void KeyRolesTellPointsHoldEndsAndInnerKeysApart()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+        var timing = track.Timing.ToList();
+        timing.Insert(1, new TimingKey(2.5f, 0.5f));
+        track = track with { Timing = timing };
+
+        Assert.Equal(KeyRole.Point, TrackEditing.RoleOf(track, 0));
+        Assert.Equal(KeyRole.Inner, TrackEditing.RoleOf(track, 1));
+        Assert.Equal(KeyRole.Point, TrackEditing.RoleOf(track, 2));
+        Assert.Equal(KeyRole.HoldEnd, TrackEditing.RoleOf(track, 3));
+        Assert.Equal(2, TrackEditing.PointKey(track, 1));
+        Assert.Equal(3, TrackEditing.LegStartKey(track, 2));
+        Assert.Equal(4, TrackEditing.LegEndKey(track, 2));
+    }
+
+    [Fact]
+    public void LegAtFindsTheLegAndSkipsHolds()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);   // keys at 0, 5, 7, 12
+        Assert.Equal(1, TrackEditing.LegAt(track, 2f));
+        Assert.Null(TrackEditing.LegAt(track, 6f));
+        Assert.Equal(2, TrackEditing.LegAt(track, 9f));
+        Assert.Null(TrackEditing.LegAt(track, 13f));
+    }
 }
