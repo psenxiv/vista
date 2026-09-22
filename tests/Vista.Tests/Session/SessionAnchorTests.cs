@@ -105,7 +105,9 @@ public class SessionAnchorTests
         state.SelectSceneAnchor();
         var before = state.Track.Points[2].Position;
 
-        Assert.Null(state.MoveAnchor(new Anchor(new Vector3(15f, 1f, 3f), 0f), carry: true));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(15f, 1f, 3f), 0f), carry: true));
+        state.EndLiveEdit();
 
         Near(before + new Vector3(5f, 0f, 3f), state.Track.Points[2].Position, 1e-4f);
         Assert.True(state.Undo());
@@ -119,7 +121,9 @@ public class SessionAnchorTests
         state.SelectTrackAnchor(state.EditedTrackId);
         var before = state.Track.Points.Select(p => p.Position).ToList();
 
-        Assert.Null(state.MoveAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false));
+        state.EndLiveEdit();
 
         for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);
         Near(new Vector3(-4f, 0f, 9f), state.SelectedAnchorInWorld!.Value.Position, 1e-4f);
@@ -130,7 +134,9 @@ public class SessionAnchorTests
     {
         var state = Editing();
         state.SelectTrackAnchor(state.EditedTrackId);
-        state.MoveAnchor(new Anchor(new Vector3(3f, 0f, -2f), 0.9f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(3f, 0f, -2f), 0.9f), carry: true);
+        state.EndLiveEdit();
         var target = new ControlPoint(new Vector3(12f, 6f, 8f), 0.4f, 0.1f, 1f);
 
         Assert.Null(state.ReplacePoint(1, target));
@@ -213,7 +219,9 @@ public class SessionAnchorTests
     {
         var state = Editing();
         state.SelectTrackAnchor(state.EditedTrackId);
-        state.MoveAnchor(new Anchor(new Vector3(0f, 0f, 0f), 0f), carry: false);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(0f, 0f, 0f), 0f), carry: false);
+        state.EndLiveEdit();
         var anchor = state.Scene.Tracks[0].Anchor;
 
         state.ChangeTrack(TrackEditing.Clear);
@@ -245,7 +253,9 @@ public class SessionAnchorTests
 
         Assert.False(state.Scene.AnchorPlaced);
         Assert.Null(state.SelectedAnchor);
-        Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
+        state.BeginLiveEdit();
+        Assert.NotNull(state.PreviewAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
+        state.EndLiveEdit();
     }
 
     [Fact]
@@ -268,7 +278,9 @@ public class SessionAnchorTests
         var state = Editing();
         state.SelectSceneAnchor();
 
-        Assert.Null(state.MoveAnchor(state.SelectedAnchorInWorld!.Value, carry: true));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAnchor(state.SelectedAnchorInWorld!.Value, carry: true));
+        state.EndLiveEdit();
 
         Assert.True(state.Undo());
         Assert.Equal(2, state.Track.Points.Count);
@@ -284,7 +296,9 @@ public class SessionAnchorTests
         var second = state.EditedTrackId;
         state.SwitchTrack(first);
         state.SelectSceneAnchor();
-        state.MoveAnchor(new Anchor(new Vector3(-7f, 2f, 11f), 0.8f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(-7f, 2f, 11f), 0.8f), carry: true);
+        state.EndLiveEdit();
         var before = state.Track.Points.Select(p => p.Position).ToList();
 
         Assert.Null(state.DeleteTrack(second));
@@ -298,9 +312,13 @@ public class SessionAnchorTests
     {
         var state = Editing();
         state.SelectSceneAnchor();
-        state.MoveAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
+        state.EndLiveEdit();
         state.SelectTrackAnchor(state.EditedTrackId);
-        state.MoveAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
+        state.EndLiveEdit();
         return state;
     }
 

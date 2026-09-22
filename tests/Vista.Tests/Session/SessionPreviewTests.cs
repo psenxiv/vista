@@ -174,12 +174,16 @@ public class SessionPreviewTests
         state.Play();
         Assert.Null(state.SelectSceneAnchor());
         Assert.True(state.Previewing);
-        Assert.Null(state.MoveAnchor(new Anchor(new Vector3(1f, 0f, 0f), 0f), carry: false));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(1f, 0f, 0f), 0f), carry: false));
+        state.EndLiveEdit();
         Assert.False(state.Previewing);
 
         state.Play();
         Assert.True(state.Previewing);
-        Assert.Null(state.MoveAnchor(new Anchor(new Vector3(2f, 0f, 0f), 0f), carry: true));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(2f, 0f, 0f), 0f), carry: true));
+        state.EndLiveEdit();
         Assert.False(state.Previewing);
     }
 

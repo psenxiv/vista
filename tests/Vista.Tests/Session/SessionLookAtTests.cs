@@ -64,7 +64,9 @@ public class SessionLookAtTests
         var state = Editing();
         Assert.Null(state.SetAim(AimMode.WatchTarget, Camera));
         Assert.Null(state.SetTarget("Guard", null));
-        Assert.Null(state.SetAimHeight(2f));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAimHeight(2f));
+        state.EndLiveEdit();
         Assert.Null(state.SetSmoothing(0.8f));
         Assert.Equal(0.8f, state.Track.Smoothing);
 
@@ -190,14 +192,20 @@ public class SessionLookAtTests
     {
         var state = Looking();
         state.SelectSceneAnchor();
-        state.MoveAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
+        state.EndLiveEdit();
         state.SelectTrackAnchor(state.EditedTrackId);
-        state.MoveAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
+        state.EndLiveEdit();
         state.SelectLookAt(state.EditedTrackId);
         var before = state.SelectedLookAtInWorld!.Value;
         var target = new Vector3(12f, 6f, 8f);
 
-        Assert.Null(state.MoveLookAt(target));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewLookAt(target));
+        state.EndLiveEdit();
 
         Near(target, state.SelectedLookAtInWorld!.Value, 1e-4f);
         Assert.True(state.Undo());
@@ -228,10 +236,14 @@ public class SessionLookAtTests
         var before = state.Track.LookAt;
         state.SelectTrackAnchor(state.EditedTrackId);
 
-        state.MoveAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false);
+        state.EndLiveEdit();
         Near(before, state.Track.LookAt, 1e-4f);
 
-        state.MoveAnchor(new Anchor(new Vector3(6f, 0f, 9f), 1.3f), carry: true);
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(6f, 0f, 9f), 1.3f), carry: true);
+        state.EndLiveEdit();
         Near(before + new Vector3(10f, 0f, 0f), state.Track.LookAt, 1e-4f);
     }
 
@@ -251,11 +263,12 @@ public class SessionLookAtTests
     public void TheLookAtMovesOnlyWhenSelectedAndIsNoAnchor()
     {
         var state = Looking();
-        Assert.NotNull(state.MoveLookAt(Vector3.Zero));
+        state.BeginLiveEdit();
+        Assert.NotNull(state.PreviewLookAt(Vector3.Zero));
+        state.EndLiveEdit();
 
         state.SelectLookAt(state.EditedTrackId);
 
-        Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
         state.BeginLiveEdit();
         Assert.NotNull(state.PreviewAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
         state.EndLiveEdit();
