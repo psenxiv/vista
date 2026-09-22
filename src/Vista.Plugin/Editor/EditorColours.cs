@@ -16,4 +16,10 @@ internal static class EditorColours
     public const uint GraphBackground = 0x60101010;
     public const uint GraphGrid = 0x40FFFFFF;
     public const uint Playhead = 0xFF4060FF;
+    public const uint OtherPath = 0x78A0A0A0;
+    public const uint OtherGlyph = 0x78A0A0A0;
+    public const uint OtherUpLine = 0x78A0A0A0;
+    public const uint OtherMarker = 0xA0303030;
+    public const uint OtherMarkerRing = 0x90B0B0B0;
+    public const uint OtherMarkerText = 0xB0C8C8C8;
 }
