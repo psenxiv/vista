@@ -1,12 +1,12 @@
+using Vista.Core.Scenes;
 using Vista.Core.Session;
-using Vista.Core.Tracks;
 using Xunit;
 
 namespace Vista.Tests.Session;
 
 public class EditHistoryTests
 {
-    private static EditSnapshot Snap(int? selected) => new(TrackEditing.Empty(), selected);
+    private static EditSnapshot Snap(int? selected) => new(SceneEditing.New(), Guid.Empty, selected);
 
     [Fact]
     public void UndoReturnsTheRecordedStateAndRedoReturnsTheCurrentOne()

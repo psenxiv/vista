@@ -182,7 +182,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.SameLine();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
-        if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(_ => TrackEditing.Empty())); }
+        if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track")) { fields.Clear(); Report(session.ChangeTrack(TrackEditing.Clear)); }
         ImGui.EndDisabled();
     }
 

@@ -1,9 +1,9 @@
-using Vista.Core.Tracks;
+using Vista.Core.Scenes;
 
 namespace Vista.Core.Session;
 
-/// <summary>A track and the point selected with it, as one undo step restores them.</summary>
-public readonly record struct EditSnapshot(Track Track, int? Selected);
+/// <summary>The scene, the edited track and its selected point, as one undo step restores them.</summary>
+public readonly record struct EditSnapshot(Scene Scene, Guid Edited, int? Selected);
 
 /// <summary>Undo and redo stacks of edit snapshots, keeping the most recent <see cref="Capacity"/> undo steps.</summary>
 public sealed class EditHistory

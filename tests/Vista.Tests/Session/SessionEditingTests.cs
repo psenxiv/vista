@@ -205,7 +205,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.Select(2);
-        state.ChangeTrack(_ => TrackEditing.Empty());
+        state.ChangeTrack(TrackEditing.Clear);
         Assert.Null(state.Selected);
     }
 
@@ -419,7 +419,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.ScrubTo(10.0);
-        state.ChangeTrack(_ => TrackEditing.Empty());
+        state.ChangeTrack(TrackEditing.Clear);
         Assert.Equal(0.0, state.ScrubHead);
     }
 

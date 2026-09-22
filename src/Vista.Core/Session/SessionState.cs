@@ -1,5 +1,6 @@
 using Vista.Core.Camera;
 using Vista.Core.Editing;
+using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 
 namespace Vista.Core.Session;
@@ -26,8 +27,20 @@ public sealed class SessionState
 
     public Director Director { get; } = new();
 
-    /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
-    public Track Track { get; private set; } = TrackEditing.Empty();
+    /// <summary>The tracks being edited, their order and which are hidden.</summary>
+    public Scene Scene { get; private set; } = SceneEditing.New();
+
+    /// <summary>The Id of the track the editor works on.</summary>
+    public Guid EditedTrackId { get; private set; }
+
+    /// <summary>The edited track: Edit builds it and Play plays it. Changed only through the edit methods and undo.</summary>
+    public Track Track
+    {
+        get => SceneEditing.Get(Scene, EditedTrackId);
+        private set => Scene = SceneEditing.Replace(Scene, value);
+    }
+
+    public SessionState() => EditedTrackId = Scene.Tracks[0].Id;
 
     /// <summary>The track's length in seconds: its last compiled key, or 0 with no points.</summary>
     public double Duration => Evaluator.Duration;
@@ -252,6 +265,47 @@ public sealed class SessionState
             return Collinear(joined, Evaluator, key, Evaluator.SideSlope(key, from), null);
         });
 
+    /// <summary>Adds an empty track at the end and edits it. Returns why it was refused, or null.</summary>
+    public string? AddTrack() => CommitScene(scene => SceneEditing.Add(scene));
+
+    /// <summary>Renames track <paramref name="id"/>. Returns why it was refused, or null.</summary>
+    public string? RenameTrack(Guid id, string name) => CommitScene(scene => (SceneEditing.Rename(scene, id, name), EditedTrackId));
+
+    /// <summary>Copies track <paramref name="id"/> after itself and edits the copy. Returns why it was refused, or null.</summary>
+    public string? DuplicateTrack(Guid id) => CommitScene(scene => SceneEditing.Duplicate(scene, id));
+
+    /// <summary>Deletes track <paramref name="id"/>; deleting the edited track edits the one taking its place. Returns why it was refused, or null.</summary>
+    public string? DeleteTrack(Guid id)
+        => CommitScene(scene =>
+        {
+            var (result, next) = SceneEditing.Delete(scene, id);
+            return (result, id == EditedTrackId ? next : EditedTrackId);
+        });
+
+    /// <summary>Moves a track in the Hierarchy order. Returns why it was refused, or null.</summary>
+    public string? MoveTrack(int from, int to) => CommitScene(scene => (SceneEditing.Move(scene, from, to), EditedTrackId));
+
+    /// <summary>Hides or shows track <paramref name="id"/>; the edited track is always shown. Returns why it was refused, or null.</summary>
+    public string? SetTrackHidden(Guid id, bool hidden)
+    {
+        if (hidden && id == EditedTrackId) return "The track being edited is always shown.";
+        return CommitScene(scene => (SceneEditing.SetHidden(scene, id, hidden), EditedTrackId));
+    }
+
+    /// <summary>Edits track <paramref name="id"/>, showing it first if hidden. Not an undo step itself. Returns why it was refused, or null.</summary>
+    public string? SwitchTrack(Guid id)
+    {
+        if (Mode != CameraMode.Editing) return "Tracks can only be switched while editing.";
+        if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
+        if (Scene.Hidden.Contains(id) && SetTrackHidden(id, false) is { } refusal) return refusal;
+        if (id == EditedTrackId) return null;
+
+        EndLiveEdit();
+        ClearForSwitch();
+        EditedTrackId = id;
+        return null;
+    }
+
     /// <summary>Starts a live edit: previews change the track at once and end as one undo step. Editing only.</summary>
     public void BeginLiveEdit()
     {
@@ -288,14 +342,15 @@ public sealed class SessionState
     {
         if (liveEditStart is not { } start) return;
         liveEditStart = null;
-        if (ReferenceEquals(start.Track, Track)) return;
+        var startTrack = SceneEditing.Get(start.Scene, start.Edited);
+        if (ReferenceEquals(startTrack, Track)) return;
 
         // Previews rebuild the lists, so compare values: a drag back to the start is no step.
-        if (start.Track.Points.SequenceEqual(Track.Points) && start.Track.Timing.SequenceEqual(Track.Timing) && start.Track.Speed == Track.Speed) Track = start.Track;
+        if (startTrack.Points.SequenceEqual(Track.Points) && startTrack.Timing.SequenceEqual(Track.Timing) && startTrack.Speed == Track.Speed) Track = startTrack;
         else history.Record(start);
     }
 
-    private EditSnapshot Current => new(Track, Selected);
+    private EditSnapshot Current => new(Scene, EditedTrackId, Selected);
 
     private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter)
     {
@@ -324,6 +379,7 @@ public sealed class SessionState
         {
             var result = change(Track);
             if (ReferenceEquals(result, Track)) return null;
+            if (result.Id != EditedTrackId) return "A change cannot replace the track.";
 
             _ = new TrackEvaluator(result);
             history.Record(Current);
@@ -338,11 +394,45 @@ public sealed class SessionState
         }
     }
 
+    /// <summary>Applies a scene change and the edited track it leaves, as one undo step. Returns why it was refused, or null.</summary>
+    private string? CommitScene(Func<Scene, (Scene Scene, Guid Edited)> change)
+    {
+        if (Mode != CameraMode.Editing) return "The scene can only change while editing.";
+        EndLiveEdit();
+
+        try
+        {
+            var (result, edited) = change(Scene);
+            if (ReferenceEquals(result, Scene) && edited == EditedTrackId) return null;
+
+            history.Record(Current);
+            if (edited != EditedTrackId) ClearForSwitch();
+            Scene = result;
+            EditedTrackId = edited;
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    /// <summary>Clears the point, key and leg selection and puts the scrub head at 0, as switching tracks does.</summary>
+    private void ClearForSwitch()
+    {
+        Selected = null;
+        SelectedKey = null;
+        SelectedLeg = null;
+        scrubTime = 0.0;
+    }
+
     private bool Restore(EditSnapshot? snapshot)
     {
         if (snapshot is not { } s) return false;
         var pointsBefore = Track.Points;
-        Track = s.Track;
+        if (s.Edited != EditedTrackId) ClearForSwitch();
+        Scene = s.Scene;
+        EditedTrackId = s.Edited;
         Selected = s.Selected;
         RefreshTimingSelection(pointsBefore);
         return true;
@@ -383,15 +473,16 @@ public sealed class SessionState
     private string? PreviewFromStart(Func<Track, TrackEvaluator, Track> change)
     {
         if (liveEditStart is not { } start) return "No live edit is in progress.";
-        if (!ReferenceEquals(evaluatedStart, start.Track))
+        var startTrack = SceneEditing.Get(start.Scene, start.Edited);
+        if (!ReferenceEquals(evaluatedStart, startTrack))
         {
-            liveStartEvaluator = new TrackEvaluator(start.Track);
-            evaluatedStart = start.Track;
+            liveStartEvaluator = new TrackEvaluator(startTrack);
+            evaluatedStart = startTrack;
         }
 
         try
         {
-            var result = change(start.Track, liveStartEvaluator!);
+            var result = change(startTrack, liveStartEvaluator!);
             _ = new TrackEvaluator(result);
             Track = result;
             return null;

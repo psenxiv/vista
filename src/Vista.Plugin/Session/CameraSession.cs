@@ -1,4 +1,5 @@
 using Vista.Core.Camera;
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Game;
@@ -19,8 +20,48 @@ internal sealed class CameraSession
 
     public CameraMode Mode => state.Mode;
 
-    /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
+    /// <summary>The edited track: Edit builds it and Play plays it. Changed only through the edit methods and undo.</summary>
     public Track Track => state.Track;
+
+    /// <summary>The tracks being edited, their order and which are hidden.</summary>
+    public Scene Scene => state.Scene;
+
+    /// <summary>The Id of the track the editor works on.</summary>
+    public Guid EditedTrackId => state.EditedTrackId;
+
+    /// <summary>Adds an empty track and edits it. Returns why it was refused, or null.</summary>
+    public string? AddTrack() => state.AddTrack();
+
+    /// <summary>Renames a track. Returns why it was refused, or null.</summary>
+    public string? RenameTrack(Guid id, string name) => state.RenameTrack(id, name);
+
+    /// <summary>Copies a track after itself and edits the copy. Returns why it was refused, or null.</summary>
+    public string? DuplicateTrack(Guid id) => state.DuplicateTrack(id);
+
+    /// <summary>Deletes a track. Returns why it was refused, or null.</summary>
+    public string? DeleteTrack(Guid id) => state.DeleteTrack(id);
+
+    /// <summary>Moves a track in the Hierarchy order. Returns why it was refused, or null.</summary>
+    public string? MoveTrack(int from, int to) => state.MoveTrack(from, to);
+
+    /// <summary>Hides or shows a track. Returns why it was refused, or null.</summary>
+    public string? SetTrackHidden(Guid id, bool hidden) => state.SetTrackHidden(id, hidden);
+
+    /// <summary>Edits a track and flies the editor camera to its first point. Returns why it was refused, or null.</summary>
+    public string? OpenTrack(Guid id)
+    {
+        var refusal = state.SwitchTrack(id);
+        if (refusal is null) JumpToPoint(0);
+        return refusal;
+    }
+
+    /// <summary>Edits a track and selects one of its points, leaving the camera where it is. Returns why it was refused, or null.</summary>
+    public string? SelectPoint(Guid track, int index)
+    {
+        var refusal = state.SwitchTrack(track);
+        if (refusal is null) state.Select(index);
+        return refusal;
+    }
 
     /// <summary>Read-only view of playback state. Check IsLive before IsPaused or IsFinished.</summary>
     public Director Director => state.Director;
