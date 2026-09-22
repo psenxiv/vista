@@ -75,6 +75,9 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Spacing);
+        using var selection = ImRaii.PushColor(ImGuiCol.Header, UiColours.AccentAt(0.45f))
+            .Push(ImGuiCol.HeaderHovered, UiColours.AccentAt(0.30f))
+            .Push(ImGuiCol.HeaderActive, UiColours.AccentAt(0.55f));
         var editing = session.Mode == CameraMode.Editing;
         DrawTopRow(editing);
 
@@ -224,7 +227,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndCombo();
     }
 
-    /// <summary>Aim and direction menus, the loop toggle, track Speed and Duration, + Add, and Clear track as a trash icon at the right end.</summary>
+    /// <summary>Aim and direction icons with their menus, the loop toggle, the Speed and Duration fields, the add button and its menu, and Clear track at the right end.</summary>
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;

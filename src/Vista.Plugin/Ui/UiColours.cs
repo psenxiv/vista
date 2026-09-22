@@ -14,6 +14,10 @@ internal static class UiColours
     /// <summary>LIVE and destructive hover.</summary>
     public const uint Red = 0xFF4050E8;
 
+    /// <summary>The accent with its alpha set to <paramref name="alpha"/>, for selection highlights.</summary>
+    public static uint AccentAt(float alpha)
+        => ImGui.ColorConvertFloat4ToU32(ImGui.ColorConvertU32ToFloat4(Accent) with { W = alpha });
+
     /// <summary>Off and greyed-out icons: the text colour at 40%.</summary>
     public static uint Dim() => Text(0.4f);
 
