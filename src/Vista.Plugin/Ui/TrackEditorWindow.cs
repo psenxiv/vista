@@ -27,7 +27,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     private const float SpeedWidth = 90f;
     private const float ModeWidth = 80f;
     private const float FieldWidth = 70f;
-    private const float CharacterWidth = 140f;
+    private const float MaxCharacterWidth = 220f;
+    private const string NotFound = " (Not found)";
     private const float SmallFieldWidth = 50f;
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
@@ -60,7 +61,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
     public override void PreDraw()
     {
-        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth(session.Track.Aim == AimMode.FollowTarget)) + CompartmentsWidth(), TopRowWidth());
+        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth(session.Track.Aim == AimMode.FollowTarget ? CharacterWidth(CharacterLabel()) : null)) + CompartmentsWidth(), TopRowWidth());
         SetMinimumWidth(width);
         Size = new Vector2(width, MinHeight);
     }
@@ -314,22 +315,38 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.SameLine(0f, 4f);
         }
 
-        var label = track.TargetName is not { } name ? "Choose a character" : lost ? $"{name} (Not found)" : name;
+        var label = CharacterLabel();
         bool pressed;
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red, lost))
-            pressed = ImGui.Button($"{label}##character", new Vector2(CharacterWidth, 0f));
+            pressed = ImGui.Button($"{label}##character", new Vector2(CharacterWidth(label), 0f));
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(lost ? IconButton.NotFoundTooltip : "Choose a character");
         if (pressed) ImGui.OpenPopup("character-menu");
         DrawCharacterMenu(track.TargetName);
     }
+
+    /// <summary>The character button's label, its name shortened with an ellipsis so the button fits the cap with " (Not found)" in full.</summary>
+    private string CharacterLabel()
+    {
+        var track = session.Track;
+        if (track.TargetName is not { } name) return "Choose a character";
+        var suffix = session.TargetLost(track) ? NotFound : "";
+        var room = MaxCharacterWidth - (ImGui.GetStyle().FramePadding.X * 2f) - ImGui.CalcTextSize(suffix).X;
+        if (ImGui.CalcTextSize(name).X <= room) return name + suffix;
+        var cut = name.Length;
+        while (cut > 0 && ImGui.CalcTextSize(name[..cut] + "…").X > room) cut--;
+        return name[..cut].TrimEnd() + "…" + suffix;
+    }
+
+    /// <summary>The character button's width: its label and frame padding.</summary>
+    private static float CharacterWidth(string label) => ImGui.CalcTextSize(label).X + (ImGui.GetStyle().FramePadding.X * 2f);
 
     /// <summary>The characters loaded nearby, nearest the camera first, each with its distance; picking one follows it.</summary>
     private void DrawCharacterMenu(string? chosen)
     {
         if (!ImGui.BeginPopup("character-menu")) return;
 
-        var camera = session.CameraPosition ?? Vector3.Zero;
-        var nearby = session.Characters.NearestTo(camera);
+        var origin = session.CameraPosition ?? session.PlayerPosition;
+        var nearby = session.Characters.NearestTo(origin ?? Vector3.Zero);
         if (nearby.Count == 0)
         {
             using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
@@ -340,7 +357,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         {
             var character = nearby[i];
             using var id = ImRaii.PushId($"character{i}");
-            if (ImGui.Selectable($"{character.Name}  ({Vector3.Distance(character.Position, camera):0.0} yalms)", character.Name == chosen))
+            var text = origin is { } from ? $"{character.Name}  ({Vector3.Distance(character.Position, from):0.0} yalms)" : character.Name;
+            if (ImGui.Selectable(text, character.Name == chosen))
                 Report(session.SetTarget(character.Name));
         }
 
@@ -500,15 +518,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The track row's full width: its items, the Follow Target items when <paramref name="following"/>, the gaps between them, and the window's and the editor's padding.</summary>
-    private static float TrackRowWidth(bool following)
+    /// <summary>The track row's full width: its items, the Follow Target items when <paramref name="character"/> is given, the gaps between them, and the window's and the editor's padding.</summary>
+    private static float TrackRowWidth(float? character)
     {
         var style = ImGui.GetStyle();
         var direction = DirectionIcons.Max(IconButton.Width);
         var items = IconButton.Width(FontAwesomeIcon.Crosshairs) + direction + IconButton.Width(FontAwesomeIcon.Repeat)
             + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
             + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);
-        var follow = following ? IconButton.WarningWidth() + 4f + CharacterWidth + (SmallFieldWidth * 2f) + (Spacing.X * 3f) : 0f;
+        var follow = character is { } width ? IconButton.WarningWidth() + 4f + width + (SmallFieldWidth * 2f) + (Spacing.X * 3f) : 0f;
         return items + follow + (Spacing.X * 8f) + (style.WindowPadding.X * 4f);
     }
 

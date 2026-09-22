@@ -163,6 +163,9 @@ internal sealed class CameraSession
     /// <summary>Where the camera is now, or null when it can't be read.</summary>
     public Vector3? CameraPosition => CameraAccess.ReadState()?.Position;
 
+    /// <summary>Where the local player stands, or null when there is none.</summary>
+    public Vector3? PlayerPosition => Plugin.ObjectTable.LocalPlayer?.Position;
+
     /// <summary>True while an Edit preview is playing.</summary>
     public bool Previewing => state.Previewing;
 
