@@ -17,8 +17,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     private const string PointPayload = "VISTA_POINT";
 
     private static readonly string[] ModeNames = ["View", "Edit", "Live"];
-    private static readonly string[] AimNames = ["Recorded aim", "Direction of travel", "Look At", "Watch Target"];
-    private static readonly AimMode[] AimModes = [AimMode.AimKeys, AimMode.PathTangent, AimMode.LookAt, AimMode.WatchTarget];
+    private static readonly string[] AimNames = ["Recorded aim", "Direction of travel", "Look At", "Watch Target", "Follow Target"];
+    private static readonly AimMode[] AimModes = [AimMode.AimKeys, AimMode.PathTangent, AimMode.LookAt, AimMode.WatchTarget, AimMode.FollowTarget];
     private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
     private static readonly PlaybackDirection[] Directions = [PlaybackDirection.Forward, PlaybackDirection.Reverse, PlaybackDirection.PingPong];
     private static readonly FontAwesomeIcon[] DirectionIcons = [FontAwesomeIcon.ArrowRight, FontAwesomeIcon.ArrowLeft, FontAwesomeIcon.ArrowsAltH];
@@ -34,6 +34,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private readonly PendingField fields;
     private readonly TimingWindow timing;
     private readonly WatchTargetWindow watchTarget;
+    private readonly FollowTargetWindow followTarget;
     private readonly HierarchyPanel hierarchy;
     private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
@@ -48,13 +49,14 @@ internal sealed unsafe class TrackEditorWindow : Window
     private float? loopX;
     private float? trashRight;
 
-    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, WatchTargetWindow watchTarget)
+    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, WatchTargetWindow watchTarget, FollowTargetWindow followTarget)
         : base("Vista###vista-track-editor")
     {
         this.session = session;
         this.fields = fields;
         this.timing = timing;
         this.watchTarget = watchTarget;
+        this.followTarget = followTarget;
         hierarchy = new HierarchyPanel(session);
         playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
@@ -306,18 +308,17 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The aim icon, coloured and captioned by the watched character under Watch Target, and its menu.</summary>
+    /// <summary>The aim icon, coloured and captioned by the character under Watch Target or Follow Target, and its menu.</summary>
     private void DrawAim()
     {
         var track = session.Track;
         var aim = Array.IndexOf(AimModes, track.Aim);
-        var (colour, tooltip) = track.Aim != AimMode.WatchTarget
-            ? ((uint?)null, $"Select aim ({AimNames[aim]})")
-            : track.TargetName is not { } name
-                ? (UiColours.Red, "Watch Target: choose a character")
-                : session.TargetLost(track)
-                    ? (UiColours.Red, $"{name} (Not found): using recorded aim")
-                    : (UiColours.Accent, $"Watch Target: {name}");
+        var (colour, tooltip) = track.Aim switch
+        {
+            AimMode.WatchTarget => TargetState(track, "Watch Target", "using recorded aim"),
+            AimMode.FollowTarget => TargetState(track, "Follow Target", "using the last position"),
+            _ => ((uint?)null, $"Select aim ({AimNames[aim]})"),
+        };
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour)) ImGui.OpenPopup("aim-menu");
         aimX = ImGui.GetItemRectMin().X;
         if (!ImGui.BeginPopup("aim-menu")) return;
@@ -326,10 +327,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         var width = AimNames.Max(n => ImGui.CalcTextSize(n).X) + ImGui.GetStyle().ItemSpacing.X + pencil;
         for (var i = 0; i < AimNames.Length; i++)
         {
-            if (AimModes[i] == AimMode.WatchTarget)
+            switch (AimModes[i])
             {
-                DrawWatchTargetEntry(i == aim, width, pencil);
-                continue;
+                case AimMode.WatchTarget:
+                    DrawTargetEntry(AimMode.WatchTarget, AimNames[i], i == aim, width, pencil, watchTarget.Open, null);
+                    continue;
+                case AimMode.FollowTarget:
+                    var refusal = track.Points.Count > 1 ? "Follow Target needs a track with one point" : null;
+                    DrawTargetEntry(AimMode.FollowTarget, AimNames[i], i == aim, width, pencil, followTarget.Open, refusal);
+                    continue;
             }
 
             if (!ImGui.Selectable(AimNames[i], i == aim) || i == aim) continue;
@@ -339,19 +345,41 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndPopup();
     }
 
-    /// <summary>The aim menu's Watch Target entry, which opens the dialog when no character is chosen, and its pencil, which always opens it.</summary>
-    private void DrawWatchTargetEntry(bool chosen, float width, float pencil)
+    /// <summary>The aim icon's colour and tooltip under a character mode: accent when found, red when lost or none is chosen.</summary>
+    private (uint? Colour, string Tooltip) TargetState(Track track, string mode, string lost)
     {
+        if (track.TargetName is not { } name) return (UiColours.Red, $"{mode}: choose a character");
+        return session.TargetLost(track) ? (UiColours.Red, $"{name} (Not found): {lost}") : (UiColours.Accent, $"{mode}: {name}");
+    }
+
+    /// <summary>A character mode's aim menu entry, which opens its dialog when the track switches into it, and on the current mode a pencil that reopens it; disabled with <paramref name="refusal"/> as its tooltip.</summary>
+    private void DrawTargetEntry(AimMode mode, string label, bool chosen, float width, float pencil, Action open, string? refusal)
+    {
+        ImGui.BeginDisabled(refusal is not null);
         var start = ImGui.GetCursorPosX();
-        var picked = ImGui.Selectable("Watch Target", chosen, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(width, 0f));
-        ImGui.SameLine(start + width - pencil);
-        bool edit;
-        using (ImRaii.PushStyle(ImGuiStyleVar.FramePadding, ImGui.GetStyle().FramePadding with { Y = 0f }))
-            edit = IconButton.Draw("edit-watch-target", FontAwesomeIcon.PencilAlt, "Edit Watch Target");
+        var picked = ImGui.Selectable(label, chosen, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(width, 0f));
+        if (refusal is not null && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(refusal);
+        var edit = false;
+        if (chosen)
+        {
+            ImGui.SameLine(start + width - pencil);
+            using (ImRaii.PushStyle(ImGuiStyleVar.FramePadding, ImGui.GetStyle().FramePadding with { Y = 0f }))
+                edit = IconButton.Draw($"edit-{mode}", FontAwesomeIcon.PencilAlt, $"Edit {label}");
+        }
+
+        ImGui.EndDisabled();
         if (!picked && !edit) return;
 
-        if (!chosen) Report(session.SetAim(AimMode.WatchTarget));
-        if (session.Track.Aim == AimMode.WatchTarget && (edit || session.Track.TargetName is null)) watchTarget.Open();
+        if (!chosen)
+        {
+            Report(session.SetAim(mode));
+            if (session.Track.Aim == mode) open();
+        }
+        else if (edit)
+        {
+            open();
+        }
+
         ImGui.CloseCurrentPopup();
     }
 

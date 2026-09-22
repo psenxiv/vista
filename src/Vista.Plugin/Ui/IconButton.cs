@@ -43,17 +43,20 @@ internal static class IconButton
     public static bool RowHovered(Vector2 min, Vector2 max)
         => ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows | ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) && ImGui.IsMouseHoveringRect(min, max, false);
 
-    /// <summary>The tooltip on every warning that a followed character can't be found.</summary>
+    /// <summary>The tooltip on a warning that a watched character can't be found.</summary>
     public const string NotFoundTooltip = "Not found nearby: using recorded aim";
 
-    /// <summary>A red warning icon saying the followed character can't be found, its tooltip shown even while disabled.</summary>
-    public static void TargetNotFound()
+    /// <summary>The tooltip on a warning that a followed character can't be found.</summary>
+    public const string FollowNotFoundTooltip = "Not found nearby: using the last position";
+
+    /// <summary>A red warning icon saying the character can't be found, its tooltip shown even while disabled.</summary>
+    public static void TargetNotFound(string tooltip)
     {
         ImGui.AlignTextToFramePadding();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
             ImGui.TextUnformatted(FontAwesomeIcon.ExclamationTriangle.ToIconString());
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(NotFoundTooltip);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
     }
 
     /// <summary>The warning icon's width.</summary>

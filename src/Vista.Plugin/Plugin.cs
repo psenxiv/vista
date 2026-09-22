@@ -42,6 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PointWindow pointWindow;
     private readonly TimingWindow timingWindow;
     private readonly WatchTargetWindow watchTargetWindow;
+    private readonly FollowTargetWindow followTargetWindow;
     private readonly PendingField fields;
     private readonly EditorKeys editorKeys = new();
     private readonly PointGizmo pointGizmo = new();
@@ -61,11 +62,13 @@ public sealed class Plugin : IDalamudPlugin
         pointWindow = new PointWindow(Session, pointGizmo);
         timingWindow = new TimingWindow(Session);
         watchTargetWindow = new WatchTargetWindow(Session, fields);
-        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, watchTargetWindow);
+        followTargetWindow = new FollowTargetWindow(Session, fields);
+        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, watchTargetWindow, followTargetWindow);
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
         windows.AddWindow(watchTargetWindow);
+        windows.AddWindow(followTargetWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;

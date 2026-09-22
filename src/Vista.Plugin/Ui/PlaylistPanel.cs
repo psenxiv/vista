@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Scenes;
+using Vista.Core.Tracks;
 using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -121,7 +122,7 @@ internal sealed unsafe class PlaylistPanel
         if (lost)
         {
             ImGui.SameLine();
-            IconButton.TargetNotFound();
+            IconButton.TargetNotFound(track.Aim == AimMode.FollowTarget ? IconButton.FollowNotFoundTooltip : IconButton.NotFoundTooltip);
         }
 
         ImGui.SameLine();

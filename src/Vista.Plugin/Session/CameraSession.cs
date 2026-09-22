@@ -99,6 +99,9 @@ internal sealed class CameraSession
     /// <summary>A scene track in the world.</summary>
     public Track WorldOf(Track local) => state.WorldOf(local);
 
+    /// <summary>A scene track as the editor shows it: a Follow track's point at its character where they stand now.</summary>
+    public Track Shown(Track local) => state.Shown(local);
+
     /// <summary>The aim point on the character a track in the world follows, or null unless one is found.</summary>
     public Vector3? CharacterAim(Track world) => state.CharacterAim(world);
 
@@ -320,7 +323,7 @@ internal sealed class CameraSession
         return state.Mode == CameraMode.Editing && placesFromCamera ? "Cannot read the camera." : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
     }
 
-    /// <summary>Names the character to follow by name and home world, or none. Returns why it was refused, or null.</summary>
+    /// <summary>Names the character to watch or follow by name and home world, or none. Returns why it was refused, or null.</summary>
     public string? SetTarget(string? name, string? world) => state.SetTarget(name, world);
 
     /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
@@ -328,6 +331,12 @@ internal sealed class CameraSession
 
     /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
     public string? SetSmoothing(float smoothing) => state.SetSmoothing(smoothing);
+
+    /// <summary>Sets whether a Follow track's offset turns with its character. Returns why it was refused, or null.</summary>
+    public string? SetFollowTurns(bool turns) => state.SetFollowTurns(turns);
+
+    /// <summary>Sets whether a Follow track's camera looks at its character. Returns why it was refused, or null.</summary>
+    public string? SetFollowLooks(bool looks) => state.SetFollowLooks(looks);
 
     /// <summary>During a live edit, drags a key towards a time. Returns why it was refused, or null.</summary>
     public string? PreviewKeyMove(int key, float time) => state.PreviewKeyMove(key, time);

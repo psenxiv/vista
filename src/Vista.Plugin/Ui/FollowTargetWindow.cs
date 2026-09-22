@@ -8,8 +8,8 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The edited track's Watch Target settings: the character to watch, its aim height and smoothing.</summary>
-internal sealed class WatchTargetWindow : Window
+/// <summary>The edited track's Follow Target settings: the character to follow, how the camera turns and aims, its aim height and smoothing.</summary>
+internal sealed class FollowTargetWindow : Window
 {
     private const float ListWidth = 260f;
     private const float FieldWidth = 70f;
@@ -20,8 +20,8 @@ internal sealed class WatchTargetWindow : Window
     private float? smoothingDrag;
     private Guid openedFor;
 
-    public WatchTargetWindow(CameraSession session, PendingField fields)
-        : base("Watch Target###vista-watch-target", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
+    public FollowTargetWindow(CameraSession session, PendingField fields)
+        : base("Follow Target###vista-follow-target", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.session = session;
         this.fields = fields;
@@ -35,11 +35,11 @@ internal sealed class WatchTargetWindow : Window
         IsOpen = true;
     }
 
-    /// <summary>Closes when editing ends, another track is edited, or the edited track leaves Watch Target.</summary>
+    /// <summary>Closes when editing ends, another track is edited, or the edited track leaves Follow Target.</summary>
     public override void PreOpenCheck()
     {
         if (!IsOpen) return;
-        if (session.Mode != CameraMode.Editing || session.EditedTrackId != openedFor || session.Track.Aim != AimMode.WatchTarget) IsOpen = false;
+        if (session.Mode != CameraMode.Editing || session.EditedTrackId != openedFor || session.Track.Aim != AimMode.FollowTarget) IsOpen = false;
     }
 
     /// <summary>Applies an unfinished aim height and drops an unfinished smoothing drag, since a closed window never reports either finishing.</summary>
@@ -58,6 +58,7 @@ internal sealed class WatchTargetWindow : Window
 
         ImGui.BeginDisabled(session.Mode != CameraMode.Editing);
         Report(CharacterPicker.Draw(session, ref search, ListWidth));
+        DrawToggles();
         DrawAimHeight();
         DrawSmoothing();
         ImGui.EndDisabled();
@@ -66,11 +67,20 @@ internal sealed class WatchTargetWindow : Window
         if (ImGui.Button("Done", new Vector2(ListWidth, 0f))) IsOpen = false;
     }
 
+    /// <summary>Whether the offset turns with the character, and whether the camera looks at them.</summary>
+    private void DrawToggles()
+    {
+        var turns = session.Track.FollowTurns;
+        if (ImGui.Checkbox("Turn with character", ref turns)) Report(session.SetFollowTurns(turns));
+        var looks = session.Track.FollowLooks;
+        if (ImGui.Checkbox("Look at character", ref looks)) Report(session.SetFollowLooks(looks));
+    }
+
     /// <summary>The aim height above the character's feet, as a labelled field.</summary>
     private void DrawAimHeight()
     {
         Label("Aim height");
-        fields.Draw("aim-height", session.Track.AimHeight, "%.1f", FieldWidth, v => Report(session.SetAimHeight(v)));
+        fields.Draw("follow-aim-height", session.Track.AimHeight, "%.1f", FieldWidth, v => Report(session.SetAimHeight(v)));
     }
 
     /// <summary>The smoothing slider; a drag is applied as one undo step when it lets go.</summary>

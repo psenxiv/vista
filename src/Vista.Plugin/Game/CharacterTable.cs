@@ -7,7 +7,7 @@ namespace Vista.Plugin.Game;
 /// <summary>Reads the players and NPCs loaded nearby from the object table.</summary>
 internal static class CharacterTable
 {
-    /// <summary>Every loaded player and NPC with a name, a player's home world, and where its feet are. Main thread only.</summary>
+    /// <summary>Every loaded player and NPC with a name, a player's home world, where its feet are and which way it faces. Main thread only.</summary>
     public static IReadOnlyList<LoadedCharacter> Read()
     {
         var found = new List<LoadedCharacter>();
@@ -16,7 +16,7 @@ internal static class CharacterTable
             if (obj.ObjectKind is not (ObjectKind.Pc or ObjectKind.BattleNpc or ObjectKind.EventNpc)) continue;
             var name = obj.Name.TextValue;
             if (string.IsNullOrEmpty(name)) continue;
-            found.Add(new LoadedCharacter(name, WorldOf(obj as IPlayerCharacter), obj.Position));
+            found.Add(new LoadedCharacter(name, WorldOf(obj as IPlayerCharacter), obj.Position, obj.Rotation + MathF.PI));
         }
 
         return found;

@@ -51,9 +51,9 @@ internal sealed class EditorLayer
         foreach (var other in scene.Tracks)
         {
             if (other.Id == edited || scene.Hidden.Contains(other.Id)) continue;
-            var otherWorld = session.WorldOf(other);
+            var otherWorld = session.Shown(other);
             AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false));
-            if (other.AnchorPlaced)
+            if (other is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
             if (other is { Aim: AimMode.LookAt, LookAtPlaced: true })
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawLookAt(view, otherWorld.LookAt, FirstPosition(otherWorld), edited: false, selected: false), MarkerKind.LookAt));
@@ -66,7 +66,7 @@ internal sealed class EditorLayer
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
-        if (editedLocal.AnchorPlaced)
+        if (editedLocal is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
             markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
         if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
             markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
