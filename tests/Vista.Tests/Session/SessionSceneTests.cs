@@ -137,6 +137,26 @@ public class SessionSceneTests
     }
 
     [Fact]
+    public void DeletingTheEditedTrackShowsAHiddenNeighbourTakingItsPlace()
+    {
+        var state = Editing();
+        var first = First(state);
+        state.AddTrack();
+        var second = state.EditedTrackId;
+        state.SwitchTrack(first);
+        state.SetTrackHidden(second, true);
+
+        Assert.Null(state.DeleteTrack(first));
+
+        Assert.Equal(second, state.EditedTrackId);
+        Assert.DoesNotContain(second, state.Scene.Hidden);
+
+        Assert.True(state.Undo());
+        Assert.Equal(first, state.EditedTrackId);
+        Assert.Contains(second, state.Scene.Hidden);
+    }
+
+    [Fact]
     public void DeletingAnotherTrackKeepsTheEditedTrackAndSelection()
     {
         var state = Editing();

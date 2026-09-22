@@ -274,11 +274,12 @@ public sealed class SessionState
     /// <summary>Copies track <paramref name="id"/> after itself and edits the copy. Returns why it was refused, or null.</summary>
     public string? DuplicateTrack(Guid id) => CommitScene(scene => SceneEditing.Duplicate(scene, id));
 
-    /// <summary>Deletes track <paramref name="id"/>; deleting the edited track edits the one taking its place. Returns why it was refused, or null.</summary>
+    /// <summary>Deletes track <paramref name="id"/>; deleting the edited track edits the one taking its place, shown if it was hidden. Returns why it was refused, or null.</summary>
     public string? DeleteTrack(Guid id)
         => CommitScene(scene =>
         {
             var (result, next) = SceneEditing.Delete(scene, id);
+            if (id == EditedTrackId && result.Hidden.Contains(next)) result = SceneEditing.SetHidden(result, next, false);
             return (result, id == EditedTrackId ? next : EditedTrackId);
         });
 
