@@ -20,6 +20,7 @@ internal sealed unsafe class AnchorGizmo
     private Anchor? dragStart;
     private AnchorKind? dragKind;
     private Guid dragTrack;
+    private bool dragRotate;
     private bool waitForRelease;
 
     public AnchorGizmo(PointGizmo points) => this.points = points;
@@ -27,7 +28,7 @@ internal sealed unsafe class AnchorGizmo
     /// <summary>True when the cursor was over the gizmo, or dragging it, at the last draw.</summary>
     public bool Hot { get; private set; }
 
-    /// <summary>Abandons a drag in progress, ending its live edit, for leaving editing mode.</summary>
+    /// <summary>Ends a drag in progress, keeping what it moved, for leaving editing mode.</summary>
     public void Cancel(CameraSession session)
     {
         if (dragStart is not null) session.EndLiveEdit();
@@ -60,7 +61,7 @@ internal sealed unsafe class AnchorGizmo
 
         var shown = dragStart ?? anchor;
         if (dragStart is null) matrix = PoseMatrix.From(shown.Position, shown.Yaw, 0f, 0f);
-        var rotate = points.Mode == GizmoMode.Rotate;
+        var rotate = dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate;
         ImGuizmo.SetID(rotate ? YawId : MoveId);
         Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate ? ImGuizmoMode.Local : ImGuizmoMode.World);
         var usingNow = ImGuizmo.IsUsing();
@@ -79,6 +80,7 @@ internal sealed unsafe class AnchorGizmo
                 dragStart = anchor;
                 dragKind = kind;
                 dragTrack = session.EditedTrackId;
+                dragRotate = rotate;
                 session.BeginLiveEdit();
             }
 
@@ -86,7 +88,14 @@ internal sealed unsafe class AnchorGizmo
                 ? dragStart.Value with { Yaw = TrackAim.FromDirection(-new Vector3(matrix.M31, matrix.M32, matrix.M33)).Yaw }
                 : dragStart.Value with { Position = matrix.Translation };
             var carry = !PhysicalKeys.IsDown(VirtualKey.MENU);
-            if (session.PreviewAnchor(edited, carry) is { } refusal) Plugin.Log.Warning("[editor] anchor drag refused: {Refusal}", refusal);
+            if (session.PreviewAnchor(edited, carry) is { } refusal)
+            {
+                Plugin.Log.Warning("[editor] anchor drag abandoned: {Refusal}", refusal);
+                dragStart = null;
+                waitForRelease = true;
+                Reset();
+            }
+
             return;
         }
 
