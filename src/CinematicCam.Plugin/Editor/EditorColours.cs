@@ -13,4 +13,7 @@ internal static class EditorColours
     public const uint MarkerRing = 0xFFFFFFFF;
     public const uint Selected = 0xFF00A0FF;
     public const uint MarkerText = 0xFFFFFFFF;
+    public const uint GraphBackground = 0x60101010;
+    public const uint GraphGrid = 0x40FFFFFF;
+    public const uint Playhead = 0xFF4060FF;
 }

@@ -39,6 +39,7 @@ public sealed class Plugin : IDalamudPlugin
     private static bool blockEscape;
     private readonly TrackEditorWindow trackEditor;
     private readonly PointWindow pointWindow;
+    private readonly TimingWindow timingWindow;
     private readonly PendingField fields;
     private readonly EditorKeys editorKeys = new();
     private readonly PointGizmo pointGizmo = new();
@@ -55,10 +56,12 @@ public sealed class Plugin : IDalamudPlugin
         Session = new CameraSession(Movement);
         editorLayer = new EditorLayer(Session, pointGizmo);
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
-        trackEditor = new TrackEditorWindow(Session, fields);
-        windows.AddWindow(trackEditor);
         pointWindow = new PointWindow(Session, pointGizmo);
+        timingWindow = new TimingWindow(Session);
+        trackEditor = new TrackEditorWindow(Session, fields, timingWindow);
+        windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
+        windows.AddWindow(timingWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;

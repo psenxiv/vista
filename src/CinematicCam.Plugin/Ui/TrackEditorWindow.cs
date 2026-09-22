@@ -25,13 +25,16 @@ internal sealed unsafe class TrackEditorWindow : Window
 
     private readonly CameraSession session;
     private readonly PendingField fields;
+    private readonly TimingWindow timing;
     private CameraMode lastMode;
+    private bool scrubbing;
 
-    public TrackEditorWindow(CameraSession session, PendingField fields)
+    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
         : base("Cinematic Cam###ccam-track-editor")
     {
         this.session = session;
         this.fields = fields;
+        this.timing = timing;
         RespectCloseHotkey = false;
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(420f, 260f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
     }
@@ -40,7 +43,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     public override void OnClose()
     {
         fields.Commit();
-        if (session.Scrubbing) session.EndScrub();
+        EndScrub();
     }
 
     public override void Draw()
@@ -84,6 +87,9 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.BeginDisabled(!session.CanRedo);
         if (IconButton.Draw("redo", FontAwesomeIcon.Redo, "Redo")) { fields.Commit(); session.Redo(); }
         ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        if (IconButton.Draw("timing", FontAwesomeIcon.ChartLine, "Timing")) timing.Toggle();
     }
 
     /// <summary>Play/Pause and Restart, left of the scrub bar on the same line.</summary>
@@ -266,10 +272,10 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.BeginDisabled(session.Mode == CameraMode.Off || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - speedWidth);
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
-        if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); }
+        if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); scrubbing = session.Scrubbing; }
         if (moved || ImGui.IsItemActivated()) session.ScrubTo(head);
         // A window that stops drawing mid-drag never reports the slider deactivating, so any idle frame ends the scrub too.
-        if (ImGui.IsItemDeactivated() || (session.Scrubbing && !ImGui.IsItemActive())) session.EndScrub();
+        if (ImGui.IsItemDeactivated() || !ImGui.IsItemActive()) EndScrub();
         ImGui.EndDisabled();
 
         if (!editing) return;
@@ -290,6 +296,14 @@ internal sealed unsafe class TrackEditorWindow : Window
         var payload = ImGui.AcceptDragDropPayload(PointPayload);
         if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index) Report(session.MovePoint(from, index));
         ImGui.EndDragDropTarget();
+    }
+
+    /// <summary>Ends a scrub the scrub bar started, leaving the Timing window's alone.</summary>
+    private void EndScrub()
+    {
+        if (!scrubbing) return;
+        scrubbing = false;
+        session.EndScrub();
     }
 
     private static void SetPayload(int index) => ImGui.SetDragDropPayload(PointPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
