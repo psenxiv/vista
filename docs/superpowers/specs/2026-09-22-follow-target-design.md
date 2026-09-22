@@ -21,8 +21,9 @@ objects that aren't characters, and blending into or out of a follow.
 
 ## Follow Target
 
-**The aim menu** reads: Recorded aim · Direction of travel · Look At · Watch Target ✎ ·
-Follow Target ✎.
+**The aim menu** reads: Recorded aim · Direction of travel · Look At · Watch Target ·
+Follow Target. The entry for the track's current mode, when it is Watch Target or Follow Target,
+shows a pencil that reopens its dialog; the other entries show none.
 
 **One point**
 
