@@ -11,7 +11,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The main editor window: modes, track settings, the point list and the scrub bar.</summary>
+/// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list and the scrub bar.</summary>
 internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "VISTA_POINT";
@@ -32,8 +32,11 @@ internal sealed unsafe class TrackEditorWindow : Window
     private readonly CameraSession session;
     private readonly PendingField fields;
     private readonly TimingWindow timing;
+    private readonly HierarchyPanel hierarchy;
     private CameraMode lastMode;
     private bool scrubbing;
+    private bool showHierarchy = true;
+    private float pendingWidth;
 
     public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
         : base("Vista###vista-track-editor")
@@ -41,12 +44,16 @@ internal sealed unsafe class TrackEditorWindow : Window
         this.session = session;
         this.fields = fields;
         this.timing = timing;
+        hierarchy = new HierarchyPanel(session);
         RespectCloseHotkey = false;
         SetMinimumWidth(MinWidth);
     }
 
-    /// <summary>Widens the minimum size to fit the track row, so Clear track stays on screen.</summary>
-    public override void PreDraw() => SetMinimumWidth(MathF.Max(MinWidth, TrackRowWidth()));
+    /// <summary>Widens the minimum size to fit the track row and any open compartment, so Clear track stays on screen.</summary>
+    public override void PreDraw() => SetMinimumWidth(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth());
+
+    /// <summary>The width the open compartments beside the track editor take, with their gap.</summary>
+    private float CompartmentsWidth() => showHierarchy ? HierarchyPanel.Width + Spacing.X : 0f;
 
     /// <summary>Applies an unfinished field edit and ends a scrub, since a closed window never reports either finishing.</summary>
     public override void OnClose()
@@ -67,18 +74,45 @@ internal sealed unsafe class TrackEditorWindow : Window
         var editing = session.Mode == CameraMode.Editing;
         DrawTopRow(editing);
 
-        ImGui.BeginDisabled(!editing);
-        DrawTrackRow();
-        ImGui.EndDisabled();
-        ImGui.Separator();
+        if (showHierarchy)
+        {
+            if (ImGui.BeginChild("hierarchy", new Vector2(HierarchyPanel.Width, 0f), true)) hierarchy.Draw(editing);
+            ImGui.EndChild();
+            ImGui.SameLine();
+        }
 
-        DrawPoints(editing);
-        ImGui.Separator();
-        DrawScrubRow(editing);
+        if (ImGui.BeginChild("track-editor", Vector2.Zero))
+        {
+            ImGui.BeginDisabled(!editing);
+            DrawTrackRow();
+            ImGui.EndDisabled();
+            ImGui.Separator();
+
+            DrawPoints(editing);
+            ImGui.Separator();
+            DrawScrubRow(editing);
+        }
+
+        ImGui.EndChild();
+
+        // Showing or hiding a compartment grows or shrinks the window by its width, so the track editor keeps its size.
+        if (pendingWidth != 0f)
+        {
+            ImGui.SetWindowSize(ImGui.GetWindowSize() + new Vector2(pendingWidth, 0f));
+            pendingWidth = 0f;
+        }
     }
 
     private void DrawTopRow(bool editing)
     {
+        var colour = showHierarchy ? (uint?)null : ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
+        if (IconButton.Draw("hierarchy", FontAwesomeIcon.Sitemap, showHierarchy ? "Hide hierarchy" : "Show hierarchy", colour))
+        {
+            showHierarchy = !showHierarchy;
+            pendingWidth += showHierarchy ? HierarchyPanel.Width + Spacing.X : -(HierarchyPanel.Width + Spacing.X);
+        }
+
+        ImGui.SameLine();
         DrawModeCombo();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
