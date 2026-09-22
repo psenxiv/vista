@@ -285,6 +285,7 @@ Editing mode:
 | Ctrl + `` ` `` | overwrite selected |
 | Ctrl + Alt + `` ` `` | nothing (AltGr sends it on some layouts) |
 | R | gizmo Move ⇄ Rotate, only with a point selected |
+| Delete / Backspace | delete the selected point, only with a point selected (added 2026-09-22) |
 | Ctrl + Z / Ctrl + Y | undo / redo |
 | Click marker / empty space | select / deselect |
 | Double-click row | jump to point |
@@ -295,7 +296,7 @@ Live mode is unchanged: Escape brings the UI back; the scrub bar seeks.
   in a number field undoes the text, not the track.
 - In editing mode the keys and chords above are hidden from the game, so C does
   not open the Character window and whatever R, backtick, Z and Y are bound to does
-  not fire. Movement keys stay blocked as today. Ctrl alone is no longer blocked.
+  not fire. Delete and Backspace are hidden only while a point is selected. Movement keys stay blocked as today. Ctrl alone is no longer blocked.
 - The left mouse button is read from its physical state too: Dalamud passes a
   press to ImGui only while ImGui wants the mouse, and clears ImGui's buttons
   otherwise (`Win32InputHandler.cs` 209–215, 292–301), so ImGui never sees a

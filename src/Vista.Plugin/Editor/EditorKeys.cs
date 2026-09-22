@@ -8,7 +8,7 @@ namespace Vista.Plugin.Editor;
 /// <summary>The editing-mode key bindings, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys
 {
-    private static readonly VirtualKey[] Watched = [VirtualKey.C, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R];
+    private static readonly VirtualKey[] Watched = [VirtualKey.C, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R, VirtualKey.DELETE, VirtualKey.BACK];
 
     private readonly bool[] held = new bool[Watched.Length];
 
@@ -28,7 +28,8 @@ internal sealed class EditorKeys
             held[i] = down;
             if (!down) continue;
 
-            var ours = key is VirtualKey.C or VirtualKey.OEM_3 or VirtualKey.R || ctrl;
+            var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.Selected is not null;
+            var ours = key is VirtualKey.C or VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes;
             if (ours) PhysicalKeys.Hide(key);
             if (pressed && ours) Act(session, gizmo, key, ctrl, alt);
         }
@@ -45,6 +46,7 @@ internal sealed class EditorKeys
             VirtualKey.Z => session.Undo() ? null : "Nothing to undo.",
             VirtualKey.Y => session.Redo() ? null : "Nothing to redo.",
             VirtualKey.R when session.Selected is not null => Toggle(gizmo),
+            VirtualKey.DELETE or VirtualKey.BACK => session.DeleteSelected(),
             _ => null,
         };
 
