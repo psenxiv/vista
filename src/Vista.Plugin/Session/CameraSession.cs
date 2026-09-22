@@ -21,7 +21,7 @@ internal sealed class CameraSession
 
     public CameraMode Mode => state.Mode;
 
-    /// <summary>The edited track: Edit builds it and Play plays it. Changed only through the edit methods and undo.</summary>
+    /// <summary>The edited track: Edit builds it and a preview plays it. Changed only through the edit methods and undo.</summary>
     public Track Track => state.Track;
 
     /// <summary>The tracks being edited, their order and which are hidden.</summary>
@@ -230,7 +230,7 @@ internal sealed class CameraSession
     /// <summary>Selects a leg while editing, leaving the point selection alone.</summary>
     public void SelectLeg(int? leg) => state.SelectLeg(leg);
 
-    /// <summary>The evaluator for the current track.</summary>
+    /// <summary>The evaluator for the edited track.</summary>
     public TrackEvaluator Evaluator => state.Evaluator;
 
     /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>

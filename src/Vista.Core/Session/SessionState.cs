@@ -47,7 +47,7 @@ public sealed class SessionState
         set => Scene = SceneEditing.Replace(Scene, value);
     }
 
-    /// <summary>The edited track in the world: Edit builds it and Play plays it. Changed only through the edit methods and undo.</summary>
+    /// <summary>The edited track in the world: Edit builds it and a preview plays it. Changed only through the edit methods and undo.</summary>
     public Track Track => WorldOf(Local);
 
     /// <summary>A scene track in the world; the same instance until the track or the scene anchor changes.</summary>
@@ -736,7 +736,7 @@ public sealed class SessionState
         return selected;
     }
 
-    /// <summary>The evaluator for the current track, rebuilt when the track changes.</summary>
+    /// <summary>The evaluator for the edited track, rebuilt when the track changes.</summary>
     public TrackEvaluator Evaluator
     {
         get
