@@ -1,4 +1,5 @@
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Vista.Core.Tracks;
 
 namespace Vista.Core.Session;
@@ -210,6 +211,21 @@ public sealed class SessionState
         EndLiveEdit();
         return Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
     }
+
+    /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>
+    public string? SetTrackSpeed(float speed) => ApplyTiming(t => TrackEditing.SetSpeed(t, EditLimits.Speed(speed)));
+
+    /// <summary>Sets the track's speed so the shot takes about <paramref name="seconds"/>. Returns why it was refused, or null.</summary>
+    public string? SetTrackDuration(float seconds) => ApplyTiming(t => TrackEditing.SetDuration(t, EditLimits.ShotDuration(seconds)));
+
+    /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>. Returns why it was refused, or null.</summary>
+    public string? SetLegDuration(int leg, float seconds) => ApplyTiming(t => TrackEditing.SetLegDuration(t, leg, EditLimits.Leg(seconds)));
+
+    /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>. Returns why it was refused, or null.</summary>
+    public string? SetLegSpeed(int leg, float speed) => ApplyTiming(t => TrackEditing.SetLegSpeed(t, leg, EditLimits.Speed(speed)));
+
+    /// <summary>Unpins leg <paramref name="leg"/> so it follows the track speed again. Returns why it was refused, or null.</summary>
+    public string? ResetLeg(int leg) => ApplyTiming(t => TrackEditing.ResetLeg(t, leg));
 
     /// <summary>Sets leg <paramref name="leg"/>'s easing. Returns why it was refused, or null.</summary>
     public string? SetEasing(int leg, Easing easing) => ApplyTiming(t => LegEasing.Set(t, leg, easing));

@@ -121,6 +121,21 @@ internal sealed class CameraSession
     /// <summary>The evaluator for the current track.</summary>
     public TrackEvaluator Evaluator => state.Evaluator;
 
+    /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>
+    public string? SetTrackSpeed(float speed) => state.SetTrackSpeed(speed);
+
+    /// <summary>Sets the track's speed so the shot takes about the given seconds. Returns why it was refused, or null.</summary>
+    public string? SetTrackDuration(float seconds) => state.SetTrackDuration(seconds);
+
+    /// <summary>Pins a leg at the speed that takes the given seconds. Returns why it was refused, or null.</summary>
+    public string? SetLegDuration(int leg, float seconds) => state.SetLegDuration(leg, seconds);
+
+    /// <summary>Pins a leg at a speed. Returns why it was refused, or null.</summary>
+    public string? SetLegSpeed(int leg, float speed) => state.SetLegSpeed(leg, speed);
+
+    /// <summary>Unpins a leg so it follows the track speed again. Returns why it was refused, or null.</summary>
+    public string? ResetLeg(int leg) => state.ResetLeg(leg);
+
     /// <summary>Sets a leg's easing. Returns why it was refused, or null.</summary>
     public string? SetEasing(int leg, Easing easing) => state.SetEasing(leg, easing);
 

@@ -203,4 +203,66 @@ public class SessionTimingTests
         Assert.NotNull(state.SetKeyMode(1, TangentMode.Flat));
         Assert.NotNull(state.RemoveHold(1));
     }
+
+    [Fact]
+    public void SetTrackSpeedChangesDurationAndOneUndoRestoresIt()
+    {
+        var state = Editing();
+        Assert.Null(state.SetTrackSpeed(5f));
+        Assert.Equal(4.0, state.Duration, 3);
+        Assert.True(state.Undo());
+        Assert.Equal(10.0, state.Duration, 3);
+    }
+
+    [Fact]
+    public void SetTrackDurationSetsTheTrackSpeed()
+    {
+        var state = Editing();
+        Assert.Null(state.SetTrackDuration(20f));
+        Assert.Equal(1f, state.Track.Speed, 3);
+    }
+
+    [Fact]
+    public void SetLegDurationPinsTheLegAndResetLegUnpinsIt()
+    {
+        var state = Editing();
+        Assert.Null(state.SetLegDuration(1, 2f));
+        Assert.True(TrackEditing.IsPinned(state.Track, 1));
+        Assert.Equal(2f, state.Evaluator.LegSeconds(1), 3);
+
+        Assert.Null(state.ResetLeg(1));
+        Assert.False(TrackEditing.IsPinned(state.Track, 1));
+        Assert.Equal(5f, state.Evaluator.LegSeconds(1), 3);
+    }
+
+    [Fact]
+    public void SetLegSpeedSetsTheLegsSeconds()
+    {
+        var state = Editing();
+        Assert.Null(state.SetLegSpeed(2, 10f));
+        Assert.Equal(1f, state.Evaluator.LegSeconds(2), 3);
+    }
+
+    [Fact]
+    public void SpeedDurationAndLegEditsOnlyWhileEditing()
+    {
+        var state = Editing();
+        state.Play();
+        var before = state.Track;
+        Assert.NotNull(state.SetTrackSpeed(5f));
+        Assert.NotNull(state.SetTrackDuration(20f));
+        Assert.NotNull(state.SetLegDuration(1, 2f));
+        Assert.NotNull(state.SetLegSpeed(2, 10f));
+        Assert.NotNull(state.ResetLeg(1));
+        Assert.Same(before, state.Track);
+    }
+
+    [Fact]
+    public void SetLegDurationKeepsTheSelectedLeg()
+    {
+        var state = Editing();
+        state.SelectLeg(2);
+        Assert.Null(state.SetLegDuration(2, 3f));
+        Assert.Equal(2, state.SelectedLeg);
+    }
 }
