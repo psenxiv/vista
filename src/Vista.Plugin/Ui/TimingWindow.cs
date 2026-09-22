@@ -248,9 +248,10 @@ internal sealed class TimingWindow : Window
         list.PathStroke(colour, ImDrawFlags.None, CurveThickness);
     }
 
-    /// <summary>A vertical line at the scrub head, across the plot and the strip.</summary>
+    /// <summary>A vertical line at the scrub head, across the plot and the strip; none while Live plays another track.</summary>
     private void DrawPlayhead(ImDrawListPtr list, TimingGraph graph, float stripBottom)
     {
+        if (session.Mode == CameraMode.Live && session.PlayingEntry?.TrackId != session.EditedTrackId) return;
         var x = graph.ToScreen((float)session.ScrubHead, 0f).X;
         list.AddLine(new Vector2(x, graph.Origin.Y), new Vector2(x, stripBottom), EditorColours.Playhead);
     }
