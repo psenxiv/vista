@@ -124,9 +124,6 @@ internal sealed class CameraSession
     /// <summary>Edits a track and selects its anchor, leaving the camera where it is. Returns why it was refused, or null.</summary>
     public string? SelectTrackAnchor(Guid id) => state.SelectTrackAnchor(id);
 
-    /// <summary>Moves the selected anchor. Returns why it was refused, or null.</summary>
-    public string? MoveAnchor(Anchor world, bool carry) => state.MoveAnchor(world, carry);
-
     /// <summary>During a live edit, moves the selected anchor. Returns why it was refused, or null.</summary>
     public string? PreviewAnchor(Anchor world, bool carry) => state.PreviewAnchor(world, carry);
 
@@ -135,9 +132,6 @@ internal sealed class CameraSession
 
     /// <summary>The selected Look At point in the world, or null.</summary>
     public Vector3? SelectedLookAtInWorld => state.SelectedLookAtInWorld;
-
-    /// <summary>Moves the selected Look At point. Returns why it was refused, or null.</summary>
-    public string? MoveLookAt(Vector3 world) => state.MoveLookAt(world);
 
     /// <summary>During a live edit, moves the selected Look At point. Returns why it was refused, or null.</summary>
     public string? PreviewLookAt(Vector3 world) => state.PreviewLookAt(world);
@@ -334,9 +328,6 @@ internal sealed class CameraSession
 
     /// <summary>Names the character to watch or follow by name and home world, or none. Returns why it was refused, or null.</summary>
     public string? SetTarget(string? name, string? world) => state.SetTarget(name, world);
-
-    /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
-    public string? SetAimHeight(float yalms) => state.SetAimHeight(yalms);
 
     /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
     public string? SetSmoothing(float smoothing) => state.SetSmoothing(smoothing);

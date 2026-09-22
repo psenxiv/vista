@@ -450,9 +450,6 @@ public sealed class SessionState
     /// <summary>The edited track's only point where it is shown, or null unless it has exactly one.</summary>
     private ControlPoint? ShownPoint => Local.Points.Count == 1 ? Track.Points[0] : null;
 
-    /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
-    public string? SetAimHeight(float yalms) => ApplySetting(t => TrackEditing.SetAimHeight(t, yalms));
-
     /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
     public string? SetSmoothing(float smoothing) => ApplySetting(t => TrackEditing.SetSmoothing(t, smoothing));
 
@@ -683,14 +680,6 @@ public sealed class SessionState
         SelectedAnchor = kind;
     }
 
-    /// <summary>Moves the selected anchor in the world, carrying what hangs off it or alone. Returns why it was refused, or null.</summary>
-    public string? MoveAnchor(Anchor world, bool carry)
-    {
-        if (SelectedAnchor is not { } kind || kind == AnchorKind.LookAt) return "Select an anchor first.";
-        if (UnplacedRefusal(kind) is { } unplaced) return unplaced;
-        return CommitScene(scene => (Moved(scene, kind, world, carry), EditedTrackId));
-    }
-
     /// <summary>During a live edit, moves the selected anchor from where it was when the edit began. Returns why it was refused, or null.</summary>
     public string? PreviewAnchor(Anchor world, bool carry)
     {
@@ -705,14 +694,6 @@ public sealed class SessionState
         => kind == AnchorKind.Scene
             ? SceneGeometry.MoveSceneAnchor(scene, world, carry)
             : SceneGeometry.MoveTrackAnchor(scene, EditedTrackId, world, carry);
-
-    /// <summary>Moves the selected Look At point to <paramref name="world"/> as one undo step. Returns why it was refused, or null.</summary>
-    public string? MoveLookAt(Vector3 world)
-    {
-        if (SelectedAnchor != AnchorKind.LookAt) return "Select the Look At point first.";
-        var local = SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world);
-        return ApplySetting(t => TrackEditing.SetLookAt(t, local));
-    }
 
     /// <summary>During a live edit, moves the selected Look At point to <paramref name="world"/>. Returns why it was refused, or null.</summary>
     public string? PreviewLookAt(Vector3 world)
