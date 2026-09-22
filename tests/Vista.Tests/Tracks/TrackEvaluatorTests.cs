@@ -12,14 +12,17 @@ public class TrackEvaluatorTests
     private static ControlPoint Point(float x, float y, float z, float yaw = 0f, float pitch = 0f, float fov = 1f, float roll = 0f)
         => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
 
-    private static TimingKey Key(float time, float position, TangentMode mode = TangentMode.Auto)
-        => new(time, position, mode, mode, 0f, 0f);
+    private static Track Build(IEnumerable<ControlPoint> points, AimMode aim = AimMode.AimKeys)
+    {
+        var track = TrackEditing.Empty(aim);
+        foreach (var point in points) track = TrackEditing.Append(track, point);
+        return track;
+    }
 
     [Fact]
     public void EvaluateReturnsNullForATrackWithNoPoints()
     {
-        var track = new Track(Array.Empty<ControlPoint>(), Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
-        var evaluator = new TrackEvaluator(track);
+        var evaluator = new TrackEvaluator(TrackEditing.Empty());
 
         Assert.Equal(0.0, evaluator.Duration);
         Assert.Null(evaluator.Evaluate(0.0));
@@ -30,8 +33,7 @@ public class TrackEvaluatorTests
     public void EvaluateOfASinglePointTrackSitsAtThatPointRegardlessOfTime()
     {
         var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f, fov: 1.2f);
-        var track = new Track(new[] { point }, Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
-        var evaluator = new TrackEvaluator(track);
+        var evaluator = new TrackEvaluator(Build(new[] { point }));
         var expectedLookAt = FreeCamMotion.LookAtFrom(point.Position, point.Yaw, point.Pitch);
 
         foreach (var time in new[] { -1.0, 0.0, 5.0 })
@@ -45,18 +47,6 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void NoTimingKeysWithMultiplePointsSitsAtTheFirstPoint()
-    {
-        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) };
-        var track = new Track(points, Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
-        var evaluator = new TrackEvaluator(track);
-
-        var state = evaluator.Evaluate(3.0);
-        Assert.NotNull(state);
-        Assert.Equal(points[0].Position, state!.Value.Position);
-    }
-
-    [Fact]
     public void AimKeysSplinesYawTheShortWayAcrossPlusMinus180()
     {
         // Point 0 at 170deg, point 1 at -170deg: the short way is through 180deg, not 0.
@@ -65,7 +55,7 @@ public class TrackEvaluatorTests
             Point(0f, 0f, 0f, yaw: 170f * Deg),
             Point(10f, 0f, 0f, yaw: -170f * Deg),
         };
-        var track = new Track(points, new[] { Key(0f, 0f), Key(1f, 1f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var track = TrackEditing.SetLegDuration(Build(points), 1, 1f);
         var evaluator = new TrackEvaluator(track);
 
         var state = evaluator.Evaluate(0.5);
@@ -84,7 +74,7 @@ public class TrackEvaluatorTests
     public void PathTangentAimFollowsTheDirectionOfTravelOnAStraightLeg()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) };
-        var track = new Track(points, new[] { Key(0f, 0f), Key(4f, 4f) }, AimMode.PathTangent, PlaybackMode.Once);
+        var track = TrackEditing.SetSpeed(Build(points, AimMode.PathTangent), 5f);
         var evaluator = new TrackEvaluator(track);
 
         var state = evaluator.Evaluate(2.0);
@@ -111,7 +101,7 @@ public class TrackEvaluatorTests
             Point(30f, 0f, 0f, fov: 1f),
             Point(40f, 0f, 0f, fov: 1f),
         };
-        var track = new Track(points, new[] { Key(0f, 0f), Key(4f, 4f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var track = TrackEditing.SetSpeed(Build(points), 10f);
         var evaluator = new TrackEvaluator(track);
 
         // Position 3.335 lands in segment 3 at fraction 0.335, where the raw spline
@@ -126,7 +116,7 @@ public class TrackEvaluatorTests
     {
         // Collinear points, so arc length is chord length: a 10 m leg then a 30 m leg, 5 s each.
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(40f, 0f, 0f) };
-        var track = new Track(points, new[] { Key(0f, 0f), Key(5f, 1f), Key(10f, 2f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var track = TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(Build(points), 1, 5f), 2, 5f);
         var evaluator = new TrackEvaluator(track);
 
         const double eps = 1e-2;
@@ -142,7 +132,7 @@ public class TrackEvaluatorTests
     public void AStraightTimingCurveGivesConstantWorldSpeedAcrossUnequalSegments()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(40f, 0f, 0f) };
-        var track = new Track(points, new[] { Key(0f, 0f), Key(10f, 2f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var track = TrackEditing.SetSpeed(Build(points), 4f);
         var evaluator = new TrackEvaluator(track);
 
         for (var i = 0; i <= 10; i++)
@@ -158,7 +148,7 @@ public class TrackEvaluatorTests
             Point(10f, 0f, 0f),
             Point(10f, 0f, 0f, yaw: 90f * Deg),
         };
-        var track = new Track(points, new[] { Key(0f, 0f), Key(5f, 1f), Key(10f, 2f) }, AimMode.AimKeys, PlaybackMode.Once);
+        var track = TrackEditing.SetLegDuration(Build(points), 2, 5f);
         var evaluator = new TrackEvaluator(track);
 
         var state = evaluator.Evaluate(7.5)!.Value;
@@ -172,11 +162,7 @@ public class TrackEvaluatorTests
     [InlineData(AimMode.PathTangent)]
     public void RollBlendsBetweenPointsInEitherAimMode(AimMode aim)
     {
-        var track = new Track(
-            new[] { Point(0f, 0f, 0f, roll: 0f), Point(10f, 0f, 0f, roll: 90f * Deg) },
-            new[] { Key(0f, 0f), Key(10f, 1f) },
-            aim,
-            PlaybackMode.Once);
+        var track = TrackEditing.SetLegDuration(Build(new[] { Point(0f, 0f, 0f, roll: 0f), Point(10f, 0f, 0f, roll: 90f * Deg) }, aim), 1, 10f);
         var evaluator = new TrackEvaluator(track);
 
         Assert.Equal(0f, evaluator.Evaluate(0.0)!.Value.Roll, 4);
@@ -189,8 +175,7 @@ public class TrackEvaluatorTests
     {
         var rolls = new[] { 0f, 90f, 180f, -90f, 0f };
         var points = rolls.Select((r, i) => Point(i * 10f, 0f, 0f, roll: r * Deg)).ToArray();
-        var keys = rolls.Select((_, i) => Key(i * 5f, i)).ToArray();
-        var evaluator = new TrackEvaluator(new Track(points, keys, AimMode.AimKeys, PlaybackMode.Once));
+        var evaluator = new TrackEvaluator(Build(points));
 
         var previous = float.NegativeInfinity;
         for (var t = 0.0; t <= 20.0; t += 0.25)
@@ -206,7 +191,7 @@ public class TrackEvaluatorTests
     [Fact]
     public void ASinglePointTrackKeepsItsRoll()
     {
-        var track = new Track(new[] { Point(1f, 2f, 3f, roll: 0.3f) }, Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
+        var track = Build(new[] { Point(1f, 2f, 3f, roll: 0.3f) });
 
         Assert.Equal(0.3f, new TrackEvaluator(track).Evaluate(0.0)!.Value.Roll);
     }
@@ -215,13 +200,9 @@ public class TrackEvaluatorTests
     private static TrackEvaluator StraightLinear()
     {
         var points = new[] { 0f, 10f, 20f }.Select(x => new ControlPoint(new Vector3(x, 0f, 0f), 0f, 0f, 1f)).ToArray();
-        var keys = new[]
-        {
-            new TimingKey(0f, 0f, TangentMode.Linear, TangentMode.Linear),
-            new TimingKey(5f, 1f, TangentMode.Linear, TangentMode.Linear),
-            new TimingKey(10f, 2f, TangentMode.Linear, TangentMode.Linear),
-        };
-        return new TrackEvaluator(new Track(points, keys, AimMode.AimKeys, PlaybackMode.Once));
+        var track = Build(points);
+        for (var key = 0; key < 3; key++) track = TimingEditing.SetKeyMode(track, key, TangentMode.Linear);
+        return new TrackEvaluator(track);
     }
 
     [Fact]
@@ -255,7 +236,7 @@ public class TrackEvaluatorTests
     public void AOnePointTrackHasNoDistance()
     {
         var point = new ControlPoint(Vector3.Zero, 0f, 0f, 1f);
-        var evaluator = new TrackEvaluator(new Track(new[] { point }, new[] { new TimingKey(0f, 0f) }, AimMode.AimKeys, PlaybackMode.Once));
+        var evaluator = new TrackEvaluator(Build(new[] { point }));
         Assert.Equal(0f, evaluator.TotalDistance);
         Assert.Equal(0f, evaluator.DistanceAt(1.0));
         Assert.Equal(0f, evaluator.PositionOf(3f));

@@ -28,8 +28,8 @@ public sealed class SessionState
     /// <summary>The track Edit builds and Play plays. Changed only through the edit methods and undo.</summary>
     public Track Track { get; private set; } = TrackEditing.Empty();
 
-    /// <summary>The track's length in seconds: its last timing key, or 0 with none.</summary>
-    public double Duration => Track.Timing.Count == 0 ? 0.0 : Track.Timing[^1].Time;
+    /// <summary>The track's length in seconds: its last compiled key, or 0 with no points.</summary>
+    public double Duration => Evaluator.Duration;
 
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>
     public bool LocksInput => Mode != CameraMode.Off;
@@ -136,8 +136,8 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing) return;
         SelectedLeg = null;
-        SelectedKey = key is { } k && k >= 0 && k < Track.Timing.Count ? k : null;
-        if (SelectedKey is { } s && TrackEditing.RoleOf(Track, s) == KeyRole.Point) Selected = (int)Track.Timing[s].Position;
+        SelectedKey = key is { } k && k >= 0 && k < TrackEditing.KeyCount(Track) ? k : null;
+        if (SelectedKey is { } s && TrackEditing.RoleOf(Track, s) == KeyRole.Point) Selected = TrackEditing.PointOf(Track, s);
     }
 
     /// <summary>Selects a leg while editing, leaving the point selection alone.</summary>
@@ -214,35 +214,13 @@ public sealed class SessionState
     /// <summary>Sets leg <paramref name="leg"/>'s easing. Returns why it was refused, or null.</summary>
     public string? SetEasing(int leg, Easing easing) => ApplyTiming(t => LegEasing.Set(t, leg, easing));
 
-    /// <summary>Sets both sides of key <paramref name="key"/> to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
+    /// <summary>Sets key <paramref name="key"/>'s sides to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
     public string? SetKeyMode(int key, TangentMode mode) => ApplyTiming(t => TimingEditing.SetKeyMode(t, key, mode));
 
-    /// <summary>Adds an inner key on the curve at <paramref name="time"/> and selects it. Returns why it was refused, or null.</summary>
-    public string? AddInnerKey(float time)
+    /// <summary>Removes the hold a hold end closes, clearing the timing selection. Returns why it was refused, or null.</summary>
+    public string? RemoveHold(int key)
     {
-        var added = -1;
-        var refusal = ApplyTiming(t =>
-        {
-            var evaluator = Evaluator;
-            var position = evaluator.PositionOf(evaluator.DistanceAt(time));
-            var slope = evaluator.ToStoredSlope(position, KeySide.Out, evaluator.SlopeAt(time));
-            var (result, key) = TimingEditing.AddInnerKey(t, time, position, slope);
-            added = key;
-            return result;
-        });
-        if (refusal is null && added >= 0)
-        {
-            SelectedLeg = null;
-            SelectedKey = added;
-        }
-
-        return refusal;
-    }
-
-    /// <summary>Deletes an inner key or a hold end's hold, clearing the timing selection. Returns why it was refused, or null.</summary>
-    public string? DeleteKey(int key)
-    {
-        var refusal = ApplyTiming(t => TimingEditing.DeleteKey(t, key));
+        var refusal = ApplyTiming(t => TimingEditing.RemoveHold(t, key));
         if (refusal is null) SelectedKey = null;
         return refusal;
     }
@@ -279,13 +257,13 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>During a live edit, moves key <paramref name="key"/> towards a time and, for an inner key, a distance, from the track as the edit began.</summary>
-    public string? PreviewKeyMove(int key, float time, float distance)
-        => PreviewFromStart((start, evaluator) => TimingEditing.MoveKey(start, key, time, evaluator.PositionOf(distance)));
+    /// <summary>During a live edit, drags key <paramref name="key"/> towards <paramref name="time"/> from the track as the edit began.</summary>
+    public string? PreviewKeyMove(int key, float time)
+        => PreviewFromStart((start, evaluator) => TimingEditing.MoveKey(start, evaluator, key, time));
 
     /// <summary>During a live edit, sets a handle to a slope in distance per second, both sides unless the key is broken.</summary>
     public string? PreviewHandle(int key, KeySide side, float distancePerSecond)
-        => PreviewFromStart((start, evaluator) => Collinear(start, evaluator, key, distancePerSecond, start.Timing[key].Broken ? side : null));
+        => PreviewFromStart((start, evaluator) => Collinear(start, evaluator, key, distancePerSecond, start.Timing[TrackEditing.PointOf(start, key)].Broken ? side : null));
 
     /// <summary>Ends a live edit, recording it as one undo step if the track changed.</summary>
     public void EndLiveEdit()
@@ -295,7 +273,7 @@ public sealed class SessionState
         if (ReferenceEquals(start.Track, Track)) return;
 
         // Previews rebuild the lists, so compare values: a drag back to the start is no step.
-        if (start.Track.Points.SequenceEqual(Track.Points) && start.Track.Timing.SequenceEqual(Track.Timing)) Track = start.Track;
+        if (start.Track.Points.SequenceEqual(Track.Points) && start.Track.Timing.SequenceEqual(Track.Timing) && start.Track.Speed == Track.Speed) Track = start.Track;
         else history.Record(start);
     }
 
@@ -314,7 +292,7 @@ public sealed class SessionState
     {
         var refusal = Commit(change, _ => Selected);
         if (refusal is not null) return refusal;
-        if (SelectedKey is { } key && key >= Track.Timing.Count) SelectedKey = null;
+        if (SelectedKey is { } key && key >= TrackEditing.KeyCount(Track)) SelectedKey = null;
         if (SelectedLeg is { } leg && leg >= Track.Points.Count) SelectedLeg = null;
         return null;
     }
@@ -360,7 +338,7 @@ public sealed class SessionState
             SelectedKey = TrackEditing.PointKey(Track, point);
             SelectedLeg = null;
         }
-        else if (SelectedKey is { } key && (key >= Track.Timing.Count || TrackEditing.RoleOf(Track, key) == KeyRole.Point))
+        else if (SelectedKey is { } key && (key >= TrackEditing.KeyCount(Track) || TrackEditing.RoleOf(Track, key) == KeyRole.Point))
         {
             SelectedKey = null;
         }
@@ -370,14 +348,14 @@ public sealed class SessionState
     private void RefreshTimingSelection(IReadOnlyList<ControlPoint> pointsBefore)
     {
         if (!ReferenceEquals(pointsBefore, Track.Points) && !pointsBefore.SequenceEqual(Track.Points)) SelectedLeg = null;
-        if (SelectedKey is { } key && (Selected is null || key >= Track.Timing.Count || TrackEditing.RoleOf(Track, key) != KeyRole.Point)) SelectedKey = null;
+        if (SelectedKey is { } key && (Selected is null || key >= TrackEditing.KeyCount(Track) || TrackEditing.RoleOf(Track, key) != KeyRole.Point)) SelectedKey = null;
         if (Selected is not null && SelectedLeg is null) SelectedKey = TrackEditing.PointKey(Track, Selected.Value);
     }
 
     /// <summary>Sets Manual slopes from one graph slope on the handled sides: <paramref name="only"/> alone, or both when null.</summary>
     private static Track Collinear(Track track, TrackEvaluator evaluator, int key, float distancePerSecond, KeySide? only)
     {
-        var position = track.Timing[key].Position;
+        var position = evaluator.Keys[key].Position;
         float? Side(KeySide side) => (only is null || only == side) && TimingEditing.HasHandle(track, key, side)
             ? evaluator.ToStoredSlope(position, side, distancePerSecond)
             : null;

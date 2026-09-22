@@ -22,7 +22,8 @@ public static class LegEasing
     /// <summary>The preset leg <paramref name="leg"/>'s bounding sides match, or Custom.</summary>
     public static Easing Read(Track track, int leg)
     {
-        var sides = (track.Timing[TrackEditing.LegStartKey(track, leg)].OutMode, track.Timing[TrackEditing.LegEndKey(track, leg)].InMode);
+        TrackEditing.ValidateLegIndex(track, leg);
+        var sides = (track.Timing[leg - 1].OutMode, track.Timing[leg].InMode);
         foreach (var preset in Presets)
         {
             if (Modes(preset) == sides) return preset;
@@ -31,17 +32,15 @@ public static class LegEasing
         return Easing.Custom;
     }
 
-    /// <summary>Sets leg <paramref name="leg"/>'s bounding sides to <paramref name="easing"/>, leaving times and inner keys alone.</summary>
+    /// <summary>Sets leg <paramref name="leg"/>'s bounding sides to <paramref name="easing"/>, leaving its time alone.</summary>
     public static Track Set(Track track, int leg, Easing easing)
     {
         var (outMode, inMode) = Modes(easing);
         if (Read(track, leg) == easing) return track;
 
-        var start = TrackEditing.LegStartKey(track, leg);
-        var end = TrackEditing.LegEndKey(track, leg);
         var timing = track.Timing.ToList();
-        timing[start] = timing[start] with { OutMode = outMode, OutTangent = 0f };
-        timing[end] = timing[end] with { InMode = inMode, InTangent = 0f };
+        timing[leg - 1] = timing[leg - 1] with { OutMode = outMode, OutTangent = 0f };
+        timing[leg] = timing[leg] with { InMode = inMode, InTangent = 0f };
         return track with { Timing = timing };
     }
 }

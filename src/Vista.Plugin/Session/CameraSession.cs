@@ -127,11 +127,8 @@ internal sealed class CameraSession
     /// <summary>Sets both sides of a key to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
     public string? SetKeyMode(int key, TangentMode mode) => state.SetKeyMode(key, mode);
 
-    /// <summary>Adds an inner key on the curve at <paramref name="time"/> and selects it. Returns why it was refused, or null.</summary>
-    public string? AddInnerKey(float time) => state.AddInnerKey(time);
-
-    /// <summary>Deletes an inner key or a hold end's hold. Returns why it was refused, or null.</summary>
-    public string? DeleteKey(int key) => state.DeleteKey(key);
+    /// <summary>Removes the hold a hold end closes. Returns why it was refused, or null.</summary>
+    public string? RemoveHold(int key) => state.RemoveHold(key);
 
     /// <summary>Lets a key's handles move separately. Returns why it was refused, or null.</summary>
     public string? BreakHandles(int key) => state.BreakHandles(key);
@@ -139,8 +136,8 @@ internal sealed class CameraSession
     /// <summary>Joins a key's handles at the <paramref name="from"/> side's slope. Returns why it was refused, or null.</summary>
     public string? UnifyHandles(int key, KeySide from) => state.UnifyHandles(key, from);
 
-    /// <summary>During a live edit, moves a key towards a time and, for an inner key, a distance. Returns why it was refused, or null.</summary>
-    public string? PreviewKeyMove(int key, float time, float distance) => state.PreviewKeyMove(key, time, distance);
+    /// <summary>During a live edit, drags a key towards a time. Returns why it was refused, or null.</summary>
+    public string? PreviewKeyMove(int key, float time) => state.PreviewKeyMove(key, time);
 
     /// <summary>During a live edit, sets a handle's slope in distance per second. Returns why it was refused, or null.</summary>
     public string? PreviewHandle(int key, KeySide side, float distancePerSecond) => state.PreviewHandle(key, side, distancePerSecond);
@@ -175,7 +172,7 @@ internal sealed class CameraSession
     public void JumpToPoint(int index)
     {
         if (state.Mode != CameraMode.Editing || index < 0 || index >= state.Track.Points.Count) return;
-        state.ScrubTo(TrackEditing.PointSeconds(state.Track, index));
+        state.ScrubTo(state.Evaluator.PointSeconds(index));
         if (state.FrameAt(state.ScrubHead) is { } frame) FlyFrom(frame);
     }
 

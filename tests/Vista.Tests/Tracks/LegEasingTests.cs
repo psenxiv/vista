@@ -10,7 +10,7 @@ public class LegEasingTests
     private static ControlPoint Point(float x, float y, float z)
         => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
-    // Points at 0,10,20 with default legs (5s each): keys at times 0, 5, 10.
+    // Points at 0,10,20 at the default 2 yalms per second: keys at times 0, 5, 10.
     private static Track Build3PointTrack()
     {
         var track = TrackEditing.Empty();
@@ -55,12 +55,20 @@ public class LegEasingTests
     }
 
     [Fact]
+    public void SettingEasingZeroesTheSidesTangents()
+    {
+        var track = TimingEditing.SetHandles(TimingEditing.SetHandles(Build3PointTrack(), 0, null, 0.3f), 1, 0.2f, null);
+        track = LegEasing.Set(track, 1, Easing.Linear);
+        Assert.Equal((0f, 0f), (track.Timing[0].OutTangent, track.Timing[1].InTangent));
+    }
+
+    [Fact]
     public void CustomCannotBeSet() => Assert.Throws<ArgumentOutOfRangeException>(() => LegEasing.Set(Build3PointTrack(), 1, Easing.Custom));
 
     [Fact]
     public void EasingNeverChangesTimes()
     {
         var track = LegEasing.Set(Build3PointTrack(), 1, Easing.EaseInOut);
-        Assert.Equal(new[] { 0f, 5f, 10f }, track.Timing.Select(k => k.Time));
+        Assert.Equal(new[] { 0f, 5f, 10f }, new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)));
     }
 }

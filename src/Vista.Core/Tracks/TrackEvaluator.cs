@@ -14,6 +14,7 @@ public sealed class TrackEvaluator
     private readonly ArcLengthTable _table;
     private readonly float[] _lengths;
     private readonly float[] _distances;
+    private readonly IReadOnlyList<TimingKey> _keys;
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
@@ -22,13 +23,16 @@ public sealed class TrackEvaluator
     private readonly float _fovMin;
     private readonly float _fovMax;
 
-    /// <summary>Total shot length: the timing curve's last key, 0 with no keys.</summary>
+    /// <summary>Total shot length: the compiled last key's time, 0 with no points.</summary>
     public double Duration => _curve.Duration;
+
+    /// <summary>The track's compiled timing keys, positions in control-point units.</summary>
+    public IReadOnlyList<TimingKey> Keys => _keys;
 
     /// <summary>The path's length as timing measures it, each segment at least <see cref="MinTimingLength"/>.</summary>
     public float TotalDistance => _distances[^1];
 
-    /// <summary>Builds the spline, arc-length table, distance timing curve and unwrapped yaw once for <paramref name="track"/>.</summary>
+    /// <summary>Builds the spline, arc-length table, compiled keys, distance timing curve and unwrapped yaw once for <paramref name="track"/>.</summary>
     public TrackEvaluator(Track track)
     {
         _track = track;
@@ -42,13 +46,40 @@ public sealed class TrackEvaluator
             _distances[i + 1] = _distances[i] + _lengths[i];
         }
 
-        _curve = new TimingCurve(track.Timing.Select(ToDistance).ToArray());
+        var legLengths = new float[track.Points.Count];
+        for (var leg = 1; leg < legLengths.Length; leg++) legLengths[leg] = _lengths[leg - 1];
+        _keys = TimingCompiler.Compile(track, legLengths);
+        _curve = new TimingCurve(_keys.Select(ToDistance).ToArray());
         _yaws = TrackAim.UnwrapAngles(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
         _rolls = TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray());
         _fovs = track.Points.Select(p => p.Fov).ToArray();
         _fovMin = _fovs.Length == 0 ? 0f : _fovs.Min();
         _fovMax = _fovs.Length == 0 ? 0f : _fovs.Max();
+    }
+
+    /// <summary>Leg <paramref name="leg"/>'s length as timing measures it.</summary>
+    public float LegLength(int leg)
+    {
+        TrackEditing.ValidateLegIndex(_track, leg);
+        return _lengths[leg - 1];
+    }
+
+    /// <summary>The time leg <paramref name="leg"/> takes, from its start key to its end key.</summary>
+    public float LegSeconds(int leg) => _keys[TrackEditing.LegEndKey(_track, leg)].Time - _keys[TrackEditing.LegStartKey(_track, leg)].Time;
+
+    /// <summary>The time point <paramref name="point"/> is reached.</summary>
+    public float PointSeconds(int point) => _keys[TrackEditing.PointKey(_track, point)].Time;
+
+    /// <summary>The leg whose time span holds <paramref name="time"/>, or null in a hold or outside the shot.</summary>
+    public int? LegAt(float time)
+    {
+        for (var leg = 1; leg < _track.Points.Count; leg++)
+        {
+            if (time >= _keys[TrackEditing.LegStartKey(_track, leg)].Time && time <= _keys[TrackEditing.LegEndKey(_track, leg)].Time) return leg;
+        }
+
+        return null;
     }
 
     /// <summary>The camera's state at <paramref name="time"/>, or null for a track with no points.</summary>

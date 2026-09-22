@@ -71,7 +71,7 @@ internal sealed class Overlay
             evaluatedTrack = track;
         }
 
-        return evaluator!.Evaluate(TrackEditing.PointSeconds(track, index)) is { } frame
+        return evaluator!.Evaluate(evaluator.PointSeconds(index)) is { } frame
             ? (frame.LookAt - frame.Position, frame.Roll, point.Fov)
             : (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
     }

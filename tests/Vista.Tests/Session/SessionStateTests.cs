@@ -240,8 +240,8 @@ public class SessionStateTests
     public void ChangeTrackAppliesWhileEditing()
     {
         var state = EditingWithTrack();
-        Assert.Null(state.ChangeTrack(t => TrackEditing.SetLeg(t, 1, 8f)));
-        Assert.Equal(8f, TrackEditing.LegSeconds(state.Track, 1));
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 1, 8f)));
+        Assert.Equal(8f, state.Evaluator.LegSeconds(1), 3);
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public class SessionStateTests
         var state = EditingWithTrack();
         var before = state.Track;
 
-        Assert.Equal("leg seconds must be > 0", state.ChangeTrack(t => TrackEditing.SetLeg(t, 1, 0f)));
+        Assert.Equal("leg index must be 1..1 for a 2-point track", state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 1f)));
         Assert.Same(before, state.Track);
     }
 
@@ -259,13 +259,7 @@ public class SessionStateTests
     {
         var state = EditingWithTrack();
         var before = state.Track;
-        var backwards = new[]
-        {
-            new TimingKey(5f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-            new TimingKey(0f, 1f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-        };
-
-        Assert.Equal("timing keys must have strictly increasing times", state.ChangeTrack(t => t with { Timing = backwards }));
+        Assert.Equal("every point needs one timing entry", state.ChangeTrack(t => t with { Timing = [] }));
         Assert.Same(before, state.Track);
     }
 }

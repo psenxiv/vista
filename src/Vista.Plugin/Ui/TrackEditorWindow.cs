@@ -242,8 +242,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
         else
         {
-            fields.Draw($"leg{index}", TrackEditing.LegSeconds(track, index), "%.1f", 70f,
-                v => Report(session.ChangeTrack(t => TrackEditing.SetLeg(t, index, EditLimits.Leg(v)))));
+            fields.Draw($"leg{index}", session.Evaluator.LegSeconds(index), "%.1f", 70f,
+                v => Report(session.ChangeTrack(t => TrackEditing.SetLegDuration(t, index, EditLimits.Leg(v)))));
         }
 
         ImGui.TableNextColumn();

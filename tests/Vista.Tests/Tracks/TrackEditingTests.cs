@@ -10,7 +10,7 @@ public class TrackEditingTests
     private static ControlPoint Point(float x, float y, float z)
         => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
-    // Points at 0,10,20 with default legs (5s each): keys at times 0, 5, 10.
+    // Points at 0,10,20 at the default 2 yalms per second: keys at times 0, 5, 10.
     private static Track Build3PointTrack()
     {
         var track = TrackEditing.Empty();
@@ -20,6 +20,12 @@ public class TrackEditingTests
         return track;
     }
 
+    private static IReadOnlyList<TimingKey> Keys(Track track) => new TrackEvaluator(track).Keys;
+
+    private static float LegSeconds(Track track, int leg) => new TrackEvaluator(track).LegSeconds(leg);
+
+    private static float Total(Track track) => (float)new TrackEvaluator(track).Duration;
+
     [Fact]
     public void EmptyHasNoPointsNoKeysAndPlaysOnce()
     {
@@ -27,6 +33,8 @@ public class TrackEditingTests
 
         Assert.Empty(track.Points);
         Assert.Empty(track.Timing);
+        Assert.Empty(Keys(track));
+        Assert.Equal(TrackEditing.DefaultSpeed, track.Speed);
         Assert.Equal(PlaybackMode.Once, track.Playback);
         Assert.Equal(AimMode.AimKeys, track.Aim);
     }
@@ -42,24 +50,28 @@ public class TrackEditingTests
     public void AppendFirstPointGetsKeyAtTimeZero()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(), Point(1f, 2f, 3f));
+        var keys = Keys(track);
 
         Assert.Single(track.Points);
         Assert.Single(track.Timing);
-        Assert.Equal(0f, track.Timing[0].Time);
-        Assert.Equal(0f, track.Timing[0].Position);
-        Assert.Equal(TangentMode.Auto, track.Timing[0].InMode);
+        Assert.Single(keys);
+        Assert.Equal(0f, keys[0].Time);
+        Assert.Equal(0f, keys[0].Position);
+        Assert.Equal(TangentMode.Auto, keys[0].InMode);
     }
 
     [Fact]
-    public void AppendLaterPointGetsKeyOneDefaultLegAfterThePreviousLastKey()
+    public void AppendLaterPointFollowsTheTrackSpeed()
     {
         var track = TrackEditing.Empty();
         track = TrackEditing.Append(track, Point(0f, 0f, 0f));
         track = TrackEditing.Append(track, Point(10f, 0f, 0f));
+        var keys = Keys(track);
 
-        Assert.Equal(2, track.Timing.Count);
-        Assert.Equal(TrackEditing.DefaultLegSeconds, track.Timing[1].Time);
-        Assert.Equal(1f, track.Timing[1].Position);
+        Assert.Equal(2, keys.Count);
+        Assert.Equal(5f, keys[1].Time, 3);
+        Assert.Equal(1f, keys[1].Position);
+        Assert.False(TrackEditing.IsPinned(track, 1));
     }
 
     [Fact]
@@ -69,11 +81,12 @@ public class TrackEditingTests
         track = TrackEditing.SetHold(track, 2, 4f); // point 2's second key lands at 14
 
         track = TrackEditing.Append(track, Point(30f, 0f, 0f));
+        var keys = Keys(track);
 
         Assert.Equal(4, track.Points.Count);
-        Assert.Equal(5, track.Timing.Count);
-        Assert.Equal(3f, track.Timing[^1].Position);
-        Assert.Equal(14f + TrackEditing.DefaultLegSeconds, track.Timing[^1].Time, 5);
+        Assert.Equal(5, keys.Count);
+        Assert.Equal(3f, keys[^1].Position);
+        Assert.Equal(19f, keys[^1].Time, 3);
     }
 
     [Fact]
@@ -84,13 +97,13 @@ public class TrackEditingTests
         track = TrackEditing.Append(track, Point(10f, 0f, 0f));
         track = TrackEditing.SetHold(track, 1, 2f);
 
-        var keysBefore = track.Timing.ToArray();
+        var keysBefore = Keys(track).ToArray();
         var evaluatorBefore = new TrackEvaluator(track);
         var positionsBefore = keysBefore.Select(k => evaluatorBefore.Evaluate(k.Time)!.Value.Position).ToArray();
 
         track = TrackEditing.Append(track, Point(20f, 0f, 0f));
 
-        Assert.Equal(keysBefore, track.Timing.Take(keysBefore.Length));
+        Assert.Equal(keysBefore, Keys(track).Take(keysBefore.Length));
 
         var evaluatorAfter = new TrackEvaluator(track);
         for (var i = 0; i < keysBefore.Length; i++)
@@ -101,57 +114,58 @@ public class TrackEditingTests
     public void LegSecondsReadsTheCurrentGapBetweenPoints()
     {
         var track = Build3PointTrack();
-        Assert.Equal(5f, TrackEditing.LegSeconds(track, 1));
-        Assert.Equal(5f, TrackEditing.LegSeconds(track, 2));
+        Assert.Equal(5f, LegSeconds(track, 1), 3);
+        Assert.Equal(5f, LegSeconds(track, 2), 3);
     }
 
     [Fact]
-    public void SetLegShiftsLaterKeysByTheDifference()
+    public void SetLegDurationShiftsLaterKeysByTheDifference()
     {
         var track = Build3PointTrack(); // times 0, 5, 10
-        track = TrackEditing.SetLeg(track, 1, 8f);
+        track = TrackEditing.SetLegDuration(track, 1, 8f);
+        var keys = Keys(track);
 
-        Assert.Equal(8f, track.Timing[1].Time, 5);
-        Assert.Equal(13f, track.Timing[2].Time, 5);
-        Assert.Equal(5f, TrackEditing.LegSeconds(track, 2), 5);
+        Assert.Equal(8f, keys[1].Time, 3);
+        Assert.Equal(13f, keys[2].Time, 3);
+        Assert.Equal(5f, LegSeconds(track, 2), 3);
     }
 
     [Fact]
-    public void SetLegRejectsLegZero()
+    public void SetLegDurationRejectsLegZero()
     {
         var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 0, 5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 0, 5f));
     }
 
     [Fact]
-    public void SetLegRejectsAnIndexAtOrAboveThePointCount()
+    public void SetLegDurationRejectsAnIndexAtOrAboveThePointCount()
     {
         var track = Build3PointTrack(); // 3 points; valid legs are 1..2
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 3, 5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 3, 5f));
     }
 
     [Fact]
     public void RejectionMessagesAreOnlyThePlainMessage()
     {
         var track = Build3PointTrack();
-        Assert.Equal("leg seconds must be > 0", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, 0f)).Message);
+        Assert.Equal("leg index must be 1..2 for a 3-point track", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 3, 1f)).Message);
         Assert.Equal("hold index must be 0..2 for a 3-point track", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 3, 1f)).Message);
     }
 
     [Fact]
-    public void SetLegRejectsNonPositiveSeconds()
+    public void SetLegDurationClampsNonPositiveSecondsToTheShortestLeg()
     {
         var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, 0f));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, -1f));
+        Assert.Equal(TrackEditing.MinLegSeconds, LegSeconds(TrackEditing.SetLegDuration(track, 1, 0f), 1), 3);
+        Assert.Equal(TrackEditing.MinLegSeconds, LegSeconds(TrackEditing.SetLegDuration(track, 1, -1f), 1), 3);
     }
 
     [Fact]
-    public void SetLegRejectsNonFiniteSeconds()
+    public void SetLegDurationIgnoresNaNAndClampsInfinity()
     {
         var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, float.NaN));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLeg(track, 1, float.PositiveInfinity));
+        Assert.Same(track, TrackEditing.SetLegDuration(track, 1, float.NaN));
+        Assert.Equal(TrackEditing.MaxSeconds, LegSeconds(TrackEditing.SetLegDuration(track, 1, float.PositiveInfinity), 1), 1);
     }
 
     [Fact]
@@ -167,10 +181,10 @@ public class TrackEditingTests
         var track = Build3PointTrack(); // times 0, 5, 10
         track = TrackEditing.SetHold(track, 1, 3f);
 
-        Assert.Equal(4, track.Timing.Count);
+        Assert.Equal(4, Keys(track).Count);
         Assert.Equal(3f, TrackEditing.HoldSeconds(track, 1), 5);
-        Assert.Equal(13f, track.Timing[^1].Time, 5);
-        Assert.Equal(5f, TrackEditing.LegSeconds(track, 2), 5);
+        Assert.Equal(13f, Keys(track)[^1].Time, 3);
+        Assert.Equal(5f, LegSeconds(track, 2), 3);
     }
 
     [Fact]
@@ -180,9 +194,9 @@ public class TrackEditingTests
         track = TrackEditing.SetHold(track, 1, 3f);
         track = TrackEditing.SetHold(track, 1, 7f);
 
-        Assert.Equal(4, track.Timing.Count);
+        Assert.Equal(4, Keys(track).Count);
         Assert.Equal(7f, TrackEditing.HoldSeconds(track, 1), 5);
-        Assert.Equal(5f, TrackEditing.LegSeconds(track, 2), 5);
+        Assert.Equal(5f, LegSeconds(track, 2), 3);
     }
 
     [Fact]
@@ -192,24 +206,24 @@ public class TrackEditingTests
         track = TrackEditing.SetHold(track, 1, 3f);
         track = TrackEditing.SetHold(track, 1, 0f);
 
-        Assert.Equal(3, track.Timing.Count);
+        Assert.Equal(3, Keys(track).Count);
         Assert.Equal(0f, TrackEditing.HoldSeconds(track, 1));
-        Assert.Equal(5f, TrackEditing.LegSeconds(track, 2), 5);
+        Assert.Equal(5f, LegSeconds(track, 2), 3);
     }
 
     [Fact]
-    public void SetHoldRejectsNegativeSeconds()
+    public void SetHoldClampsNegativeSecondsToNoHold()
     {
-        var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 1, -1f));
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+        Assert.Equal(0f, TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, -1f), 1));
     }
 
     [Fact]
-    public void SetHoldRejectsNonFiniteSeconds()
+    public void SetHoldIgnoresNaNAndClampsInfinity()
     {
         var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 1, float.NaN));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 1, float.PositiveInfinity));
+        Assert.Same(track, TrackEditing.SetHold(track, 1, float.NaN));
+        Assert.Equal(TrackEditing.MaxSeconds, TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, float.PositiveInfinity), 1));
     }
 
     [Fact]
@@ -224,7 +238,7 @@ public class TrackEditingTests
     public void LegSecondsAndHoldSecondsAlsoValidateTheIndex()
     {
         var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.LegSeconds(track, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LegSeconds(track, 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.HoldSeconds(track, 3));
     }
 
@@ -232,7 +246,7 @@ public class TrackEditingTests
     public void LegOnATrackWithFewerThanTwoPointsSaysItHasNoLegs()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f, 0f, 0f));
-        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.LegSeconds(track, 1));
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.LegSpeed(track, 1));
         Assert.Equal("this track has no legs", ex.Message);
     }
 
@@ -244,29 +258,16 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void APointWithNoTimingKeyIsRefusedAsAnArgumentError()
-    {
-        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f) };
-        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
-
-        var leg = Assert.Throws<ArgumentException>(() => TrackEditing.LegSeconds(track, 1));
-        Assert.Equal("point 1 has no timing key", leg.Message);
-        var hold = Assert.Throws<ArgumentException>(() => TrackEditing.SetHold(track, 1, 2f));
-        Assert.Equal("point 1 has no timing key", hold.Message);
-    }
-
-    [Fact]
     public void SettingALegAfterAHoldKeepsTheHold()
     {
         var track = Build3PointTrack();
         track = TrackEditing.SetHold(track, 1, 3f);
         var holdBefore = TrackEditing.HoldSeconds(track, 1);
 
-        track = TrackEditing.SetLeg(track, 2, 8f);
+        track = TrackEditing.SetLegDuration(track, 2, 8f);
 
         Assert.Equal(holdBefore, TrackEditing.HoldSeconds(track, 1), 5);
-        Assert.Equal(8f, TrackEditing.LegSeconds(track, 2), 5);
+        Assert.Equal(8f, LegSeconds(track, 2), 3);
     }
 
     [Fact]
@@ -275,7 +276,7 @@ public class TrackEditingTests
         var track = Build3PointTrack();
         track = TrackEditing.SetHold(track, 1, 2f);
 
-        foreach (var key in track.Timing)
+        foreach (var key in Keys(track))
         {
             Assert.Equal(TangentMode.Auto, key.InMode);
             Assert.Equal(0f, key.InTangent);
@@ -292,25 +293,20 @@ public class TrackEditingTests
         Assert.Equal(PlaybackMode.Loop, updated.Playback);
         Assert.Equal(track.Points, updated.Points);
         Assert.Equal(track.Timing, updated.Timing);
+        Assert.Equal(track.Speed, updated.Speed);
     }
 
-    private static float Total(Track track) => track.Timing[^1].Time;
-
     [Fact]
-    public void InsertAfterSplitsTheLegByPathLengthAndKeepsTheTotal()
+    public void InsertAfterTimesEachHalfByItsLength()
     {
         var track = Build3PointTrack();
         var result = TrackEditing.InsertAfter(track, 0, Point(2f, 0f, 0f));
-
-        var table = new ArcLengthTable(result.Points.Select(p => p.Position).ToArray());
-        var before = table.SegmentLength(0);
-        var after = table.SegmentLength(1);
+        var evaluator = new TrackEvaluator(result);
 
         Assert.Equal(4, result.Points.Count);
-        Assert.Equal(5f * before / (before + after), TrackEditing.LegSeconds(result, 1), 3);
-        Assert.Equal(5f, TrackEditing.LegSeconds(result, 1) + TrackEditing.LegSeconds(result, 2), 4);
-        Assert.Equal(Total(track), Total(result), 4);
-        Assert.Equal(5f, TrackEditing.LegSeconds(result, 3), 4);
+        Assert.Equal(evaluator.LegLength(1) / 2f, evaluator.LegSeconds(1), 3);
+        Assert.Equal(evaluator.LegLength(2) / 2f, evaluator.LegSeconds(2), 3);
+        Assert.Equal(5f, evaluator.LegSeconds(3), 3);
     }
 
     [Fact]
@@ -321,7 +317,7 @@ public class TrackEditingTests
 
         Assert.Equal(2f, TrackEditing.HoldSeconds(result, 0), 4);
         Assert.Equal(0f, TrackEditing.HoldSeconds(result, 1));
-        Assert.Equal(Total(track), Total(result), 4);
+        Assert.Equal(Total(track), Total(result), 1);
     }
 
     [Fact]
@@ -331,7 +327,8 @@ public class TrackEditingTests
         var result = TrackEditing.InsertAfter(track, 2, Point(30f, 0f, 0f));
 
         Assert.Equal(4, result.Points.Count);
-        Assert.Equal(TrackEditing.DefaultLegSeconds, TrackEditing.LegSeconds(result, 3));
+        Assert.Equal(5f, LegSeconds(result, 3), 3);
+        Assert.False(TrackEditing.IsPinned(result, 3));
     }
 
     [Fact]
@@ -342,19 +339,20 @@ public class TrackEditingTests
         track = TrackEditing.Append(track, Point(0f, 0f, 0f));
         var result = TrackEditing.InsertAfter(track, 0, Point(0f, 0f, 0f));
 
-        Assert.Equal(2.5f, TrackEditing.LegSeconds(result, 1), 4);
-        Assert.Equal(2.5f, TrackEditing.LegSeconds(result, 2), 4);
+        Assert.Equal(TrackEditing.MinLegSeconds, LegSeconds(result, 1), 4);
+        Assert.Equal(TrackEditing.MinLegSeconds, LegSeconds(result, 2), 4);
     }
 
     [Fact]
-    public void DeletingAMiddlePointMergesItsLegsAndHold()
+    public void DeletingAMiddlePointMergesItsLegsAndDropsItsHold()
     {
         var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
         var result = TrackEditing.Delete(track, 1);
+        var evaluator = new TrackEvaluator(result);
 
         Assert.Equal(2, result.Points.Count);
-        Assert.Equal(12f, TrackEditing.LegSeconds(result, 1), 4);
-        Assert.Equal(Total(track), Total(result), 4);
+        Assert.Equal(evaluator.LegLength(1) / 2f, evaluator.LegSeconds(1), 3);
+        Assert.Equal(10f, Total(result), 1);
     }
 
     [Fact]
@@ -362,12 +360,13 @@ public class TrackEditingTests
     {
         var track = TrackEditing.SetHold(Build3PointTrack(), 0, 1f);
         var result = TrackEditing.Delete(track, 0);
+        var keys = Keys(result);
 
         Assert.Equal(2, result.Points.Count);
-        Assert.Equal(0f, result.Timing[0].Time);
-        Assert.Equal(0f, result.Timing[0].Position);
-        Assert.Equal(5f, TrackEditing.LegSeconds(result, 1), 4);
-        Assert.Equal(5f, Total(result), 4);
+        Assert.Equal(0f, keys[0].Time);
+        Assert.Equal(0f, keys[0].Position);
+        Assert.Equal(5f, LegSeconds(result, 1), 3);
+        Assert.Equal(5f, Total(result), 3);
     }
 
     [Fact]
@@ -377,28 +376,29 @@ public class TrackEditingTests
         var result = TrackEditing.Delete(track, 2);
 
         Assert.Equal(2, result.Points.Count);
-        Assert.Equal(5f, Total(result), 4);
+        Assert.Equal(5f, Total(result), 3);
     }
 
     [Fact]
-    public void DeletingTheOnlyPointEmptiesTheTrackButKeepsItsModes()
+    public void DeletingTheOnlyPointEmptiesTheTrackButKeepsItsModesAndSpeed()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f, 0f, 0f));
-        track = TrackEditing.SetPlayback(track, PlaybackMode.Loop);
+        track = TrackEditing.SetSpeed(TrackEditing.SetPlayback(track, PlaybackMode.Loop), 7f);
         var result = TrackEditing.Delete(track, 0);
 
         Assert.Empty(result.Points);
         Assert.Empty(result.Timing);
         Assert.Equal(AimMode.PathTangent, result.Aim);
         Assert.Equal(PlaybackMode.Loop, result.Playback);
+        Assert.Equal(7f, result.Speed);
     }
 
     [Fact]
-    public void MovingAPointCarriesItsHoldAndLeavesLegsInTheirSlots()
+    public void MovingAPointCarriesItsHoldAndLeavesLegSpeedsInTheirSlots()
     {
         var track = Build3PointTrack();
-        track = TrackEditing.SetLeg(track, 1, 3f);
-        track = TrackEditing.SetLeg(track, 2, 7f);
+        track = TrackEditing.SetLegSpeed(track, 1, 3f);
+        track = TrackEditing.SetLegSpeed(track, 2, 7f);
         track = TrackEditing.SetHold(track, 2, 1f);
         var moved = track.Points[2];
 
@@ -409,9 +409,8 @@ public class TrackEditingTests
         Assert.Same(track.Points[1], result.Points[2]);
         Assert.Equal(1f, TrackEditing.HoldSeconds(result, 0), 4);
         Assert.Equal(0f, TrackEditing.HoldSeconds(result, 2));
-        Assert.Equal(3f, TrackEditing.LegSeconds(result, 1), 4);
-        Assert.Equal(7f, TrackEditing.LegSeconds(result, 2), 4);
-        Assert.Equal(Total(track), Total(result), 4);
+        Assert.Equal(3f, TrackEditing.LegSpeed(result, 1));
+        Assert.Equal(7f, TrackEditing.LegSpeed(result, 2));
     }
 
     [Fact]
@@ -442,38 +441,6 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void EditsRefuseAPointWithNoTimingKey()
-    {
-        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f) };
-        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
-
-        const string message = "every point needs one or two timing keys";
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
-    }
-
-    [Fact]
-    public void EditsRefuseAPointWithMoreThanTwoTimingKeys()
-    {
-        var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[]
-        {
-            new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-            new TimingKey(1f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-            new TimingKey(2f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-            new TimingKey(7f, 1f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
-        };
-        var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
-
-        const string message = "every point needs one or two timing keys";
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f))).Message);
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Delete(track, 0)).Message);
-        Assert.Equal(message, Assert.Throws<ArgumentException>(() => TrackEditing.Move(track, 0, 1)).Message);
-    }
-
-    [Fact]
     public void EditsRejectOutOfRangeIndices()
     {
         var track = Build3PointTrack();
@@ -486,11 +453,11 @@ public class TrackEditingTests
     [Fact]
     public void PointSecondsIsWhenThePointIsReached()
     {
-        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
-        Assert.Equal(0f, TrackEditing.PointSeconds(track, 0));
-        Assert.Equal(5f, TrackEditing.PointSeconds(track, 1));
-        Assert.Equal(12f, TrackEditing.PointSeconds(track, 2));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.PointSeconds(track, 3));
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f));
+        Assert.Equal(0f, evaluator.PointSeconds(0));
+        Assert.Equal(5f, evaluator.PointSeconds(1), 3);
+        Assert.Equal(12f, evaluator.PointSeconds(2), 3);
+        Assert.Throws<ArgumentOutOfRangeException>(() => evaluator.PointSeconds(3));
     }
 
     [Fact]
@@ -498,9 +465,10 @@ public class TrackEditingTests
     {
         var track = LegEasing.Set(Build3PointTrack(), 2, Easing.EaseIn);
         track = TrackEditing.SetHold(track, 1, 2f);
+        var keys = Keys(track);
 
-        Assert.Equal(TangentMode.Auto, track.Timing[1].OutMode);
-        Assert.Equal(TangentMode.Flat, track.Timing[2].OutMode);
+        Assert.Equal(TangentMode.Auto, keys[1].OutMode);
+        Assert.Equal(TangentMode.Flat, keys[2].OutMode);
         Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 2));
     }
 
@@ -510,208 +478,76 @@ public class TrackEditingTests
         var track = TrackEditing.SetHold(LegEasing.Set(Build3PointTrack(), 2, Easing.EaseIn), 1, 2f);
         track = TrackEditing.SetHold(track, 1, 0f);
 
-        Assert.Equal(3, track.Timing.Count);
+        Assert.Equal(3, Keys(track).Count);
         Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 2));
     }
 
     [Fact]
-    public void KeyRolesTellPointsHoldEndsAndInnerKeysApart()
+    public void KeyRolesTellPointsAndHoldEndsApart()
     {
         var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
-        var timing = track.Timing.ToList();
-        timing.Insert(1, new TimingKey(2.5f, 0.5f));
-        track = track with { Timing = timing };
 
         Assert.Equal(KeyRole.Point, TrackEditing.RoleOf(track, 0));
-        Assert.Equal(KeyRole.Inner, TrackEditing.RoleOf(track, 1));
-        Assert.Equal(KeyRole.Point, TrackEditing.RoleOf(track, 2));
-        Assert.Equal(KeyRole.HoldEnd, TrackEditing.RoleOf(track, 3));
-        Assert.Equal(2, TrackEditing.PointKey(track, 1));
-        Assert.Equal(3, TrackEditing.LegStartKey(track, 2));
-        Assert.Equal(4, TrackEditing.LegEndKey(track, 2));
+        Assert.Equal(KeyRole.Point, TrackEditing.RoleOf(track, 1));
+        Assert.Equal(KeyRole.HoldEnd, TrackEditing.RoleOf(track, 2));
+        Assert.Equal(KeyRole.Point, TrackEditing.RoleOf(track, 3));
+        Assert.Equal(new[] { 0, 1, 1, 2 }, Enumerable.Range(0, 4).Select(k => TrackEditing.PointOf(track, k)));
+        Assert.Equal(1, TrackEditing.PointKey(track, 1));
+        Assert.Equal(3, TrackEditing.PointKey(track, 2));
+        Assert.Equal(2, TrackEditing.LegStartKey(track, 2));
+        Assert.Equal(3, TrackEditing.LegEndKey(track, 2));
     }
 
     [Fact]
-    public void LegAtFindsTheLegAndSkipsHolds()
+    public void LegLengthsAreIndexedByLeg()
     {
-        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);   // keys at 0, 5, 7, 12
-        Assert.Equal(1, TrackEditing.LegAt(track, 2f));
-        Assert.Null(TrackEditing.LegAt(track, 6f));
-        Assert.Equal(2, TrackEditing.LegAt(track, 9f));
-        Assert.Null(TrackEditing.LegAt(track, 13f));
-    }
-
-    // Adds a key at the given time and position, keeping keys in time order.
-    private static Track WithInner(Track track, float time, float position)
-    {
-        var timing = track.Timing.Append(new TimingKey(time, position)).OrderBy(k => k.Time).ToList();
-        return track with { Timing = timing };
+        var lengths = TrackEditing.LegLengths(Build3PointTrack());
+        Assert.Equal(3, lengths.Length);
+        Assert.Equal(0f, lengths[0]);
+        Assert.Equal(10f, lengths[1], 1);
+        Assert.Equal(10f, lengths[2], 1);
     }
 
     [Fact]
-    public void SetLegSpreadsInnerKeysInProportion()
+    public void ReorderKeepsEasingInItsSlot()
     {
-        var track = WithInner(Build3PointTrack(), 2f, 0.3f);        // leg 1 is 0..5 s
-        track = TrackEditing.SetLeg(track, 1, 10f);
-
-        Assert.Equal(new[] { 0f, 4f, 10f, 15f }, track.Timing.Select(k => k.Time));
-        Assert.Equal(0.3f, track.Timing[1].Position);
-    }
-
-    [Fact]
-    public void SetLegClampsUpSoInnerKeysKeepTheirSpacing()
-    {
-        var track = WithInner(Build3PointTrack(), 0.5f, 0.3f);      // spans 0.5 and 4.5 s
-        track = TrackEditing.SetLeg(track, 1, 0.1f);
-
-        Assert.Equal(0.5f, TrackEditing.LegSeconds(track, 1), 3);    // the 0.5 s span may only shrink to 0.05 s
-        Assert.Equal(TrackEditing.MinLegSeconds, TrackEditing.MinLegFor(Build3PointTrack(), 1));
-    }
-
-    [Fact]
-    public void AddAfterSelectedSortsInnerKeysIntoTheHalvesByTime()
-    {
-        // Points at x = 0, 10, 20. Inserting (5, 0, 0) after point 0 splits leg 1 (0..5 s) at 2.5 s, half the distance.
-        var track = WithInner(WithInner(Build3PointTrack(), 1f, 0.2f), 4f, 0.8f);
-        track = TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f));
-
-        Assert.Equal(new[] { 0f, 1f, 2.5f, 4f, 5f, 10f }, track.Timing.Select(k => k.Time));
-        Assert.Equal(0.4f, track.Timing[1].Position, 2);
-        Assert.Equal(1f, track.Timing[2].Position);
-        Assert.Equal(1.6f, track.Timing[3].Position, 2);
-        Assert.Equal(2f, track.Timing[4].Position);
-        Assert.Equal(3f, track.Timing[5].Position);
-    }
-
-    [Fact]
-    public void AddAfterSelectedDropsAnInnerKeyTooCloseToTheNewPoint()
-    {
-        var track = WithInner(Build3PointTrack(), 2.52f, 0.5f);
-        track = TrackEditing.InsertAfter(track, 0, Point(5f, 0f, 0f));
-        Assert.Equal(new[] { 0f, 2.5f, 5f, 10f }, track.Timing.Select(k => k.Time));
-    }
-
-    [Fact]
-    public void AddAfterSelectedKeepsTheLegsEasingOnItsOuterSides()
-    {
-        var track = TrackEditing.InsertAfter(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseInOut), 0, Point(5f, 0f, 0f));
-        Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 1));
-        Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 2));
-    }
-
-    [Fact]
-    public void DeletingAMiddlePointMergesBothLegsInnerKeysByDistance()
-    {
-        // Legs 0..5 and 5..10 s, each 10 long; merged, point 1's place sits at half the distance.
-        var track = WithInner(WithInner(Build3PointTrack(), 2f, 0.5f), 7f, 1.5f);
-        track = TrackEditing.Delete(track, 1);
-
-        Assert.Equal(new[] { 0f, 2f, 7f, 10f }, track.Timing.Select(k => k.Time));
-        Assert.Equal(0.25f, track.Timing[1].Position, 2);
-        Assert.Equal(0.75f, track.Timing[2].Position, 2);
-        Assert.Equal(1f, track.Timing[3].Position);
-    }
-
-    [Fact]
-    public void DeletingAMiddlePointKeepsTheMergedLegsOuterEasing()
-    {
-        var track = LegEasing.Set(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseIn), 2, Easing.EaseOut);
-        Assert.Equal(Easing.EaseInOut, LegEasing.Read(TrackEditing.Delete(track, 1), 1));
-    }
-
-    [Fact]
-    public void DeletingAnEndPointTakesItsLegsInnerKeys()
-    {
-        var first = TrackEditing.Delete(WithInner(Build3PointTrack(), 2f, 0.5f), 0);
-        Assert.Equal(new[] { 0f, 5f }, first.Timing.Select(k => k.Time));
-
-        var last = TrackEditing.Delete(WithInner(Build3PointTrack(), 7f, 1.5f), 2);
-        Assert.Equal(new[] { 0f, 5f }, last.Timing.Select(k => k.Time));
-    }
-
-    [Fact]
-    public void ReorderKeepsLegTimesEasingAndInnerKeysInTheirSlots()
-    {
-        var track = LegEasing.Set(WithInner(Build3PointTrack(), 2f, 0.5f), 1, Easing.EaseOut);
-        track = TrackEditing.SetHold(track, 2, 3f);                  // point 2 holds 10..13 s
+        var track = LegEasing.Set(Build3PointTrack(), 1, Easing.EaseOut);
+        track = TrackEditing.SetHold(track, 2, 3f);
         track = TrackEditing.Move(track, 2, 0);
 
-        Assert.Equal(new[] { 0f, 3f, 5f, 8f, 13f }, track.Timing.Select(k => k.Time));
-        Assert.Equal(new[] { 0f, 0f, 0.5f, 1f, 2f }, track.Timing.Select(k => k.Position));
         Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 1));
         Assert.Equal(new Vector3(20f, 0f, 0f), track.Points[0].Position);
     }
 
-    private static Track Track(float[] xs, params TimingKey[] keys)
-    {
-        var points = xs.Select(x => Point(x, 0f, 0f)).ToList();
-        return new Track(points, keys, AimMode.AimKeys, PlaybackMode.Once);
-    }
-
-    private static TimingKey Manual(float time, float position, float inSlope, float outSlope)
-        => new(time, position, TangentMode.Manual, TangentMode.Manual, inSlope, outSlope);
-
-    private static int KeyAt(Track track, float time)
-        => track.Timing.Select((k, i) => (k, i)).Single(p => MathF.Abs(p.k.Time - time) < 1e-4f).i;
-
-    private static void AssertSlopesKept(Track before, Track after, params (float Time, KeySide Side)[] sides)
+    private static void AssertSlopesKept(Track before, Track after, params (int Before, int After, KeySide Side)[] sides)
     {
         var was = new TrackEvaluator(before);
         var now = new TrackEvaluator(after);
-        foreach (var (time, side) in sides)
-            Assert.Equal(was.SideSlope(KeyAt(before, time), side), now.SideSlope(KeyAt(after, time), side), 3);
+        foreach (var (b, a, side) in sides)
+            Assert.Equal(was.SideSlope(b, side), now.SideSlope(a, side), 3);
     }
 
     [Fact]
     public void InsertAfterKeepsManualSlopesInDistancePerSecond()
     {
-        // Leg 0..10 m over 0..5 s, split at x = 4 (share 0.4); every secant is 2 m/s and every Manual side 2 or 2.5 m/s.
-        var track = Track(
-            new[] { 0f, 10f, 20f },
-            new TimingKey(0f, 0f, OutMode: TangentMode.Manual, OutTangent: 0.2f),
-            Manual(1f, 0.2f, 0.25f, 0.25f),
-            Manual(4f, 0.8f, 0.2f, 0.2f),
-            new TimingKey(5f, 1f, InMode: TangentMode.Manual, InTangent: 0.2f),
-            new TimingKey(10f, 2f));
+        // Leg 0..10 m at 2 m/s, split at x = 4; both Manual sides are 2 m/s, the secant of either half.
+        var track = TimingEditing.SetHandles(TimingEditing.SetHandles(Build3PointTrack(), 0, null, 0.2f), 1, 0.2f, null);
 
         var result = TrackEditing.InsertAfter(track, 0, Point(4f, 0f, 0f));
 
-        AssertSlopesKept(track, result, (0f, KeySide.Out), (1f, KeySide.In), (1f, KeySide.Out), (4f, KeySide.In), (4f, KeySide.Out), (5f, KeySide.In));
+        AssertSlopesKept(track, result, (0, 0, KeySide.Out), (1, 2, KeySide.In));
     }
 
     [Fact]
     public void DeletingAMiddlePointKeepsManualSlopesInDistancePerSecond()
     {
-        // Legs of 6 and 14 m merge into one of 20 m; every Manual side is 2 m/s, at most twice its secant.
-        var track = Track(
-            new[] { 0f, 6f, 20f },
-            new TimingKey(0f, 0f, OutMode: TangentMode.Manual, OutTangent: 2f / 6f),
-            Manual(2f, 0.5f, 2f / 6f, 2f / 6f),
-            new TimingKey(5f, 1f),
-            Manual(7f, 1.5f, 2f / 14f, 2f / 14f),
-            new TimingKey(10f, 2f, InMode: TangentMode.Manual, InTangent: 2f / 14f));
+        // Legs of 6 and 14 m merge into one of 20 m, all at 2 m/s; both Manual sides are 2 m/s.
+        var track = TrackEditing.Empty();
+        foreach (var x in new[] { 0f, 6f, 20f }) track = TrackEditing.Append(track, Point(x, 0f, 0f));
+        track = TimingEditing.SetHandles(TimingEditing.SetHandles(track, 0, null, 2f / 6f), 2, 2f / 14f, null);
 
         var result = TrackEditing.Delete(track, 1);
 
-        AssertSlopesKept(track, result, (0f, KeySide.Out), (2f, KeySide.In), (2f, KeySide.Out), (7f, KeySide.In), (7f, KeySide.Out), (10f, KeySide.In));
-    }
-
-    [Fact]
-    public void DeletingAMiddlePointNextToATinySegmentKeepsInnerKeysInside()
-    {
-        // Leg 2 is 0.1 m against a leg 3 of a million, so its inner key would merge onto point 1's place.
-        var track = Track(
-            new[] { 0f, 10f, 10.05f, 1_000_000f },
-            new TimingKey(0f, 0f),
-            new TimingKey(5f, 1f),
-            new TimingKey(6f, 1.5f),
-            new TimingKey(10f, 2f),
-            new TimingKey(15f, 3f));
-
-        var result = TrackEditing.Delete(track, 2);
-
-        var inner = KeyAt(result, 6f);
-        Assert.True(result.Timing[inner].Position > 1f);
-        Assert.Equal(KeyRole.Inner, TrackEditing.RoleOf(result, inner));
+        AssertSlopesKept(track, result, (0, 0, KeySide.Out), (2, 1, KeySide.In));
     }
 }

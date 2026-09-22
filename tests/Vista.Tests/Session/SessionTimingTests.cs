@@ -36,12 +36,13 @@ public class SessionTimingTests
     }
 
     [Fact]
-    public void SelectingAnInnerKeyLeavesThePointSelectionAlone()
+    public void SelectingAHoldEndLeavesThePointSelectionAlone()
     {
         var state = Editing();
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
         state.Select(2);
-        Assert.Null(state.AddInnerKey(2f));
-        Assert.Equal(1, state.SelectedKey);
+        state.SelectKey(2);
+        Assert.Equal(2, state.SelectedKey);
         Assert.Equal(2, state.Selected);
     }
 
@@ -75,7 +76,7 @@ public class SessionTimingTests
         var state = Editing();
         state.SelectLeg(2);
 
-        Assert.Null(state.ChangeTrack(t => TrackEditing.SetLeg(t, 2, 8f)));
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 8f)));
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
         Assert.Equal(2, state.SelectedLeg);
     }
@@ -91,22 +92,23 @@ public class SessionTimingTests
     }
 
     [Fact]
-    public void AnAddedInnerKeySitsOnTheCurve()
+    public void RemovingAHoldClearsTheTimingSelection()
     {
         var state = Editing();
-        var before = state.Evaluator.DistanceAt(2.0);
-        Assert.Null(state.AddInnerKey(2f));
-        Assert.Equal(before, state.Evaluator.DistanceAt(2.0), 1);
+        state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f));
+        state.SelectKey(2);
+        Assert.Null(state.RemoveHold(2));
+        Assert.Null(state.SelectedKey);
+        Assert.Equal(3, TrackEditing.KeyCount(state.Track));
     }
 
     [Fact]
-    public void DeletingAKeyClearsTheTimingSelection()
+    public void RemovingAHoldFromAPointKeyIsRefused()
     {
         var state = Editing();
-        state.AddInnerKey(2f);
-        Assert.Null(state.DeleteKey(1));
-        Assert.Null(state.SelectedKey);
-        Assert.Equal(3, state.Track.Timing.Count);
+        var before = state.Track;
+        Assert.NotNull(state.RemoveHold(1));
+        Assert.Same(before, state.Track);
     }
 
     [Fact]
@@ -114,13 +116,31 @@ public class SessionTimingTests
     {
         var state = Editing();
         state.BeginLiveEdit();
-        Assert.Null(state.PreviewKeyMove(1, 3f, 0f));
-        Assert.Null(state.PreviewKeyMove(1, 4f, 0f));
+        Assert.Null(state.PreviewKeyMove(1, 3f));
+        Assert.Null(state.PreviewKeyMove(1, 4f));
         state.EndLiveEdit();
 
-        Assert.Equal(4f, state.Track.Timing[1].Time);
+        Assert.Equal(4f, state.Evaluator.Keys[1].Time, 3);
+        Assert.Equal(10f, state.Duration, 3);
         Assert.True(state.Undo());
-        Assert.Equal(5f, state.Track.Timing[1].Time);
+        Assert.Equal(5f, state.Evaluator.Keys[1].Time, 3);
+        Assert.False(TrackEditing.IsPinned(state.Track, 1));
+    }
+
+    [Fact]
+    public void AKeyDragBackToTheStartIsNoStep()
+    {
+        var state = Editing();
+        var before = state.Track;
+        var start = state.Evaluator.Keys[1].Time;
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewKeyMove(1, 3f));
+        Assert.Null(state.PreviewKeyMove(1, start));
+        state.EndLiveEdit();
+
+        Assert.Same(before, state.Track);
+        Assert.True(state.Undo());
+        Assert.Equal(2, state.Track.Points.Count);
     }
 
     [Fact]
@@ -165,10 +185,11 @@ public class SessionTimingTests
     }
 
     [Fact]
-    public void PointEditsClearAnInnerKeySelection()
+    public void PointEditsClearAHoldEndSelection()
     {
         var state = Editing();
-        state.AddInnerKey(2f);
+        state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f));
+        state.SelectKey(2);
         state.AddToEnd(new ControlPoint(new Vector3(30f, 0f, 0f), 0f, 0f, 1f));
         Assert.Null(state.SelectedKey);
     }
@@ -179,6 +200,7 @@ public class SessionTimingTests
         var state = Editing();
         state.Play();
         Assert.NotNull(state.SetEasing(1, Easing.Linear));
-        Assert.NotNull(state.AddInnerKey(2f));
+        Assert.NotNull(state.SetKeyMode(1, TangentMode.Flat));
+        Assert.NotNull(state.RemoveHold(1));
     }
 }

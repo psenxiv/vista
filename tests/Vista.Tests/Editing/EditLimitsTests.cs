@@ -24,6 +24,24 @@ public class EditLimitsTests
     public void HoldClampsToZeroAndTenMinutes(float input, float expected)
         => Assert.Equal(expected, EditLimits.Hold(input));
 
+    [Theory]
+    [InlineData(0f, 0.01f)]
+    [InlineData(-3f, 0.01f)]
+    [InlineData(2.5f, 2.5f)]
+    [InlineData(9999f, 100f)]
+    [InlineData(float.NaN, 2f)]
+    public void SpeedClampsToAHundredthAndAHundredYalmsPerSecond(float input, float expected)
+        => Assert.Equal(expected, EditLimits.Speed(input));
+
+    [Theory]
+    [InlineData(0f, 0.2f)]
+    [InlineData(-3f, 0.2f)]
+    [InlineData(30f, 30f)]
+    [InlineData(99999f, 3600f)]
+    [InlineData(float.NaN, 0.2f)]
+    public void ShotDurationClampsToTwoTenthsOfASecondAndAnHour(float input, float expected)
+        => Assert.Equal(expected, EditLimits.ShotDuration(input));
+
     [Fact]
     public void PitchClampsToTheGizmoLimit()
     {

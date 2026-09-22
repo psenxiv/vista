@@ -281,6 +281,9 @@ public class SessionEditingTests
 
         state.ChangeTrack(t => TrackEditing.SetHold(t, 2, 2f));
         Assert.Equal(12.0, state.Duration, 5);
+
+        state.ChangeTrack(t => TrackEditing.SetSpeed(t, 4f));
+        Assert.Equal(7.0, state.Duration, 3);
     }
 
     [Fact]

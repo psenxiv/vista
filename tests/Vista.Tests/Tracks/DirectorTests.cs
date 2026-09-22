@@ -10,14 +10,11 @@ public class DirectorTests
     private static ControlPoint Point(float x, float y, float z)
         => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
-    private static TimingKey Key(float time, float position)
-        => new(time, position, TangentMode.Auto, TangentMode.Auto, 0f, 0f);
-
     private static Track StraightTrack(PlaybackMode mode = PlaybackMode.Once)
     {
-        var points = new[] { Point(0f, 0f, 0f), Point(5f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[] { Key(0f, 0f), Key(10f, 2f) };
-        return new Track(points, timing, AimMode.PathTangent, mode);
+        var track = TrackEditing.SetPlayback(TrackEditing.Empty(AimMode.PathTangent), mode);
+        foreach (var x in new[] { 0f, 5f, 10f }) track = TrackEditing.Append(track, Point(x, 0f, 0f));
+        return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
     }
 
     private static SnapPoint Snap()
@@ -186,7 +183,7 @@ public class DirectorTests
     [Fact]
     public void TickOnATrackWithNoPointsIsNull()
     {
-        var empty = new Track(Array.Empty<ControlPoint>(), Array.Empty<TimingKey>(), AimMode.AimKeys, PlaybackMode.Once);
+        var empty = TrackEditing.Empty();
         var director = new Director();
         director.GoLive(new TrackShot(empty));
 
@@ -277,7 +274,7 @@ public class DirectorTests
         var snap = Snap();
         var director = new Director();
         director.GoLive(new SnapShot(snap));
-        var broken = StraightTrack() with { Timing = new[] { Key(5f, 0f), Key(5f, 2f) } };
+        var broken = StraightTrack() with { Timing = [] };
 
         Assert.Throws<ArgumentException>(() => director.GoLive(new TrackShot(broken)));
 

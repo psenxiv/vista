@@ -11,6 +11,14 @@ public static class EditLimits
     /// <summary>A leg in seconds, 0.1 to 600; not a number becomes the minimum.</summary>
     public static float Leg(float seconds) => float.IsFinite(seconds) ? Math.Clamp(seconds, MinLegSeconds, MaxSeconds) : MinLegSeconds;
 
+    public const float MinShotSeconds = 0.2f;
+
+    /// <summary>A track or leg speed in yalms per second, 0.01 to 100; not a number becomes the default 2.</summary>
+    public static float Speed(float speed) => float.IsFinite(speed) ? Math.Clamp(speed, TrackEditing.MinSpeed, TrackEditing.MaxSpeed) : TrackEditing.DefaultSpeed;
+
+    /// <summary>A shot's duration in seconds, 0.2 to 3600; not a number becomes the minimum.</summary>
+    public static float ShotDuration(float seconds) => float.IsFinite(seconds) ? Math.Clamp(seconds, MinShotSeconds, TrackEditing.MaxShotSeconds) : MinShotSeconds;
+
     /// <summary>A hold in seconds, 0 to 600; not a number becomes 0.</summary>
     public static float Hold(float seconds) => float.IsFinite(seconds) ? Math.Clamp(seconds, 0f, MaxSeconds) : 0f;
 

@@ -1,13 +1,16 @@
 namespace Vista.Core.Tracks;
 
-/// <summary>Builds a track's timing keys from control points, legs and holds, without exposing tangents.</summary>
+/// <summary>Edits a track's points and timing: the track speed, pinned legs and holds.</summary>
 public static class TrackEditing
 {
-    /// <summary>Seconds a leg takes when a point is appended without one being set explicitly.</summary>
-    public const float DefaultLegSeconds = 5f;
+    /// <summary>A new track's speed, in yalms per second.</summary>
+    public const float DefaultSpeed = 2f;
 
-    /// <summary>Keys stay at least this many seconds apart.</summary>
-    public const float MinKeyGap = 0.05f;
+    /// <summary>The slowest track or leg speed, in yalms per second.</summary>
+    public const float MinSpeed = 0.01f;
+
+    /// <summary>The fastest track or leg speed, in yalms per second.</summary>
+    public const float MaxSpeed = 100f;
 
     /// <summary>The shortest leg, in seconds.</summary>
     public const float MinLegSeconds = 0.1f;
@@ -15,329 +18,167 @@ public static class TrackEditing
     /// <summary>The longest leg or hold, in seconds.</summary>
     public const float MaxSeconds = 600f;
 
-    /// <summary>A track with no points, no keys, and <see cref="PlaybackMode.Once"/>.</summary>
+    /// <summary>The longest shot, in seconds.</summary>
+    public const float MaxShotSeconds = 3600f;
+
+    /// <summary>Keys stay at least this many seconds apart.</summary>
+    public const float MinKeyGap = 0.05f;
+
+    private const int DurationSteps = 60;
+
+    /// <summary>A track with no points at the default speed, playing <see cref="PlaybackMode.Once"/>.</summary>
     public static Track Empty(AimMode aim = AimMode.AimKeys)
-        => new(Array.Empty<ControlPoint>(), Array.Empty<TimingKey>(), aim, PlaybackMode.Once);
+        => new([], [], DefaultSpeed, aim, PlaybackMode.Once);
 
-    /// <summary>Appends a point, giving it a key one <see cref="DefaultLegSeconds"/> after the previous last key.</summary>
-    public static Track Append(Track track, ControlPoint point)
-    {
-        var points = new List<ControlPoint>(track.Points) { point };
-        var index = track.Points.Count;
-        var time = track.Timing.Count == 0 ? 0f : track.Timing[^1].Time + DefaultLegSeconds;
-
-        var timing = new List<TimingKey>(track.Timing) { new(time, index) };
-        return track with { Points = points, Timing = timing };
-    }
-
-    /// <summary>The time from point i-1's last key to point i's first key.</summary>
-    public static float LegSeconds(Track track, int index)
-    {
-        ValidateLegIndex(track, index);
-        var keys = track.Timing;
-        return keys[FirstKeyIndex(keys, index)].Time - keys[LastKeyIndex(keys, index - 1)].Time;
-    }
-
-    /// <summary>Sets leg i, shifting every key at or after point i's first key by the difference and spreading its inner keys.</summary>
-    public static Track SetLeg(Track track, int index, float seconds)
-    {
-        ValidateLegIndex(track, index);
-        RequireValidKeys(track);
-        if (!float.IsFinite(seconds) || seconds <= 0f)
-            throw new ArgumentOutOfRangeException(null, "leg seconds must be > 0");
-
-        seconds = MathF.Max(seconds, MinLegFor(track, index));
-        var keys = track.Timing;
-        var prevLastIndex = LastKeyIndex(keys, index - 1);
-        var currFirstIndex = FirstKeyIndex(keys, index);
-        var start = keys[prevLastIndex].Time;
-        var oldLeg = keys[currFirstIndex].Time - start;
-        var diff = seconds - oldLeg;
-
-        var result = new List<TimingKey>(keys.Count);
-        for (var i = 0; i < keys.Count; i++)
-        {
-            if (i > prevLastIndex && i < currFirstIndex)
-                result.Add(keys[i] with { Time = start + ((keys[i].Time - start) * seconds / oldLeg) });
-            else
-                result.Add(i >= currFirstIndex ? keys[i] with { Time = keys[i].Time + diff } : keys[i]);
-        }
-
-        return track with { Timing = result };
-    }
-
-    /// <summary>The shortest leg <paramref name="leg"/> can be while its inner keys stay <see cref="MinKeyGap"/> apart.</summary>
-    public static float MinLegFor(Track track, int leg)
-    {
-        var start = LegStartKey(track, leg);
-        var end = LegEndKey(track, leg);
-        if (end - start < 2) return MinLegSeconds;
-
-        var keys = track.Timing;
-        var smallest = float.MaxValue;
-        for (var i = start; i < end; i++) smallest = MathF.Min(smallest, keys[i + 1].Time - keys[i].Time);
-        var length = keys[end].Time - keys[start].Time;
-        return MathF.Max(MinLegSeconds, length * MinKeyGap / smallest);
-    }
-
-    /// <summary>The time between point i's two keys, 0 when it has no second key.</summary>
-    public static float HoldSeconds(Track track, int index)
-    {
-        ValidatePointIndex(track, index, "hold");
-        var keys = track.Timing;
-        var firstIndex = FirstKeyIndex(keys, index);
-        var lastIndex = LastKeyIndex(keys, index);
-        return lastIndex == firstIndex ? 0f : keys[lastIndex].Time - keys[firstIndex].Time;
-    }
-
-    /// <summary>Sets hold i, adding, resizing or (at 0) removing point i's second key; later keys shift with it.</summary>
-    public static Track SetHold(Track track, int index, float seconds)
-    {
-        ValidatePointIndex(track, index, "hold");
-        if (!float.IsFinite(seconds) || seconds < 0f)
-            throw new ArgumentOutOfRangeException(null, "hold seconds must be >= 0");
-
-        var keys = track.Timing;
-        var firstIndex = FirstKeyIndex(keys, index);
-        var lastIndex = LastKeyIndex(keys, index);
-        var hasHold = lastIndex != firstIndex;
-        var currentHold = hasHold ? keys[lastIndex].Time - keys[firstIndex].Time : 0f;
-        var diff = seconds - currentHold;
-
-        var result = new List<TimingKey>(keys.Count + (hasHold ? 0 : 1));
-        for (var i = 0; i < keys.Count; i++)
-        {
-            if (hasHold && i == lastIndex)
-            {
-                if (seconds == 0f) continue;
-                result.Add(keys[i] with { Time = keys[i].Time + diff });
-                continue;
-            }
-
-            if (i > lastIndex)
-            {
-                result.Add(keys[i] with { Time = keys[i].Time + diff });
-                continue;
-            }
-
-            if (i == firstIndex && hasHold && seconds == 0f)
-            {
-                result.Add(keys[i] with { OutMode = keys[lastIndex].OutMode, OutTangent = keys[lastIndex].OutTangent });
-                continue;
-            }
-
-            if (i == firstIndex && !hasHold && seconds > 0f)
-            {
-                result.Add(keys[i] with { OutMode = TangentMode.Auto, OutTangent = 0f });
-                result.Add(new TimingKey(keys[i].Time + seconds, index, OutMode: keys[i].OutMode, OutTangent: keys[i].OutTangent));
-                continue;
-            }
-
-            result.Add(keys[i]);
-        }
-
-        return track with { Timing = result };
-    }
-
-    /// <summary>The time point <paramref name="index"/> is reached: its first key.</summary>
-    public static float PointSeconds(Track track, int index)
-    {
-        ValidatePointIndex(track, index, "time");
-        return track.Timing[FirstKeyIndex(track.Timing, index)].Time;
-    }
+    /// <summary>How many timing keys the track compiles to.</summary>
+    public static int KeyCount(Track track) => track.Points.Count + track.Timing.Count(t => t.Hold > 0f);
 
     /// <summary>What timing key <paramref name="key"/> is.</summary>
-    public static KeyRole RoleOf(Track track, int key)
-    {
-        var position = track.Timing[key].Position;
-        if (position != MathF.Floor(position)) return KeyRole.Inner;
-        return key > 0 && track.Timing[key - 1].Position == position ? KeyRole.HoldEnd : KeyRole.Point;
-    }
+    public static KeyRole RoleOf(Track track, int key) => Locate(track, key).Role;
 
-    /// <summary>Index of point <paramref name="point"/>'s first key.</summary>
+    /// <summary>The point timing key <paramref name="key"/> belongs to.</summary>
+    public static int PointOf(Track track, int key) => Locate(track, key).Point;
+
+    /// <summary>Index of point <paramref name="point"/>'s key.</summary>
     public static int PointKey(Track track, int point)
     {
         ValidatePointIndex(track, point, "point");
-        return FirstKeyIndex(track.Timing, point);
+        var key = 0;
+        for (var p = 0; p < point; p++) key += track.Timing[p].Hold > 0f ? 2 : 1;
+        return key;
     }
 
-    /// <summary>Index of the key leg <paramref name="leg"/> leaves from: the last key of the point before it.</summary>
+    /// <summary>Index of the key leg <paramref name="leg"/> leaves from: the point before it, or its hold end.</summary>
     public static int LegStartKey(Track track, int leg)
     {
         ValidateLegIndex(track, leg);
-        return LastKeyIndex(track.Timing, leg - 1);
+        return PointKey(track, leg - 1) + (track.Timing[leg - 1].Hold > 0f ? 1 : 0);
     }
 
-    /// <summary>Index of the key leg <paramref name="leg"/> arrives at: its point's first key.</summary>
+    /// <summary>Index of the key leg <paramref name="leg"/> arrives at.</summary>
     public static int LegEndKey(Track track, int leg)
     {
         ValidateLegIndex(track, leg);
-        return FirstKeyIndex(track.Timing, leg);
+        return PointKey(track, leg);
     }
 
-    /// <summary>The leg whose time span holds <paramref name="time"/>, or null in a hold or outside the shot.</summary>
-    public static int? LegAt(Track track, float time)
+    /// <summary>Each leg's length as timing measures it, indexed by leg; index 0 is 0.</summary>
+    public static float[] LegLengths(Track track)
+    {
+        var lengths = new float[track.Points.Count];
+        if (lengths.Length < 2) return lengths;
+
+        var table = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray());
+        for (var leg = 1; leg < lengths.Length; leg++)
+            lengths[leg] = MathF.Max(table.SegmentLength(leg - 1), TrackEvaluator.MinTimingLength);
+        return lengths;
+    }
+
+    /// <summary>True when leg <paramref name="leg"/> has its own speed.</summary>
+    public static bool IsPinned(Track track, int leg)
+    {
+        ValidateLegIndex(track, leg);
+        return track.Timing[leg].LegSpeed is not null;
+    }
+
+    /// <summary>True when no leg follows the track speed, including a track with fewer than two points.</summary>
+    public static bool AllPinned(Track track)
     {
         for (var leg = 1; leg < track.Points.Count; leg++)
         {
-            if (time >= track.Timing[LegStartKey(track, leg)].Time && time <= track.Timing[LegEndKey(track, leg)].Time) return leg;
+            if (track.Timing[leg].LegSpeed is null) return false;
         }
 
-        return null;
+        return true;
     }
 
-    /// <summary>Sets the playback mode; never touches points or keys.</summary>
-    public static Track SetPlayback(Track track, PlaybackMode mode)
-        => track with { Playback = mode };
+    /// <summary>The speed leg <paramref name="leg"/> is set to: its pinned speed, or the track's.</summary>
+    public static float LegSpeed(Track track, int leg)
+    {
+        ValidateLegIndex(track, leg);
+        return track.Timing[leg].LegSpeed ?? track.Speed;
+    }
 
-    /// <summary>Inserts a point after point <paramref name="index"/>, splitting that leg by path length; after the last point it appends.</summary>
+    /// <summary>Point <paramref name="point"/>'s hold, in seconds.</summary>
+    public static float HoldSeconds(Track track, int point)
+    {
+        ValidatePointIndex(track, point, "hold");
+        return track.Timing[point].Hold;
+    }
+
+    /// <summary>Appends a point whose leg follows the track speed.</summary>
+    public static Track Append(Track track, ControlPoint point)
+        => track with { Points = [.. track.Points, point], Timing = [.. track.Timing, new PointTiming()] };
+
+    /// <summary>Inserts a point after point <paramref name="index"/>, both halves keeping the split leg's speed and pin; after the last point it appends.</summary>
     public static Track InsertAfter(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "insert");
-        RequireValidKeys(track);
         if (index == track.Points.Count - 1) return Append(track, point);
 
-        var points = new List<ControlPoint>(track.Points);
+        var points = track.Points.ToList();
         points.Insert(index + 1, point);
+        var timing = track.Timing.ToList();
+        timing.Insert(index + 1, new PointTiming(LegSpeed: track.Timing[index + 1].LegSpeed));
 
-        var table = new ArcLengthTable(points.Select(p => p.Position).ToArray());
-        var before = MathF.Max(table.SegmentLength(index), TrackEvaluator.MinTimingLength);
-        var after = MathF.Max(table.SegmentLength(index + 1), TrackEvaluator.MinTimingLength);
-        var share = before / (before + after);
-
-        var keys = track.Timing;
-        var startIndex = LastKeyIndex(keys, index);
-        var endIndex = FirstKeyIndex(keys, index + 1);
-        var start = keys[startIndex].Time;
-        var time = start + ((keys[endIndex].Time - start) * share);
-
-        var timing = new List<TimingKey>(keys.Count + 1);
-        timing.AddRange(keys.Take(startIndex));
-        timing.Add(Scaled(keys[startIndex], 1f, 1f / share));
-        var second = new List<TimingKey>();
-        for (var i = startIndex + 1; i < endIndex; i++)
-        {
-            var key = keys[i];
-            if (MathF.Abs(key.Time - time) < MinKeyGap) continue;
-            var fraction = key.Position - index;
-            if (key.Time < time) timing.Add(Scaled(key, 1f / share, 1f / share) with { Position = index + InsideLeg(fraction / share) });
-            else second.Add(Scaled(key, 1f / (1f - share), 1f / (1f - share)) with { Position = index + 1 + InsideLeg((fraction - share) / (1f - share)) });
-        }
-
-        timing.Add(new TimingKey(time, index + 1));
-        timing.AddRange(second);
-        timing.Add(Scaled(keys[endIndex], 1f / (1f - share), 1f) with { Position = keys[endIndex].Position + 1 });
-        timing.AddRange(keys.Skip(endIndex + 1).Select(k => k with { Position = k.Position + 1 }));
+        var before = LegLengths(track);
+        var after = LegLengths(track with { Points = points });
+        timing[index] = ScaleOut(timing[index], before[index + 1] / after[index + 1]);
+        timing[index + 2] = ScaleIn(timing[index + 2], before[index + 1] / after[index + 2]);
         return track with { Points = points, Timing = timing };
     }
 
-    /// <summary>A fraction of a leg kept strictly inside it.</summary>
-    private static float InsideLeg(float fraction) => Math.Clamp(fraction, 0.001f, 0.999f);
-
-    /// <summary>The key with its stored tangents multiplied, so a slope keeps its distance per second when its segment's length changes.</summary>
-    private static TimingKey Scaled(TimingKey key, float inScale, float outScale)
-        => key with { InTangent = key.InTangent * inScale, OutTangent = key.OutTangent * outScale };
-
-    /// <summary>Removes point <paramref name="index"/>: a middle point's legs and hold merge, an end point's leg and hold go.</summary>
+    /// <summary>Removes point <paramref name="index"/>: a middle point's legs merge at the first leg's speed, an end point's leg goes.</summary>
     public static Track Delete(Track track, int index)
     {
         ValidatePointIndex(track, index, "delete");
-        RequireValidKeys(track);
-        if (track.Points.Count == 1)
-            return track with { Points = Array.Empty<ControlPoint>(), Timing = Array.Empty<TimingKey>() };
-
-        var keys = track.Timing;
         var n = track.Points.Count;
-        var points = new List<ControlPoint>(track.Points);
+        if (n == 1) return track with { Points = [], Timing = [] };
+
+        var points = track.Points.ToList();
         points.RemoveAt(index);
+        var timing = track.Timing.ToList();
 
         if (index == 0)
         {
-            var shift = keys[FirstKeyIndex(keys, 1)].Time;
-            return track with { Points = points, Timing = keys.Where(k => k.Position >= 1f).Select(k => k with { Time = k.Time - shift, Position = k.Position - 1 }).ToList() };
+            timing.RemoveAt(0);
+            timing[0] = timing[0] with { LegSpeed = null };
+            return track with { Points = points, Timing = timing };
         }
 
         if (index == n - 1)
-            return track with { Points = points, Timing = keys.Where(k => k.Position <= n - 2).ToList() };
-
-        var table = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray());
-        var before = MathF.Max(table.SegmentLength(index - 1), TrackEvaluator.MinTimingLength);
-        var after = MathF.Max(table.SegmentLength(index), TrackEvaluator.MinTimingLength);
-        var total = before + after;
-
-        var startIndex = LastKeyIndex(keys, index - 1);
-        var endIndex = FirstKeyIndex(keys, index + 1);
-        var first = before / total;
-        var second = after / total;
-
-        var timing = new List<TimingKey>(keys.Count);
-        for (var i = 0; i < keys.Count; i++)
         {
-            var key = keys[i];
-            if (i == startIndex) timing.Add(Scaled(key, 1f, first));
-            else if (key.Position <= index - 1) timing.Add(key);
-            else if (key.Position < index) timing.Add(Scaled(key, first, first) with { Position = index - 1 + InsideLeg((key.Position - (index - 1)) * first) });
-            else if (key.Position == index) continue;
-            else if (key.Position < index + 1) timing.Add(Scaled(key, second, second) with { Position = index - 1 + InsideLeg((before + ((key.Position - index) * after)) / total) });
-            else if (i == endIndex) timing.Add(Scaled(key, second, 1f) with { Position = key.Position - 1 });
-            else timing.Add(key with { Position = key.Position - 1 });
+            timing.RemoveAt(index);
+            return track with { Points = points, Timing = timing };
         }
 
+        timing[index + 1] = timing[index + 1] with { LegSpeed = timing[index].LegSpeed };
+        timing.RemoveAt(index);
+
+        var before = LegLengths(track);
+        var after = LegLengths(track with { Points = points });
+        timing[index - 1] = ScaleOut(timing[index - 1], before[index] / after[index]);
+        timing[index] = ScaleIn(timing[index], before[index + 1] / after[index]);
         return track with { Points = points, Timing = timing };
     }
 
-    /// <summary>Moves point <paramref name="from"/> to position <paramref name="to"/>; holds travel with their point, leg times stay in their slots.</summary>
+    /// <summary>Moves point <paramref name="from"/> to position <paramref name="to"/>; holds travel with their point, leg speeds and easing stay in their slots.</summary>
     public static Track Move(Track track, int from, int to)
     {
         ValidatePointIndex(track, from, "move");
         ValidatePointIndex(track, to, "move");
-        RequireValidKeys(track);
         if (from == to) return track;
 
-        var n = track.Points.Count;
-        var keys = track.Timing;
-        var legs = new float[n];
-        for (var i = 1; i < n; i++) legs[i] = LegSeconds(track, i);
-
-        var order = Enumerable.Range(0, n).ToList();
+        var order = Enumerable.Range(0, track.Points.Count).ToList();
         order.RemoveAt(from);
         order.Insert(to, from);
 
-        var timing = new List<TimingKey>(keys.Count);
-        var time = keys[0].Time;
-        for (var slot = 0; slot < n; slot++)
-        {
-            var moved = order[slot];
-            var movedFirst = keys[FirstKeyIndex(keys, moved)];
-            var movedLastIndex = LastKeyIndex(keys, moved);
-            var hasHold = movedLastIndex != FirstKeyIndex(keys, moved);
-            var slotFirst = keys[FirstKeyIndex(keys, slot)];
-            var slotLast = keys[LastKeyIndex(keys, slot)];
-
-            if (slot > 0)
-            {
-                var originalStart = keys[LastKeyIndex(keys, slot - 1)].Time;
-                foreach (var inner in keys.Where(k => k.Position > slot - 1 && k.Position < slot))
-                    timing.Add(inner with { Time = time + (inner.Time - originalStart) });
-                time += legs[slot];
-            }
-
-            var arrival = movedFirst with { Time = time, Position = slot, InMode = slotFirst.InMode, InTangent = slotFirst.InTangent, Broken = slotFirst.Broken };
-            if (!hasHold)
-            {
-                timing.Add(arrival with { OutMode = slotLast.OutMode, OutTangent = slotLast.OutTangent });
-                continue;
-            }
-
-            timing.Add(arrival);
-            time += keys[movedLastIndex].Time - movedFirst.Time;
-            timing.Add(keys[movedLastIndex] with { Time = time, Position = slot, OutMode = slotLast.OutMode, OutTangent = slotLast.OutTangent });
-        }
-
+        var timing = order.Select((moved, slot) => track.Timing[slot] with { Hold = track.Timing[moved].Hold }).ToList();
+        timing[0] = timing[0] with { LegSpeed = null };
         return track with { Points = order.Select(i => track.Points[i]).ToList(), Timing = timing };
     }
 
-    /// <summary>Replaces point <paramref name="index"/>, keeping every timing key.</summary>
+    /// <summary>Replaces point <paramref name="index"/>, keeping its timing.</summary>
     public static Track Replace(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "replace");
@@ -347,7 +188,97 @@ public static class TrackEditing
         return track with { Points = points };
     }
 
-    private static void ValidateLegIndex(Track track, int index)
+    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/>; later keys shift with it.</summary>
+    public static Track SetHold(Track track, int index, float seconds)
+    {
+        ValidatePointIndex(track, index, "hold");
+        if (float.IsNaN(seconds)) return track;
+        return WithTiming(track, index, track.Timing[index] with { Hold = Math.Clamp(seconds, 0f, MaxSeconds) });
+    }
+
+    /// <summary>Sets the playback mode; never touches points or timing.</summary>
+    public static Track SetPlayback(Track track, PlaybackMode mode)
+        => track.Playback == mode ? track : track with { Playback = mode };
+
+    /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
+    public static Track SetSpeed(Track track, float speed)
+    {
+        if (float.IsNaN(speed)) return track;
+        var clamped = ClampSpeed(speed);
+        return clamped == track.Speed ? track : track with { Speed = clamped };
+    }
+
+    /// <summary>Sets the track speed so the shot, holds included, takes <paramref name="seconds"/> as near as the ranges allow; unchanged when every leg is pinned.</summary>
+    public static Track SetDuration(Track track, float seconds)
+    {
+        if (float.IsNaN(seconds) || AllPinned(track)) return track;
+
+        var target = MathF.Min(seconds, MaxShotSeconds);
+        var lengths = LegLengths(track);
+        var fixedSeconds = track.Timing.Sum(t => (double)t.Hold);
+        for (var leg = 1; leg < lengths.Length; leg++)
+        {
+            if (track.Timing[leg].LegSpeed is { } pinned) fixedSeconds += TimingCompiler.LegDuration(lengths[leg], pinned);
+        }
+
+        double Total(double speed)
+        {
+            var total = fixedSeconds;
+            for (var leg = 1; leg < lengths.Length; leg++)
+            {
+                if (track.Timing[leg].LegSpeed is null) total += TimingCompiler.LegDuration(lengths[leg], (float)speed);
+            }
+
+            return total;
+        }
+
+        if (Total(MinSpeed) <= target) return SetSpeed(track, MinSpeed);
+        if (Total(MaxSpeed) >= target) return SetSpeed(track, MaxSpeed);
+
+        var low = Math.Log(MinSpeed);
+        var high = Math.Log(MaxSpeed);
+        for (var i = 0; i < DurationSteps; i++)
+        {
+            var mid = (low + high) / 2.0;
+            if (Total(Math.Exp(mid)) > target) low = mid; else high = mid;
+        }
+
+        return SetSpeed(track, (float)Math.Exp((low + high) / 2.0));
+    }
+
+    /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
+    public static Track SetLegSpeed(Track track, int leg, float speed)
+    {
+        ValidateLegIndex(track, leg);
+        if (float.IsNaN(speed)) return track;
+        return WithTiming(track, leg, track.Timing[leg] with { LegSpeed = ClampSpeed(speed) });
+    }
+
+    /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>, clamped to the leg range.</summary>
+    public static Track SetLegDuration(Track track, int leg, float seconds)
+    {
+        ValidateLegIndex(track, leg);
+        if (float.IsNaN(seconds)) return track;
+        return SetLegSpeed(track, leg, LegLengths(track)[leg] / Math.Clamp(seconds, MinLegSeconds, MaxSeconds));
+    }
+
+    /// <summary>Unpins leg <paramref name="leg"/> so it follows the track speed again.</summary>
+    public static Track ResetLeg(Track track, int leg)
+    {
+        ValidateLegIndex(track, leg);
+        return WithTiming(track, leg, track.Timing[leg] with { LegSpeed = null });
+    }
+
+    /// <summary>The track with point <paramref name="index"/>'s timing replaced, or the same track when it is unchanged.</summary>
+    internal static Track WithTiming(Track track, int index, PointTiming value)
+    {
+        if (track.Timing[index] == value) return track;
+        var timing = track.Timing.ToList();
+        timing[index] = value;
+        return track with { Timing = timing };
+    }
+
+    internal static void ValidateLegIndex(Track track, int index)
     {
         var n = track.Points.Count;
         if (n < 2)
@@ -356,7 +287,7 @@ public static class TrackEditing
             throw new ArgumentOutOfRangeException(null, $"leg index must be 1..{n - 1} for a {n}-point track");
     }
 
-    private static void ValidatePointIndex(Track track, int index, string what)
+    internal static void ValidatePointIndex(Track track, int index, string what)
     {
         var n = track.Points.Count;
         if (n == 0)
@@ -365,45 +296,28 @@ public static class TrackEditing
             throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track");
     }
 
-    private static int FirstKeyIndex(IReadOnlyList<TimingKey> keys, int point)
+    private static float ClampSpeed(float speed) => Math.Clamp(speed, MinSpeed, MaxSpeed);
+
+    /// <summary>A Manual departure slope rescaled so it keeps its distance per second when its leg's length changes.</summary>
+    private static PointTiming ScaleOut(PointTiming timing, float scale)
+        => timing.OutMode == TangentMode.Manual ? timing with { OutTangent = timing.OutTangent * scale } : timing;
+
+    /// <summary>A Manual arrival slope rescaled so it keeps its distance per second when its leg's length changes.</summary>
+    private static PointTiming ScaleIn(PointTiming timing, float scale)
+        => timing.InMode == TangentMode.Manual ? timing with { InTangent = timing.InTangent * scale } : timing;
+
+    private static (int Point, KeyRole Role) Locate(Track track, int key)
     {
-        for (var i = 0; i < keys.Count; i++)
-            if (keys[i].Position == point) return i;
+        var count = KeyCount(track);
+        if (key < 0 || key >= count)
+            throw new ArgumentOutOfRangeException(null, $"key index must be 0..{count - 1}");
 
-        throw new ArgumentException($"point {point} has no timing key");
-    }
-
-    private static int LastKeyIndex(IReadOnlyList<TimingKey> keys, int point)
-    {
-        var last = -1;
-        for (var i = 0; i < keys.Count; i++)
-            if (keys[i].Position == point) last = i;
-
-        if (last < 0)
-            throw new ArgumentException($"point {point} has no timing key");
-
-        return last;
-    }
-
-    /// <summary>Checks each point has one or two keys of its own and every other key lies between the first and last point.</summary>
-    private static void RequireValidKeys(Track track)
-    {
-        var counts = new int[track.Points.Count];
-        foreach (var key in track.Timing)
+        var first = 0;
+        for (var p = 0; ; p++)
         {
-            var whole = MathF.Floor(key.Position);
-            if (key.Position != whole)
-            {
-                if (key.Position <= 0f || key.Position >= track.Points.Count - 1)
-                    throw new ArgumentException("a timing key lies outside the track");
-                continue;
-            }
-
-            var point = (int)whole;
-            if (point < 0 || point >= counts.Length) throw new ArgumentException("a timing key lies outside the track");
-            counts[point]++;
+            var next = first + (track.Timing[p].Hold > 0f ? 2 : 1);
+            if (key < next) return (p, key == first ? KeyRole.Point : KeyRole.HoldEnd);
+            first = next;
         }
-
-        if (counts.Any(c => c is < 1 or > 2)) throw new ArgumentException("every point needs one or two timing keys");
     }
 }
