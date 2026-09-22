@@ -52,7 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "/vista opens the editor | release"
+            HelpMessage = "/vista opens the editor"
         });
 
         Movement = new MovementLock();

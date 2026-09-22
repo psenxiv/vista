@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Fetch Dalamud (release channel)
+        run: |
+          $dalamud = Join-Path $env:APPDATA 'XIVLauncher\addon\Hooks\dev'
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile dalamud.zip
+          Expand-Archive -Force dalamud.zip $dalamud
+          "DALAMUD_HOME=$dalamud" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Check the tag against the version
+        id: version
+        run: |
+          $tag = '${{ github.ref_name }}'
+          [xml]$project = Get-Content src/Vista.Plugin/Vista.Plugin.csproj
+          $version = ($project.Project.PropertyGroup | Where-Object { $_.Version }).Version
+          $base = $tag.TrimStart('v').Split('-')[0]
+          if ($base -ne $version) { throw "Tag $tag doesn't match the project version $version." }
+          $prerelease = $tag.Contains('-')
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "prerelease=$($prerelease.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Test
+        run: dotnet test tests/Vista.Tests/Vista.Tests.csproj -c Release
+
+      - name: Build
+        run: dotnet build src/Vista.Plugin/Vista.Plugin.csproj -c Release
+
+      - name: Find the package
+        id: package
+        run: |
+          $zip = Get-ChildItem -Path src/Vista.Plugin/bin/Release -Recurse -Filter latest.zip | Select-Object -First 1
+          if (-not $zip) { throw 'DalamudPackager produced no latest.zip.' }
+          "zip=$($zip.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $manifest = Get-Content src/Vista.Plugin/Vista.json -Raw | ConvertFrom-Json
+          $flags = @()
+          if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { $flags += '--prerelease' }
+          gh release create '${{ github.ref_name }}' '${{ steps.package.outputs.zip }}' --title 'Vista ${{ github.ref_name }}' --notes $manifest.Changelog @flags
+
+      - name: Update repo.json
+        if: steps.version.outputs.prerelease == 'false'
+        run: |
+          git fetch origin main
+          git checkout main
+          $manifest = Get-Content src/Vista.Plugin/Vista.json -Raw | ConvertFrom-Json
+          $version = '${{ steps.version.outputs.version }}'
+          while ($version.Split('.').Count -lt 4) { $version += '.0' }
+          $link = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/latest.zip"
+          $repo = @(Get-Content repo.json -Raw | ConvertFrom-Json)
+          $entry = $repo[0]
+          $entry.AssemblyVersion = $version
+          $entry.TestingAssemblyVersion = $version
+          $entry.Punchline = $manifest.Punchline
+          $entry.Description = $manifest.Description
+          $entry.Tags = $manifest.Tags
+          $entry.Changelog = $manifest.Changelog
+          $entry.DownloadLinkInstall = $link
+          $entry.DownloadLinkUpdate = $link
+          $entry.DownloadLinkTesting = $link
+          $entry.LastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+          ConvertTo-Json -InputObject $repo -Depth 5 | Set-Content repo.json -Encoding utf8NoBOM
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add repo.json
+          git commit -m 'chore(release) publish ${{ github.ref_name }}'
+          git push origin main
