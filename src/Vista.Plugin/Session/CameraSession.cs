@@ -14,7 +14,7 @@ internal sealed class CameraSession
     private readonly SessionState state;
     private readonly FreeCam freeCam = new();
     private readonly MovementLock movement;
-    private readonly CameraOwnership ownership = new();
+    private bool owned;
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
     private bool previewedLastFrame;
@@ -174,7 +174,7 @@ internal sealed class CameraSession
     public bool Previewing => state.Previewing;
 
     /// <summary>True while the plugin writes the camera.</summary>
-    public bool OwnsCamera => ownership.IsOwned;
+    public bool OwnsCamera => owned;
 
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>
     public bool LocksInput => state.LocksInput;
@@ -250,14 +250,14 @@ internal sealed class CameraSession
     /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason, CameraMode to = CameraMode.Off)
     {
-        if (!state.Release(to) && !ownership.IsOwned) return;
+        if (!state.Release(to) && !owned) return;
 
         freeCam.Disable();
         GameUi.Restore();
         movement.Release();
         lastFrame = null;
         previewedLastFrame = false;
-        ownership.Release(reason);
+        owned = false;
 
         // Without this the game carries on from our values rather than its own,
         // which leaves the camera wrong long after we stop writing.
@@ -463,7 +463,7 @@ internal sealed class CameraSession
     /// <summary>Where the camera goes this frame, or null to leave it to the game. Called from the camera hook.</summary>
     public CameraState? Frame(float dt)
     {
-        if (!ownership.IsOwned) return null;
+        if (!owned) return null;
 
         var frame = state.Mode switch
         {
@@ -535,7 +535,7 @@ internal sealed class CameraSession
     private void TakeCamera()
     {
         snapshotBeforeTakeover ??= CameraAccess.Capture();
-        ownership.Take();
+        owned = true;
     }
 
     /// <summary>Puts the free-cam at <paramref name="frame"/>, keeping its aim by writing the game's yaw and pitch within its limits.</summary>
