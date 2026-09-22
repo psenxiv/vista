@@ -161,8 +161,8 @@ internal sealed unsafe class PlaylistPanel
         }
 
         if (!entered && !ImGui.IsItemDeactivated()) return;
-        var digits = new string(loopsText.Where(char.IsAsciiDigit).ToArray());
-        var count = int.TryParse(digits, out var n) && n > 0 ? n : (int?)null;
+        var whole = loopsText.Split('.')[0];
+        var count = int.TryParse(whole, out var n) && n != 0 ? n : (int?)null;
         Report(session.SetEntryLoops(entry.Id, count));
         editingLoops = null;
     }

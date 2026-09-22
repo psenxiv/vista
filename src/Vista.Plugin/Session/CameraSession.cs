@@ -31,7 +31,7 @@ internal sealed class CameraSession
             if (hideUiInLive == value) return;
             hideUiInLive = value;
             if (state.Mode != CameraMode.Live) return;
-            if (value && !state.Director.IsPaused) GameUi.Hide();
+            if (value && !state.Director.IsPaused && !state.Director.IsFinished) GameUi.Hide();
             else if (!value) GameUi.Restore();
         }
     }
