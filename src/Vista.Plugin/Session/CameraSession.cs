@@ -121,6 +121,7 @@ internal sealed class CameraSession
         switch (state.Edit())
         {
             case EditOutcome.FromOff:
+                previewedLastFrame = false;
                 freeCam.Enable(start.Value.Position, 0f, start.Value.Fov);
                 movement.Hold();
                 TakeCamera();
@@ -164,6 +165,7 @@ internal sealed class CameraSession
         GameUi.Restore();
         movement.Release();
         lastFrame = null;
+        previewedLastFrame = false;
         ownership.Release(reason);
 
         // Without this the game carries on from our values rather than its own,
@@ -353,7 +355,7 @@ internal sealed class CameraSession
         if (previewedLastFrame && !state.Previewing)
         {
             previewedLastFrame = false;
-            if ((frame ?? state.FrameAt(state.ScrubHead)) is { } last) FlyFrom(last);
+            if ((frame ?? lastFrame ?? state.FrameAt(state.ScrubHead)) is { } last) FlyFrom(last);
             return freeCam.Tick(dt);
         }
 
