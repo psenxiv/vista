@@ -1,7 +1,7 @@
 # Vista — Speed-Driven Timing and the Rename
 
 Date: 2026-09-22
-Status: Approved in brainstorming, awaiting written-spec review
+Status: Approved
 
 This changes how a shot's timing is authored. Legs now take their pace from a speed
 instead of a hand-typed time, and timing keys are compiled from the legs, not stored.
@@ -36,7 +36,7 @@ a second source of keys without redesigning the model.
 A leg's duration is always derived: its length divided by its speed, at least 0.1 s.
 A leg's average speed is its length divided by that duration.
 
-Defaults: a new track's speed is 2 yalms per second (proposed; for the user to confirm).
+Defaults: a new track's speed is 2 yalms per second.
 
 ## Rules
 
@@ -58,7 +58,7 @@ Defaults: a new track's speed is 2 yalms per second (proposed; for the user to c
 
 When every leg is pinned, the track Speed and Duration fields are disabled.
 
-Ranges (proposed; for the user to confirm), clamped not refused: track and leg speed 0.01 to 100 yalms per second; leg
+Ranges, clamped not refused: track and leg speed 0.01 to 100 yalms per second; leg
 duration 0.1 to 600 s; track duration from its minimum above to 3600 s; hold 0 to 600 s.
 A leg whose duration would pass 600 s at its speed is held at 600 s.
 
