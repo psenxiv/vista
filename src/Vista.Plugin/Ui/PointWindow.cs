@@ -182,7 +182,7 @@ internal sealed class PointWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>One number field: bordered in <paramref name="border"/>, named by its tooltip, and dragged live as one undo step.</summary>
+    /// <summary>One number field, bordered in its axis colour and named by its tooltip.</summary>
     private static bool BorderedField(string id, string name, uint? border, ref float value, float speed, string format)
     {
         ImGui.TableNextColumn();

@@ -363,7 +363,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         DropTarget(index, editing);
 
-        ImGui.SameLine();
+        ImGui.SameLine(0f, 0f);
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted($"{index + 1}");
 

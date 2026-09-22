@@ -61,7 +61,7 @@ internal sealed unsafe class HierarchyPanel
         using var id = ImRaii.PushId(track.Id.ToString());
         var isEdited = track.Id == edited;
         var hidden = scene.Hidden.Contains(track.Id);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + IconButton.Width(FontAwesomeIcon.Eye) + (ImGui.GetStyle().ItemSpacing.X * 2f);
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + MathF.Max(IconButton.Width(FontAwesomeIcon.Eye), IconButton.Width(FontAwesomeIcon.EyeSlash)) + (ImGui.GetStyle().ItemSpacing.X * 2f);
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons);
 
         if (renaming == track.Id) DrawRename(track, nameWidth);
