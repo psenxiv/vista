@@ -156,4 +156,22 @@ public class TrackAimTests
         Assert.Equal(first.Yaw, second.Yaw, 5);
         Assert.Equal(first.Pitch, second.Pitch, 5);
     }
+
+    [Fact]
+    public void TowardAimsFromOnePlaceAtAnother()
+    {
+        var ahead = TrackAim.Toward(Vector3.Zero, new Vector3(0f, 0f, -10f))!.Value;
+        Assert.Equal(0f, ahead.Yaw, 4);
+        Assert.Equal(0f, ahead.Pitch, 4);
+
+        var left = TrackAim.Toward(Vector3.Zero, new Vector3(-10f, 0f, 0f))!.Value;
+        Assert.Equal(90f * Deg, left.Yaw, 4);
+    }
+
+    [Fact]
+    public void TowardClampsPitchAndGivesNoAimForATargetOnTheCamera()
+    {
+        Assert.Equal(TrackAim.PitchLimit, TrackAim.Toward(Vector3.Zero, new Vector3(0f, 10f, 0f))!.Value.Pitch, 5);
+        Assert.Null(TrackAim.Toward(Vector3.Zero, new Vector3(0.05f, 0f, 0f)));
+    }
 }

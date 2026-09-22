@@ -26,13 +26,15 @@ public sealed class SessionState
     private readonly Func<Vector3, float?> groundBelow;
     private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
     private TrackPlayback? preview;
+    private readonly IAimTargets? aimTargets;
+    private readonly AimTracker scrubAim;
 
     /// <summary>True while an Edit preview is playing.</summary>
     public bool Previewing => preview is not null;
 
     public CameraMode Mode { get; private set; }
 
-    public Director Director { get; } = new();
+    public Director Director { get; }
 
     /// <summary>The tracks being edited, their order and which are hidden.</summary>
     public Scene Scene { get; private set; } = SceneEditing.New();
@@ -59,10 +61,13 @@ public sealed class SessionState
         return world;
     }
 
-    /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't.</summary>
-    public SessionState(Func<Vector3, float?>? groundBelow = null)
+    /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds followed characters.</summary>
+    public SessionState(Func<Vector3, float?>? groundBelow = null, IAimTargets? aimTargets = null)
     {
         this.groundBelow = groundBelow ?? (_ => null);
+        this.aimTargets = aimTargets;
+        scrubAim = new AimTracker(aimTargets);
+        Director = new Director(aimTargets);
         EditedTrackId = Scene.Tracks[0].Id;
     }
 
@@ -172,7 +177,7 @@ public sealed class SessionState
         EndLiveEdit();
         Scrubbing = false;
 
-        var playback = new TrackPlayback(Track);
+        var playback = new TrackPlayback(Track, aimTargets);
         if (!fromStart)
         {
             playback.Seek(ScrubHead);
@@ -748,8 +753,19 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
-    public CameraState? FrameAt(double time) => Local.Points.Count == 0 ? null : Evaluator.Evaluate(time);
+    /// <summary>The track's frame at <paramref name="time"/> seconds, aimed at its target where it is now, or null with no points.</summary>
+    public CameraState? FrameAt(double time)
+    {
+        if (Local.Points.Count == 0) return null;
+        scrubAim.Reset();
+        return scrubAim.Frame(Evaluator, Track, time, 0f);
+    }
+
+    /// <summary>The aim point on the character a track in the world follows, or null unless one is named and found.</summary>
+    public Vector3? CharacterAim(Track world) => AimTracker.CharacterAim(world, aimTargets);
+
+    /// <summary>True when a track in the world follows a named character who isn't found.</summary>
+    public bool TargetLost(Track world) => AimTracker.TargetLost(world, aimTargets);
 
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
     public bool Scrubbing { get; private set; }

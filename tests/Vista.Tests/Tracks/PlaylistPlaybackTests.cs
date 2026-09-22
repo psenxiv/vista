@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Xunit;
 
@@ -281,5 +282,40 @@ public class PlaylistPlaybackTests
         playback.Seek(10.0);
 
         Assert.False(playback.IsFinished);
+    }
+
+    // A single point at the origin, held 1 s, following Guard with heavy smoothing.
+    private static Track Follow() => TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f)), 0, 1f) with { TargetName = "Guard", Smoothing = 1f };
+
+    private static void GuardAt(NearbyCharacters characters, float x)
+        => characters.Update([new LoadedCharacter("Guard", new Vector3(x, -1.3f, -10f))]);
+
+    private static void AimsAt(Vector3 target, CameraState frame)
+    {
+        var want = Vector3.Normalize(target - frame.Position);
+        var got = Vector3.Normalize(frame.LookAt - frame.Position);
+        Assert.Equal(want.X, got.X, 3);
+        Assert.Equal(want.Y, got.Y, 3);
+        Assert.Equal(want.Z, got.Z, 3);
+    }
+
+    [Fact]
+    public void ACutOrASeekStartsTheSmoothingAfresh()
+    {
+        var characters = new NearbyCharacters();
+        GuardAt(characters, 0f);
+        var playback = new PlaylistPlayback([Item(Follow()), Item(Follow())], targets: characters);
+        AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
+
+        GuardAt(characters, 10f);
+        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), playback.Advance(0.5f)!.Value);
+
+        var cut = playback.Advance(0.5f)!.Value;
+        Assert.Equal(1, playback.Index);
+        AimsAt(new Vector3(10f, 0f, -10f), cut);
+
+        GuardAt(characters, -10f);
+        playback.Seek(0.2);
+        AimsAt(new Vector3(-10f, 0f, -10f), playback.Advance(0.01f)!.Value);
     }
 }

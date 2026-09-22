@@ -306,4 +306,21 @@ public class DirectorTests
         Assert.Null(director.Playlist);
         Assert.Null(director.Tick(1f));
     }
+
+    [Fact]
+    public void LiveFollowsACharacterTheDirectorWasGiven()
+    {
+        var characters = new NearbyCharacters();
+        characters.Update([new LoadedCharacter("Guard", new Vector3(0f, -1.3f, -10f))]);
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard" };
+        var director = new Director(characters);
+        director.GoLive(new TrackShot(track));
+
+        var frame = director.Tick(1f / 60f)!.Value;
+
+        var look = Vector3.Normalize(frame.LookAt - frame.Position);
+        Assert.Equal(0f, look.X, 4);
+        Assert.Equal(0f, look.Y, 4);
+        Assert.Equal(-1f, look.Z, 4);
+    }
 }

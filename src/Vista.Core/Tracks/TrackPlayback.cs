@@ -7,6 +7,7 @@ public sealed class TrackPlayback : IPlayback
 {
     private readonly Track _track;
     private readonly TrackEvaluator _evaluator;
+    private readonly AimTracker aim;
     private double _clock;
 
     /// <summary>Where the camera is in the shot, from 0 to <see cref="TrackEvaluator.Duration"/>.</summary>
@@ -18,11 +19,12 @@ public sealed class TrackPlayback : IPlayback
     /// <summary>True once a track that doesn't loop has reached the end of its cycle; never true for one that loops.</summary>
     public bool IsFinished { get; private set; }
 
-    /// <summary>Starts <paramref name="track"/> at the start of its cycle.</summary>
-    public TrackPlayback(Track track)
+    /// <summary>Starts <paramref name="track"/>, a track in the world, at the start of its cycle; <paramref name="targets"/> finds a followed character.</summary>
+    public TrackPlayback(Track track, IAimTargets? targets = null)
     {
         _track = track;
         _evaluator = new TrackEvaluator(track);
+        aim = new AimTracker(targets);
     }
 
     /// <summary>Adds <paramref name="dt"/> to the clock, stops or wraps it at the end of the cycle, and evaluates the shot time.</summary>
@@ -45,19 +47,21 @@ public sealed class TrackPlayback : IPlayback
             _clock = next;
         }
 
-        return _evaluator.Evaluate(ShotTime);
+        return aim.Frame(_evaluator, _track, ShotTime, Math.Max(dt, 0f));
     }
 
-    /// <summary>Puts the clock back to the start of the cycle and clears <see cref="IsFinished"/>.</summary>
+    /// <summary>Puts the clock back to the start of the cycle, clears <see cref="IsFinished"/> and starts the smoothing afresh.</summary>
     public void Restart()
     {
+        aim.Reset();
         _clock = 0.0;
         IsFinished = false;
     }
 
-    /// <summary>Jumps to shot time <paramref name="time"/>, clamped to the shot, keeping a Ping-pong shot's pass.</summary>
+    /// <summary>Jumps to shot time <paramref name="time"/>, clamped to the shot, keeping a Ping-pong shot's pass; the smoothing starts afresh.</summary>
     public void Seek(double time)
     {
+        aim.Reset();
         var length = _evaluator.Duration;
         var cycle = Cycle;
         var onReturn = PlaybackClock.OnReturnPass(_track.Direction, length, _clock);

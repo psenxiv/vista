@@ -11,16 +11,18 @@ public sealed class PlaylistPlayback : IPlayback
     private readonly IReadOnlyList<PlaylistItem> items;
     private readonly TrackEvaluator[] evaluators;
     private readonly bool loops;
+    private readonly AimTracker aim;
     private double clock;
     private bool shownFirstFrame;
 
-    /// <summary>Plays <paramref name="items"/> from the first, wrapping at the end when <paramref name="loops"/>; refused when empty.</summary>
-    public PlaylistPlayback(IReadOnlyList<PlaylistItem> items, bool loops = false)
+    /// <summary>Plays <paramref name="items"/> from the first, wrapping at the end when <paramref name="loops"/>; <paramref name="targets"/> finds followed characters. Refused when empty.</summary>
+    public PlaylistPlayback(IReadOnlyList<PlaylistItem> items, bool loops = false, IAimTargets? targets = null)
     {
         if (items.Count == 0) throw new ArgumentException("A playlist needs an entry to play.");
         this.items = items;
         this.loops = loops;
         evaluators = items.Select(i => new TrackEvaluator(i.Track)).ToArray();
+        aim = new AimTracker(targets);
     }
 
     /// <summary>The index of the entry playing, among the items.</summary>
@@ -38,19 +40,20 @@ public sealed class PlaylistPlayback : IPlayback
     /// <summary>Where the camera is in the playing entry's track.</summary>
     public double ShotTime => PlaybackClock.ShotTime(Direction, ShotLength, PassClock);
 
-    /// <summary>Moves on by <paramref name="dt"/>, cutting to later entries as earlier ones finish, and returns the frame.</summary>
+    /// <summary>Moves on by <paramref name="dt"/>, cutting to later entries as earlier ones finish, and returns the frame; a cut starts the smoothing afresh.</summary>
     public CameraState? Advance(float dt)
     {
         // A zero-length first entry gets its own frame before time starts moving.
         if (Index == 0 && !shownFirstFrame)
         {
             shownFirstFrame = true;
-            if (Total == 0) return evaluators[0].Evaluate(ShotTime);
+            if (Total == 0) return Frame(dt);
         }
 
         if (!IsFinished) clock += Math.Max(dt, 0f);
 
         var wrapped = false;
+        var cut = false;
         while (!IsFinished && clock >= Total && (Total > 0 || clock > 0))
         {
             if (Index == items.Count - 1)
@@ -67,17 +70,20 @@ public sealed class PlaylistPlayback : IPlayback
                 {
                     Index = 0;
                     clock = 0;
+                    cut = true;
                     break;
                 }
 
                 wrapped = true;
                 clock -= Total;
                 Index = 0;
+                cut = true;
             }
             else
             {
                 clock -= Total;
                 Index++;
+                cut = true;
             }
 
             // A zero-length entry is shown for the frame it's reached on.
@@ -88,25 +94,31 @@ public sealed class PlaylistPlayback : IPlayback
             }
         }
 
-        return evaluators[Index].Evaluate(ShotTime);
+        if (cut) aim.Reset();
+        return Frame(dt);
     }
 
-    /// <summary>Jumps to <paramref name="time"/> in the playing entry, staying in the loop pass it is on.</summary>
+    /// <summary>The playing entry's frame now, aimed at its target.</summary>
+    private CameraState? Frame(float dt) => aim.Frame(evaluators[Index], items[Index].Track, ShotTime, Math.Max(dt, 0f));
+
+    /// <summary>Jumps to <paramref name="time"/> in the playing entry, staying in the loop pass it is on; the smoothing starts afresh.</summary>
     public void Seek(double time)
     {
         var pass = PassClock;
         var onReturn = PlaybackClock.OnReturnPass(Direction, ShotLength, pass);
         clock = clock - pass + PlaybackClock.ClockFor(Direction, ShotLength, time, onReturn);
         IsFinished = !loops && Index == items.Count - 1 && clock >= Total;
+        aim.Reset();
     }
 
-    /// <summary>Goes back to the first entry's start.</summary>
+    /// <summary>Goes back to the first entry's start; the smoothing starts afresh.</summary>
     public void Restart()
     {
         Index = 0;
         clock = 0;
         IsFinished = false;
         shownFirstFrame = false;
+        aim.Reset();
     }
 
     private PlaybackDirection Direction => items[Index].Track.Direction;

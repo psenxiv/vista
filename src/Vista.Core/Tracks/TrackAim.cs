@@ -8,6 +8,9 @@ public static class TrackAim
     /// <summary>Steepest pitch a path-tangent or aim-key look can reach, so it never gimbals straight up or down.</summary>
     public const float PitchLimit = 89f * MathF.PI / 180f;
 
+    /// <summary>Closer than this, in yalms, a target gives no aim.</summary>
+    public const float MinTargetDistance = 0.1f;
+
     /// <summary>Below this, a direction vector is treated as undefined rather than normalised.</summary>
     private const float DirectionEpsilon = 1e-6f;
 
@@ -21,6 +24,13 @@ public static class TrackAim
         var yaw = MathF.Atan2(-normalized.X, -normalized.Z);
         var pitch = MathF.Asin(Math.Clamp(normalized.Y, -1f, 1f));
         return (yaw, pitch);
+    }
+
+    /// <summary>The pitch-clamped aim from <paramref name="from"/> at <paramref name="target"/>, or null when it is closer than <see cref="MinTargetDistance"/>.</summary>
+    public static (float Yaw, float Pitch)? Toward(Vector3 from, Vector3 target)
+    {
+        var direction = target - from;
+        return direction.Length() < MinTargetDistance ? null : ClampPitch(FromDirection(direction));
     }
 
     /// <summary>Walks an angle sequence (yaw or roll), adding or subtracting full turns so consecutive values differ by at most π.</summary>

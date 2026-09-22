@@ -251,4 +251,62 @@ public class TrackEvaluatorTests
         Assert.Equal(0f, evaluator.DistanceAt(1.0));
         Assert.Equal(0f, evaluator.PositionOf(3f));
     }
+
+    [Theory]
+    [InlineData(AimMode.AimKeys)]
+    [InlineData(AimMode.PathTangent)]
+    [InlineData(AimMode.LookAt)]
+    [InlineData(AimMode.FollowTarget)]
+    public void ATargetAimsTheCameraAtIt(AimMode aim)
+    {
+        var track = TrackEditing.SetSpeed(Build(new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) }, aim), 5f);
+        var target = new Vector3(10f, 5f, -30f);
+
+        var state = new TrackEvaluator(track).Evaluate(2.0, target)!.Value;
+
+        var look = Vector3.Normalize(state.LookAt - state.Position);
+        var toTarget = Vector3.Normalize(target - state.Position);
+        Assert.Equal(toTarget.X, look.X, 3);
+        Assert.Equal(toTarget.Y, look.Y, 3);
+        Assert.Equal(toTarget.Z, look.Z, 3);
+    }
+
+    [Theory]
+    [InlineData(AimMode.LookAt)]
+    [InlineData(AimMode.FollowTarget)]
+    public void WithNoTargetTheNewModesUseTheRecordedAim(AimMode aim)
+    {
+        var points = new[] { Point(0f, 0f, 0f, yaw: 90f * Deg), Point(10f, 0f, 0f, yaw: 90f * Deg) };
+
+        var state = new TrackEvaluator(Build(points, aim)).Evaluate(1.0)!.Value;
+
+        Assert.Equal(90f * Deg, TrackAim.FromDirection(state.LookAt - state.Position).Yaw, 3);
+    }
+
+    [Theory]
+    [InlineData(AimMode.LookAt)]
+    [InlineData(AimMode.FollowTarget)]
+    public void ASinglePointTrackTurnsToATarget(AimMode aim)
+    {
+        var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f, fov: 1.2f, roll: 0.3f);
+
+        var state = new TrackEvaluator(Build(new[] { point }, aim)).Evaluate(0.0, new Vector3(1f, 2f, -7f))!.Value;
+
+        var (yaw, pitch) = TrackAim.FromDirection(state.LookAt - state.Position);
+        Assert.Equal(point.Position, state.Position);
+        Assert.Equal(0f, yaw, 4);
+        Assert.Equal(0f, pitch, 4);
+        Assert.Equal(1.2f, state.Fov);
+        Assert.Equal(0.3f, state.Roll);
+    }
+
+    [Fact]
+    public void ATargetOnTheCameraLeavesTheRecordedAim()
+    {
+        var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f);
+
+        var state = new TrackEvaluator(Build(new[] { point }, AimMode.LookAt)).Evaluate(0.0, new Vector3(1.05f, 2f, 3f))!.Value;
+
+        Assert.Equal(FreeCamMotion.LookAtFrom(point.Position, 0.5f, 0.1f), state.LookAt);
+    }
 }

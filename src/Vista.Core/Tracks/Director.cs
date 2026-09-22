@@ -7,6 +7,10 @@ public sealed class Director
 {
     private Shot? _shot;
     private IPlayback? _playback;
+    private readonly IAimTargets? targets;
+
+    /// <summary>A Director whose playbacks find followed characters with <paramref name="targets"/>.</summary>
+    public Director(IAimTargets? targets = null) => this.targets = targets;
 
     /// <summary>True once <see cref="GoLive"/> has been called and <see cref="GoOffline"/> has not.</summary>
     public bool IsLive { get; private set; }
@@ -31,8 +35,8 @@ public sealed class Director
     {
         var playback = shot switch
         {
-            TrackShot t => (IPlayback)new TrackPlayback(t.Track),
-            PlaylistShot p => new PlaylistPlayback(p.Items, p.Loops),
+            TrackShot t => (IPlayback)new TrackPlayback(t.Track, targets),
+            PlaylistShot p => new PlaylistPlayback(p.Items, p.Loops, targets),
             _ => null,
         };
         _shot = shot;

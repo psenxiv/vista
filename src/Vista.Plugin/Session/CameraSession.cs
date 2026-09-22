@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
@@ -89,6 +90,12 @@ internal sealed class CameraSession
 
     /// <summary>A scene track in the world.</summary>
     public Track WorldOf(Track local) => state.WorldOf(local);
+
+    /// <summary>The aim point on the character a track in the world follows, or null unless one is found.</summary>
+    public Vector3? CharacterAim(Track world) => state.CharacterAim(world);
+
+    /// <summary>True when a track in the world follows a named character who isn't found nearby.</summary>
+    public bool TargetLost(Track world) => state.TargetLost(world);
 
     /// <summary>The selected anchor, or null.</summary>
     public AnchorKind? SelectedAnchor => state.SelectedAnchor;

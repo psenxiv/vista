@@ -84,30 +84,36 @@ public sealed class TrackEvaluator
         return null;
     }
 
-    /// <summary>The camera's state at <paramref name="time"/>, or null for a track with no points.</summary>
-    public CameraState? Evaluate(double time)
+    /// <summary>The camera's state at <paramref name="time"/>, aimed at <paramref name="target"/> when given, or null for a track with no points.</summary>
+    public CameraState? Evaluate(double time, Vector3? target = null)
     {
         if (_track.Points.Count == 0) return null;
 
         if (_track.Points.Count == 1)
         {
             var only = _track.Points[0];
-            return new CameraState(only.Position, FreeCamMotion.LookAtFrom(only.Position, only.Yaw, only.Pitch), only.Fov, only.Roll);
+            var (onlyYaw, onlyPitch) = Toward(only.Position, target) ?? (only.Yaw, only.Pitch);
+            return new CameraState(only.Position, FreeCamMotion.LookAtFrom(only.Position, onlyYaw, onlyPitch), only.Fov, only.Roll);
         }
 
         var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
         var parameter = _table.ParameterAt(segment, fraction);
         var cameraPosition = CatmullRom.Evaluate(_positions, segment, parameter);
 
-        var (yaw, pitch) = _track.Aim == AimMode.AimKeys
-            ? AimKeys(segment, fraction)
-            : TrackAim.PathTangent(_positions, _table, segment, fraction, (_yaws[0], _pitches[0]));
+        var (yaw, pitch) = Toward(cameraPosition, target)
+            ?? (_track.Aim == AimMode.PathTangent
+                ? TrackAim.PathTangent(_positions, _table, segment, fraction, (_yaws[0], _pitches[0]))
+                : AimKeys(segment, fraction));
 
         var fov = Math.Clamp(TrackAim.Channel(_fovs, segment, fraction), _fovMin, _fovMax);
         var roll = TrackAim.Channel(_rolls, segment, fraction);
 
         return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov, roll);
     }
+
+    /// <summary>The aim at <paramref name="target"/> from <paramref name="from"/>, or null with no target or one on the camera.</summary>
+    private static (float Yaw, float Pitch)? Toward(Vector3 from, Vector3? target)
+        => target is { } at ? TrackAim.Toward(from, at) : null;
 
     /// <summary>Distance along the path at <paramref name="time"/>.</summary>
     public float DistanceAt(double time) => _curve.PositionAt(time);

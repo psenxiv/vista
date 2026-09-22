@@ -334,4 +334,37 @@ public class TrackPlaybackTests
         Assert.Equal(10.0, playback.ShotTime, 5);
         Assert.False(playback.IsFinished);
     }
+
+    private static void AimsAt(Vector3 target, CameraState frame)
+    {
+        var want = Vector3.Normalize(target - frame.Position);
+        var got = Vector3.Normalize(frame.LookAt - frame.Position);
+        Assert.Equal(want.X, got.X, 3);
+        Assert.Equal(want.Y, got.Y, 3);
+        Assert.Equal(want.Z, got.Z, 3);
+    }
+
+    private static void GuardAt(NearbyCharacters characters, float x)
+        => characters.Update([new LoadedCharacter("Guard", new Vector3(x, -1.3f, -10f))]);
+
+    [Fact]
+    public void AFollowedCharacterIsEasedOntoAndASeekOrRestartSnapsBackOntoThem()
+    {
+        var characters = new NearbyCharacters();
+        GuardAt(characters, 0f);
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var playback = new TrackPlayback(track, characters);
+
+        AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(1f / 60f)!.Value);
+
+        GuardAt(characters, 10f);
+        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), playback.Advance(0.5f)!.Value);
+
+        playback.Seek(0.0);
+        AimsAt(new Vector3(10f, 0f, -10f), playback.Advance(1f / 60f)!.Value);
+
+        GuardAt(characters, -10f);
+        playback.Restart();
+        AimsAt(new Vector3(-10f, 0f, -10f), playback.Advance(1f / 60f)!.Value);
+    }
 }
