@@ -142,3 +142,19 @@ Core under TDD:
 - easing through the new model.
 
 Then one `CHECKLIST.md` at the end, for the user to work through.
+
+## Results (2026-09-22)
+
+In game, every check passed with no notes, covering:
+- the rename;
+- track speed and duration;
+- legs, pins and the pin toggle;
+- point edits keeping the pace;
+- the Timing window, with its yalm scale and hover readout;
+- easing, handles, shape-keeping, and the Delete and Backspace keys.
+
+Decisions settled after the final reviews:
+- Pinning a leg that's at a limit pins it at its speed setting, not the average its row shows.
+- Joined handles may kink when the leg on only one side changes speed; that follows from storing
+  handles as ratios.
+- The track Speed and Duration fields stay disabled until there are two points.

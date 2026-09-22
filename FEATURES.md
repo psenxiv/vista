@@ -14,6 +14,10 @@ export/import, sessions holding multiple tracks, anchoring for tracks and sessio
 with auto-advance, and two more playback modes: Reverse and Ping-pong. Looping either one comes
 from the existing Loop mode. Details are settled after phase 2.
 
+On 2026-09-22 the user ordered it. **3.a** is Reverse and Ping-pong playback, since it stands
+alone. The rest is specced before it is ordered: export/import comes after the data models
+settle (anchors, multi-track sessions, playlists).
+
 ### Export / import
 Tracks and snap points, exported as one portable JSON file so a director can
 build shots and hand them to operators to run. Switchboard import/export is a
