@@ -56,16 +56,32 @@ internal sealed class PointWindow : Window
 
     public override void Draw()
     {
+        Anchor? anchor = null;
+        var index = -1;
         if (session.SelectedAnchor is not null)
         {
-            DrawAnchor();
-            return;
+            if (session.SelectedAnchorInWorld is not { } a) return;
+            anchor = a;
         }
+        else if (session.Selected is { } i && i < session.Track.Points.Count) index = i;
+        else return;
 
-        if (session.Selected is not { } index || index >= session.Track.Points.Count) return;
-        var point = session.Track.Points[index];
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
+        if (!DrawHeader(anchor is null ? index : null)) return;
 
+        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
+        if (!ImGui.BeginTable("fields", 4, ImGuiTableFlags.SizingFixedFit)) return;
+
+        if (anchor is { } shownAnchor) DrawAnchorRows(shownAnchor);
+        else DrawPointRows(index, session.Track.Points[index]);
+
+        ImGui.EndTable();
+        fieldsWidth = ImGui.GetItemRectSize().X;
+    }
+
+    /// <summary>Gizmo mode, then copy, paste and delete, disabled for an anchor; false once the point is deleted.</summary>
+    private bool DrawHeader(int? pointIndex)
+    {
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Gizmo");
         ImGui.SameLine();
@@ -78,102 +94,116 @@ internal sealed class PointWindow : Window
         var icons = IconButton.Width(FontAwesomeIcon.Copy) + IconButton.Width(FontAwesomeIcon.Paste) + IconButton.Width(FontAwesomeIcon.Trash) + (gap * 2f);
         ImGui.SameLine();
         ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + fieldsWidth - icons));
-        if (IconButton.Draw("copy-point", FontAwesomeIcon.Copy, "Copy position, aim, roll and FoV")) copied = point;
+
+        ImGui.BeginDisabled(pointIndex is null);
+        var point = pointIndex is { } i ? session.Track.Points[i] : (ControlPoint?)null;
+        if (IconButton.Draw("copy-point", FontAwesomeIcon.Copy, "Copy position, aim, roll and FoV") && point is { } source) copied = source;
 
         ImGui.SameLine();
         ImGui.BeginDisabled(copied is null);
-        if (IconButton.Draw("paste-point", FontAwesomeIcon.Paste, "Paste position, aim, roll and FoV") && copied is { } c)
-            Report(session.ReplacePoint(index, point with { Position = c.Position, Yaw = c.Yaw, Pitch = c.Pitch, Roll = c.Roll, Fov = c.Fov }));
+        if (IconButton.Draw("paste-point", FontAwesomeIcon.Paste, "Paste position, aim, roll and FoV") && copied is { } c && pointIndex is { } target && point is { } p)
+            Report(session.ReplacePoint(target, p with { Position = c.Position, Yaw = c.Yaw, Pitch = c.Pitch, Roll = c.Roll, Fov = c.Fov }));
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        if (IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point", danger: true))
-        {
-            Report(session.DeleteSelected());
-            return;
-        }
+        var deleted = IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point", danger: true) && pointIndex is not null;
+        ImGui.EndDisabled();
+        if (deleted) Report(session.DeleteSelected());
+        return !deleted;
+    }
 
-        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
-        if (!ImGui.BeginTable("point-fields", 6, ImGuiTableFlags.SizingFixedFit)) return;
-
+    /// <summary>The point's position, rotation and FoV rows; pitch and yaw are disabled under direction of travel.</summary>
+    private void DrawPointRows(int index, ControlPoint point)
+    {
         ImGui.TableNextRow();
-        Field("X", EditorColours.AxisX, $"x{index}", index, point.Position.X, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
-        Field("Y", EditorColours.AxisY, $"y{index}", index, point.Position.Y, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
-        Field("Z", EditorColours.AxisZ, $"z{index}", index, point.Position.Z, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
+        PointField($"x{index}", "X", EditorColours.AxisX, index, point.Position.X, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
+        PointField($"y{index}", "Y", EditorColours.AxisY, index, point.Position.Y, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
+        PointField($"z{index}", "Z", EditorColours.AxisZ, index, point.Position.Z, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
+        RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
 
-        // Pitch turns about X, yaw about Y and roll about Z, so each sits under its axis in the gizmo's colours.
         ImGui.TableNextRow();
         ImGui.BeginDisabled(session.Track.Aim == AimMode.PathTangent);
-        Field("Pitch", EditorColours.AxisX, $"pitch{index}", index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
-        Field("Yaw", EditorColours.AxisY, $"yaw{index}", index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
+        PointField($"pitch{index}", "Pitch", EditorColours.AxisX, index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
+        PointField($"yaw{index}", "Yaw", EditorColours.AxisY, index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
         ImGui.EndDisabled();
-        Field("Roll", EditorColours.AxisZ, $"roll{index}", index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
+        PointField($"roll{index}", "Roll", EditorColours.AxisZ, index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
+        RowIcon(FontAwesomeIcon.SyncAlt, "Rotation");
 
         ImGui.TableNextRow();
-        Field("FoV", null, $"fov{index}", index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = EditLimits.Fov(Radians(v)) });
-
-        ImGui.EndTable();
-        fieldsWidth = ImGui.GetItemRectSize().X;
+        PointField($"fov{index}", "FoV", null, index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = EditLimits.Fov(Radians(v)) });
     }
 
-    /// <summary>The selected anchor's gizmo mode and its X, Y, Z and Yaw; typing moves it and carries what hangs off it.</summary>
-    private void DrawAnchor()
+    /// <summary>The anchor's rows: X, Y, Z and Yaw edit it, and the fields it lacks are disabled.</summary>
+    private void DrawAnchorRows(Anchor anchor)
     {
-        if (session.SelectedAnchorInWorld is not { } anchor) return;
-        using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
-
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Gizmo");
-        ImGui.SameLine();
-        if (ImGui.RadioButton("Move", gizmo.Mode == GizmoMode.Move)) gizmo.SetMode(GizmoMode.Move);
-        ImGui.SameLine();
-        if (ImGui.RadioButton("Rotate", gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
-
-        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
-        if (!ImGui.BeginTable("anchor-fields", 4, ImGuiTableFlags.SizingFixedFit)) return;
+        ImGui.TableNextRow();
+        AnchorField("anchor-x", "X", EditorColours.AxisX, anchor.Position.X, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { X = EditLimits.Coordinate(v, a.Position.X) } });
+        AnchorField("anchor-y", "Y", EditorColours.AxisY, anchor.Position.Y, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Y = EditLimits.Coordinate(v, a.Position.Y) } });
+        AnchorField("anchor-z", "Z", EditorColours.AxisZ, anchor.Position.Z, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Z = EditLimits.Coordinate(v, a.Position.Z) } });
+        RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
 
         ImGui.TableNextRow();
-        AnchorField("X", EditorColours.AxisX, "anchor-x", anchor.Position.X, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { X = EditLimits.Coordinate(v, a.Position.X) } });
-        AnchorField("Y", EditorColours.AxisY, "anchor-y", anchor.Position.Y, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Y = EditLimits.Coordinate(v, a.Position.Y) } });
+        MissingField("anchor-pitch", "Pitch", EditorColours.AxisX);
+        AnchorField("anchor-yaw", "Yaw", EditorColours.AxisY, Degrees(EditLimits.Angle(anchor.Yaw)), AngleSpeed, "%.1f°", (a, v) => a with { Yaw = EditLimits.Angle(Radians(v)) });
+        MissingField("anchor-roll", "Roll", EditorColours.AxisZ);
+        RowIcon(FontAwesomeIcon.SyncAlt, "Rotation");
+
         ImGui.TableNextRow();
-        AnchorField("Z", EditorColours.AxisZ, "anchor-z", anchor.Position.Z, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Z = EditLimits.Coordinate(v, a.Position.Z) } });
-        AnchorField("Yaw", EditorColours.AxisY, "anchor-yaw", Degrees(EditLimits.Angle(anchor.Yaw)), AngleSpeed, "%.1f°", (a, v) => a with { Yaw = EditLimits.Angle(Radians(v)) });
-        ImGui.EndTable();
+        MissingField("anchor-fov", "FoV", null);
     }
 
-    /// <summary>A label and a drag field for the selected anchor: dragging moves it live, carrying what hangs off it, and each drag is one undo step.</summary>
-    private void AnchorField(string label, uint colour, string id, float value, float speed, string format, Func<Anchor, float, Anchor> set)
+    /// <summary>A point's field: dragging moves the point live, and each drag is one undo step.</summary>
+    private void PointField(string id, string name, uint? border, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
     {
-        ImGui.TableNextColumn();
-        ImGui.AlignTextToFramePadding();
-        using (ImRaii.PushColor(ImGuiCol.Text, colour))
-            ImGui.TextUnformatted(label);
-        ImGui.TableNextColumn();
-        ImGui.SetNextItemWidth(FieldWidth);
-
         var edited = value;
-        var changed = ImGui.DragFloat($"##{id}", ref edited, speed, 0f, 0f, format);
+        var changed = BorderedField(id, name, border, ref edited, speed, format);
+        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
+        // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
+        if (changed && index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
+        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
+    }
+
+    /// <summary>An anchor's field: dragging moves it live, carrying what hangs off it, and each drag is one undo step.</summary>
+    private void AnchorField(string id, string name, uint border, float value, float speed, string format, Func<Anchor, float, Anchor> set)
+    {
+        var edited = value;
+        var changed = BorderedField(id, name, border, ref edited, speed, format);
         if (ImGui.IsItemActivated()) session.BeginLiveEdit();
         if (changed && session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
         if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
     }
 
-    /// <summary>A label and a drag field, as two cells of the grid: dragging moves the point live, and each drag is one undo step.</summary>
-    private void Field(string label, uint? colour, string id, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
+    /// <summary>A disabled field showing "—", for what an anchor does not have.</summary>
+    private static void MissingField(string id, string name, uint? border)
+    {
+        var none = 0f;
+        ImGui.BeginDisabled(true);
+        _ = BorderedField(id, name, border, ref none, 0f, "—");
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>One number field: bordered in <paramref name="border"/>, named by its tooltip, and dragged live as one undo step.</summary>
+    private static bool BorderedField(string id, string name, uint? border, ref float value, float speed, string format)
+    {
+        ImGui.TableNextColumn();
+        ImGui.SetNextItemWidth(FieldWidth);
+        bool changed;
+        using (ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f, border is not null))
+        using (ImRaii.PushColor(ImGuiCol.Border, border ?? 0u, border is not null))
+            changed = ImGui.DragFloat($"##{id}", ref value, speed, 0f, 0f, format);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(name);
+        return changed;
+    }
+
+    /// <summary>The row's icon at its right end, naming the row in its tooltip.</summary>
+    private static void RowIcon(FontAwesomeIcon icon, string name)
     {
         ImGui.TableNextColumn();
         ImGui.AlignTextToFramePadding();
-        using (ImRaii.PushColor(ImGuiCol.Text, colour ?? 0u, colour is not null))
-            ImGui.TextUnformatted(label);
-        ImGui.TableNextColumn();
-        ImGui.SetNextItemWidth(FieldWidth);
-
-        var edited = value;
-        var changed = ImGui.DragFloat($"##{id}", ref edited, speed, 0f, 0f, format);
-        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
-        // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
-        if (changed && index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
-        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+            ImGui.TextUnformatted(icon.ToIconString());
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(name);
     }
 
     private static float Degrees(float radians) => radians * 180f / MathF.PI;
