@@ -13,7 +13,7 @@ public sealed class Director
     public Director(IAimTargets? targets = null) => this.targets = targets;
 
     /// <summary>True once <see cref="GoLive"/> has been called and <see cref="GoOffline"/> has not.</summary>
-    public bool IsLive { get; private set; }
+    public bool IsLive => _shot is not null;
 
     /// <summary>True while live and paused; frames stop advancing.</summary>
     public bool IsPaused { get; private set; }
@@ -41,7 +41,6 @@ public sealed class Director
         };
         _shot = shot;
         _playback = playback;
-        IsLive = true;
         IsPaused = false;
     }
 
@@ -60,7 +59,8 @@ public sealed class Director
     /// <summary>Takes live mode off and clears pause. <see cref="Tick"/> returns null until the next <see cref="GoLive"/>.</summary>
     public void GoOffline()
     {
-        IsLive = false;
+        _shot = null;
+        _playback = null;
         IsPaused = false;
     }
 
