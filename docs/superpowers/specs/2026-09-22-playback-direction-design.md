@@ -1,14 +1,14 @@
 # Vista — Playback Direction (Phase 3.a)
 
 Date: 2026-09-22
-Status: Approved design, awaiting spec review
+Status: Approved
 
 This adds Reverse and Ping-pong playback. It replaces the track's `PlaybackMode` with two
 settings: a **Direction** and a **Loop** toggle. Where this differs from
 `2026-09-20-cinematic-cam-design.md` (Playback mode) or `2026-09-21-editor-design.md` (the
 second row), this document wins.
 
-The plugin is unreleased, so the stored format changes with no migration.
+The plugin is unreleased and tracks aren't saved yet, so nothing needs migrating.
 
 ## Terms
 
@@ -51,7 +51,8 @@ Shot time is a pure function of the clock, with `L` the shot's length:
   still facing the path's forward direction, like a rewind; so does Ping-pong's return
   (decided 2026-09-22).
 - The clock accumulates frame time, as today, so a shot runs identically at any frame rate.
-  A negative frame time never runs the clock backwards, and a zero-length shot stays at 0.
+  A negative frame time never runs the clock backwards. A zero-length shot stays at 0 and,
+  with Loop off, is finished at once, as today.
 
 ## Starting, seeking and finishing
 
@@ -65,6 +66,8 @@ Shot time is a pure function of the clock, with `L` the shot's length:
     time. A finished Ping-pong shot is on its return pass.
   - With Loop off, a seek that lands on the end of the cycle finishes the shot, and a seek
     back from a finished shot un-finishes it, as today.
+  - With Loop on, the clock wraps at the end of the cycle as it does in playback, so a seek
+    to the end of a Forward shot shows its first frame, as Loop does today.
 - **The scrub bar** keeps its range of 0 to `L` and shows the shot time, both while
   editing and live (decided 2026-09-22).
 - **Edit from Live** puts the edit-mode scrub head at the shot time.
@@ -116,4 +119,5 @@ Core under TDD:
 - the session: a Reverse cue at shot time `L`, Edit from Live taking the shot time, and
   scrubbing a live Ping-pong shot.
 
-Then one `CHECKLIST.md` at the end, for the user to work through.
+No `CHECKLIST.md` for this phase: the user tests in game in their own time (decided
+2026-09-22).
