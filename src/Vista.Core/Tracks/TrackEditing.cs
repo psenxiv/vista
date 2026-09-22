@@ -225,9 +225,12 @@ public static class TrackEditing
         return result with { LookAt = FreeCamMotion.LookAtFrom(from.Position, from.Yaw, from.Pitch), LookAtPlaced = true };
     }
 
-    /// <summary>Puts the Look At point at <paramref name="local"/>, relative to the track's anchor.</summary>
+    /// <summary>Puts the Look At point at <paramref name="local"/>, relative to the track's anchor; unchanged when not finite.</summary>
     public static Track SetLookAt(Track track, Vector3 local)
-        => track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
+    {
+        if (!float.IsFinite(local.X) || !float.IsFinite(local.Y) || !float.IsFinite(local.Z)) return track;
+        return track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
+    }
 
     /// <summary>Names the character to follow; null or blank chooses none.</summary>
     public static Track SetTarget(Track track, string? name)

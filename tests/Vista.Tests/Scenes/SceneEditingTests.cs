@@ -126,6 +126,23 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void DuplicateCopiesTheLookAtAndFollowSettings()
+    {
+        var scene = SceneEditing.New();
+        scene = SceneEditing.Replace(scene, scene.Tracks[0] with
+        {
+            LookAt = new Vector3(1f, 2f, 3f), LookAtPlaced = true, TargetName = "Guard", AimHeight = 2f, Smoothing = 0.7f,
+        });
+        var copy = SceneEditing.Duplicate(scene, scene.Tracks[0].Id).Scene.Tracks[1];
+
+        Assert.Equal(new Vector3(1f, 2f, 3f), copy.LookAt);
+        Assert.True(copy.LookAtPlaced);
+        Assert.Equal("Guard", copy.TargetName);
+        Assert.Equal(2f, copy.AimHeight);
+        Assert.Equal(0.7f, copy.Smoothing);
+    }
+
+    [Fact]
     public void DeleteRemovesTheTrackAndNamesTheOneTakingItsPlace()
     {
         var scene = Three();

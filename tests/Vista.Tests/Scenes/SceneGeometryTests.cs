@@ -220,4 +220,28 @@ public class SceneGeometryTests
 
         Near(new Vector3(5f, 6f, 7f), WorldLookAt(placed));
     }
+
+    [Fact]
+    public void PlacingATrackAnchorUnderAPlacedSceneAnchorLeavesItsLookAtInTheWorld()
+    {
+        var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f), AnchorPlaced = true };
+        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(5f, 6f, 7f), LookAtPlaced = true });
+        var before = WorldLookAt(scene);
+
+        var placed = SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(20f, 9f, -3f), 2f);
+
+        Assert.True(placed.Tracks[0].AnchorPlaced);
+        Near(before, WorldLookAt(placed));
+    }
+
+    [Fact]
+    public void MovingTheSceneAnchorCarriesTheLookAt()
+    {
+        var scene = WithLookAt(Anchored());
+        var to = new Anchor(new Vector3(-30f, 1f, 8f), -0.7f);
+
+        var moved = SceneGeometry.MoveSceneAnchor(scene, to, carry: true);
+
+        Near(to.ToWorld(scene.Tracks[0].Anchor).ToWorld(new Vector3(0f, 3f, -10f)), WorldLookAt(moved));
+    }
 }

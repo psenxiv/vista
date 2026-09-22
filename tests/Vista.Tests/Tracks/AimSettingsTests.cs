@@ -56,6 +56,16 @@ public class AimSettingsTests
     }
 
     [Fact]
+    public void ALookAtThatIsNotFiniteChangesNothing()
+    {
+        var track = TrackEditing.Empty();
+
+        Assert.Same(track, TrackEditing.SetLookAt(track, new Vector3(float.NaN, 0f, 0f)));
+        Assert.Same(track, TrackEditing.SetLookAt(track, new Vector3(0f, float.PositiveInfinity, 0f)));
+        Assert.Same(track, TrackEditing.SetLookAt(track, new Vector3(0f, 0f, float.NegativeInfinity)));
+    }
+
+    [Fact]
     public void OtherModesPlaceNoLookAtAndTheSameModeChangesNothing()
     {
         Assert.False(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.FollowTarget, Camera).LookAtPlaced);
