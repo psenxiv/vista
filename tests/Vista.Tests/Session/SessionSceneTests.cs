@@ -86,14 +86,23 @@ public class SessionSceneTests
         var state = Editing();
         var first = First(state);
         state.AddTrack();
+        var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
+        state.Select(1);
         state.AddToEnd(Point(30f));
-        state.SwitchTrack(state.Scene.Tracks[1].Id);
+        state.SwitchTrack(second);
 
         Assert.True(state.Undo());
 
         Assert.Equal(first, state.EditedTrackId);
         Assert.Equal(3, state.Track.Points.Count);
+        Assert.Equal(1, state.Selected);
+
+        Assert.True(state.Redo());
+
+        Assert.Equal(second, state.EditedTrackId);
+        Assert.Equal(4, state.Scene.Tracks[0].Points.Count);
+        Assert.Null(state.Selected);
     }
 
     [Fact]
@@ -260,6 +269,7 @@ public class SessionSceneTests
         var state = Editing();
         state.AddTrack();
         var first = First(state);
+        var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
         state.Play();
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -268,6 +278,20 @@ public class SessionSceneTests
         Assert.NotNull(state.SwitchTrack(first));
         Assert.NotNull(state.RenameTrack(first, "Crane"));
         Assert.Equal(2, state.Scene.Tracks.Count);
+
+        state.Stop();
+        Assert.True(state.Director.IsPaused);
+
+        Assert.NotNull(state.AddTrack());
+        Assert.NotNull(state.SwitchTrack(first));
+        Assert.NotNull(state.RenameTrack(first, "Crane"));
+        Assert.NotNull(state.DuplicateTrack(first));
+        Assert.NotNull(state.DeleteTrack(first));
+        Assert.NotNull(state.MoveTrack(0, 1));
+        Assert.NotNull(state.SetTrackHidden(second, true));
+
+        Assert.Equal(2, state.Scene.Tracks.Count);
+        Assert.Empty(state.Scene.Hidden);
     }
 
     [Fact]
