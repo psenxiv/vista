@@ -3,6 +3,9 @@
 Date: 2026-09-22
 Status: Approved in brainstorming, awaiting written-spec review
 
+> Timing authoring here is superseded by `2026-09-22-timing-model-design.md`: legs take
+> their pace from a speed, keys are compiled, and keys between points are removed.
+
 2c-2 adds control over a shot's pacing: easing presets per leg, and a graph for
 shaping the timing curve by hand. It builds on the timing model in
 `2026-09-20-cinematic-cam-design.md` (Timing) and the editor in
