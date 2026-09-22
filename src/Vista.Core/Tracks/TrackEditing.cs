@@ -121,10 +121,6 @@ public static class TrackEditing
         var timing = track.Timing.ToList();
         timing.Insert(index + 1, new PointTiming(LegSpeed: track.Timing[index + 1].LegSpeed));
 
-        var before = LegLengths(track);
-        var after = LegLengths(track with { Points = points });
-        timing[index] = ScaleOut(timing[index], before[index + 1] / after[index + 1]);
-        timing[index + 2] = ScaleIn(timing[index + 2], before[index + 1] / after[index + 2]);
         return track with { Points = points, Timing = timing };
     }
 
@@ -155,10 +151,6 @@ public static class TrackEditing
         timing[index + 1] = timing[index + 1] with { LegSpeed = timing[index].LegSpeed };
         timing.RemoveAt(index);
 
-        var before = LegLengths(track);
-        var after = LegLengths(track with { Points = points });
-        timing[index - 1] = ScaleOut(timing[index - 1], before[index] / after[index]);
-        timing[index] = ScaleIn(timing[index], before[index + 1] / after[index]);
         return track with { Points = points, Timing = timing };
     }
 
@@ -299,14 +291,6 @@ public static class TrackEditing
     }
 
     private static float ClampSpeed(float speed) => Math.Clamp(speed, MinSpeed, MaxSpeed);
-
-    /// <summary>A Manual departure slope rescaled so it keeps its distance per second when its leg's length changes.</summary>
-    private static PointTiming ScaleOut(PointTiming timing, float scale)
-        => timing.OutMode == TangentMode.Manual ? timing with { OutTangent = timing.OutTangent * scale } : timing;
-
-    /// <summary>A Manual arrival slope rescaled so it keeps its distance per second when its leg's length changes.</summary>
-    private static PointTiming ScaleIn(PointTiming timing, float scale)
-        => timing.InMode == TangentMode.Manual ? timing with { InTangent = timing.InTangent * scale } : timing;
 
     private static (int Point, KeyRole Role) Locate(Track track, int key)
     {

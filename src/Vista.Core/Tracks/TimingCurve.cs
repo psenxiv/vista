@@ -108,13 +108,13 @@ public sealed class TimingCurve
         return (inTangent, outTangent);
     }
 
-    /// <summary>One side's slope before the monotone clamp.</summary>
-    private static float SideRaw(TangentMode mode, float manual, float auto, float linear) => mode switch
+    /// <summary>One side's slope before the monotone clamp; a Manual tangent is a ratio to <paramref name="secant"/>.</summary>
+    private static float SideRaw(TangentMode mode, float manual, float auto, float secant) => mode switch
     {
         TangentMode.Auto => auto,
-        TangentMode.Linear => linear,
+        TangentMode.Linear => secant,
         TangentMode.Flat => 0f,
-        TangentMode.Manual => manual,
+        TangentMode.Manual => manual * secant,
         _ => throw new ArgumentOutOfRangeException(nameof(mode), $"unknown tangent mode {mode}"),
     };
 

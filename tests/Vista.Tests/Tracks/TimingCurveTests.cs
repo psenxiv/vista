@@ -300,6 +300,24 @@ public class TimingCurveTests
     }
 
     [Fact]
+    public void AManualSideIsARatioToItsSpansSecant()
+    {
+        var curve = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 0f, 0.5f),
+            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+        });
+        Assert.Equal(1f, curve.SideSlope(0, KeySide.Out), 4);
+
+        var steep = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 0f, 100f),
+            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+        });
+        Assert.Equal(6f, steep.SideSlope(0, KeySide.Out), 4);
+    }
+
+    [Fact]
     public void AManualSideUsesItsTangentWithinTheMonotoneLimit()
     {
         var gentle = new TimingCurve(new[]
@@ -307,7 +325,7 @@ public class TimingCurveTests
             Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 1f, 1f),
             Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
         });
-        Assert.Equal(1f, gentle.SideSlope(0, KeySide.Out), 4);
+        Assert.Equal(2f, gentle.SideSlope(0, KeySide.Out), 4);
 
         var steep = new TimingCurve(new[]
         {

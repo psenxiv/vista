@@ -15,6 +15,7 @@ public sealed class TrackEvaluator
     private readonly float[] _lengths;
     private readonly float[] _distances;
     private readonly IReadOnlyList<TimingKey> _keys;
+    private readonly TimingKey[] _distanceKeys;
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
@@ -49,7 +50,8 @@ public sealed class TrackEvaluator
         var legLengths = new float[track.Points.Count];
         for (var leg = 1; leg < legLengths.Length; leg++) legLengths[leg] = _lengths[leg - 1];
         _keys = TimingCompiler.Compile(track, legLengths);
-        _curve = new TimingCurve(_keys.Select(ToDistance).ToArray());
+        _distanceKeys = _keys.Select(ToDistance).ToArray();
+        _curve = new TimingCurve(_distanceKeys);
         _yaws = TrackAim.UnwrapAngles(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
         _rolls = TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray());
@@ -133,38 +135,34 @@ public sealed class TrackEvaluator
         return segment + fraction;
     }
 
-    /// <summary>A slope on one side of <paramref name="position"/>, from distance per second to stored control points per second.</summary>
-    public float ToStoredSlope(float position, KeySide side, float distancePerSecond) => distancePerSecond / SideLength(position, side);
-
-    /// <summary>A slope on one side of <paramref name="position"/>, from stored control points per second to distance per second.</summary>
-    public float FromStoredSlope(float position, KeySide side, float stored) => stored * SideLength(position, side);
-
-    /// <summary>The timing length of the segment on one side of a place: the one before it for In at a point, else the one it is in.</summary>
-    private float SideLength(float position, KeySide side)
+    /// <summary>A slope on one side of key <paramref name="key"/>, from distance per second to a ratio of that span's average speed.</summary>
+    public float ToStoredSlope(int key, KeySide side, float distancePerSecond)
     {
-        if (_lengths.Length == 0) return 1f;
-        var clamped = Math.Clamp(position, 0f, _lengths.Length);
-        var segment = Math.Min((int)MathF.Floor(clamped), _lengths.Length - 1);
-        if (side == KeySide.In && clamped - segment == 0f && segment > 0) segment--;
-        return _lengths[segment];
+        var secant = Secant(key, side);
+        return secant == 0f ? 0f : distancePerSecond / secant;
     }
 
-    /// <summary>The key with its position and tangents moved from control-point units to distance along the path.</summary>
+    /// <summary>A slope on one side of key <paramref name="key"/>, from a ratio of that span's average speed to distance per second.</summary>
+    public float FromStoredSlope(int key, KeySide side, float stored) => stored * Secant(key, side);
+
+    /// <summary>The average speed, in distance per second, of the span on one side of key <paramref name="key"/>; 0 with no span.</summary>
+    private float Secant(int key, KeySide side)
+    {
+        var start = side == KeySide.In ? key - 1 : key;
+        if (start < 0 || start + 1 >= _distanceKeys.Length) return 0f;
+        var a = _distanceKeys[start];
+        var b = _distanceKeys[start + 1];
+        return (b.Position - a.Position) / (b.Time - a.Time);
+    }
+
+    /// <summary>The key with its position moved from control-point units to distance along the path.</summary>
     private TimingKey ToDistance(TimingKey key)
     {
         if (_lengths.Length == 0) return key;
 
         var position = Math.Clamp(key.Position, 0f, _lengths.Length);
         var segment = Math.Min((int)MathF.Floor(position), _lengths.Length - 1);
-        var fraction = position - segment;
-        var inSegment = fraction == 0f && segment > 0 ? segment - 1 : segment;
-
-        return key with
-        {
-            Position = _distances[segment] + (fraction * _lengths[segment]),
-            InTangent = key.InTangent * _lengths[inSegment],
-            OutTangent = key.OutTangent * _lengths[segment],
-        };
+        return key with { Position = _distances[segment] + ((position - segment) * _lengths[segment]) };
     }
 
     /// <summary>Splits a distance along the path into a segment index and the arc fraction into it.</summary>

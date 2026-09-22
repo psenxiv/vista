@@ -225,11 +225,19 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void StoredSlopesConvertBySegmentLength()
+    public void StoredSlopesAreRatiosToTheSpansSecant()
     {
         var evaluator = StraightLinear();
-        Assert.Equal(0.2f, evaluator.ToStoredSlope(1f, KeySide.Out, 2f), 2);
-        Assert.Equal(2f, evaluator.FromStoredSlope(1f, KeySide.In, 0.2f), 1);
+        Assert.Equal(1f, evaluator.ToStoredSlope(1, KeySide.Out, 2f), 3);
+        Assert.Equal(1f, evaluator.FromStoredSlope(1, KeySide.In, 0.5f), 3);
+    }
+
+    [Fact]
+    public void AStoredSlopeWithNoSpanIsZero()
+    {
+        var evaluator = StraightLinear();
+        Assert.Equal(0f, evaluator.ToStoredSlope(0, KeySide.In, 2f));
+        Assert.Equal(0f, evaluator.FromStoredSlope(2, KeySide.Out, 0.5f));
     }
 
     [Fact]

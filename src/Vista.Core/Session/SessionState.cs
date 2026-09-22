@@ -373,9 +373,8 @@ public sealed class SessionState
     /// <summary>Sets Manual slopes from one graph slope on the handled sides: <paramref name="only"/> alone, or both when null.</summary>
     private static Track Collinear(Track track, TrackEvaluator evaluator, int key, float distancePerSecond, KeySide? only)
     {
-        var position = evaluator.Keys[key].Position;
         float? Side(KeySide side) => (only is null || only == side) && TimingEditing.HasHandle(track, key, side)
-            ? evaluator.ToStoredSlope(position, side, distancePerSecond)
+            ? evaluator.ToStoredSlope(key, side, distancePerSecond)
             : null;
         return TimingEditing.SetHandles(track, key, Side(KeySide.In), Side(KeySide.Out));
     }

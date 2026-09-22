@@ -526,35 +526,48 @@ public class TrackEditingTests
         Assert.Equal(new Vector3(20f, 0f, 0f), track.Points[0].Position);
     }
 
-    private static void AssertSlopesKept(Track before, Track after, params (int Before, int After, KeySide Side)[] sides)
+    private static float OutSlope(Track track, int key) => new TrackEvaluator(track).SideSlope(key, KeySide.Out);
+
+    // Build3PointTrack with point 1's handles at half the average speed on both sides.
+    private static Track HalfSpeedHandles() => TimingEditing.SetHandles(Build3PointTrack(), 1, 0.5f, 0.5f);
+
+    [Fact]
+    public void AHandleIsHalfItsSpansAverageSpeed()
+        => Assert.Equal(1f, OutSlope(HalfSpeedHandles(), 1), 3);
+
+    [Fact]
+    public void AHandleKeepsItsShapeThroughTheTrackSpeed()
+        => Assert.Equal(2f, OutSlope(TrackEditing.SetSpeed(HalfSpeedHandles(), 4f), 1), 3);
+
+    [Fact]
+    public void AHandleKeepsItsShapeThroughALegDuration()
+        => Assert.Equal(2.5f, OutSlope(TrackEditing.SetLegDuration(HalfSpeedHandles(), 2, 2f), 1), 3);
+
+    [Fact]
+    public void AHandleKeepsItsShapeThroughAPointEdit()
+        => Assert.Equal(1f, OutSlope(TrackEditing.Replace(HalfSpeedHandles(), 2, Point(40f, 0f, 0f)), 1), 3);
+
+    [Fact]
+    public void InsertingOnANeighbouringLegKeepsTheRatio()
     {
-        var was = new TrackEvaluator(before);
-        var now = new TrackEvaluator(after);
-        foreach (var (b, a, side) in sides)
-            Assert.Equal(was.SideSlope(b, side), now.SideSlope(a, side), 3);
+        var result = TrackEditing.InsertAfter(HalfSpeedHandles(), 0, Point(4f, 0f, 0f));
+
+        Assert.Equal((0.5f, 0.5f), (result.Timing[2].InTangent, result.Timing[2].OutTangent));
+        var evaluator = new TrackEvaluator(result);
+        Assert.Equal(1f, evaluator.SideSlope(2, KeySide.In), 3);
+        Assert.Equal(1f, evaluator.SideSlope(2, KeySide.Out), 3);
     }
 
     [Fact]
-    public void InsertAfterKeepsManualSlopesInDistancePerSecond()
+    public void DeletingOnANeighbouringLegKeepsTheRatio()
     {
-        // Leg 0..10 m at 2 m/s, split at x = 4; both Manual sides are 2 m/s, the secant of either half.
-        var track = TimingEditing.SetHandles(TimingEditing.SetHandles(Build3PointTrack(), 0, null, 0.2f), 1, 0.2f, null);
-
-        var result = TrackEditing.InsertAfter(track, 0, Point(4f, 0f, 0f));
-
-        AssertSlopesKept(track, result, (0, 0, KeySide.Out), (1, 2, KeySide.In));
-    }
-
-    [Fact]
-    public void DeletingAMiddlePointKeepsManualSlopesInDistancePerSecond()
-    {
-        // Legs of 6 and 14 m merge into one of 20 m, all at 2 m/s; both Manual sides are 2 m/s.
-        var track = TrackEditing.Empty();
-        foreach (var x in new[] { 0f, 6f, 20f }) track = TrackEditing.Append(track, Point(x, 0f, 0f));
-        track = TimingEditing.SetHandles(TimingEditing.SetHandles(track, 0, null, 2f / 6f), 2, 2f / 14f, null);
+        var track = TrackEditing.InsertAfter(HalfSpeedHandles(), 0, Point(4f, 0f, 0f));
 
         var result = TrackEditing.Delete(track, 1);
 
-        AssertSlopesKept(track, result, (0, 0, KeySide.Out), (2, 1, KeySide.In));
+        Assert.Equal((0.5f, 0.5f), (result.Timing[1].InTangent, result.Timing[1].OutTangent));
+        var evaluator = new TrackEvaluator(result);
+        Assert.Equal(1f, evaluator.SideSlope(1, KeySide.In), 3);
+        Assert.Equal(1f, evaluator.SideSlope(1, KeySide.Out), 3);
     }
 }

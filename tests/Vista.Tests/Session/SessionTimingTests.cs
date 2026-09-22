@@ -158,6 +158,18 @@ public class SessionTimingTests
     }
 
     [Fact]
+    public void AHandleDragKeepsItsShapeWhenTheTrackSpeedChanges()
+    {
+        var state = Editing();
+        state.BeginLiveEdit();
+        state.PreviewHandle(1, KeySide.Out, 3f);
+        state.EndLiveEdit();
+
+        Assert.Null(state.SetTrackSpeed(4f));
+        Assert.Equal(6f, state.Evaluator.SideSlope(1, KeySide.Out), 1);
+    }
+
+    [Fact]
     public void ABrokenHandleDragMovesOneSide()
     {
         var state = Editing();

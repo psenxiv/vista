@@ -15,7 +15,7 @@ public static class TimingEditing
         return TrackEditing.WithTiming(track, point, timing);
     }
 
-    /// <summary>Sets Manual slopes, in stored units, on the key's sides given; a null side, or one the key doesn't own, is left alone. Negative slopes become 0.</summary>
+    /// <summary>Sets Manual slopes, as ratios to their span's average speed, on the key's sides given; a null side, or one the key doesn't own, is left alone. Negative slopes become 0.</summary>
     public static Track SetHandles(Track track, int key, float? inSlope, float? outSlope)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
