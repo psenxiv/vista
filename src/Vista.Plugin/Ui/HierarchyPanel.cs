@@ -68,8 +68,10 @@ internal sealed unsafe class HierarchyPanel
         else DrawName(scene, track, index, isEdited, editing, nameWidth);
         ImGui.SameLine();
 
-        ImGui.BeginDisabled(!track.AnchorPlaced);
-        if (IconButton.Draw("anchor", FontAwesomeIcon.Anchor, "Select track anchor")) Report(session.SelectTrackAnchor(track.Id));
+        var follows = track.Aim == AimMode.FollowTarget;
+        ImGui.BeginDisabled(!track.AnchorPlaced || follows);
+        var anchorTip = follows ? "Follow Target tracks move with their character" : "Select track anchor";
+        if (IconButton.Draw("anchor", FontAwesomeIcon.Anchor, anchorTip)) Report(session.SelectTrackAnchor(track.Id));
         ImGui.EndDisabled();
         var eye = hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye;
         CentreInLastSlot(eye);

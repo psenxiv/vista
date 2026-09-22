@@ -597,7 +597,9 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing) return "Anchors can only be selected while editing.";
         if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
-        if (!SceneEditing.Get(Scene, id).AnchorPlaced) return TrackAnchorUnplaced;
+        var track = SceneEditing.Get(Scene, id);
+        if (track.Aim == AimMode.FollowTarget) return FollowAnchorHidden;
+        if (!track.AnchorPlaced) return TrackAnchorUnplaced;
         if (SwitchTrack(id) is { } refusal) return refusal;
         SelectAnchor(AnchorKind.Track);
         return null;
@@ -619,13 +621,14 @@ public sealed class SessionState
 
     private const string SceneAnchorUnplaced = "The scene anchor is placed with the scene's first point.";
     private const string TrackAnchorUnplaced = "A track's anchor is placed with its first point.";
+    private const string FollowAnchorHidden = "A Follow Target track's anchor is hidden";
     private const string LookAtUnused = "The Look At point is used only while the track aims at it.";
 
-    /// <summary>Why the <paramref name="kind"/> selection cannot be used: an unplaced anchor, or a Look At point not in use.</summary>
+    /// <summary>Why the <paramref name="kind"/> selection cannot be used: an unplaced or hidden anchor, or a Look At point not in use.</summary>
     private string? UnplacedRefusal(AnchorKind kind) => kind switch
     {
         AnchorKind.Scene => Scene.AnchorPlaced ? null : SceneAnchorUnplaced,
-        AnchorKind.Track => Local.AnchorPlaced ? null : TrackAnchorUnplaced,
+        AnchorKind.Track => Local.Aim == AimMode.FollowTarget ? FollowAnchorHidden : Local.AnchorPlaced ? null : TrackAnchorUnplaced,
         _ => Local is { Aim: AimMode.LookAt, LookAtPlaced: true } ? null : LookAtUnused,
     };
 
