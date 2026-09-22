@@ -90,6 +90,18 @@ public class TimingEditingTests
     }
 
     [Fact]
+    public void AnInnerKeyWithNeighboursOneTenthApartDragsWithoutThrowing()
+    {
+        // At 0.3 and 0.4 s, float rounding puts prev + gap a step above next - gap.
+        var track = WithInner(WithInner(WithInner(Build3PointTrack(), 0.3f, 0.06f), 0.4f, 0.08f), 0.35f, 0.07f);
+        Assert.True(0.3f + TrackEditing.MinKeyGap > 0.4f - TrackEditing.MinKeyGap);
+
+        var moved = TimingEditing.MoveKey(track, 2, 3f, 0.07f);
+
+        Assert.InRange(moved.Timing[2].Time, 0.3f, 0.4f);
+    }
+
+    [Fact]
     public void MovingAnInnerKeyToItsCurrentPlaceReturnsTheSameInstance()
     {
         var track = WithInner(Build3PointTrack(), 2f, 0.5f);

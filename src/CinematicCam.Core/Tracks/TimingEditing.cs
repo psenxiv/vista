@@ -27,7 +27,9 @@ public static class TimingEditing
         {
             var prev = keys[key - 1];
             var next = keys[key + 1];
-            var t = Math.Clamp(time, prev.Time + TrackEditing.MinKeyGap, next.Time - TrackEditing.MinKeyGap);
+            var earliest = prev.Time + TrackEditing.MinKeyGap;
+            var latest = next.Time - TrackEditing.MinKeyGap;
+            var t = earliest <= latest ? Math.Clamp(time, earliest, latest) : keys[key].Time;
             var low = prev.Position + PositionGap;
             var high = next.Position - PositionGap;
             var p = low <= high ? Math.Clamp(position, low, high) : keys[key].Position;
