@@ -288,8 +288,7 @@ internal sealed unsafe class TrackEditorWindow : Window
             return;
         }
 
-        using var dim = ImRaii.PushColor(ImGuiCol.Text, ImGui.GetColorU32(ImGuiCol.Text, 0.4f));
-        if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Following the track speed: click to pin at this speed"))
+        if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Following the track speed: click to pin at this speed", ImGui.GetColorU32(ImGuiCol.Text, 0.4f)))
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 

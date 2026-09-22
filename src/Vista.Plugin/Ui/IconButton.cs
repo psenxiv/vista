@@ -8,10 +8,12 @@ namespace Vista.Plugin.Ui;
 /// <summary>Icon buttons with a tooltip, and their width for right-aligning them.</summary>
 internal static class IconButton
 {
-    /// <summary>An icon button with a tooltip naming it, shown even while disabled.</summary>
-    public static bool Draw(string id, FontAwesomeIcon icon, string tooltip)
+    /// <summary>An icon button with a tooltip naming it, shown even while disabled. An optional icon colour never dims the tooltip.</summary>
+    public static bool Draw(string id, FontAwesomeIcon icon, string tooltip, uint? iconColour = null)
     {
-        var pressed = ImGuiComponents.IconButton(id, icon);
+        bool pressed;
+        using (ImRaii.PushColor(ImGuiCol.Text, iconColour ?? 0u, iconColour is not null))
+            pressed = ImGuiComponents.IconButton(id, icon);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
         return pressed;
     }
