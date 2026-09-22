@@ -11,7 +11,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list and the scrub bar.</summary>
+/// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
 internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "VISTA_POINT";
@@ -33,9 +33,11 @@ internal sealed unsafe class TrackEditorWindow : Window
     private readonly PendingField fields;
     private readonly TimingWindow timing;
     private readonly HierarchyPanel hierarchy;
+    private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
     private bool scrubbing;
     private bool showHierarchy = true;
+    private bool showPlaylist = true;
     private float pendingWidth;
 
     public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
@@ -45,6 +47,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         this.fields = fields;
         this.timing = timing;
         hierarchy = new HierarchyPanel(session);
+        playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
         SetMinimumWidth(MinWidth);
     }
@@ -53,7 +56,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     public override void PreDraw() => SetMinimumWidth(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth());
 
     /// <summary>The width the open compartments beside the track editor take, with their gap.</summary>
-    private float CompartmentsWidth() => showHierarchy ? HierarchyPanel.Width + Spacing.X : 0f;
+    private float CompartmentsWidth()
+        => (showHierarchy ? HierarchyPanel.Width + Spacing.X : 0f) + (showPlaylist ? PlaylistPanel.Width + Spacing.X : 0f);
 
     /// <summary>Applies an unfinished field edit and ends a scrub, since a closed window never reports either finishing.</summary>
     public override void OnClose()
@@ -81,7 +85,8 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.SameLine();
         }
 
-        if (ImGui.BeginChild("track-editor", Vector2.Zero))
+        var editorWidth = showPlaylist ? -(PlaylistPanel.Width + Spacing.X) : 0f;
+        if (ImGui.BeginChild("track-editor", new Vector2(editorWidth, 0f)))
         {
             ImGui.BeginDisabled(!editing);
             DrawTrackRow();
@@ -94,6 +99,13 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         ImGui.EndChild();
+
+        if (showPlaylist)
+        {
+            ImGui.SameLine();
+            if (ImGui.BeginChild("playlist", new Vector2(PlaylistPanel.Width, 0f), true)) playlist.Draw(editing);
+            ImGui.EndChild();
+        }
 
         // Showing or hiding a compartment grows or shrinks the window by its width, so the track editor keeps its size.
         if (pendingWidth != 0f)
@@ -110,6 +122,14 @@ internal sealed unsafe class TrackEditorWindow : Window
         {
             showHierarchy = !showHierarchy;
             pendingWidth += showHierarchy ? HierarchyPanel.Width + Spacing.X : -(HierarchyPanel.Width + Spacing.X);
+        }
+
+        ImGui.SameLine();
+        var listColour = showPlaylist ? (uint?)null : ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
+        if (IconButton.Draw("playlist", FontAwesomeIcon.ListOl, showPlaylist ? "Hide playlist" : "Show playlist", listColour))
+        {
+            showPlaylist = !showPlaylist;
+            pendingWidth += showPlaylist ? PlaylistPanel.Width + Spacing.X : -(PlaylistPanel.Width + Spacing.X);
         }
 
         ImGui.SameLine();
@@ -139,7 +159,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void DrawTransport()
     {
         var playing = session.Previewing || (session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished);
-        ImGui.BeginDisabled(session.Track.Points.Count == 0);
+        ImGui.BeginDisabled(session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive);
         if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
         {
             fields.Commit();
@@ -156,7 +176,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.SameLine();
     }
 
-    /// <summary>Off, Edit and Live; Off releases the camera and Live cues the shot paused at its start.</summary>
+    /// <summary>Off, Edit and Live; Off releases the camera and Live cues the playlist paused at its first entry's start.</summary>
     private void DrawModeCombo()
     {
         var current = session.Mode switch { CameraMode.Editing => 1, CameraMode.Live => 2, _ => 0 };
@@ -165,8 +185,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
         if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Edit(); }
-        ImGui.BeginDisabled(session.Track.Points.Count == 0);
+        ImGui.BeginDisabled(!session.CanGoLive);
         if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Cue(); }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !session.CanGoLive) ImGui.SetTooltip("Add a track with points to the playlist");
         ImGui.EndDisabled();
         ImGui.EndCombo();
     }
@@ -342,7 +363,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Play/Pause and Restart, the scrub bar showing current and total time, and fly speed at its right while editing.</summary>
     private void DrawScrubRow(bool editing)
     {
-        var duration = (float)session.Duration;
+        var duration = (float)session.ScrubLength;
         var head = (float)session.ScrubHead;
         var speedWidth = editing ? ImGui.CalcTextSize("Speed").X + SpeedWidth + (ImGui.GetStyle().ItemSpacing.X * 2f) : 0f;
 

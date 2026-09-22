@@ -103,6 +103,7 @@ internal sealed unsafe class HierarchyPanel
             var ticked = false;
             if (ImGui.MenuItem("Rename", string.Empty, ref ticked)) StartRename(track);
             if (ImGui.MenuItem("Duplicate", string.Empty, ref ticked)) Report(session.DuplicateTrack(track.Id));
+            if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist(track.Id));
             if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1)) Report(session.DeleteTrack(track.Id));
             ImGui.EndPopup();
         }
