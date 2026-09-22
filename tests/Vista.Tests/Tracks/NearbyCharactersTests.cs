@@ -50,4 +50,17 @@ public class NearbyCharactersTests
 
         Assert.Equal(new[] { "Near", "Middle", "Far" }, characters.NearestTo(Vector3.Zero).Select(c => c.Name));
     }
+
+    [Fact]
+    public void UpdateKeepsItsOwnCopyOfTheCharacters()
+    {
+        var loaded = new List<LoadedCharacter> { new("Guard", new Vector3(3f, 0f, 4f)) };
+        var characters = new NearbyCharacters();
+        characters.Update(loaded);
+
+        loaded.Clear();
+
+        Assert.Equal(new Vector3(3f, 0f, 4f), characters.Find("Guard", Vector3.Zero));
+        Assert.Single(characters.All);
+    }
 }

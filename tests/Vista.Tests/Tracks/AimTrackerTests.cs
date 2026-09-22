@@ -120,4 +120,17 @@ public class AimTrackerTests
         AimsAt(new Vector3(0f, 0f, -10f), Frame(tracker, near));
         Assert.Equal(Recorded, Frame(new AimTracker(null), near).LookAt);
     }
+
+    [Fact]
+    public void AResetForgetsTheLastGoodAim()
+    {
+        var tracker = new AimTracker(null);
+        var far = Single(AimMode.LookAt) with { LookAt = new Vector3(0f, 0f, -10f), LookAtPlaced = true };
+        var near = far with { LookAt = new Vector3(0.05f, 0f, 0f) };
+        Frame(tracker, far);
+
+        tracker.Reset();
+
+        Assert.Equal(Recorded, Frame(tracker, near).LookAt);
+    }
 }

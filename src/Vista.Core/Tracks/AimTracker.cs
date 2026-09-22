@@ -42,8 +42,12 @@ public sealed class AimTracker
         return lastAim is { } aim ? frame with { LookAt = FreeCamMotion.LookAtFrom(frame.Position, aim.Yaw, aim.Pitch) } : frame;
     }
 
-    /// <summary>Starts the smoothing afresh, so the next frame lands on the character.</summary>
-    public void Reset() => smoother.Reset();
+    /// <summary>Starts the smoothing afresh and forgets the last good aim, so the next frame lands on the character.</summary>
+    public void Reset()
+    {
+        smoother.Reset();
+        lastAim = null;
+    }
 
     private Vector3? Target(Track world, float dt) => world.Aim switch
     {

@@ -13,8 +13,8 @@ public sealed class NearbyCharacters : IAimTargets
     /// <summary>Every character as last read.</summary>
     public IReadOnlyList<LoadedCharacter> All => characters;
 
-    /// <summary>Replaces the characters with <paramref name="loaded"/>.</summary>
-    public void Update(IReadOnlyList<LoadedCharacter> loaded) => characters = loaded;
+    /// <summary>Replaces the characters with a copy of <paramref name="loaded"/>.</summary>
+    public void Update(IReadOnlyList<LoadedCharacter> loaded) => characters = loaded.ToArray();
 
     public Vector3? Find(string name, Vector3 near)
     {

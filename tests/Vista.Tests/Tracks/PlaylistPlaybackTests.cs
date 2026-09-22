@@ -318,4 +318,36 @@ public class PlaylistPlaybackTests
         playback.Seek(0.2);
         AimsAt(new Vector3(-10f, 0f, -10f), playback.Advance(0.01f)!.Value);
     }
+
+    [Fact]
+    public void AWrapStartsTheSmoothingAfresh()
+    {
+        var characters = new NearbyCharacters();
+        GuardAt(characters, 0f);
+        var playback = new PlaylistPlayback([Item(Follow())], loops: true, targets: characters);
+        AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
+
+        GuardAt(characters, 10f);
+        var wrapped = playback.Advance(1f)!.Value;
+
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(0.1, playback.ShotTime, 4);
+        AimsAt(new Vector3(10f, 0f, -10f), wrapped);
+    }
+
+    [Fact]
+    public void AZeroLengthEntryStartsTheSmoothingAfresh()
+    {
+        var characters = new NearbyCharacters();
+        GuardAt(characters, 0f);
+        var zero = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var playback = new PlaylistPlayback([Item(Follow()), Item(zero), Item(Follow())], targets: characters);
+        AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
+
+        GuardAt(characters, 10f);
+        var cut = playback.Advance(1f)!.Value;
+
+        Assert.Equal(1, playback.Index);
+        AimsAt(new Vector3(10f, 0f, -10f), cut);
+    }
 }
