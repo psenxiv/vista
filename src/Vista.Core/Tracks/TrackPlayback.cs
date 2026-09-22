@@ -3,7 +3,7 @@ using Vista.Core.Camera;
 namespace Vista.Core.Tracks;
 
 /// <summary>Advances a track's playback clock frame by frame, by its direction and loop setting.</summary>
-public sealed class TrackPlayback
+public sealed class TrackPlayback : IPlayback
 {
     private readonly Track _track;
     private readonly TrackEvaluator _evaluator;
@@ -11,6 +11,9 @@ public sealed class TrackPlayback
 
     /// <summary>Where the camera is in the shot, from 0 to <see cref="TrackEvaluator.Duration"/>.</summary>
     public double ShotTime => PlaybackClock.ShotTime(_track.Direction, _evaluator.Duration, _clock);
+
+    /// <summary>The track's length in seconds.</summary>
+    public double ShotLength => _evaluator.Duration;
 
     /// <summary>True once a track that doesn't loop has reached the end of its cycle; never true for one that loops.</summary>
     public bool IsFinished { get; private set; }

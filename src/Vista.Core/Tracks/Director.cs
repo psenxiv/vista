@@ -6,7 +6,7 @@ namespace Vista.Core.Tracks;
 public sealed class Director
 {
     private Shot? _shot;
-    private TrackPlayback? _playback;
+    private IPlayback? _playback;
 
     /// <summary>True once <see cref="GoLive"/> has been called and <see cref="GoOffline"/> has not.</summary>
     public bool IsLive { get; private set; }
@@ -14,16 +14,27 @@ public sealed class Director
     /// <summary>True while live and paused; frames stop advancing.</summary>
     public bool IsPaused { get; private set; }
 
-    /// <summary>True once the current <see cref="TrackShot"/>'s playback has finished; false otherwise.</summary>
+    /// <summary>True once the current track or playlist's playback has finished; false otherwise.</summary>
     public bool IsFinished => _playback?.IsFinished ?? false;
 
-    /// <summary>Where the current <see cref="TrackShot"/>'s camera is in the shot; 0 for other shots or before going live.</summary>
+    /// <summary>Where the current track or playlist's camera is in the shot; 0 for other shots or before going live.</summary>
     public double ShotTime => _playback?.ShotTime ?? 0.0;
+
+    /// <summary>The current shot's length in seconds; 0 for the game camera or before going live.</summary>
+    public double ShotLength => _playback?.ShotLength ?? 0.0;
+
+    /// <summary>The playlist being played, or null for other shots.</summary>
+    public PlaylistPlayback? Playlist => _playback as PlaylistPlayback;
 
     /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero. Unchanged if the track throws.</summary>
     public void GoLive(Shot shot)
     {
-        var playback = shot is TrackShot trackShot ? new TrackPlayback(trackShot.Track) : null;
+        var playback = shot switch
+        {
+            TrackShot t => (IPlayback)new TrackPlayback(t.Track),
+            PlaylistShot p => new PlaylistPlayback(p.Items),
+            _ => null,
+        };
         _shot = shot;
         _playback = playback;
         IsLive = true;
@@ -49,7 +60,7 @@ public sealed class Director
         IsPaused = false;
     }
 
-    /// <summary>Jumps the live track shot to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
+    /// <summary>Jumps the live track or playlist to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
     public void Seek(double time)
     {
         if (IsLive) _playback?.Seek(time);
@@ -62,12 +73,7 @@ public sealed class Director
 
         return _shot switch
         {
-            SnapShot snap => new CameraState(
-                snap.Point.Position,
-                FreeCamMotion.LookAtFrom(snap.Point.Position, snap.Point.Yaw, snap.Point.Pitch),
-                snap.Point.Fov,
-                snap.Point.Roll),
-            TrackShot => _playback!.Advance(IsPaused ? 0f : dt),
+            TrackShot or PlaylistShot => _playback!.Advance(IsPaused ? 0f : dt),
             _ => null,
         };
     }

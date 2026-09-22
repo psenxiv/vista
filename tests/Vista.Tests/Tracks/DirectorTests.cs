@@ -1,5 +1,4 @@
 using System.Numerics;
-using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Xunit;
 
@@ -16,9 +15,6 @@ public class DirectorTests
         foreach (var x in new[] { 0f, 5f, 10f }) track = TrackEditing.Append(track, Point(x, 0f, 0f));
         return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
     }
-
-    private static SnapPoint Snap()
-        => new(new Vector3(1f, 2f, 3f), 0.4f, 0.1f, 1.2f);
 
     [Fact]
     public void TickIsNullBeforeGoingLive()
@@ -158,19 +154,6 @@ public class DirectorTests
     }
 
     [Fact]
-    public void TickOnASnapShotReturnsItsPoseEveryFrame()
-    {
-        var snap = Snap();
-        var director = new Director();
-        director.GoLive(new SnapShot(snap));
-
-        var expected = new CameraState(snap.Position, FreeCamMotion.LookAtFrom(snap.Position, snap.Yaw, snap.Pitch), snap.Fov);
-
-        Assert.Equal(expected, director.Tick(1f));
-        Assert.Equal(expected, director.Tick(100f));
-    }
-
-    [Fact]
     public void TickOnAGameCameraShotIsAlwaysNull()
     {
         var director = new Director();
@@ -203,16 +186,6 @@ public class DirectorTests
         Assert.True(director.IsFinished);
     }
 
-    [Fact]
-    public void IsFinishedIsFalseForNonTrackShots()
-    {
-        var director = new Director();
-        director.GoLive(new SnapShot(Snap()));
-
-        director.Tick(100f);
-
-        Assert.False(director.IsFinished);
-    }
     [Fact]
     public void ShotTimeIsZeroBeforeGoingLive()
     {
@@ -258,38 +231,16 @@ public class DirectorTests
     }
 
     [Fact]
-    public void ShotTimeIsZeroForNonTrackShots()
-    {
-        var director = new Director();
-        director.GoLive(new SnapShot(Snap()));
-
-        director.Tick(3f);
-
-        Assert.Equal(0.0, director.ShotTime);
-    }
-
-    [Fact]
     public void GoLiveWithATrackThatCannotPlayLeavesTheCurrentShotOnProgram()
     {
-        var snap = Snap();
         var director = new Director();
-        director.GoLive(new SnapShot(snap));
+        director.GoLive(new GameCameraShot());
         var broken = StraightTrack() with { Timing = [] };
 
         Assert.Throws<ArgumentException>(() => director.GoLive(new TrackShot(broken)));
 
-        var expected = new CameraState(snap.Position, FreeCamMotion.LookAtFrom(snap.Position, snap.Yaw, snap.Pitch), snap.Fov);
         Assert.True(director.IsLive);
-        Assert.Equal(expected, director.Tick(1f));
-    }
-
-    [Fact]
-    public void ASnapShotCarriesItsRoll()
-    {
-        var director = new Director();
-        director.GoLive(new SnapShot(new SnapPoint(Vector3.Zero, 0f, 0f, 1f, 0.4f)));
-
-        Assert.Equal(0.4f, director.Tick(0.1f)!.Value.Roll);
+        Assert.Null(director.Tick(1f));
     }
 
     [Fact]
@@ -305,14 +256,37 @@ public class DirectorTests
     }
 
     [Fact]
-    public void SeekDoesNothingOfflineOrForSnapShots()
+    public void SeekDoesNothingOffline()
     {
         var director = new Director();
         director.Seek(3.0);
         Assert.Equal(0.0, director.ShotTime);
+    }
 
-        director.GoLive(new SnapShot(Snap()));
-        director.Seek(3.0);
-        Assert.Equal(0.0, director.ShotTime);
+    [Fact]
+    public void APlaylistShotPlaysItsEntriesInTurn()
+    {
+        var items = new[] { new PlaylistItem(Guid.NewGuid(), StraightTrack(), null), new PlaylistItem(Guid.NewGuid(), StraightTrack(), null) };
+        var director = new Director();
+        director.GoLive(new PlaylistShot(items));
+
+        director.Tick(12f);
+
+        Assert.Equal(items[1].EntryId, director.Playlist!.EntryId);
+        Assert.Equal(2.0, director.ShotTime, 4);
+        Assert.Equal(10.0, director.ShotLength, 4);
+        director.Seek(5.0);
+        Assert.Equal(5.0, director.ShotTime, 4);
+        director.Tick(10f);
+        Assert.True(director.IsFinished);
+    }
+
+    [Fact]
+    public void ATrackShotHasNoPlaylist()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack()));
+        Assert.Null(director.Playlist);
+        Assert.Equal(10.0, director.ShotLength, 4);
     }
 }
