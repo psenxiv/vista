@@ -50,13 +50,18 @@ A GitHub Actions workflow runs on a pushed `v*` tag:
 
 Releasing is then: bump the version, commit, tag, push the tag.
 
-## Manifest
+## Manifest and what testers see
 
-- `Punchline`: "Camera tracks for cinematic work."
-- `Description`: a plain summary of what Vista does today: camera tracks built from points with
-  timing, four aim modes, Scenes of tracks on movable anchors, a playlist played live, and edit
-  previews. No mention of saving, snap points or the switchboard.
-- `RepoUrl`: the GitHub repo. `IconUrl`: the icon's raw URL.
+- `Name`: "Vista". `Author`: "psenxiv".
+- `Punchline`: "Camera tracks for cinematic shots."
+- `Description`: "Create smooth, cinematic camera paths in FFXIV, organise them into scenes, and play
+  them back live."
+- `Tags`: camera, cinematic, screenshots, video, events.
+- `Changelog` for 0.2.0: "First closed beta."
+- `AcceptsFeedback`: false. Testers report to the user directly.
+- `RepoUrl`: `https://github.com/psenxiv/vista`. `IconUrl`: the icon's raw URL.
+- The `/vista` command's help text: "Open the Vista window. /vista release hands the camera back to
+  the game."
 
 ## Icon
 
