@@ -20,7 +20,7 @@ public sealed class TrackPlayback : IPlayback
     public bool IsFinished { get; private set; }
 
     /// <summary>Starts <paramref name="track"/>, a track in the world, at the start of its cycle; <paramref name="targets"/> finds a watched or followed character.</summary>
-    public TrackPlayback(Track track, IAimTargets? targets = null)
+    public TrackPlayback(Track track, NearbyCharacters? targets = null)
     {
         _track = track;
         _evaluator = new TrackEvaluator(track);

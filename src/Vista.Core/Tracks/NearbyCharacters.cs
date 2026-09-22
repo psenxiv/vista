@@ -6,7 +6,7 @@ namespace Vista.Core.Tracks;
 public readonly record struct LoadedCharacter(string Name, string? World, Vector3 Position, float Facing = 0f);
 
 /// <summary>The characters loaded nearby as last read, found by exact name and world.</summary>
-public sealed class NearbyCharacters : IAimTargets
+public sealed class NearbyCharacters
 {
     private IReadOnlyList<LoadedCharacter> characters = [];
 
@@ -16,6 +16,7 @@ public sealed class NearbyCharacters : IAimTargets
     /// <summary>Replaces the characters with a copy of <paramref name="loaded"/>.</summary>
     public void Update(IReadOnlyList<LoadedCharacter> loaded) => characters = loaded.ToArray();
 
+    /// <summary>The character named <paramref name="name"/>, on <paramref name="world"/> when given, nearest <paramref name="near"/>; null when none is loaded.</summary>
     public LoadedCharacter? FindCharacter(string name, string? world, Vector3 near)
     {
         LoadedCharacter? best = null;

@@ -27,7 +27,7 @@ public sealed class SessionState
     private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
     private readonly Dictionary<Guid, (Track World, Anchor Frame, Track Shown)> shown = new();
     private TrackPlayback? preview;
-    private readonly IAimTargets? aimTargets;
+    private readonly NearbyCharacters? aimTargets;
     private readonly AimTracker scrubAim;
 
     /// <summary>True while an Edit preview is playing.</summary>
@@ -87,7 +87,7 @@ public sealed class SessionState
     }
 
     /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds watched or followed characters.</summary>
-    public SessionState(Func<Vector3, float?>? groundBelow = null, IAimTargets? aimTargets = null)
+    public SessionState(Func<Vector3, float?>? groundBelow = null, NearbyCharacters? aimTargets = null)
     {
         this.groundBelow = groundBelow ?? (_ => null);
         this.aimTargets = aimTargets;

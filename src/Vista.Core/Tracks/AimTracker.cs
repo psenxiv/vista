@@ -6,7 +6,7 @@ namespace Vista.Core.Tracks;
 /// <summary>Aims a track in the world each frame: at its Look At point or its eased character, keeping the last good aim when the target is on the camera, or rides a Follow track with its character.</summary>
 public sealed class AimTracker
 {
-    private readonly IAimTargets? targets;
+    private readonly NearbyCharacters? targets;
     private readonly AimSmoother smoother = new();
     private (float Yaw, float Pitch)? lastAim;
     private readonly AimSmoother positionSmoother = new();
@@ -15,22 +15,22 @@ public sealed class AimTracker
     private CameraState? lastFollow;
 
     /// <summary>A tracker finding watched or followed characters with <paramref name="targets"/>; with none, no character is ever found.</summary>
-    public AimTracker(IAimTargets? targets) => this.targets = targets;
+    public AimTracker(NearbyCharacters? targets) => this.targets = targets;
 
     /// <summary>The character a Watch or Follow track in the world names, found nearest its anchor; null unless named and found.</summary>
-    public static LoadedCharacter? Character(Track world, IAimTargets? targets)
+    public static LoadedCharacter? Character(Track world, NearbyCharacters? targets)
         => world is { Aim: AimMode.WatchTarget or AimMode.FollowTarget, TargetName: { } name } ? targets?.FindCharacter(name, world.TargetWorld, world.Anchor.Position) : null;
 
     /// <summary>The aim point on the character a Watch track in the world watches, unsmoothed; null unless one is named and found.</summary>
-    public static Vector3? CharacterAim(Track world, IAimTargets? targets)
+    public static Vector3? CharacterAim(Track world, NearbyCharacters? targets)
         => world.Aim == AimMode.WatchTarget ? TargetPoint(world, targets) : null;
 
     /// <summary>The aim point on the character a Watch or Follow track in the world names: their feet plus the aim height; null unless found.</summary>
-    public static Vector3? TargetPoint(Track world, IAimTargets? targets)
+    public static Vector3? TargetPoint(Track world, NearbyCharacters? targets)
         => Character(world, targets) is { } character ? character.Position + (Vector3.UnitY * world.AimHeight) : null;
 
     /// <summary>Where a track in the world points its camera: its Look At point, or its character's aim point when it watches them or follows looking at them; null for a recorded or path aim.</summary>
-    public static Vector3? AimPoint(Track world, IAimTargets? targets) => world switch
+    public static Vector3? AimPoint(Track world, NearbyCharacters? targets) => world switch
     {
         { Aim: AimMode.LookAt, LookAtPlaced: true } => world.LookAt,
         { Aim: AimMode.WatchTarget } or { Aim: AimMode.FollowTarget, FollowLooks: true } => TargetPoint(world, targets),
@@ -38,7 +38,7 @@ public sealed class AimTracker
     };
 
     /// <summary>True when a Watch or Follow track in the world names a character who isn't found.</summary>
-    public static bool TargetLost(Track world, IAimTargets? targets)
+    public static bool TargetLost(Track world, NearbyCharacters? targets)
         => world is { Aim: AimMode.WatchTarget or AimMode.FollowTarget, TargetName: not null } && Character(world, targets) is null;
 
     /// <summary>The frame of <paramref name="world"/> at <paramref name="time"/>, <paramref name="dt"/> seconds after the last.</summary>
