@@ -15,8 +15,15 @@ internal static class UiColours
     public const uint Red = 0xFF4050E8;
 
     /// <summary>Off and greyed-out icons: the text colour at 40%.</summary>
-    public static uint Dim() => ImGui.GetColorU32(ImGuiCol.Text, 0.4f);
+    public static uint Dim() => Text(0.4f);
 
     /// <summary>Section headers: the text colour at 60%.</summary>
-    public static uint Muted() => ImGui.GetColorU32(ImGuiCol.Text, 0.6f);
+    public static uint Muted() => Text(0.6f);
+
+    /// <summary>The text colour with its alpha scaled, leaving style alpha to disabled drawing so it applies once.</summary>
+    private static uint Text(float alpha)
+    {
+        var text = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+        return ImGui.ColorConvertFloat4ToU32(text with { W = text.W * alpha });
+    }
 }

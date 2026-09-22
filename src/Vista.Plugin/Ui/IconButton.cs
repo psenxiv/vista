@@ -9,23 +9,19 @@ namespace Vista.Plugin.Ui;
 /// <summary>Frameless icon buttons with a tooltip, their toggle and row-action variants, and their width for right-aligning them.</summary>
 internal static class IconButton
 {
-    // The danger button hovered last frame, so its icon can be red while hovered.
-    private static uint? dangerHovered;
+    // The danger button hovered last frame, so its icon can be red while hovered; older frames are stale.
+    private static (uint Id, int Frame)? dangerHovered;
 
     /// <summary>A frameless icon button with a tooltip, shown even while disabled; <paramref name="danger"/> turns the icon red on hover.</summary>
     public static bool Draw(string id, FontAwesomeIcon icon, string tooltip, uint? iconColour = null, bool danger = false)
     {
-        var red = danger && dangerHovered == ImGui.GetID(id);
+        var red = danger && dangerHovered is { } last && last.Id == ImGui.GetID(id) && last.Frame == ImGui.GetFrameCount() - 1;
         var colour = red ? UiColours.Red : iconColour;
         bool pressed;
         using (Frameless())
         using (ImRaii.PushColor(ImGuiCol.Text, colour ?? 0u, colour is not null))
             pressed = ImGuiComponents.IconButton(id, icon);
-        if (danger)
-        {
-            if (ImGui.IsItemHovered()) dangerHovered = ImGui.GetID(id);
-            else if (red) dangerHovered = null;
-        }
+        if (danger && ImGui.IsItemHovered()) dangerHovered = (ImGui.GetID(id), ImGui.GetFrameCount());
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
         return pressed;

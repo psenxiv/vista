@@ -297,9 +297,12 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.BeginDisabled(!editing);
 
         ImGui.TableNextColumn();
+        // The row's full height, cell padding included, so neighbouring rows' hover areas meet.
+        var top = ImGui.GetCursorScreenPos().Y - CellPadding.Y;
         var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
         if (ImGui.Selectable($"##row{index}", session.Selected == index, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.Select(index);
-        var rowHovered = IconButton.RowHovered(ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+        var rowHovered = editing && IconButton.RowHovered(
+            new Vector2(ImGui.GetItemRectMin().X, top), new Vector2(ImGui.GetItemRectMax().X, top + ImGui.GetFrameHeight() + (CellPadding.Y * 2f)));
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
         if (editing && ImGui.BeginDragDropSource())
         {

@@ -88,7 +88,7 @@ internal sealed unsafe class PlaylistPanel
         ImGui.Selectable($"{index + 1}  {name}", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(nameWidth, ImGui.GetFrameHeight()));
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);
-        var rowHovered = IconButton.RowHovered(rowMin, rowMax);
+        var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
 
         if (editing && ImGui.BeginDragDropSource())
         {
