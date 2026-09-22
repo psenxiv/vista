@@ -91,7 +91,7 @@ internal sealed unsafe class PlaylistPanel
         if (!loopsHovered) wheelCarry = 0f;
     }
 
-    /// <summary>One entry: its number and track, a warning when its followed character isn't found, drag to reorder or drop a track on it, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
+    /// <summary>One entry: its number and track, a warning when its watched or followed character isn't found, drag to reorder or drop a track on it, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
     private void DrawRow(Scene scene, PlaylistEntry entry, int index, bool unreachable, Guid? playing, bool editing)
     {
         using var id = ImRaii.PushId(entry.Id.ToString());

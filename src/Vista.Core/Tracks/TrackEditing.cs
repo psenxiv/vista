@@ -232,7 +232,7 @@ public static class TrackEditing
         return track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
     }
 
-    /// <summary>Names the character to follow, with a player's home world or null for an NPC; a null or blank name chooses none.</summary>
+    /// <summary>Names the character to watch or follow, with a player's home world or null for an NPC; a null or blank name chooses none.</summary>
     public static Track SetTarget(Track track, string? name, string? world)
     {
         var chosen = string.IsNullOrWhiteSpace(name) ? null : name;

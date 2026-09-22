@@ -14,7 +14,7 @@ public sealed class AimTracker
     private float? easedYaw;
     private CameraState? lastFollow;
 
-    /// <summary>A tracker finding followed characters with <paramref name="targets"/>; with none, no character is ever found.</summary>
+    /// <summary>A tracker finding watched or followed characters with <paramref name="targets"/>; with none, no character is ever found.</summary>
     public AimTracker(IAimTargets? targets) => this.targets = targets;
 
     /// <summary>The character a Watch or Follow track in the world names, found nearest its anchor; null unless named and found.</summary>

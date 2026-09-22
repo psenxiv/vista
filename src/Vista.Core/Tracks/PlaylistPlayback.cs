@@ -15,7 +15,7 @@ public sealed class PlaylistPlayback : IPlayback
     private double clock;
     private bool shownFirstFrame;
 
-    /// <summary>Plays <paramref name="items"/> from the first, wrapping at the end when <paramref name="loops"/>; <paramref name="targets"/> finds followed characters. Refused when empty.</summary>
+    /// <summary>Plays <paramref name="items"/> from the first, wrapping at the end when <paramref name="loops"/>; <paramref name="targets"/> finds watched or followed characters. Refused when empty.</summary>
     public PlaylistPlayback(IReadOnlyList<PlaylistItem> items, bool loops = false, IAimTargets? targets = null)
     {
         if (items.Count == 0) throw new ArgumentException("A playlist needs an entry to play.");

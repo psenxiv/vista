@@ -86,7 +86,7 @@ public sealed class SessionState
         return world;
     }
 
-    /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds followed characters.</summary>
+    /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds watched or followed characters.</summary>
     public SessionState(Func<Vector3, float?>? groundBelow = null, IAimTargets? aimTargets = null)
     {
         this.groundBelow = groundBelow ?? (_ => null);
@@ -880,10 +880,10 @@ public sealed class SessionState
         return scrubAim.Frame(Evaluator, WorldOf(Local), time, 0f);
     }
 
-    /// <summary>The aim point on the character a track in the world follows, or null unless one is named and found.</summary>
+    /// <summary>The aim point on the character a Watch track in the world watches, or null unless one is named and found.</summary>
     public Vector3? CharacterAim(Track world) => AimTracker.CharacterAim(world, aimTargets);
 
-    /// <summary>True when a track in the world follows a named character who isn't found.</summary>
+    /// <summary>True when a track in the world watches or follows a named character who isn't found.</summary>
     public bool TargetLost(Track world) => AimTracker.TargetLost(world, aimTargets);
 
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>

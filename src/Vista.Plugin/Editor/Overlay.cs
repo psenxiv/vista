@@ -102,7 +102,7 @@ internal sealed class Overlay
         return view.ToScreen(world);
     }
 
-    /// <summary>The aim point on a followed character: a small crosshair in the anchor colour.</summary>
+    /// <summary>The aim point on a watched character: a small crosshair in the anchor colour.</summary>
     public void DrawTargetMarker(EditorView view, Vector3 world)
         => DrawCross(ImGui.GetBackgroundDrawList(), view, world, TargetCross, EditorColours.Anchor, GlyphThickness);
 

@@ -9,7 +9,7 @@ public sealed class Director
     private IPlayback? _playback;
     private readonly IAimTargets? targets;
 
-    /// <summary>A Director whose playbacks find followed characters with <paramref name="targets"/>.</summary>
+    /// <summary>A Director whose playbacks find watched or followed characters with <paramref name="targets"/>.</summary>
     public Director(IAimTargets? targets = null) => this.targets = targets;
 
     /// <summary>True once <see cref="GoLive"/> has been called and <see cref="GoOffline"/> has not.</summary>

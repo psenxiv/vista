@@ -19,7 +19,7 @@ public sealed class TrackPlayback : IPlayback
     /// <summary>True once a track that doesn't loop has reached the end of its cycle; never true for one that loops.</summary>
     public bool IsFinished { get; private set; }
 
-    /// <summary>Starts <paramref name="track"/>, a track in the world, at the start of its cycle; <paramref name="targets"/> finds a followed character.</summary>
+    /// <summary>Starts <paramref name="track"/>, a track in the world, at the start of its cycle; <paramref name="targets"/> finds a watched or followed character.</summary>
     public TrackPlayback(Track track, IAimTargets? targets = null)
     {
         _track = track;
