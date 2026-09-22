@@ -361,7 +361,7 @@ internal sealed class TimingWindow : Window
     private void DrawKeyPopup()
     {
         if (!ImGui.BeginPopup(KeyPopup)) return;
-        if (!Editing || popupKey is not { } key || key >= session.Track.Timing.Count)
+        if (!Editing || popupKey is not { } key || key != session.SelectedKey || key >= session.Track.Timing.Count)
         {
             ImGui.CloseCurrentPopup();
             ImGui.EndPopup();
@@ -381,16 +381,15 @@ internal sealed class TimingWindow : Window
         ImGui.EndPopup();
     }
 
-    /// <summary>Starts a live edit for a drag, while editing.</summary>
+    /// <summary>Remembers a pressed key or handle, while editing; the live edit waits for the mouse to move.</summary>
     private void BeginDrag(Drag started)
     {
         if (!Editing) return;
         EndDrag();
-        session.BeginLiveEdit();
         drag = started;
     }
 
-    /// <summary>Previews the drag once the mouse has moved, until the button is let go or a preview is refused.</summary>
+    /// <summary>Starts the live edit once the mouse has moved, then previews until the button is let go or a preview is refused.</summary>
     private void ContinueDrag()
     {
         if (drag is not { } d) return;
@@ -400,8 +399,14 @@ internal sealed class TimingWindow : Window
             return;
         }
 
-        d.Moved |= ImGui.IsMouseDragging(ImGuiMouseButton.Left);
-        if (!d.Moved || d.Refused) return;
+        if (!d.Moved)
+        {
+            if (!ImGui.IsMouseDragging(ImGuiMouseButton.Left)) return;
+            d.Moved = true;
+            session.BeginLiveEdit();
+        }
+
+        if (d.Refused) return;
 
         var mouse = ImGui.GetMousePos();
         var refusal = d.Side is { } side
@@ -412,9 +417,9 @@ internal sealed class TimingWindow : Window
 
     private void EndDrag()
     {
-        if (drag is null) return;
+        if (drag is not { } d) return;
         drag = null;
-        session.EndLiveEdit();
+        if (d.Moved) session.EndLiveEdit();
     }
 
     /// <summary>Starts a scrub when the cursor is in the bottom strip.</summary>
