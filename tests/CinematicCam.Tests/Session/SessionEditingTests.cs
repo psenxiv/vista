@@ -389,11 +389,11 @@ public class SessionEditingTests
     {
         var state = Editing();
         var original = state.Track.Points[1];
-        state.BeginPointEdit();
+        state.BeginLiveEdit();
         Assert.Null(state.PreviewPoint(1, Point(11f)));
         Assert.Null(state.PreviewPoint(1, Point(12f)));
         Assert.Equal(12f, state.Track.Points[1].Position.X);
-        state.EndPointEdit();
+        state.EndLiveEdit();
 
         Assert.True(state.Undo());
         Assert.Equal(original, state.Track.Points[1]);
@@ -405,8 +405,8 @@ public class SessionEditingTests
     public void AnUnchangedLivePointEditRecordsNoStep()
     {
         var state = Editing();
-        state.BeginPointEdit();
-        state.EndPointEdit();
+        state.BeginLiveEdit();
+        state.EndLiveEdit();
         state.Undo();
         Assert.Equal(2, state.Track.Points.Count);
     }
@@ -423,7 +423,7 @@ public class SessionEditingTests
     public void UndoInTheMiddleOfALiveEditRevertsIt()
     {
         var state = Editing();
-        state.BeginPointEdit();
+        state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
         Assert.True(state.Undo());
         Assert.Equal(10f, state.Track.Points[1].Position.X);
@@ -434,7 +434,7 @@ public class SessionEditingTests
     public void AModeChangeEndsALiveEditAsAStep()
     {
         var state = Editing();
-        state.BeginPointEdit();
+        state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
         state.Play();
         state.Edit();
@@ -450,10 +450,10 @@ public class SessionEditingTests
         Assert.True(state.CanRedo);
 
         var original = state.Track.Points[1];
-        state.BeginPointEdit();
+        state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
         state.PreviewPoint(1, original);
-        state.EndPointEdit();
+        state.EndLiveEdit();
 
         Assert.True(state.CanRedo);
         Assert.True(state.Redo());
@@ -464,7 +464,7 @@ public class SessionEditingTests
     public void AnEditInTheMiddleOfALiveEditMakesTwoSteps()
     {
         var state = Editing();
-        state.BeginPointEdit();
+        state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
         state.AddToEnd(Point(30f));
 

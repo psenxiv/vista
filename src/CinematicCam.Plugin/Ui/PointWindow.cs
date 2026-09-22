@@ -38,14 +38,14 @@ internal sealed class PointWindow : Window
     public override void PreOpenCheck()
     {
         var selected = session.Mode == CameraMode.Editing ? session.Selected : null;
-        if (selected != shown) session.EndPointEdit();
+        if (selected != shown) session.EndLiveEdit();
         shown = selected;
         IsOpen = selected is not null;
         if (selected is { } index) WindowName = $"Point {index + 1}###ccam-point";
     }
 
     /// <summary>Ends a drag in progress, since a closed window never reports the field letting go.</summary>
-    public override void OnClose() => session.EndPointEdit();
+    public override void OnClose() => session.EndLiveEdit();
 
     public override void Draw()
     {
@@ -115,10 +115,10 @@ internal sealed class PointWindow : Window
 
         var edited = value;
         var changed = ImGui.DragFloat($"##{id}", ref edited, speed, 0f, 0f, format);
-        if (ImGui.IsItemActivated()) session.BeginPointEdit();
+        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
         // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
         if (changed && index < session.Track.Points.Count) _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
-        if (ImGui.IsItemDeactivated()) session.EndPointEdit();
+        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
     }
 
     private static float Degrees(float radians) => radians * 180f / MathF.PI;

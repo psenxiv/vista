@@ -173,14 +173,14 @@ internal sealed class CameraSession
     /// <summary>Moves a point in the order. Returns why it was refused, or null.</summary>
     public string? MovePoint(int from, int to) => state.MovePoint(from, to);
 
-    /// <summary>Starts a live point edit that previews on the track and ends as one undo step.</summary>
-    public void BeginPointEdit() => state.BeginPointEdit();
+    /// <summary>Starts a live edit that previews on the track and ends as one undo step.</summary>
+    public void BeginLiveEdit() => state.BeginLiveEdit();
 
     /// <summary>Replaces point <paramref name="index"/> during a live edit. Returns why it was refused, or null.</summary>
     public string? PreviewPoint(int index, ControlPoint point) => state.PreviewPoint(index, point);
 
-    /// <summary>Ends a live point edit as one undo step if anything changed.</summary>
-    public void EndPointEdit() => state.EndPointEdit();
+    /// <summary>Ends a live edit as one undo step if anything changed.</summary>
+    public void EndLiveEdit() => state.EndLiveEdit();
 
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
