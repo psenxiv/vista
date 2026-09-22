@@ -200,6 +200,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void DrawPoints(bool editing)
     {
         var track = session.Track;
+        var evaluator = session.Evaluator;
         var footer = ImGui.GetFrameHeightWithSpacing() + (ImGui.GetStyle().ItemSpacing.Y * 2f);
         if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0)
         {
@@ -215,7 +216,7 @@ internal sealed unsafe class TrackEditorWindow : Window
                 ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
 
-                for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, i, editing);
+                for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, evaluator, i, editing);
                 ImGui.EndTable();
             }
         }
@@ -224,7 +225,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     }
 
     /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon deletes it.</summary>
-    private void DrawPointRow(Track track, int index, bool editing)
+    /// <remarks><paramref name="track"/> and <paramref name="evaluator"/> are a snapshot taken once for the whole list: an earlier row's delete or reorder must not change what a later row reads.</remarks>
+    private void DrawPointRow(Track track, TrackEvaluator evaluator, int index, bool editing)
     {
         ImGui.TableNextRow();
         ImGui.BeginDisabled(!editing);
@@ -252,7 +254,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.TextUnformatted($"{index + 1}");
 
         ImGui.TableNextColumn();
-        if (index > 0) fields.Draw($"leg{index}", session.Evaluator.LegSeconds(index), "%.1f", FieldWidth, v => Report(session.SetLegDuration(index, v)));
+        if (index > 0) fields.Draw($"leg{index}", evaluator.LegSeconds(index), "%.1f", FieldWidth, v => Report(session.SetLegDuration(index, v)));
 
         ImGui.TableNextColumn();
         if (index > 0) fields.Draw($"leg-speed{index}", TrackEditing.LegSpeed(track, index), "%.2f", FieldWidth, v => Report(session.SetLegSpeed(index, v)));
