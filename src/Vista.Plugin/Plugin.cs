@@ -141,6 +141,7 @@ public sealed class Plugin : IDalamudPlugin
             var steps = (int)wheel;
             if (steps != 0)
             {
+                Session.StopPreview();
                 Session.Speed.Step(steps);
                 wheel -= steps;
             }

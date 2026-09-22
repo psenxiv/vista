@@ -138,7 +138,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Play/Pause and Restart, left of the scrub bar on the same line.</summary>
     private void DrawTransport()
     {
-        var playing = session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished;
+        var playing = session.Previewing || (session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished);
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
         {
@@ -150,7 +150,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode != CameraMode.Live);
+        ImGui.BeginDisabled(session.Mode == CameraMode.Off || session.Track.Points.Count == 0);
         if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
         ImGui.EndDisabled();
         ImGui.SameLine();

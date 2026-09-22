@@ -37,7 +37,7 @@ internal sealed class EditorLayer
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
     {
-        if (session.Mode != CameraMode.Editing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); return; }
+        if (session.Mode != CameraMode.Editing || session.Previewing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); return; }
         if (EditorView.Read() is not { } view) return;
 
         var scene = session.Scene;

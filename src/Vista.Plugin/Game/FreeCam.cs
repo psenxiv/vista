@@ -34,6 +34,9 @@ internal sealed class FreeCam
 
     public void Disable() => Enabled = false;
 
+    /// <summary>True when a flight or roll key is held this frame, outside text fields.</summary>
+    public static bool HasFlightInput() => !PhysicalKeys.IsTyping() && (ReadInput() != Vector3.Zero || ReadRoll() != 0f);
+
     public CameraState? Tick(float deltaSeconds)
     {
         if (!Enabled) return null;

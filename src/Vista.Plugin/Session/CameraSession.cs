@@ -15,6 +15,7 @@ internal sealed class CameraSession
     private readonly CameraOwnership ownership = new();
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
+    private bool previewedLastFrame;
 
     public CameraSession(MovementLock movement) => this.movement = movement;
 
@@ -97,6 +98,9 @@ internal sealed class CameraSession
     /// <summary>Read-only view of playback state. Check IsLive before IsPaused or IsFinished.</summary>
     public Director Director => state.Director;
 
+    /// <summary>True while an Edit preview is playing.</summary>
+    public bool Previewing => state.Previewing;
+
     /// <summary>True while the plugin writes the camera.</summary>
     public bool OwnsCamera => ownership.IsOwned;
 
@@ -132,20 +136,24 @@ internal sealed class CameraSession
         Plugin.Log.Information("[vista] mode: editing");
     }
 
-    /// <summary>Resumes a paused shot, re-hides the UI of a playing one, otherwise starts from the top.</summary>
+    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or re-hides the UI of a playing one.</summary>
     public void Play() => Apply(state.Play());
 
-    /// <summary>Goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
+    /// <summary>In Edit, previews from the beginning; live, goes live with the current track from its start, taking the camera if off. Refused with no points.</summary>
     public void Restart() => Apply(state.Restart());
 
     /// <summary>Goes live paused at the track's start, leaving the UI shown. Refused with no points.</summary>
     public void Cue() => Apply(state.Cue());
 
-    /// <summary>Holds the current frame and stays live. No effect unless live.</summary>
+    /// <summary>Live, holds the current frame; in Edit, stops a preview.</summary>
     public void Stop()
     {
-        if (state.Stop()) Plugin.Log.Information("[vista] paused");
+        var editing = state.Mode == CameraMode.Editing;
+        if (state.Stop()) Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
     }
+
+    /// <summary>Stops an Edit preview; the free-cam takes over from the frame shown on the next frame.</summary>
+    public void StopPreview() => state.StopPreview();
 
     /// <summary>Turns the plugin off: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason)
@@ -327,7 +335,7 @@ internal sealed class CameraSession
 
         var frame = state.Mode switch
         {
-            CameraMode.Editing => state.Scrubbing && state.FrameAt(state.ScrubHead) is { } scrubbed ? scrubbed : freeCam.Tick(dt),
+            CameraMode.Editing => EditingFrame(dt),
             CameraMode.Live => state.Director.Tick(dt),
             _ => null,
         };
@@ -336,11 +344,32 @@ internal sealed class CameraSession
         return frame;
     }
 
+    /// <summary>While editing: the preview's frame, the scrubbed frame, or the free-cam, handing the free-cam the last frame when a preview stops.</summary>
+    private CameraState? EditingFrame(float dt)
+    {
+        if (state.Previewing && FreeCam.HasFlightInput()) state.StopPreview();
+        var frame = state.AdvancePreview(dt);
+
+        if (previewedLastFrame && !state.Previewing)
+        {
+            previewedLastFrame = false;
+            if ((frame ?? state.FrameAt(state.ScrubHead)) is { } last) FlyFrom(last);
+            return freeCam.Tick(dt);
+        }
+
+        previewedLastFrame = state.Previewing;
+        if (frame is { } previewing) return previewing;
+        return state.Scrubbing && state.FrameAt(state.ScrubHead) is { } scrubbed ? scrubbed : freeCam.Tick(dt);
+    }
+
     /// <summary>Carries out a play or restart outcome in game.</summary>
     private void Apply(PlayOutcome outcome)
     {
         switch (outcome)
         {
+            case PlayOutcome.Previewed:
+                Plugin.Log.Information("[vista] preview");
+                return;
             case PlayOutcome.Refused:
                 Plugin.Log.Error("[vista] cannot play a track with no points.");
                 return;
@@ -378,6 +407,7 @@ internal sealed class CameraSession
     /// <summary>Puts the free-cam at <paramref name="frame"/>, keeping its aim by writing the game's yaw and pitch within its limits.</summary>
     private void FlyFrom(CameraState frame)
     {
+        previewedLastFrame = false;
         freeCam.Enable(frame.Position, frame.Roll, frame.Fov);
         var (yaw, pitch) = TrackAim.FromDirection(frame.LookAt - frame.Position);
         var (min, max) = CameraAccess.ReadPitchLimits() ?? (-MathF.PI / 2f, MathF.PI / 2f);
