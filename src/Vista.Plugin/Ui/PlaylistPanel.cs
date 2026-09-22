@@ -23,6 +23,9 @@ internal sealed unsafe class PlaylistPanel
 
     private readonly CameraSession session;
 
+    // A loop count being dragged or typed, held across frames until let go.
+    private (Guid Entry, int Value)? pendingLoops;
+
     public PlaylistPanel(CameraSession session) => this.session = session;
 
     /// <summary>The header, one row per entry, and + Add; editing is disabled unless in Edit mode.</summary>
@@ -103,15 +106,22 @@ internal sealed unsafe class PlaylistPanel
     /// <summary>The loop count: 0 follows the track (— or ∞ when it holds the playlist), otherwise ×N; set when let go.</summary>
     private void DrawLoops(Scene scene, PlaylistEntry entry)
     {
-        var value = entry.Loops ?? 0;
+        var value = pendingLoops is { } p && p.Entry == entry.Id ? p.Value : entry.Loops ?? 0;
         var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
         var format = value > 0 ? "×%d" : holds ? "∞" : "—";
         ImGui.SetNextItemWidth(LoopWidth);
         using (ImRaii.PushColor(ImGuiCol.Text, Amber, value > 0 || holds))
             ImGui.DragInt("##loops", ref value, 0.05f, 0, PlaylistEditing.MaxLoops, format);
+        if (ImGui.IsItemActive()) pendingLoops = (entry.Id, value);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip("Times to play; — follows the track (∞ when the track loops)");
-        if (ImGui.IsItemDeactivatedAfterEdit()) Report(session.SetEntryLoops(entry.Id, value == 0 ? null : value));
+        if (ImGui.IsItemDeactivatedAfterEdit())
+        {
+            Report(session.SetEntryLoops(entry.Id, value <= 0 ? null : value));
+            pendingLoops = null;
+        }
+        else if (ImGui.IsItemDeactivated() && pendingLoops is { } q && q.Entry == entry.Id)
+            pendingLoops = null;
     }
 
     /// <summary>Accepts an entry (to reorder) or a Hierarchy track (to add) dropped on the last item, placing it at <paramref name="index"/>.</summary>
