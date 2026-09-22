@@ -18,6 +18,8 @@ public sealed class SessionState
     private double scrubTime;
     private bool resumeAfterScrub;
     private EditSnapshot? liveEditStart;
+    private Track? evaluatedStart;
+    private TrackEvaluator? liveStartEvaluator;
 
     public CameraMode Mode { get; private set; }
 
@@ -115,11 +117,35 @@ public sealed class SessionState
     /// <summary>True while editing with a step to redo.</summary>
     public bool CanRedo => Mode == CameraMode.Editing && history.CanRedo;
 
+    /// <summary>The selected timing key's index, or null. Never set together with <see cref="SelectedLeg"/>.</summary>
+    public int? SelectedKey { get; private set; }
+
+    /// <summary>The selected leg, or null. Never set together with <see cref="SelectedKey"/>.</summary>
+    public int? SelectedLeg { get; private set; }
+
     /// <summary>Selects a point while editing; null or an index out of range clears the selection.</summary>
     public void Select(int? index)
     {
         if (Mode != CameraMode.Editing) return;
         Selected = index is { } i && i >= 0 && i < Track.Points.Count ? i : null;
+        SyncKeyToPoint();
+    }
+
+    /// <summary>Selects a timing key while editing; a point's key also selects its point.</summary>
+    public void SelectKey(int? key)
+    {
+        if (Mode != CameraMode.Editing) return;
+        SelectedLeg = null;
+        SelectedKey = key is { } k && k >= 0 && k < Track.Timing.Count ? k : null;
+        if (SelectedKey is { } s && TrackEditing.RoleOf(Track, s) == KeyRole.Point) Selected = (int)Track.Timing[s].Position;
+    }
+
+    /// <summary>Selects a leg while editing, leaving the point selection alone.</summary>
+    public void SelectLeg(int? leg)
+    {
+        if (Mode != CameraMode.Editing) return;
+        SelectedKey = null;
+        SelectedLeg = leg is { } l && l >= 1 && l < Track.Points.Count ? l : null;
     }
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
@@ -185,6 +211,53 @@ public sealed class SessionState
         return Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
     }
 
+    /// <summary>Sets leg <paramref name="leg"/>'s easing. Returns why it was refused, or null.</summary>
+    public string? SetEasing(int leg, Easing easing) => ApplyTiming(t => LegEasing.Set(t, leg, easing));
+
+    /// <summary>Sets both sides of key <paramref name="key"/> to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
+    public string? SetKeyMode(int key, TangentMode mode) => ApplyTiming(t => TimingEditing.SetKeyMode(t, key, mode));
+
+    /// <summary>Adds an inner key on the curve at <paramref name="time"/> and selects it. Returns why it was refused, or null.</summary>
+    public string? AddInnerKey(float time)
+    {
+        var added = -1;
+        var refusal = ApplyTiming(t =>
+        {
+            var evaluator = Evaluator;
+            var position = evaluator.PositionOf(evaluator.DistanceAt(time));
+            var slope = evaluator.ToStoredSlope(position, KeySide.Out, evaluator.SlopeAt(time));
+            var (result, key) = TimingEditing.AddInnerKey(t, time, position, slope);
+            added = key;
+            return result;
+        });
+        if (refusal is null && added >= 0)
+        {
+            SelectedLeg = null;
+            SelectedKey = added;
+        }
+
+        return refusal;
+    }
+
+    /// <summary>Deletes an inner key or a hold end's hold, clearing the timing selection. Returns why it was refused, or null.</summary>
+    public string? DeleteKey(int key)
+    {
+        var refusal = ApplyTiming(t => TimingEditing.DeleteKey(t, key));
+        if (refusal is null) SelectedKey = null;
+        return refusal;
+    }
+
+    /// <summary>Lets key <paramref name="key"/>'s handles move separately. Returns why it was refused, or null.</summary>
+    public string? BreakHandles(int key) => ApplyTiming(t => TimingEditing.SetBroken(t, key, true));
+
+    /// <summary>Joins key <paramref name="key"/>'s handles at the slope the <paramref name="from"/> side has in the graph. Returns why it was refused, or null.</summary>
+    public string? UnifyHandles(int key, KeySide from)
+        => ApplyTiming(t =>
+        {
+            var joined = TimingEditing.SetBroken(t, key, false);
+            return Collinear(joined, Evaluator, key, Evaluator.SideSlope(key, from), null);
+        });
+
     /// <summary>Starts a live edit: previews change the track at once and end as one undo step. Editing only.</summary>
     public void BeginLiveEdit()
     {
@@ -206,6 +279,14 @@ public sealed class SessionState
         }
     }
 
+    /// <summary>During a live edit, moves key <paramref name="key"/> towards a time and, for an inner key, a distance, from the track as the edit began.</summary>
+    public string? PreviewKeyMove(int key, float time, float distance)
+        => PreviewFromStart((start, evaluator) => TimingEditing.MoveKey(start, key, time, evaluator.PositionOf(distance)));
+
+    /// <summary>During a live edit, sets a handle to a slope in distance per second, both sides unless the key is broken.</summary>
+    public string? PreviewHandle(int key, KeySide side, float distancePerSecond)
+        => PreviewFromStart((start, evaluator) => Collinear(start, evaluator, key, distancePerSecond, start.Timing[key].Broken ? side : null));
+
     /// <summary>Ends a live edit, recording it as one undo step if the track changed.</summary>
     public void EndLiveEdit()
     {
@@ -221,6 +302,23 @@ public sealed class SessionState
     private EditSnapshot Current => new(Track, Selected);
 
     private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter)
+    {
+        var refusal = Commit(change, selectAfter);
+        if (refusal is null) RefreshTimingSelection();
+        return refusal;
+    }
+
+    /// <summary>Applies a timing change, keeping the point selection and any timing selection still in range.</summary>
+    private string? ApplyTiming(Func<Track, Track> change)
+    {
+        var refusal = Commit(change, _ => Selected);
+        if (refusal is not null) return refusal;
+        if (SelectedKey is { } key && key >= Track.Timing.Count) SelectedKey = null;
+        if (SelectedLeg is { } leg && leg >= Track.Points.Count) SelectedLeg = null;
+        return null;
+    }
+
+    private string? Commit(Func<Track, Track> change, Func<Track, int?> selectAfter)
     {
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
         EndLiveEdit();
@@ -248,7 +346,63 @@ public sealed class SessionState
         if (snapshot is not { } s) return false;
         Track = s.Track;
         Selected = s.Selected;
+        RefreshTimingSelection();
         return true;
+    }
+
+    /// <summary>Points the timing selection at the selected point's key, or clears a point key's selection when no point is selected.</summary>
+    private void SyncKeyToPoint()
+    {
+        if (Selected is { } point)
+        {
+            SelectedKey = TrackEditing.PointKey(Track, point);
+            SelectedLeg = null;
+        }
+        else if (SelectedKey is { } key && (key >= Track.Timing.Count || TrackEditing.RoleOf(Track, key) == KeyRole.Point))
+        {
+            SelectedKey = null;
+        }
+    }
+
+    /// <summary>After a point edit: a point key follows its point, and any other timing selection clears unless it's a leg still in range.</summary>
+    private void RefreshTimingSelection()
+    {
+        if (SelectedKey is { } key && (Selected is null || key >= Track.Timing.Count || TrackEditing.RoleOf(Track, key) != KeyRole.Point)) SelectedKey = null;
+        if (Selected is not null && SelectedLeg is null) SelectedKey = TrackEditing.PointKey(Track, Selected.Value);
+        if (SelectedLeg is { } leg && leg >= Track.Points.Count) SelectedLeg = null;
+    }
+
+    /// <summary>Sets Manual slopes from one graph slope on the handled sides: <paramref name="only"/> alone, or both when null.</summary>
+    private static Track Collinear(Track track, TrackEvaluator evaluator, int key, float distancePerSecond, KeySide? only)
+    {
+        var position = track.Timing[key].Position;
+        float? Side(KeySide side) => (only is null || only == side) && TimingEditing.HasHandle(track, key, side)
+            ? evaluator.ToStoredSlope(position, side, distancePerSecond)
+            : null;
+        return TimingEditing.SetHandles(track, key, Side(KeySide.In), Side(KeySide.Out));
+    }
+
+    /// <summary>Replaces the track with <paramref name="change"/> of the live edit's starting track. Returns why it was refused, or null.</summary>
+    private string? PreviewFromStart(Func<Track, TrackEvaluator, Track> change)
+    {
+        if (liveEditStart is not { } start) return "No live edit is in progress.";
+        if (!ReferenceEquals(evaluatedStart, start.Track))
+        {
+            liveStartEvaluator = new TrackEvaluator(start.Track);
+            evaluatedStart = start.Track;
+        }
+
+        try
+        {
+            var result = change(start.Track, liveStartEvaluator!);
+            _ = new TrackEvaluator(result);
+            Track = result;
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
+        }
     }
 
     private string? SelectionRefusal()
@@ -263,18 +417,23 @@ public sealed class SessionState
         return selected;
     }
 
-    /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
-    public CameraState? FrameAt(double time)
+    /// <summary>The evaluator for the current track, rebuilt when the track changes.</summary>
+    public TrackEvaluator Evaluator
     {
-        if (Track.Points.Count == 0) return null;
-        if (!ReferenceEquals(evaluatedTrack, Track))
+        get
         {
-            evaluator = new TrackEvaluator(Track);
-            evaluatedTrack = Track;
-        }
+            if (!ReferenceEquals(evaluatedTrack, Track))
+            {
+                evaluator = new TrackEvaluator(Track);
+                evaluatedTrack = Track;
+            }
 
-        return evaluator!.Evaluate(time);
+            return evaluator!;
+        }
     }
+
+    /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
+    public CameraState? FrameAt(double time) => Track.Points.Count == 0 ? null : Evaluator.Evaluate(time);
 
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
     public bool Scrubbing { get; private set; }

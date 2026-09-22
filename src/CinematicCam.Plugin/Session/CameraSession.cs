@@ -106,6 +106,45 @@ internal sealed class CameraSession
     /// <summary>Selects a point while editing; null or out of range clears the selection.</summary>
     public void Select(int? index) => state.Select(index);
 
+    /// <summary>The selected timing key's index, or null.</summary>
+    public int? SelectedKey => state.SelectedKey;
+
+    /// <summary>The selected leg, or null.</summary>
+    public int? SelectedLeg => state.SelectedLeg;
+
+    /// <summary>Selects a timing key while editing; a point's key also selects its point.</summary>
+    public void SelectKey(int? key) => state.SelectKey(key);
+
+    /// <summary>Selects a leg while editing, leaving the point selection alone.</summary>
+    public void SelectLeg(int? leg) => state.SelectLeg(leg);
+
+    /// <summary>The evaluator for the current track.</summary>
+    public TrackEvaluator Evaluator => state.Evaluator;
+
+    /// <summary>Sets a leg's easing. Returns why it was refused, or null.</summary>
+    public string? SetEasing(int leg, Easing easing) => state.SetEasing(leg, easing);
+
+    /// <summary>Sets both sides of a key to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
+    public string? SetKeyMode(int key, TangentMode mode) => state.SetKeyMode(key, mode);
+
+    /// <summary>Adds an inner key on the curve at <paramref name="time"/> and selects it. Returns why it was refused, or null.</summary>
+    public string? AddInnerKey(float time) => state.AddInnerKey(time);
+
+    /// <summary>Deletes an inner key or a hold end's hold. Returns why it was refused, or null.</summary>
+    public string? DeleteKey(int key) => state.DeleteKey(key);
+
+    /// <summary>Lets a key's handles move separately. Returns why it was refused, or null.</summary>
+    public string? BreakHandles(int key) => state.BreakHandles(key);
+
+    /// <summary>Joins a key's handles at the <paramref name="from"/> side's slope. Returns why it was refused, or null.</summary>
+    public string? UnifyHandles(int key, KeySide from) => state.UnifyHandles(key, from);
+
+    /// <summary>During a live edit, moves a key towards a time and, for an inner key, a distance. Returns why it was refused, or null.</summary>
+    public string? PreviewKeyMove(int key, float time, float distance) => state.PreviewKeyMove(key, time, distance);
+
+    /// <summary>During a live edit, sets a handle's slope in distance per second. Returns why it was refused, or null.</summary>
+    public string? PreviewHandle(int key, KeySide side, float distancePerSecond) => state.PreviewHandle(key, side, distancePerSecond);
+
     /// <summary>The track's length in seconds.</summary>
     public double Duration => state.Duration;
 
