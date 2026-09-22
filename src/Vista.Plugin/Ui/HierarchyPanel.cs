@@ -34,9 +34,9 @@ internal sealed unsafe class HierarchyPanel
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
-        ImGui.EndDisabled();
         ImGui.SameLine();
         if (IconButton.Draw("bring-scene", FontAwesomeIcon.StreetView, "Bring scene to me")) Report(session.BringSceneToMe());
+        ImGui.EndDisabled();
         ImGui.EndDisabled();
         ImGui.Separator();
 
