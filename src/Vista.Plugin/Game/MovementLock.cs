@@ -13,7 +13,6 @@ internal sealed unsafe class MovementLock : IDisposable
     private readonly int* counter;
 
     public bool Held { get; private set; }
-    public bool Available => counter != null;
 
     /// <summary>The game's current count. Other plugins share it.</summary>
     public int Count => counter != null ? *counter : 0;

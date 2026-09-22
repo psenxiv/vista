@@ -170,12 +170,6 @@ internal sealed class CameraSession
     /// <summary>Reads the characters loaded nearby. Call once a frame from Framework.Update.</summary>
     public void RefreshCharacters() => characters.Update(CharacterTable.Read());
 
-    /// <summary>Where the camera is now, or null when it can't be read.</summary>
-    public Vector3? CameraPosition => CameraAccess.ReadState()?.Position;
-
-    /// <summary>Where the local player stands, or null when there is none.</summary>
-    public Vector3? PlayerPosition => Plugin.ObjectTable.LocalPlayer?.Position;
-
     /// <summary>True while an Edit preview is playing.</summary>
     public bool Previewing => state.Previewing;
 
@@ -361,9 +355,6 @@ internal sealed class CameraSession
 
     /// <summary>The track's length in seconds.</summary>
     public double Duration => state.Duration;
-
-    /// <summary>The track's frame at <paramref name="time"/> seconds, or null with no points.</summary>
-    public CameraState? FrameAt(double time) => state.FrameAt(time);
 
     /// <summary>True while the scrub head is being dragged.</summary>
     public bool Scrubbing => state.Scrubbing;

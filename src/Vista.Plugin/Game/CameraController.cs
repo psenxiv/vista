@@ -14,7 +14,6 @@ internal sealed unsafe class CameraController : IDisposable
     private readonly Func<CameraState?> stateSource;
     private Hook<CameraUpdateDelegate>? updateHook;
 
-    public bool IsHooked => updateHook?.IsEnabled == true;
     public long UpdateCount { get; private set; }
 
     /// <summary>True after the update hook caught an exception; it writes nothing until <see cref="ClearFault"/>.</summary>
