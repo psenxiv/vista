@@ -108,19 +108,15 @@ internal sealed class CameraSession
     /// <summary>During a live edit, moves the selected anchor. Returns why it was refused, or null.</summary>
     public string? PreviewAnchor(Anchor world, bool carry) => state.PreviewAnchor(world, carry);
 
-    /// <summary>Edits a track and flies the editor camera to look at its anchor. Returns why it was refused, or null.</summary>
-    public string? OpenTrack(Guid id)
+    /// <summary>Makes a track the edited one, leaving the camera where it is. Returns why it was refused, or null.</summary>
+    public string? SelectTrack(Guid id) => state.SwitchTrack(id);
+
+    /// <summary>Edits a track and flies the editor camera to its first point, as a point's double-click does. Returns why it was refused, or null.</summary>
+    public string? FlyToFirstPoint(Guid id)
     {
         var refusal = state.SwitchTrack(id);
-        if (refusal is not null) return refusal;
-
-        var track = SceneEditing.Get(state.Scene, id);
-        if (!track.AnchorPlaced) return null;
-        var (position, lookAt) = SceneGeometry.ViewOf(SceneGeometry.WorldAnchor(state.Scene, track));
-        var fov = CameraAccess.ReadState()?.Fov ?? lastFrame?.Fov ?? 1f;
-        state.StopPreview();
-        FlyFrom(new CameraState(position, lookAt, fov));
-        return null;
+        if (refusal is null) JumpToPoint(0);
+        return refusal;
     }
 
     /// <summary>Edits a track and selects one of its points, leaving the camera where it is. Returns why it was refused, or null.</summary>

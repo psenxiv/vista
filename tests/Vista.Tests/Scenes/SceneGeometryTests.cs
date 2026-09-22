@@ -150,15 +150,4 @@ public class SceneGeometryTests
         Assert.True(SceneGeometry.MoveSceneAnchor(scene, new Anchor(Vector3.One, 0f), carry: true).AnchorPlaced);
         Assert.True(SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, new Anchor(Vector3.One, 0f), carry: true).Tracks[0].AnchorPlaced);
     }
-
-    [Fact]
-    public void TheViewOfAnAnchorIsBehindAndAboveItLookingAtIt()
-    {
-        var anchor = new Anchor(new Vector3(10f, 0f, 10f), 0f);
-        var (position, lookAt) = SceneGeometry.ViewOf(anchor);
-
-        // Yaw 0 looks towards −Z, so behind is +Z.
-        Near(new Vector3(10f, SceneGeometry.ViewUp, 10f + SceneGeometry.ViewBack), position);
-        Near(anchor.Position, lookAt);
-    }
 }

@@ -22,17 +22,24 @@ internal sealed unsafe class PlaylistPanel
 
     private readonly CameraSession session;
 
-    // A loop count being dragged or typed, held across frames until let go.
-    private (Guid Entry, int Value)? pendingLoops;
+    private Guid? editingLoops;
+    private string loopsText = string.Empty;
+    private bool focusLoops;
+
+    // The mouse was over a loop cell last frame, so the list must not scroll with the wheel this frame.
+    private bool wheelOverLoops;
 
     public PlaylistPanel(CameraSession session) => this.session = session;
 
-    /// <summary>The header, one row per entry, and + Add; editing is disabled unless in Edit mode.</summary>
+    /// <summary>The header with its loop and add buttons, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
     {
         // Rows can remove or reorder entries, so every row reads this snapshot.
         var scene = session.Scene;
         var playing = session.PlayingEntry;
+        if (editingLoops is { } id && (!editing || PlaylistEditing.IndexOf(scene, id) < 0)) editingLoops = null;
+        var noWheel = wheelOverLoops;
+        wheelOverLoops = false;
 
         ImGui.AlignTextToFramePadding();
         var header = playing is { } now
@@ -40,11 +47,31 @@ internal sealed unsafe class PlaylistPanel
             : "Playlist";
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted(), playing is null))
             ImGui.TextUnformatted(header);
+
+        ImGui.BeginDisabled(!editing);
+        var buttons = IconButton.Width(FontAwesomeIcon.Repeat) + IconButton.Width(FontAwesomeIcon.Plus) + ImGui.GetStyle().ItemSpacing.X;
+        ImGui.SameLine();
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
+        if (IconButton.Toggle("playlist-loop", FontAwesomeIcon.Repeat, scene.PlaylistLoops, "Loop playlist"))
+            Report(session.SetPlaylistLoops(!scene.PlaylistLoops));
+        ImGui.SameLine();
+        if (IconButton.Draw("add-entry", FontAwesomeIcon.Plus, "Add to playlist")) ImGui.OpenPopup("add-entry");
+        if (ImGui.BeginPopup("add-entry"))
+        {
+            foreach (var track in scene.Tracks)
+            {
+                using var trackId = ImRaii.PushId(track.Id.ToString());
+                if (ImGui.Selectable(track.Name)) Report(session.AddToPlaylist(track.Id));
+            }
+
+            ImGui.EndPopup();
+        }
+
+        ImGui.EndDisabled();
         ImGui.Separator();
 
         ImGui.BeginDisabled(!editing);
-        var footer = ImGui.GetFrameHeightWithSpacing();
-        if (ImGui.BeginChild("entries", new Vector2(0f, -footer)))
+        if (ImGui.BeginChild("entries", new Vector2(0f, 0f), false, noWheel ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None))
         {
             var held = false;
             for (var i = 0; i < scene.Playlist.Count; i++)
@@ -59,19 +86,6 @@ internal sealed unsafe class PlaylistPanel
         }
 
         ImGui.EndChild();
-
-        if (ImGui.Button("+ Add")) ImGui.OpenPopup("add-entry");
-        if (ImGui.BeginPopup("add-entry"))
-        {
-            foreach (var track in scene.Tracks)
-            {
-                using var id = ImRaii.PushId(track.Id.ToString());
-                if (ImGui.Selectable(track.Name)) Report(session.AddToPlaylist(track.Id));
-            }
-
-            ImGui.EndPopup();
-        }
-
         ImGui.EndDisabled();
     }
 
@@ -100,31 +114,72 @@ internal sealed unsafe class PlaylistPanel
         DropTarget(scene, index, editing);
 
         ImGui.SameLine();
-        DrawLoops(scene, entry);
+        DrawLoops(scene, entry, editing);
 
         ImGui.SameLine();
         if (IconButton.RowAction("remove", FontAwesomeIcon.Times, "Remove from playlist", rowHovered, danger: true)) Report(session.RemoveFromPlaylist(entry.Id));
     }
 
-    /// <summary>The loop count: 0 follows the track (— or ∞ when it holds the playlist), otherwise ×N; set when let go.</summary>
-    private void DrawLoops(Scene scene, PlaylistEntry entry)
+    /// <summary>The repeat count: a number, ∞ when the entry holds the playlist, or — when it plays once; click to type, wheel to step.</summary>
+    private void DrawLoops(Scene scene, PlaylistEntry entry, bool editing)
     {
-        var value = pendingLoops is { } p && p.Entry == entry.Id ? p.Value : entry.Loops ?? 0;
-        var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
-        var format = value > 0 ? "×%d" : holds ? "∞" : "—";
-        ImGui.SetNextItemWidth(LoopWidth);
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Amber, value > 0 || holds))
-            ImGui.DragInt("##loops", ref value, 0.05f, 0, PlaylistEditing.MaxLoops, format);
-        if (ImGui.IsItemActive()) pendingLoops = (entry.Id, value);
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Times to play; — follows the track (∞ when the track loops)");
-        if (ImGui.IsItemDeactivatedAfterEdit())
+        if (editingLoops == entry.Id)
         {
-            Report(session.SetEntryLoops(entry.Id, value <= 0 ? null : value));
-            pendingLoops = null;
+            DrawLoopsInput(entry);
+            return;
         }
-        else if (ImGui.IsItemDeactivated() && pendingLoops is { } q && q.Entry == entry.Id)
-            pendingLoops = null;
+
+        var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
+        var text = entry.Loops is { } n ? n.ToString() : holds ? "∞" : "—";
+        var colour = entry.Loops is not null || holds ? UiColours.Amber : UiColours.Dim();
+        using (ImRaii.PushColor(ImGuiCol.Text, colour))
+            if (ImGui.Selectable($"{text}##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight())))
+                StartLoops(entry);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeat Count");
+        if (!editing || !ImGui.IsItemHovered()) return;
+        wheelOverLoops = true;
+        StepLoops(entry);
+    }
+
+    /// <summary>The number box: Enter or clicking away sets the count, Escape cancels; empty or 0 follows the track.</summary>
+    private void DrawLoopsInput(PlaylistEntry entry)
+    {
+        if (focusLoops)
+        {
+            ImGui.SetKeyboardFocusHere();
+            focusLoops = false;
+        }
+
+        ImGui.SetNextItemWidth(LoopWidth);
+        var entered = ImGui.InputText("##loops-input", ref loopsText, 3, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            editingLoops = null;
+            return;
+        }
+
+        if (!entered && !ImGui.IsItemDeactivated()) return;
+        var count = int.TryParse(loopsText, out var n) && n > 0 ? n : (int?)null;
+        Report(session.SetEntryLoops(entry.Id, count));
+        editingLoops = null;
+    }
+
+    private void StartLoops(PlaylistEntry entry)
+    {
+        editingLoops = entry.Id;
+        loopsText = entry.Loops?.ToString() ?? string.Empty;
+        focusLoops = true;
+    }
+
+    /// <summary>The mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>
+    private void StepLoops(PlaylistEntry entry)
+    {
+        var wheel = ImGui.GetIO().MouseWheel;
+        if (wheel == 0f) return;
+        int? next = wheel > 0f
+            ? Math.Min((entry.Loops ?? 0) + 1, PlaylistEditing.MaxLoops)
+            : entry.Loops is { } n && n > 1 ? n - 1 : null;
+        if (next != entry.Loops) Report(session.SetEntryLoops(entry.Id, next));
     }
 
     /// <summary>Accepts an entry (to reorder) or a Hierarchy track (to add) dropped on the last item, placing it at <paramref name="index"/>.</summary>

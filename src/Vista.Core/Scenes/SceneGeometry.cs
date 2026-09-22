@@ -1,5 +1,4 @@
 using System.Numerics;
-using Vista.Core.Camera;
 using Vista.Core.Tracks;
 
 namespace Vista.Core.Scenes;
@@ -7,12 +6,6 @@ namespace Vista.Core.Scenes;
 /// <summary>Where a scene's tracks sit in the world, where anchors start, and how moving them carries what hangs off them.</summary>
 public static class SceneGeometry
 {
-    /// <summary>How far behind an anchor, along its yaw, the camera stops when flying to it.</summary>
-    public const float ViewBack = 5f;
-
-    /// <summary>How far above an anchor the camera stops when flying to it.</summary>
-    public const float ViewUp = 3f;
-
     /// <summary>A track's anchor in the world.</summary>
     public static Anchor WorldAnchor(Scene scene, Track track) => scene.Anchor.ToWorld(track.Anchor);
 
@@ -54,12 +47,5 @@ public static class SceneGeometry
         }
 
         return SceneEditing.Replace(scene, moved);
-    }
-
-    /// <summary>Where the camera goes to look at an anchor: behind it along its yaw and above it.</summary>
-    public static (Vector3 Position, Vector3 LookAt) ViewOf(Anchor worldAnchor)
-    {
-        var forward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, worldAnchor.Yaw, 0f));
-        return (worldAnchor.Position - (forward * ViewBack) + new Vector3(0f, ViewUp, 0f), worldAnchor.Position);
     }
 }

@@ -23,19 +23,21 @@ internal sealed unsafe class HierarchyPanel
 
     public HierarchyPanel(CameraSession session) => this.session = session;
 
-    /// <summary>The "Scene" header, one row per track, and + Track; disabled unless editing.</summary>
+    /// <summary>The "Scene" header with its anchor and add buttons, then one row per track; disabled unless editing.</summary>
     public void Draw(bool editing)
     {
         ImGui.AlignTextToFramePadding();
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
             ImGui.TextUnformatted("Scene");
         ImGui.BeginDisabled(!editing);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor);
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + IconButton.Width(FontAwesomeIcon.Plus) + ImGui.GetStyle().ItemSpacing.X;
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
         ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track")) Report(session.AddTrack());
         ImGui.EndDisabled();
         ImGui.Separator();
 
@@ -44,18 +46,16 @@ internal sealed unsafe class HierarchyPanel
         var edited = session.EditedTrackId;
         if (renaming is { } id && (!editing || SceneEditing.IndexOf(scene, id) < 0)) renaming = null;
         ImGui.BeginDisabled(!editing);
-        var footer = ImGui.GetFrameHeightWithSpacing();
-        if (ImGui.BeginChild("tracks", new Vector2(0f, -footer)))
+        if (ImGui.BeginChild("tracks", new Vector2(0f, 0f)))
         {
             for (var i = 0; i < scene.Tracks.Count; i++) DrawRow(scene, scene.Tracks[i], i, edited, editing);
         }
 
         ImGui.EndChild();
-        if (ImGui.Button("+ Track")) Report(session.AddTrack());
         ImGui.EndDisabled();
     }
 
-    /// <summary>The eye toggle and the name: click edits the track, double-click renames, right-click opens the menu, drag reorders.</summary>
+    /// <summary>The eye toggle and the name: click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
     private void DrawRow(Scene scene, Track track, int index, Guid edited, bool editing)
     {
         using var id = ImRaii.PushId(track.Id.ToString());
@@ -80,8 +80,8 @@ internal sealed unsafe class HierarchyPanel
         }
 
         if (ImGui.Selectable(track.Name, isEdited, ImGuiSelectableFlags.None, new Vector2(0f, ImGui.GetFrameHeight())))
-            Report(session.OpenTrack(track.Id));
-        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) StartRename(track);
+            Report(session.SelectTrack(track.Id));
+        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
         {
