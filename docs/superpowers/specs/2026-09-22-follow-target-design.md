@@ -59,6 +59,16 @@ shows a pencil that reopens its dialog; the other entries show none.
     character when Turn with character is on.
   - **Aim height**, used when Look at character is on.
   - **Smoothing**, easing both the camera's position and its aim as Watch Target eases its aim.
+  - Below a separator, the **orbit**: three unlabelled drag fields in a row, bordered in the axis
+    colours and named by their tooltips:
+    - **Distance** (X colour): the camera's distance from the character along the ground, in yalms.
+    - **Height** (Y colour): the camera's height above the character's feet, in yalms.
+    - **Angle** (Z colour): where the camera sits around them, 0–360°, measured from their facing:
+      0° behind, 90° to their right, 180° in front.
+    - Changing Angle swings the point around the character and turns its recorded yaw by the same
+      amount, so the camera keeps its view of them; Distance and Height leave the aim alone.
+    - They move the camera live while dragged; each drag is one undo step. They are disabled until
+      the track has its point.
   - Done.
 - Every change in it is one undo step, and it is disabled unless editing.
 - The character, aim height and smoothing are the track's one shared set, as for Watch Target.
