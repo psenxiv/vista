@@ -38,7 +38,8 @@ Out of scope: the manual behind a `?` icon, which gets its own spec later.
 - **LIVE** moves to the right end of the top bar, just left of the Hide UI eye.
 - **Hide UI tooltip:** "Hide game UI when Live".
 - **Point list:** the grip icon at the start of each row goes. Rows still drag to reorder.
-- **Opening the window** sets it to its minimum width, every time it opens. Height is kept.
+- **The first time the window is used** it opens at its minimum width. After that it keeps whatever
+  size the user gives it.
 
 ## Scene panel
 
