@@ -105,7 +105,7 @@ internal sealed unsafe class PlaylistPanel
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f) - warning);
         var name = track.Name;
         ImGui.Selectable("##entry", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(nameWidth, ImGui.GetFrameHeight()));
-        DrawRowText($"{index + 1}  {name}");
+        RowText.Draw($"{index + 1}  {name}");
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);
         var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
@@ -146,7 +146,7 @@ internal sealed unsafe class PlaylistPanel
         var colour = entry.Loops is not null || holds ? UiColours.Amber : UiColours.Dim();
         if (ImGui.Selectable("##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight()))) StartLoops(entry);
         using (ImRaii.PushColor(ImGuiCol.Text, colour))
-            DrawRowText(text);
+            RowText.Draw(text);
         if (editing) ImGuiP.SetItemUsingMouseWheel();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeats");
         if (!editing || !ImGui.IsItemHovered()) return;
@@ -217,19 +217,6 @@ internal sealed unsafe class PlaylistPanel
             Report(session.AddToPlaylist(scene.Tracks[t].Id, index));
 
         ImGui.EndDragDropTarget();
-    }
-
-    /// <summary>Text inside the row just drawn: centred on its height, inset by twice the frame padding and clipped to the row.</summary>
-    private static void DrawRowText(string text)
-    {
-        var min = ImGui.GetItemRectMin();
-        var max = ImGui.GetItemRectMax();
-        var padding = ImGui.GetStyle().FramePadding.X * 2f;
-        var at = new Vector2(min.X + padding, min.Y + ((max.Y - min.Y - ImGui.GetTextLineHeight()) * 0.5f));
-        var list = ImGui.GetWindowDrawList();
-        list.PushClipRect(min, max with { X = max.X - padding }, true);
-        list.AddText(at, ImGui.GetColorU32(ImGuiCol.Text), text);
-        list.PopClipRect();
     }
 
     private static void Report(string? refusal)

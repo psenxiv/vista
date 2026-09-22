@@ -90,25 +90,12 @@ internal sealed unsafe class HierarchyPanel
     private static void CentreInLastSlot(FontAwesomeIcon icon)
         => ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X + ((LastSlot() - IconButton.Width(icon)) * 0.5f));
 
-    /// <summary>Text inside the row just drawn: centred on its height, inset by twice the frame padding and clipped to the row.</summary>
-    private static void DrawRowText(string text)
-    {
-        var min = ImGui.GetItemRectMin();
-        var max = ImGui.GetItemRectMax();
-        var padding = ImGui.GetStyle().FramePadding.X * 2f;
-        var at = new Vector2(min.X + padding, min.Y + ((max.Y - min.Y - ImGui.GetTextLineHeight()) * 0.5f));
-        var list = ImGui.GetWindowDrawList();
-        list.PushClipRect(min, max with { X = max.X - padding }, true);
-        list.AddText(at, ImGui.GetColorU32(ImGuiCol.Text), text);
-        list.PopClipRect();
-    }
-
     /// <summary>The name as a selectable, carrying the row's clicks, drag and drop, and context menu.</summary>
     private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float width)
     {
         if (ImGui.Selectable("##name", isEdited, ImGuiSelectableFlags.None, new Vector2(width, ImGui.GetFrameHeight())))
             Report(session.SelectTrack(track.Id));
-        DrawRowText(track.Name);
+        RowText.Draw(track.Name);
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
