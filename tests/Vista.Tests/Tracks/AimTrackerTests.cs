@@ -13,8 +13,8 @@ public class AimTrackerTests
 
     private static Track Single(AimMode aim) => TrackEditing.Append(TrackEditing.Empty(aim), Camera);
 
-    private static Track Following(string? name = "Guard", float smoothing = 0f)
-        => Single(AimMode.FollowTarget) with { TargetName = name, Smoothing = smoothing };
+    private static Track Watching(string? name = "Guard", float smoothing = 0f)
+        => Single(AimMode.WatchTarget) with { TargetName = name, Smoothing = smoothing };
 
     // A guard whose aim point, 1.3 above the feet, is at (x, 0, −10).
     private static NearbyCharacters GuardAt(float x)
@@ -37,20 +37,20 @@ public class AimTrackerTests
     }
 
     [Fact]
-    public void FollowAimsAtTheCharacterAtItsAimHeight()
+    public void WatchAimsAtTheCharacterAtItsAimHeight()
     {
-        AimsAt(new Vector3(0f, 0f, -10f), Frame(new AimTracker(GuardAt(0f)), Following()));
-        Assert.Equal(new Vector3(0f, 0f, -10f), AimTracker.CharacterAim(Following(), GuardAt(0f)));
+        AimsAt(new Vector3(0f, 0f, -10f), Frame(new AimTracker(GuardAt(0f)), Watching()));
+        Assert.Equal(new Vector3(0f, 0f, -10f), AimTracker.CharacterAim(Watching(), GuardAt(0f)));
     }
 
     [Fact]
     public void RecordedAimIsUsedWhenTheCharacterIsNotFoundOrNoneIsChosen()
     {
-        Assert.Equal(Recorded, Frame(new AimTracker(new NearbyCharacters()), Following()).LookAt);
-        Assert.Equal(Recorded, Frame(new AimTracker(GuardAt(0f)), Following(name: null)).LookAt);
-        Assert.True(AimTracker.TargetLost(Following(), new NearbyCharacters()));
-        Assert.False(AimTracker.TargetLost(Following(name: null), new NearbyCharacters()));
-        Assert.False(AimTracker.TargetLost(Following(), GuardAt(0f)));
+        Assert.Equal(Recorded, Frame(new AimTracker(new NearbyCharacters()), Watching()).LookAt);
+        Assert.Equal(Recorded, Frame(new AimTracker(GuardAt(0f)), Watching(name: null)).LookAt);
+        Assert.True(AimTracker.TargetLost(Watching(), new NearbyCharacters()));
+        Assert.False(AimTracker.TargetLost(Watching(name: null), new NearbyCharacters()));
+        Assert.False(AimTracker.TargetLost(Watching(), GuardAt(0f)));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class AimTrackerTests
     {
         var characters = new NearbyCharacters();
         characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Guard", null, new Vector3(20f, -1.3f, -10f))]);
-        var track = Following() with { Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
+        var track = Watching() with { Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
         AimsAt(new Vector3(20f, 0f, -10f), Frame(new AimTracker(characters), track));
     }
@@ -68,7 +68,7 @@ public class AimTrackerTests
     {
         var characters = new NearbyCharacters();
         characters.Update([new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -1.3f, -10f))]);
-        var track = Following("Aya") with { TargetWorld = "Gilgamesh", Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
+        var track = Watching("Aya") with { TargetWorld = "Gilgamesh", Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
         Assert.Equal(new Vector3(-20f, 0f, -10f), AimTracker.CharacterAim(track, characters));
         Assert.True(AimTracker.TargetLost(track with { TargetWorld = "Sargatanas" }, characters));
@@ -97,7 +97,7 @@ public class AimTrackerTests
     {
         var characters = GuardAt(0f);
         var tracker = new AimTracker(characters);
-        var track = Following(smoothing: 1f);
+        var track = Watching(smoothing: 1f);
         Frame(tracker, track);
 
         characters.Update(GuardAt(10f).All);
@@ -112,7 +112,7 @@ public class AimTrackerTests
     {
         var characters = new NearbyCharacters();
         var tracker = new AimTracker(characters);
-        var track = Following(smoothing: 1f);
+        var track = Watching(smoothing: 1f);
         Frame(tracker, track);
 
         characters.Update(GuardAt(0f).All);

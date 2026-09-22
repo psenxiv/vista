@@ -308,11 +308,11 @@ public class DirectorTests
     }
 
     [Fact]
-    public void LiveFollowsACharacterTheDirectorWasGiven()
+    public void LiveWatchesACharacterTheDirectorWasGiven()
     {
         var characters = new NearbyCharacters();
         characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, -1.3f, -10f))]);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard" };
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard" };
         var director = new Director(characters);
         director.GoLive(new TrackShot(track));
 
@@ -329,7 +329,7 @@ public class DirectorTests
     {
         var characters = new NearbyCharacters();
         characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, -1.3f, -10f))]);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
         var director = new Director(characters);
         director.GoLive(new TrackShot(track));
         director.Tick(1f / 60f);

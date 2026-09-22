@@ -71,7 +71,7 @@ internal sealed unsafe class PointGizmo
 
         var (usingNow, over, ring) = Mode == GizmoMode.Move
             ? DrawMove(view, point)
-            : DrawRings(view, Preview?.Point ?? point, session.Track.Aim is AimMode.AimKeys or AimMode.FollowTarget ? AllRings : RollOnly);
+            : DrawRings(view, Preview?.Point ?? point, session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget ? AllRings : RollOnly);
         Hot = usingNow || over;
 
         if (waitForRelease)

@@ -284,8 +284,8 @@ public class PlaylistPlaybackTests
         Assert.False(playback.IsFinished);
     }
 
-    // A single point at the origin, held 1 s, following Guard with heavy smoothing.
-    private static Track Follow() => TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f)), 0, 1f) with { TargetName = "Guard", Smoothing = 1f };
+    // A single point at the origin, held 1 s, watching Guard with heavy smoothing.
+    private static Track Watch() => TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)), 0, 1f) with { TargetName = "Guard", Smoothing = 1f };
 
     private static void GuardAt(NearbyCharacters characters, float x)
         => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
@@ -304,7 +304,7 @@ public class PlaylistPlaybackTests
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
-        var playback = new PlaylistPlayback([Item(Follow()), Item(Follow())], targets: characters);
+        var playback = new PlaylistPlayback([Item(Watch()), Item(Watch())], targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
 
         GuardAt(characters, 10f);
@@ -324,7 +324,7 @@ public class PlaylistPlaybackTests
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
-        var playback = new PlaylistPlayback([Item(Follow())], loops: true, targets: characters);
+        var playback = new PlaylistPlayback([Item(Watch())], loops: true, targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
 
         GuardAt(characters, 10f);
@@ -340,8 +340,8 @@ public class PlaylistPlaybackTests
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
-        var zero = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f)) with { TargetName = "Guard", Smoothing = 1f };
-        var playback = new PlaylistPlayback([Item(Follow()), Item(zero), Item(Follow())], targets: characters);
+        var zero = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var playback = new PlaylistPlayback([Item(Watch()), Item(zero), Item(Watch())], targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
 
         GuardAt(characters, 10f);

@@ -15,13 +15,13 @@ public sealed class AimTracker
 
     /// <summary>The aim point on the character a track in the world follows, unsmoothed; null unless one is named and found.</summary>
     public static Vector3? CharacterAim(Track world, IAimTargets? targets)
-        => world is { Aim: AimMode.FollowTarget, TargetName: { } name } && targets?.Find(name, world.TargetWorld, world.Anchor.Position) is { } feet
+        => world is { Aim: AimMode.WatchTarget, TargetName: { } name } && targets?.Find(name, world.TargetWorld, world.Anchor.Position) is { } feet
             ? feet + (Vector3.UnitY * world.AimHeight)
             : null;
 
     /// <summary>True when a track in the world follows a named character who isn't found.</summary>
     public static bool TargetLost(Track world, IAimTargets? targets)
-        => world is { Aim: AimMode.FollowTarget, TargetName: not null } && CharacterAim(world, targets) is null;
+        => world is { Aim: AimMode.WatchTarget, TargetName: not null } && CharacterAim(world, targets) is null;
 
     /// <summary>The frame of <paramref name="world"/> at <paramref name="time"/>, <paramref name="dt"/> seconds after the last.</summary>
     public CameraState? Frame(TrackEvaluator evaluator, Track world, double time, float dt)
@@ -30,7 +30,7 @@ public sealed class AimTracker
         if (evaluator.Evaluate(time, target) is not { } frame) return null;
 
         // Lost, the smoother waits on the recorded aim, so finding the character again eases from it.
-        if (world.Aim == AimMode.FollowTarget && target is null) smoother.Seed(frame.LookAt);
+        if (world.Aim == AimMode.WatchTarget && target is null) smoother.Seed(frame.LookAt);
         if (target is not { } at) return frame;
 
         if (TrackAim.Toward(frame.Position, at) is not null)
@@ -52,7 +52,7 @@ public sealed class AimTracker
     private Vector3? Target(Track world, float dt) => world.Aim switch
     {
         AimMode.LookAt when world.LookAtPlaced => world.LookAt,
-        AimMode.FollowTarget when CharacterAim(world, targets) is { } aim => smoother.Step(aim, dt, world.Smoothing),
+        AimMode.WatchTarget when CharacterAim(world, targets) is { } aim => smoother.Step(aim, dt, world.Smoothing),
         _ => null,
     };
 }

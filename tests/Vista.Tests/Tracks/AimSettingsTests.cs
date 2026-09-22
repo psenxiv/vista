@@ -19,7 +19,7 @@ public class AimSettingsTests
     }
 
     [Fact]
-    public void ANewTrackHasNoLookAtNoCharacterAndTheDefaultFollowSettings()
+    public void ANewTrackHasNoLookAtNoCharacterAndTheDefaultWatchSettings()
     {
         var track = TrackEditing.Empty();
 
@@ -69,13 +69,13 @@ public class AimSettingsTests
     [Fact]
     public void OtherModesPlaceNoLookAtAndTheSameModeChangesNothing()
     {
-        Assert.False(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.FollowTarget, Camera).LookAtPlaced);
+        Assert.False(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.WatchTarget, Camera).LookAtPlaced);
         var track = TrackEditing.Empty();
         Assert.Same(track, TrackEditing.SetAim(track, AimMode.AimKeys, Camera));
     }
 
     [Fact]
-    public void TheFollowSettingsClampAndAnEmptyNameClearsTheCharacter()
+    public void TheWatchSettingsClampAndAnEmptyNameClearsTheCharacter()
     {
         var track = TrackEditing.Empty();
         var named = TrackEditing.SetTarget(track, "Guard", null);

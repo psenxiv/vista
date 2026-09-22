@@ -126,7 +126,7 @@ public class SceneEditingTests
     }
 
     [Fact]
-    public void DuplicateCopiesTheLookAtAndFollowSettings()
+    public void DuplicateCopiesTheLookAtAndWatchSettings()
     {
         var scene = SceneEditing.New();
         scene = SceneEditing.Replace(scene, scene.Tracks[0] with

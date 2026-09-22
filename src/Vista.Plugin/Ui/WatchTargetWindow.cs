@@ -8,8 +8,8 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The edited track's Follow Target settings: the character to follow, its aim height and smoothing.</summary>
-internal sealed class FollowTargetWindow : Window
+/// <summary>The edited track's Watch Target settings: the character to watch, its aim height and smoothing.</summary>
+internal sealed class WatchTargetWindow : Window
 {
     private const float ListWidth = 260f;
     private const float FieldWidth = 70f;
@@ -20,8 +20,8 @@ internal sealed class FollowTargetWindow : Window
     private float? smoothingDrag;
     private Guid openedFor;
 
-    public FollowTargetWindow(CameraSession session, PendingField fields)
-        : base("Follow Target###vista-follow-target", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
+    public WatchTargetWindow(CameraSession session, PendingField fields)
+        : base("Watch Target###vista-watch-target", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.session = session;
         this.fields = fields;
@@ -35,11 +35,11 @@ internal sealed class FollowTargetWindow : Window
         IsOpen = true;
     }
 
-    /// <summary>Closes when editing ends, another track is edited, or the edited track leaves Follow Target.</summary>
+    /// <summary>Closes when editing ends, another track is edited, or the edited track leaves Watch Target.</summary>
     public override void PreOpenCheck()
     {
         if (!IsOpen) return;
-        if (session.Mode != CameraMode.Editing || session.EditedTrackId != openedFor || session.Track.Aim != AimMode.FollowTarget) IsOpen = false;
+        if (session.Mode != CameraMode.Editing || session.EditedTrackId != openedFor || session.Track.Aim != AimMode.WatchTarget) IsOpen = false;
     }
 
     /// <summary>Applies an unfinished aim height and drops an unfinished smoothing drag, since a closed window never reports either finishing.</summary>

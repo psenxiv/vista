@@ -66,10 +66,10 @@ public class SessionLookAtTests
     }
 
     [Fact]
-    public void TheFollowSettingsAreEachOneUndoStep()
+    public void TheWatchSettingsAreEachOneUndoStep()
     {
         var state = Editing();
-        Assert.Null(state.SetAim(AimMode.FollowTarget, Camera));
+        Assert.Null(state.SetAim(AimMode.WatchTarget, Camera));
         Assert.Null(state.SetTarget("Guard", null));
         Assert.Null(state.SetAimHeight(2f));
         Assert.Null(state.SetSmoothing(0.8f));

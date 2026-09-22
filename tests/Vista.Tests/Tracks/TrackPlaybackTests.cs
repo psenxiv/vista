@@ -348,11 +348,11 @@ public class TrackPlaybackTests
         => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
 
     [Fact]
-    public void AFollowedCharacterIsEasedOntoAndASeekOrRestartSnapsBackOntoThem()
+    public void AWatchedCharacterIsEasedOntoAndASeekOrRestartSnapsBackOntoThem()
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
         var playback = new TrackPlayback(track, characters);
 
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(1f / 60f)!.Value);

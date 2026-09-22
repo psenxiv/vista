@@ -18,8 +18,8 @@ public class SessionAimTests
     private static void GuardAt(NearbyCharacters characters, Vector3 aim)
         => characters.Update([new LoadedCharacter("Guard", null, aim - new Vector3(0f, 1.3f, 0f))]);
 
-    // Editing a 2 s track, x = 0 to 10, following Guard with heavy smoothing; Guard aimed at A.
-    private static (SessionState State, NearbyCharacters Characters) Following()
+    // Editing a 2 s track, x = 0 to 10, watching Guard with heavy smoothing; Guard aimed at A.
+    private static (SessionState State, NearbyCharacters Characters) Watching()
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, A);
@@ -27,7 +27,7 @@ public class SessionAimTests
         state.Edit();
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
-        state.ChangeTrack(t => t with { Aim = AimMode.FollowTarget, TargetName = "Guard", Smoothing = 1f });
+        state.ChangeTrack(t => t with { Aim = AimMode.WatchTarget, TargetName = "Guard", Smoothing = 1f });
         return (state, characters);
     }
 
@@ -43,7 +43,7 @@ public class SessionAimTests
     [Fact]
     public void ScrubbedFramesAimAtTheCharacterWhereTheyAreNow()
     {
-        var (state, characters) = Following();
+        var (state, characters) = Watching();
         AimsAt(A, state.FrameAt(0.0)!.Value);
 
         GuardAt(characters, B);
@@ -54,7 +54,7 @@ public class SessionAimTests
     [Fact]
     public void APreviewStartsOnTheCharacterAndEasesAfterThem()
     {
-        var (state, characters) = Following();
+        var (state, characters) = Watching();
         state.Play();
         AimsAt(A, state.AdvancePreview(1f / 60f)!.Value);
 
@@ -64,9 +64,9 @@ public class SessionAimTests
     }
 
     [Fact]
-    public void LiveFollowsTheCharacterAndAScrubSnapsBackOntoThem()
+    public void LiveWatchesTheCharacterAndAScrubSnapsBackOntoThem()
     {
-        var (state, characters) = Following();
+        var (state, characters) = Watching();
         state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
@@ -83,7 +83,7 @@ public class SessionAimTests
     [Fact]
     public void TheSessionSaysWhenTheCharacterIsLost()
     {
-        var (state, characters) = Following();
+        var (state, characters) = Watching();
         Assert.False(state.TargetLost(state.Track));
         Assert.Equal(A, state.CharacterAim(state.Track));
 

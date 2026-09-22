@@ -256,7 +256,7 @@ public class TrackEvaluatorTests
     [InlineData(AimMode.AimKeys)]
     [InlineData(AimMode.PathTangent)]
     [InlineData(AimMode.LookAt)]
-    [InlineData(AimMode.FollowTarget)]
+    [InlineData(AimMode.WatchTarget)]
     public void ATargetAimsTheCameraAtIt(AimMode aim)
     {
         var track = TrackEditing.SetSpeed(Build(new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) }, aim), 5f);
@@ -273,7 +273,7 @@ public class TrackEvaluatorTests
 
     [Theory]
     [InlineData(AimMode.LookAt)]
-    [InlineData(AimMode.FollowTarget)]
+    [InlineData(AimMode.WatchTarget)]
     public void WithNoTargetTheNewModesUseTheRecordedAim(AimMode aim)
     {
         var points = new[] { Point(0f, 0f, 0f, yaw: 90f * Deg), Point(10f, 0f, 0f, yaw: 90f * Deg) };
@@ -285,7 +285,7 @@ public class TrackEvaluatorTests
 
     [Theory]
     [InlineData(AimMode.LookAt)]
-    [InlineData(AimMode.FollowTarget)]
+    [InlineData(AimMode.WatchTarget)]
     public void ASinglePointTrackTurnsToATarget(AimMode aim)
     {
         var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f, fov: 1.2f, roll: 0.3f);
