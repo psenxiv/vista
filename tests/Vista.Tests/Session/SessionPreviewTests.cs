@@ -39,6 +39,7 @@ public class SessionPreviewTests
     [Theory]
     [InlineData(PlaybackDirection.Forward, 10.0, 0.0)]
     [InlineData(PlaybackDirection.Reverse, 0.0, 10.0)]
+    [InlineData(PlaybackDirection.PingPong, 0.0, 0.0)]
     public void PlayFromWhereTheShotFinishesStartsFromTheBeginning(PlaybackDirection direction, double finish, double start)
     {
         var state = Editing();
@@ -162,6 +163,22 @@ public class SessionPreviewTests
         Assert.True(state.Previewing);
 
         Assert.Null(state.SwitchTrack(state.Scene.Tracks[1].Id));
+        Assert.False(state.Previewing);
+    }
+
+    [Fact]
+    public void MovingOrBringingTheAnchorStopsThePreview()
+    {
+        var state = Editing();
+
+        state.Play();
+        Assert.Null(state.SelectSceneAnchor());
+        Assert.True(state.Previewing);
+        Assert.Null(state.MoveAnchor(new Anchor(new Vector3(1f, 0f, 0f), 0f), carry: false));
+        Assert.False(state.Previewing);
+
+        state.Play();
+        Assert.Null(state.BringScene(new Vector3(2f, 0f, 0f)));
         Assert.False(state.Previewing);
     }
 
