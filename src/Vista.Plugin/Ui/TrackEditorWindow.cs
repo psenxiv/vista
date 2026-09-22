@@ -283,12 +283,12 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         if (TrackEditing.IsPinned(track, index))
         {
-            if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pinned: click to follow the track speed"))
+            if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pin to Track speed"))
                 Report(session.ResetLeg(index));
             return;
         }
 
-        if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Following the track speed: click to pin at this speed", ImGui.GetColorU32(ImGuiCol.Text, 0.4f)))
+        if (IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pin to Leg speed", ImGui.GetColorU32(ImGuiCol.Text, 0.4f)))
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 

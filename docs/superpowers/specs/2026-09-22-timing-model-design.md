@@ -73,8 +73,9 @@ A leg whose duration would pass 600 s at its speed is held at 600 s.
   coupled, then **Hold**. The Speed field shows the leg's actual average speed, its
   length over its duration, so the two always agree even at a limit; typing into it
   pins the leg at that speed (decided 2026-09-22). Row 1 has no leg fields.
-- Every row from 2 on has a pin icon button. A pinned leg's pin is lit; clicking it
-  unpins the leg, which follows the track speed again. An unpinned leg's pin is greyed;
+- Every row from 2 on has a pin icon button. A pinned leg's pin is lit, with the
+  tooltip "Pin to Track speed"; clicking it unpins the leg, which follows the track
+  speed again. An unpinned leg's pin is greyed, with the tooltip "Pin to Leg speed";
   clicking it pins the leg at its current speed (decided 2026-09-22).
 
 **Timing window.** A yalm scale runs down the graph's right edge: tick marks at a
