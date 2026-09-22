@@ -26,7 +26,18 @@ internal sealed unsafe class HierarchyPanel
     /// <summary>The "Scene" header, one row per track, and + Track; disabled unless editing.</summary>
     public void Draw(bool editing)
     {
+        ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Scene");
+        ImGui.BeginDisabled(!editing);
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + IconButton.Width(FontAwesomeIcon.StreetView) + ImGui.GetStyle().ItemSpacing.X;
+        ImGui.SameLine();
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
+        ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
+        if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (IconButton.Draw("bring-scene", FontAwesomeIcon.StreetView, "Bring scene to me")) Report(session.BringSceneToMe());
+        ImGui.EndDisabled();
         ImGui.Separator();
 
         // Rows can delete or reorder tracks, so every row reads this snapshot.
@@ -55,6 +66,11 @@ internal sealed unsafe class HierarchyPanel
         ImGui.BeginDisabled(isEdited);
         if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide"))
             Report(session.SetTrackHidden(track.Id, !hidden));
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+
+        ImGui.BeginDisabled(!track.AnchorPlaced);
+        if (IconButton.Draw("anchor", FontAwesomeIcon.Anchor, "Select track anchor")) Report(session.SelectTrackAnchor(track.Id));
         ImGui.EndDisabled();
         ImGui.SameLine();
 

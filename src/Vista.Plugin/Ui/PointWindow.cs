@@ -11,7 +11,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The selected point's number fields, gizmo mode, copy, paste and delete; shown only while a point is selected in editing mode.</summary>
+/// <summary>The selected point's or anchor's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
 {
     private const float FieldWidth = 70f;
@@ -21,7 +21,7 @@ internal sealed class PointWindow : Window
 
     private readonly CameraSession session;
     private readonly PointGizmo gizmo;
-    private int? shown;
+    private (int? Point, AnchorKind? Anchor, Guid Track) shown;
     private float fieldsWidth;
     private ControlPoint? copied;
 
@@ -34,14 +34,21 @@ internal sealed class PointWindow : Window
         ShowCloseButton = false;
     }
 
-    /// <summary>Opens while a point is selected in editing mode, and applies an unfinished edit when the selection moves.</summary>
+    /// <summary>Opens while a point or an anchor is selected in editing mode, and applies an unfinished edit when the selection moves.</summary>
     public override void PreOpenCheck()
     {
-        var selected = session.Mode == CameraMode.Editing ? session.Selected : null;
-        if (selected != shown) session.EndLiveEdit();
-        shown = selected;
-        IsOpen = selected is not null;
-        if (selected is { } index) WindowName = $"Point {index + 1}###vista-point";
+        var editing = session.Mode == CameraMode.Editing;
+        var now = (editing ? session.Selected : null, editing ? session.SelectedAnchor : null, session.EditedTrackId);
+        if (now != shown) session.EndLiveEdit();
+        shown = now;
+        IsOpen = now.Item1 is not null || now.Item2 is not null;
+        WindowName = now switch
+        {
+            (_, AnchorKind.Scene, _) => "Scene anchor###vista-point",
+            (_, AnchorKind.Track, _) => "Track anchor###vista-point",
+            ({ } index, _, _) => $"Point {index + 1}###vista-point",
+            _ => WindowName,
+        };
     }
 
     /// <summary>Ends a drag in progress, since a closed window never reports the field letting go.</summary>
@@ -49,6 +56,12 @@ internal sealed class PointWindow : Window
 
     public override void Draw()
     {
+        if (session.SelectedAnchor is not null)
+        {
+            DrawAnchor();
+            return;
+        }
+
         if (session.Selected is not { } index || index >= session.Track.Points.Count) return;
         var point = session.Track.Points[index];
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
@@ -101,6 +114,48 @@ internal sealed class PointWindow : Window
 
         ImGui.EndTable();
         fieldsWidth = ImGui.GetItemRectSize().X;
+    }
+
+    /// <summary>The selected anchor's gizmo mode and its X, Y, Z and Yaw; typing moves it and carries what hangs off it.</summary>
+    private void DrawAnchor()
+    {
+        if (session.SelectedAnchorInWorld is not { } anchor) return;
+        using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
+
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted("Gizmo");
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Move", gizmo.Mode == GizmoMode.Move)) gizmo.SetMode(GizmoMode.Move);
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Rotate", gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
+
+        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
+        if (!ImGui.BeginTable("anchor-fields", 4, ImGuiTableFlags.SizingFixedFit)) return;
+
+        ImGui.TableNextRow();
+        AnchorField("X", EditorColours.AxisX, "anchor-x", anchor.Position.X, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { X = EditLimits.Coordinate(v, a.Position.X) } });
+        AnchorField("Y", EditorColours.AxisY, "anchor-y", anchor.Position.Y, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Y = EditLimits.Coordinate(v, a.Position.Y) } });
+        ImGui.TableNextRow();
+        AnchorField("Z", EditorColours.AxisZ, "anchor-z", anchor.Position.Z, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Z = EditLimits.Coordinate(v, a.Position.Z) } });
+        AnchorField("Yaw", EditorColours.AxisY, "anchor-yaw", Degrees(EditLimits.Angle(anchor.Yaw)), AngleSpeed, "%.1f°", (a, v) => a with { Yaw = EditLimits.Angle(Radians(v)) });
+        ImGui.EndTable();
+    }
+
+    /// <summary>A label and a drag field for the selected anchor: dragging moves it live, carrying what hangs off it, and each drag is one undo step.</summary>
+    private void AnchorField(string label, uint colour, string id, float value, float speed, string format, Func<Anchor, float, Anchor> set)
+    {
+        ImGui.TableNextColumn();
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.PushColor(ImGuiCol.Text, colour))
+            ImGui.TextUnformatted(label);
+        ImGui.TableNextColumn();
+        ImGui.SetNextItemWidth(FieldWidth);
+
+        var edited = value;
+        var changed = ImGui.DragFloat($"##{id}", ref edited, speed, 0f, 0f, format);
+        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
+        if (changed && session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
+        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
     }
 
     /// <summary>A label and a drag field, as two cells of the grid: dragging moves the point live, and each drag is one undo step.</summary>
