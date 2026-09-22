@@ -316,7 +316,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var (colour, tooltip) = track.Aim switch
         {
             AimMode.WatchTarget => TargetState(track, "Watch Target", "using recorded aim"),
-            AimMode.FollowTarget => TargetState(track, "Follow Target", "using the last position"),
+            AimMode.FollowTarget => TargetState(track, "Follow Target", null),
             _ => ((uint?)null, $"Select aim ({AimNames[aim]})"),
         };
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour)) ImGui.OpenPopup("aim-menu");
@@ -346,10 +346,10 @@ internal sealed unsafe class TrackEditorWindow : Window
     }
 
     /// <summary>The aim icon's colour and tooltip under a character mode: accent when found, red when lost or none is chosen.</summary>
-    private (uint? Colour, string Tooltip) TargetState(Track track, string mode, string lost)
+    private (uint? Colour, string Tooltip) TargetState(Track track, string mode, string? lost)
     {
         if (track.TargetName is not { } name) return (UiColours.Red, $"{mode}: choose a character");
-        return session.TargetLost(track) ? (UiColours.Red, $"{name} (Not found): {lost}") : (UiColours.Accent, $"{mode}: {name}");
+        return session.TargetLost(track) ? (UiColours.Red, lost is null ? $"{name} (Not found)" : $"{name} (Not found): {lost}") : (UiColours.Accent, $"{mode}: {name}");
     }
 
     /// <summary>A character mode's aim menu entry, which opens its dialog when the track switches into it, and on the current mode a pencil that reopens it; disabled with <paramref name="refusal"/> as its tooltip.</summary>

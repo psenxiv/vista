@@ -80,8 +80,7 @@ shows a pencil that reopens its dialog; the other entries show none.
 
 - The camera stays where it last was, looking as it last did. If it never found them in this
   playback, it sits at the point read as an offset from the track's anchor.
-- The aim icon turns red with "Name (Not found): using the last position", and the playlist warns as
-  for Watch Target.
+- The aim icon turns red with "Name (Not found)", and the playlist row warns "Not found nearby".
 
 **Editing**
 
@@ -94,8 +93,7 @@ shows a pencil that reopens its dialog; the other entries show none.
   Target.
 
 **The aim icon** is drawn blue under Follow Target when the character is found, red otherwise, as
-under Watch Target, with tooltips "Follow Target: Name", "Name (Not found): using the last
-position" and "Follow Target: choose a character".
+under Watch Target, with tooltips "Follow Target: Name", "Name (Not found)" and "Follow Target: choose a character".
 
 ## Architecture
 

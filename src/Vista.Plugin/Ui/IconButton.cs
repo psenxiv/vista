@@ -47,7 +47,7 @@ internal static class IconButton
     public const string NotFoundTooltip = "Not found nearby: using recorded aim";
 
     /// <summary>The tooltip on a warning that a followed character can't be found.</summary>
-    public const string FollowNotFoundTooltip = "Not found nearby: using the last position";
+    public const string FollowNotFoundTooltip = "Not found nearby";
 
     /// <summary>A red warning icon saying the character can't be found, its tooltip shown even while disabled.</summary>
     public static void TargetNotFound(string tooltip)
