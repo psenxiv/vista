@@ -31,20 +31,23 @@ public class FreeCamMotionTests
     public void SpeedScalesDistanceLinearly()
     {
         var input = new Vector3(1, 0, 0);
+        // One second of full forward input at speed 1 and speed 2 travels exactly 1 and 2 units.
         var slow = FreeCamMotion.Step(Vector3.Zero, input, 0f, 0f, 1f, 1f);
         var fast = FreeCamMotion.Step(Vector3.Zero, input, 0f, 0f, 2f, 1f);
 
-        Assert.True(fast.Length() > slow.Length() * 1.9f);
+        Assert.Equal(1f, slow.Length(), 5);
+        Assert.Equal(2f, fast.Length(), 5);
     }
 
     [Fact]
     public void UpInputMovesOnYOnly()
     {
+        // Up input is world up, untouched by yaw or pitch: one second at speed 3 rises exactly 3.
         var result = FreeCamMotion.Step(Vector3.Zero, new Vector3(0, 1, 0), 1.2f, 0.4f, 3f, 1f);
 
         Assert.Equal(0f, result.X, 4);
         Assert.Equal(0f, result.Z, 4);
-        Assert.True(result.Y > 0f);
+        Assert.Equal(3f, result.Y, 4);
     }
 
     [Fact]

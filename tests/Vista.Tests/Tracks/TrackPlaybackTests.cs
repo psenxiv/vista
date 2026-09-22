@@ -34,8 +34,9 @@ public class TrackPlaybackTests
         for (var i = 0; i < 150; i++)
             last30 = thirty.Advance(1f / 30f);
 
-        Assert.Equal(PlaybackClock.ShotTime(direction, 10.0, 5.0), sixty.ShotTime, 3);
-        Assert.Equal(PlaybackClock.ShotTime(direction, 10.0, 5.0), thirty.ShotTime, 3);
+        // A 10 s shot at clock 5 s is 5 s in whichever direction it plays: forward 5, reverse 10 - 5, ping-pong 5 on the outward pass.
+        Assert.Equal(5.0, sixty.ShotTime, 3);
+        Assert.Equal(5.0, thirty.ShotTime, 3);
         Assert.NotNull(last60);
         Assert.NotNull(last30);
         Assert.Equal(last60!.Value.Position.X, last30!.Value.Position.X, 3);
@@ -96,22 +97,23 @@ public class TrackPlaybackTests
     }
 
     [Theory]
-    [InlineData(false, PlaybackDirection.Forward)]
-    [InlineData(true, PlaybackDirection.Forward)]
-    [InlineData(false, PlaybackDirection.Reverse)]
-    [InlineData(true, PlaybackDirection.Reverse)]
-    [InlineData(false, PlaybackDirection.PingPong)]
-    [InlineData(true, PlaybackDirection.PingPong)]
-    public void NegativeFrameTimeDoesNotRunTimeBackwards(bool loop, PlaybackDirection direction)
+    // A 10 s shot. At clock 0 the shot time is 0 forward, 10 reversed; at clock 2 it is 2 forward, 8 reversed.
+    [InlineData(false, PlaybackDirection.Forward, 0.0, 2.0)]
+    [InlineData(true, PlaybackDirection.Forward, 0.0, 2.0)]
+    [InlineData(false, PlaybackDirection.Reverse, 10.0, 8.0)]
+    [InlineData(true, PlaybackDirection.Reverse, 10.0, 8.0)]
+    [InlineData(false, PlaybackDirection.PingPong, 0.0, 2.0)]
+    [InlineData(true, PlaybackDirection.PingPong, 0.0, 2.0)]
+    public void NegativeFrameTimeDoesNotRunTimeBackwards(bool loop, PlaybackDirection direction, double atZero, double atTwo)
     {
         var fresh = new TrackPlayback(StraightTrack(loop, direction));
         fresh.Advance(-1f);
-        Assert.Equal(PlaybackClock.ShotTime(direction, 10.0, 0.0), fresh.ShotTime, 5);
+        Assert.Equal(atZero, fresh.ShotTime, 5);
 
         var playing = new TrackPlayback(StraightTrack(loop, direction));
         playing.Advance(2f);
         playing.Advance(-1f);
-        Assert.Equal(PlaybackClock.ShotTime(direction, 10.0, 2.0), playing.ShotTime, 5);
+        Assert.Equal(atTwo, playing.ShotTime, 5);
     }
 
     [Theory]

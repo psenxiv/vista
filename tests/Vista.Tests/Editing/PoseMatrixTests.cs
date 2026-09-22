@@ -69,7 +69,8 @@ public class PoseMatrixTests
         Assert.Equal(0.2f, pitch, 4);
         Assert.Equal(0.1f, roll, 4);
 
+        // Straight up is pi / 2, past the clamp, so ToPose returns the limit itself rather than merely something below it.
         var straightUp = PoseMatrix.From(Vector3.Zero, 0f, 1.5707963f, 0f);
-        Assert.True(PoseMatrix.ToPose(straightUp).Pitch <= TrackAim.PitchLimit);
+        Assert.Equal(TrackAim.PitchLimit, PoseMatrix.ToPose(straightUp).Pitch);
     }
 }

@@ -60,9 +60,14 @@ public class CameraGlyphTests
     }
 
     [Fact]
-    public void AnExtremeFovStaysFinite()
+    public void AnExtremeFovClampsToTheWidestHalfAngle()
     {
+        // The half-angle clamps at 80 degrees, so at depth 1 the face sits tan(80) = 5.6713 above and below the axis.
         var glyph = CameraGlyph.Build(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, MathF.PI, 1f, 1f);
-        Assert.All(glyph.Corners, c => Assert.True(float.IsFinite(c.X) && float.IsFinite(c.Y)));
+
+        Assert.Equal(5.6713f, glyph.Corners[0].Y, 4);
+        Assert.Equal(5.6713f, glyph.Corners[1].Y, 4);
+        Assert.Equal(-5.6713f, glyph.Corners[2].Y, 4);
+        Assert.Equal(-5.6713f, glyph.Corners[3].Y, 4);
     }
 }

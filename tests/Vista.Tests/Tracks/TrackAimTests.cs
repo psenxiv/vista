@@ -64,10 +64,10 @@ public class TrackAimTests
     [Fact]
     public void ChannelInterpolatesBetweenItsEndpoints()
     {
+        // Endpoints duplicate as phantoms, so both tangents are (10 - 0) / 2 = 5 and the Hermite midpoint is exactly 5.
         var values = new[] { 0f, 10f };
-        var mid = TrackAim.Channel(values, 0, 0.5f);
 
-        Assert.True(mid is > 0f and < 10f, $"expected midpoint between 0 and 10, got {mid}");
+        Assert.Equal(5f, TrackAim.Channel(values, 0, 0.5f), 5);
     }
 
     [Fact]

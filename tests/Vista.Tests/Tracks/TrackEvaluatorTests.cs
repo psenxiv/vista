@@ -153,10 +153,25 @@ public class TrackEvaluatorTests
         var track = TrackEditing.SetLegDuration(Build(points), 2, 5f);
         var evaluator = new TrackEvaluator(track);
 
-        var state = evaluator.Evaluate(7.5)!.Value;
-        var yaw = TrackAim.FromDirection(state.LookAt - state.Position).Yaw;
+        // Leg 2 runs from 5 s to 10 s. The yaw channel is a Hermite through 0 and 90 degrees whose
+        // phantom-duplicated endpoints make it pass through both exactly, and whose derivative
+        // (pi / 4)(-6t^2 + 6t + 1) is positive across [0, 1], so the turn is strictly monotone between them.
+        Assert.Equal(0f, YawAt(evaluator, 5.0) / Deg, 3);
+        Assert.Equal(90f, YawAt(evaluator, 10.0) / Deg, 3);
 
-        Assert.InRange(yaw, 20f * Deg, 70f * Deg);
+        var previous = 0f;
+        foreach (var time in new[] { 5.5, 6.0, 7.0, 7.5, 8.0, 9.0, 9.5 })
+        {
+            var yaw = YawAt(evaluator, time) / Deg;
+            Assert.InRange(yaw, previous + 0.001f, 90f);
+            previous = yaw;
+        }
+    }
+
+    private static float YawAt(TrackEvaluator evaluator, double time)
+    {
+        var state = evaluator.Evaluate(time)!.Value;
+        return TrackAim.FromDirection(state.LookAt - state.Position).Yaw;
     }
 
     [Theory]
