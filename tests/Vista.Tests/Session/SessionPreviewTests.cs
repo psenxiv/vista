@@ -147,6 +147,25 @@ public class SessionPreviewTests
     }
 
     [Fact]
+    public void ReselectingTheEditedTrackKeepsThePreviewButSwitchingAwayStopsIt()
+    {
+        var state = Editing();
+        var first = state.EditedTrackId;
+        state.AddTrack();
+        state.SwitchTrack(first);
+
+        state.Play();
+        Assert.Null(state.SelectTrackAnchor(first));
+        Assert.True(state.Previewing);
+
+        Assert.Null(state.SwitchTrack(first));
+        Assert.True(state.Previewing);
+
+        Assert.Null(state.SwitchTrack(state.Scene.Tracks[1].Id));
+        Assert.False(state.Previewing);
+    }
+
+    [Fact]
     public void APreviewRecordsNoUndoStep()
     {
         var state = Editing();

@@ -382,12 +382,12 @@ public sealed class SessionState
     /// <summary>Edits track <paramref name="id"/>, showing it first if hidden. Not an undo step itself. Returns why it was refused, or null.</summary>
     public string? SwitchTrack(Guid id)
     {
-        StopPreview();
         if (Mode != CameraMode.Editing) return "Tracks can only be switched while editing.";
         if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
         if (Scene.Hidden.Contains(id) && SetTrackHidden(id, false) is { } refusal) return refusal;
         if (id == EditedTrackId) return null;
 
+        StopPreview();
         EndLiveEdit();
         ClearForSwitch();
         EditedTrackId = id;

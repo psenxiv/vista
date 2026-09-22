@@ -77,7 +77,7 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void PlayFromEditingGoesLive()
+    public void CueThenPlayFromEditingGoesLive()
     {
         var state = EditingWithTrack();
         Assert.Equal(PlayOutcome.Cued, state.Cue());

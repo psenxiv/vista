@@ -483,6 +483,7 @@ public class SessionEditingTests
         var state = Editing();
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
+        state.Cue();
         state.Play();
         state.Edit();
         Assert.True(state.Undo());
