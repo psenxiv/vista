@@ -303,8 +303,9 @@ public sealed class SessionState
 
     private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter)
     {
+        var pointsBefore = Track.Points;
         var refusal = Commit(change, selectAfter);
-        if (refusal is null) RefreshTimingSelection();
+        if (refusal is null) RefreshTimingSelection(pointsBefore);
         return refusal;
     }
 
@@ -344,9 +345,10 @@ public sealed class SessionState
     private bool Restore(EditSnapshot? snapshot)
     {
         if (snapshot is not { } s) return false;
+        var pointsBefore = Track.Points;
         Track = s.Track;
         Selected = s.Selected;
-        RefreshTimingSelection();
+        RefreshTimingSelection(pointsBefore);
         return true;
     }
 
@@ -364,12 +366,12 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>After a point edit: a point key follows its point, and any other timing selection clears unless it's a leg still in range.</summary>
-    private void RefreshTimingSelection()
+    /// <summary>After a point edit: a point key follows its point, and any other timing selection clears unless it's a leg and the points are unchanged.</summary>
+    private void RefreshTimingSelection(IReadOnlyList<ControlPoint> pointsBefore)
     {
+        if (!ReferenceEquals(pointsBefore, Track.Points) && !pointsBefore.SequenceEqual(Track.Points)) SelectedLeg = null;
         if (SelectedKey is { } key && (Selected is null || key >= Track.Timing.Count || TrackEditing.RoleOf(Track, key) != KeyRole.Point)) SelectedKey = null;
         if (Selected is not null && SelectedLeg is null) SelectedKey = TrackEditing.PointKey(Track, Selected.Value);
-        if (SelectedLeg is { } leg && leg >= Track.Points.Count) SelectedLeg = null;
     }
 
     /// <summary>Sets Manual slopes from one graph slope on the handled sides: <paramref name="only"/> alone, or both when null.</summary>

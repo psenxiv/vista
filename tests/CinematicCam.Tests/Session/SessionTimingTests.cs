@@ -59,6 +59,28 @@ public class SessionTimingTests
     }
 
     [Fact]
+    public void DeletingAPointClearsTheSelectedLeg()
+    {
+        var state = Editing();
+        state.AddToEnd(Point(30f));
+        state.SelectLeg(2);
+
+        Assert.Null(state.DeletePoint(1));
+        Assert.Null(state.SelectedLeg);
+    }
+
+    [Fact]
+    public void LegAndHoldFieldEditsKeepTheSelectedLeg()
+    {
+        var state = Editing();
+        state.SelectLeg(2);
+
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetLeg(t, 2, 8f)));
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
+        Assert.Equal(2, state.SelectedLeg);
+    }
+
+    [Fact]
     public void EasingIsOneUndoStep()
     {
         var state = Editing();
