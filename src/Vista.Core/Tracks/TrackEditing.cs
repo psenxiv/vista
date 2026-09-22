@@ -188,12 +188,14 @@ public static class TrackEditing
         return track with { Points = points };
     }
 
-    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/>; later keys shift with it.</summary>
+    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it.</summary>
     public static Track SetHold(Track track, int index, float seconds)
     {
         ValidatePointIndex(track, index, "hold");
         if (float.IsNaN(seconds)) return track;
-        return WithTiming(track, index, track.Timing[index] with { Hold = Math.Clamp(seconds, 0f, MaxSeconds) });
+        var clamped = Math.Clamp(seconds, 0f, MaxSeconds);
+        if (clamped < MinKeyGap) clamped = 0f;
+        return WithTiming(track, index, track.Timing[index] with { Hold = clamped });
     }
 
     /// <summary>Sets the playback mode; never touches points or timing.</summary>

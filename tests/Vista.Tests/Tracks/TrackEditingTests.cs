@@ -227,6 +227,13 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void SetHoldRoundsATinyHoldDownToZero()
+    {
+        var track = Build3PointTrack();
+        Assert.Equal(0f, TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, 0.0001f), 1));
+    }
+
+    [Fact]
     public void SetHoldRejectsAnOutOfRangeIndex()
     {
         var track = Build3PointTrack(); // valid holds are 0..2
