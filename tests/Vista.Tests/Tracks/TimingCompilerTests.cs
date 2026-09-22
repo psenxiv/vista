@@ -10,7 +10,7 @@ public class TimingCompilerTests
 {
     private static ControlPoint P(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
 
-    private static Track Three() => TrackEditing.Append(TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)), P(20f));
+    private static Track Three() => TrackEditing.Append(TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty() with { Speed = 2f }, P(0f)), P(10f)), P(20f));
 
     private static float[] Times(Track t) => new TrackEvaluator(t).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
 
@@ -28,7 +28,7 @@ public class TimingCompilerTests
     // Compiler and evaluator
 
     [Fact]
-    public void AStraightTrackCompilesAKeyPerPointAtTheDefaultSpeed()
+    public void AStraightTrackCompilesAKeyPerPointAtTheTrackSpeed()
     {
         var track = Three();
         var keys = new TrackEvaluator(track).Keys;

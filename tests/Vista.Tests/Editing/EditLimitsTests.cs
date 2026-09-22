@@ -29,7 +29,7 @@ public class EditLimitsTests
     [InlineData(-3f, 0.01f)]
     [InlineData(2.5f, 2.5f)]
     [InlineData(9999f, 100f)]
-    [InlineData(float.NaN, 2f)]
+    [InlineData(float.NaN, TrackEditing.DefaultSpeed)]
     public void SpeedClampsToAHundredthAndAHundredYalmsPerSecond(float input, float expected)
         => Assert.Equal(expected, EditLimits.Speed(input));
 

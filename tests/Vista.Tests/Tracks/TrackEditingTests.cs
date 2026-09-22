@@ -10,10 +10,10 @@ public class TrackEditingTests
     private static ControlPoint Point(float x, float y, float z)
         => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
-    // Points at 0,10,20 at the default 2 yalms per second: keys at times 0, 5, 10.
+    // Points at 0,10,20 at 2 yalms per second: keys at times 0, 5, 10.
     private static Track Build3PointTrack()
     {
-        var track = TrackEditing.Empty();
+        var track = TrackEditing.Empty() with { Speed = 2f };
         track = TrackEditing.Append(track, Point(0f, 0f, 0f));
         track = TrackEditing.Append(track, Point(10f, 0f, 0f));
         track = TrackEditing.Append(track, Point(20f, 0f, 0f));
@@ -25,6 +25,9 @@ public class TrackEditingTests
     private static float LegSeconds(Track track, int leg) => new TrackEvaluator(track).LegSeconds(leg);
 
     private static float Total(Track track) => (float)new TrackEvaluator(track).Duration;
+
+    [Fact]
+    public void ANewTrackMovesAtFiveYalmsPerSecond() => Assert.Equal(5f, TrackEditing.Empty().Speed);
 
     [Fact]
     public void EmptyHasNoPointsNoKeysAndPlaysForwardWithoutLooping()
@@ -99,7 +102,7 @@ public class TrackEditingTests
     [Fact]
     public void AppendLaterPointFollowsTheTrackSpeed()
     {
-        var track = TrackEditing.Empty();
+        var track = TrackEditing.Empty() with { Speed = 2f };
         track = TrackEditing.Append(track, Point(0f, 0f, 0f));
         track = TrackEditing.Append(track, Point(10f, 0f, 0f));
         var keys = Keys(track);

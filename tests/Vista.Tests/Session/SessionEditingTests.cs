@@ -9,11 +9,12 @@ public class SessionEditingTests
 {
     private static ControlPoint Point(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
 
-    // Editing, three points at x = 0, 10, 20.
+    // Editing at 2 yalms per second, three points at x = 0, 10, 20.
     private static SessionState Editing()
     {
         var state = new SessionState();
         state.Edit();
+        state.SetTrackSpeed(2f);
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
         state.AddToEnd(Point(20f));
@@ -81,7 +82,7 @@ public class SessionEditingTests
 
         var steps = 0;
         while (state.Undo()) steps++;
-        Assert.Equal(3, steps);
+        Assert.Equal(4, steps); // the speed and three points
     }
 
     [Fact]

@@ -4,7 +4,7 @@ namespace Vista.Core.Tracks;
 public static class TrackEditing
 {
     /// <summary>A new track's speed, in yalms per second.</summary>
-    public const float DefaultSpeed = 2f;
+    public const float DefaultSpeed = 5f;
 
     /// <summary>The slowest track or leg speed, in yalms per second.</summary>
     public const float MinSpeed = 0.01f;

@@ -49,11 +49,17 @@ internal sealed unsafe class TrackEditorWindow : Window
         hierarchy = new HierarchyPanel(session);
         playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
+        SizeCondition = ImGuiCond.FirstUseEver;
         SetMinimumWidth(MinWidth);
     }
 
-    /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, so Hide UI and Clear track stay on screen.</summary>
-    public override void PreDraw() => SetMinimumWidth(MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth()));
+    /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
+    public override void PreDraw()
+    {
+        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth());
+        SetMinimumWidth(width);
+        Size = new Vector2(width, MinHeight);
+    }
 
     /// <summary>The width the open compartments beside the track editor take, with their gap.</summary>
     private float CompartmentsWidth()
@@ -135,7 +141,6 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.SameLine();
         DrawModeCombo();
-        DrawLive();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
         ImGui.SameLine(0f, gap);
@@ -157,17 +162,22 @@ internal sealed unsafe class TrackEditorWindow : Window
             DrawFlySpeed();
         }
 
+        var live = session.Mode == CameraMode.Live ? ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X : 0f;
         ImGui.SameLine();
-        RightAlign(IconButton.Width(FontAwesomeIcon.EyeSlash));
-        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, session.HideUiInLive, "Hide game UI in Live"))
+        RightAlign(live + IconButton.Width(FontAwesomeIcon.EyeSlash));
+        if (session.Mode == CameraMode.Live)
+        {
+            DrawLive();
+            ImGui.SameLine();
+        }
+
+        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, session.HideUiInLive, "Hide game UI when Live"))
             session.HideUiInLive = !session.HideUiInLive;
     }
 
-    /// <summary>Red LIVE text pulsing on a two-second cycle while the mode is Live.</summary>
-    private void DrawLive()
+    /// <summary>Red LIVE text pulsing on a two-second cycle.</summary>
+    private static void DrawLive()
     {
-        if (session.Mode != CameraMode.Live) return;
-        ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
         var pulse = 0.55f + (0.45f * MathF.Cos((float)ImGui.GetTime() * MathF.PI));
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
@@ -264,9 +274,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.BeginDisabled(TrackEditing.AllPinned(session.Track));
         ImGui.SameLine();
-        LabelledField(FontAwesomeIcon.TachometerAlt, "track-speed", session.Track.Speed, "%.2f", "Track speed, yalms per second", v => Report(session.SetTrackSpeed(v)));
+        LabelledField(FontAwesomeIcon.TachometerAlt, "track-speed", session.Track.Speed, "%.2f", "Track speed", v => Report(session.SetTrackSpeed(v)));
         ImGui.SameLine();
-        LabelledField(FontAwesomeIcon.Stopwatch, "track-duration", (float)session.Duration, "%.1f s", "Whole shot, holds included, in seconds", v => Report(session.SetTrackDuration(v)));
+        LabelledField(FontAwesomeIcon.Stopwatch, "track-duration", (float)session.Duration, "%.1f s", "Track duration", v => Report(session.SetTrackDuration(v)));
         ImGui.EndDisabled();
 
         ImGui.SameLine();
@@ -290,7 +300,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>A plus icon that appends a point, and a caret opening the insert menu.</summary>
     private void DrawAddButton()
     {
-        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, "Add point (Backtick)")) Report(session.AddToEnd());
+        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, "Add point")) Report(session.AddToEnd());
         ImGui.SameLine(0f, 0f);
         if (IconButton.Draw("add-menu", FontAwesomeIcon.CaretDown, "More ways to add")) ImGui.OpenPopup("add-menu");
         if (!ImGui.BeginPopup("add-menu")) return;
@@ -311,9 +321,8 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0)
         {
             using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
-            if (ImGui.BeginTable("point-table", 7, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable("point-table", 6, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
             {
-                ImGui.TableSetupColumn("##handle");
                 ImGui.TableSetupColumn("#");
                 ImGui.TableSetupColumn("Duration (s)");
                 ImGui.TableSetupColumn("Speed");
@@ -355,11 +364,6 @@ internal sealed unsafe class TrackEditorWindow : Window
         DropTarget(index, editing);
 
         ImGui.SameLine();
-        ImGui.AlignTextToFramePadding();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-            ImGui.TextUnformatted(FontAwesomeIcon.GripLines.ToIconString());
-
-        ImGui.TableNextColumn();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted($"{index + 1}");
 

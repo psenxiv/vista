@@ -10,11 +10,12 @@ public class SessionSceneTests
 {
     private static ControlPoint Point(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
 
-    // Editing; Track 1 has points at x = 0, 10, 20 (two 5 s legs).
+    // Editing; Track 1 has points at x = 0, 10, 20 at 2 yalms per second (two 5 s legs).
     private static SessionState Editing()
     {
         var state = new SessionState();
         state.Edit();
+        state.SetTrackSpeed(2f);
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
         state.AddToEnd(Point(20f));
@@ -301,6 +302,7 @@ public class SessionSceneTests
     {
         var state = Editing();
         state.AddTrack();
+        state.SetTrackSpeed(2f);
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
         state.AddToPlaylist(state.EditedTrackId);

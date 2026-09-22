@@ -14,7 +14,7 @@ public class TrackEvaluatorTests
 
     private static Track Build(IEnumerable<ControlPoint> points, AimMode aim = AimMode.AimKeys)
     {
-        var track = TrackEditing.Empty(aim);
+        var track = TrackEditing.Empty(aim) with { Speed = 2f };
         foreach (var point in points) track = TrackEditing.Append(track, point);
         return track;
     }

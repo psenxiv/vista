@@ -15,10 +15,12 @@ public class SessionPlaylistTests
     {
         var state = new SessionState();
         state.Edit();
+        state.SetTrackSpeed(2f);
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
         state.AddToEnd(Point(20f));
         state.AddTrack();
+        state.SetTrackSpeed(2f);
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
         return state;

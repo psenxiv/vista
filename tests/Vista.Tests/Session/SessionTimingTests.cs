@@ -14,6 +14,7 @@ public class SessionTimingTests
     {
         var state = new SessionState();
         state.Edit();
+        state.SetTrackSpeed(2f);
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
         state.AddToEnd(Point(20f));
