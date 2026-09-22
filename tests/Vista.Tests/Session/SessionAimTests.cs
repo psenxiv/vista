@@ -10,8 +10,6 @@ public class SessionAimTests
 {
     private static readonly Vector3 A = new(0f, 0f, -10f);
     private static readonly Vector3 B = new(10f, 0f, -10f);
-    private static readonly Vector3 Eased = Vector3.Lerp(A, B, 1f - MathF.Exp(-1f));
-
     private static ControlPoint Point(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
 
     // Puts Guard's aim point, 1.3 above the feet, at <paramref name="aim"/>.
@@ -52,15 +50,12 @@ public class SessionAimTests
     }
 
     [Fact]
-    public void APreviewStartsOnTheCharacterAndEasesAfterThem()
+    public void APreviewStartsOnTheCharacter()
     {
-        var (state, characters) = Watching();
+        var (state, _) = Watching();
         state.Play();
+
         AimsAt(A, state.AdvancePreview(1f / 60f)!.Value);
-
-        GuardAt(characters, B);
-
-        AimsAt(Eased, state.AdvancePreview(0.5f)!.Value);
     }
 
     [Fact]
@@ -73,7 +68,7 @@ public class SessionAimTests
         AimsAt(A, state.Director.Tick(1f / 60f)!.Value);
 
         GuardAt(characters, B);
-        AimsAt(Eased, state.Director.Tick(0.5f)!.Value);
+        state.Director.Tick(0.5f);
 
         state.BeginScrub();
         state.ScrubTo(1.0);

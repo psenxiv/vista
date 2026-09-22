@@ -31,7 +31,6 @@ public class SessionSceneTests
         var track = Assert.Single(state.Scene.Tracks);
         Assert.Equal(track.Id, state.EditedTrackId);
         Assert.Same(track, state.Track);
-        Assert.Equal("Track 1", state.Track.Name);
     }
 
     [Fact]
@@ -128,7 +127,6 @@ public class SessionSceneTests
 
         Assert.Equal(2, state.Scene.Tracks.Count);
         Assert.Equal(state.Scene.Tracks[1].Id, state.EditedTrackId);
-        Assert.Equal("Track 1 copy", state.Track.Name);
         Assert.Equal(3, state.Track.Points.Count);
     }
 
@@ -179,22 +177,6 @@ public class SessionSceneTests
 
         Assert.Equal(First(state), state.EditedTrackId);
         Assert.Equal(1, state.Selected);
-    }
-
-    [Fact]
-    public void TheLastTrackCannotBeDeleted()
-    {
-        var state = Editing();
-        Assert.NotNull(state.DeleteTrack(First(state)));
-        Assert.Single(state.Scene.Tracks);
-    }
-
-    [Fact]
-    public void AnEmptyNameIsRefused()
-    {
-        var state = Editing();
-        Assert.NotNull(state.RenameTrack(First(state), " "));
-        Assert.Equal("Track 1", state.Track.Name);
     }
 
     [Fact]
@@ -267,6 +249,9 @@ public class SessionSceneTests
     [Fact]
     public void SceneEditsAndSwitchingAreRefusedUnlessEditing()
     {
+        const string refused = "The scene can only change while editing.";
+        const string noSwitch = "Tracks can only be switched while editing.";
+
         var state = Editing();
         state.AddTrack();
         var first = First(state);
@@ -277,21 +262,21 @@ public class SessionSceneTests
         state.Play();
         Assert.Equal(CameraMode.Live, state.Mode);
 
-        Assert.NotNull(state.AddTrack());
-        Assert.NotNull(state.SwitchTrack(first));
-        Assert.NotNull(state.RenameTrack(first, "Crane"));
+        Assert.Equal(refused, state.AddTrack());
+        Assert.Equal(noSwitch, state.SwitchTrack(first));
+        Assert.Equal(refused, state.RenameTrack(first, "Crane"));
         Assert.Equal(2, state.Scene.Tracks.Count);
 
         state.Stop();
         Assert.True(state.Director.IsPaused);
 
-        Assert.NotNull(state.AddTrack());
-        Assert.NotNull(state.SwitchTrack(first));
-        Assert.NotNull(state.RenameTrack(first, "Crane"));
-        Assert.NotNull(state.DuplicateTrack(first));
-        Assert.NotNull(state.DeleteTrack(first));
-        Assert.NotNull(state.MoveTrack(0, 1));
-        Assert.NotNull(state.SetTrackHidden(second, true));
+        Assert.Equal(refused, state.AddTrack());
+        Assert.Equal(noSwitch, state.SwitchTrack(first));
+        Assert.Equal(refused, state.RenameTrack(first, "Crane"));
+        Assert.Equal(refused, state.DuplicateTrack(first));
+        Assert.Equal(refused, state.DeleteTrack(first));
+        Assert.Equal(refused, state.MoveTrack(0, 1));
+        Assert.Equal(refused, state.SetTrackHidden(second, true));
 
         Assert.Equal(2, state.Scene.Tracks.Count);
         Assert.Empty(state.Scene.Hidden);

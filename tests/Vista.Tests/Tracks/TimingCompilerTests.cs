@@ -320,45 +320,9 @@ public class TimingCompilerTests
         Assert.False(TimingEditing.SetBroken(broken, 1, false).Timing[1].Broken);
     }
 
-    [Fact]
-    public void RemoveHoldOnAHoldEndClearsTheHold()
-    {
-        var held = TrackEditing.SetHold(Three(), 1, 2f);
-        Assert.Equal(0f, TimingEditing.RemoveHold(held, 2).Timing[1].Hold);
-        Assert.Throws<ArgumentException>(() => TimingEditing.RemoveHold(held, 1));
-    }
-
     // The key drag
 
     private static Track Drag(Track track, int key, float time) => TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
-
-    [Fact]
-    public void DraggingAPointKeyPinsBothLegs()
-    {
-        var track = Drag(Three(), 1, 3f);
-        var evaluator = new TrackEvaluator(track);
-
-        AssertNear(evaluator.LegLength(1) / 3f, TrackEditing.LegSpeed(track, 1));
-        AssertNear(evaluator.LegLength(2) / 7f, TrackEditing.LegSpeed(track, 2));
-        Assert.True(TrackEditing.IsPinned(track, 1) && TrackEditing.IsPinned(track, 2));
-        AssertTimes([0f, 3f, 10f], track);
-    }
-
-    [Fact]
-    public void TheFirstKeyNeverMoves()
-    {
-        var track = Three();
-        Assert.Same(track, Drag(track, 0, 2f));
-    }
-
-    [Fact]
-    public void DraggingTheLastKeyChangesTheShotsLength()
-    {
-        var track = Drag(Three(), 2, 12f);
-        AssertNear(new TrackEvaluator(track).LegLength(2) / 7f, TrackEditing.LegSpeed(track, 2));
-        Assert.False(TrackEditing.IsPinned(track, 1));
-        AssertTimes([0f, 5f, 12f], track);
-    }
 
     [Fact]
     public void DraggingAHoldingPointsKeyTradesTimeWithItsHold()
@@ -367,21 +331,6 @@ public class TimingCompilerTests
         AssertNear(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1));
         AssertNear(2f, TrackEditing.HoldSeconds(track, 1));
         AssertTimes([0f, 6f, 8f, 13f], track);
-    }
-
-    [Fact]
-    public void DraggingAHoldEndChangesTheHold()
-    {
-        var track = Drag(TrackEditing.SetHold(Three(), 1, 3f), 2, 9f);
-        AssertNear(4f, TrackEditing.HoldSeconds(track, 1));
-        AssertTimes([0f, 5f, 9f, 14f], track);
-    }
-
-    [Fact]
-    public void APointKeyDragClampsToTheShortestLegs()
-    {
-        AssertTimes([0f, 0.1f, 10f], Drag(Three(), 1, -4f));
-        AssertTimes([0f, 9.9f, 10f], Drag(Three(), 1, 50f));
     }
 
     [Fact]

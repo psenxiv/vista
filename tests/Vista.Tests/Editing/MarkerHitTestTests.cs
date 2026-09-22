@@ -21,6 +21,14 @@ public class MarkerHitTestTests
     }
 
     [Fact]
+    public void TheRadiusIsComparedSquared()
+    {
+        // 5 px away is 25 px squared: inside 10 squared, but outside an unsquared 10.
+        var markers = new Vector2?[] { new(105f, 100f) };
+        Assert.Equal(0, MarkerHitTest.Nearest(markers, new Vector2(100f, 100f), 10f));
+    }
+
+    [Fact]
     public void OffScreenMarkersAreSkipped()
     {
         var markers = new Vector2?[] { null, new(100f, 100f) };

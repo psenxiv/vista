@@ -19,6 +19,7 @@ public class SceneGeometryTests
     private static ControlPoint Point(float x, float y = 0f, float z = 0f) => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
     // One track with points at x = 0, 10, 20, local to a track anchor at (5, 0, 0) yaw 0.5, under a scene anchor at (100, 2, 50) yaw 1.
+    // The two together put the track's anchor at (102.701512, 2, 45.792645) yaw 1.5.
     private static Scene Anchored()
     {
         var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f), AnchorPlaced = true };
@@ -35,9 +36,8 @@ public class SceneGeometryTests
     {
         var scene = Anchored();
         var world = SceneGeometry.InWorld(scene, scene.Tracks[0]);
-        var anchor = scene.Anchor.ToWorld(scene.Tracks[0].Anchor);
 
-        Near(anchor.ToWorld(new Vector3(10f, 0f, 0f)), world.Points[1].Position);
+        Near(new Vector3(103.408884f, 2f, 35.817695f), world.Points[1].Position);
         Assert.Equal(1.5f, world.Points[1].Yaw, Tolerance);
     }
 
@@ -111,7 +111,7 @@ public class SceneGeometryTests
 
         Near(to.Position, SceneGeometry.WorldAnchor(moved, moved.Tracks[0]).Position);
         Assert.Same(scene.Tracks[0].Points, moved.Tracks[0].Points);
-        Near(to.ToWorld(new Vector3(10f, 0f, 0f)), WorldPositions(moved)[1]);
+        Near(new Vector3(99.800666f, 2f, 58.013307f), WorldPositions(moved)[1]);
     }
 
     [Fact]
@@ -148,11 +148,11 @@ public class SceneGeometryTests
     public void InWorldCarriesTheLookAtAndTheAnchorThroughBothAnchors()
     {
         var scene = WithLookAt(Anchored());
-        var anchor = scene.Anchor.ToWorld(scene.Tracks[0].Anchor);
         var world = SceneGeometry.InWorld(scene, scene.Tracks[0]);
 
-        Near(anchor.ToWorld(new Vector3(0f, 3f, -10f)), world.LookAt);
-        Assert.Equal(anchor, world.Anchor);
+        Near(new Vector3(92.726562f, 5f, 45.085273f), world.LookAt);
+        Near(new Vector3(102.701512f, 2f, 45.792645f), world.Anchor.Position);
+        Assert.Equal(1.5f, world.Anchor.Yaw, Tolerance);
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class SceneGeometryTests
 
         var moved = SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, to, carry: true);
 
-        Near(to.ToWorld(new Vector3(0f, 3f, -10f)), WorldLookAt(moved));
+        Near(new Vector3(88.013307f, 5f, 50.199334f), WorldLookAt(moved));
     }
 
     [Fact]

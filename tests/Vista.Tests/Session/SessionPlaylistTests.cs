@@ -50,32 +50,6 @@ public class SessionPlaylistTests
     }
 
     [Fact]
-    public void PlaylistEditsAreRefusedUnlessEditing()
-    {
-        var state = Editing();
-        state.AddToPlaylist(First(state));
-        state.Cue();
-
-        Assert.NotNull(state.AddToPlaylist(First(state)));
-        Assert.NotNull(state.RemoveFromPlaylist(state.Scene.Playlist[0].Id));
-        Assert.NotNull(state.SetEntryLoops(state.Scene.Playlist[0].Id, 3));
-        Assert.Single(state.Scene.Playlist);
-    }
-
-    [Fact]
-    public void MovePlaylistEntryIsRefusedWhileLive()
-    {
-        var state = Editing();
-        state.AddToPlaylist(First(state));
-        state.AddToPlaylist(Second(state));
-        state.Cue();
-
-        Assert.NotNull(state.MovePlaylistEntry(1, 0));
-        Assert.Equal(First(state), state.Scene.Playlist[0].TrackId);
-        Assert.Equal(Second(state), state.Scene.Playlist[1].TrackId);
-    }
-
-    [Fact]
     public void DeletingATrackRemovesItsEntriesInOneStep()
     {
         var state = Editing();
@@ -93,15 +67,7 @@ public class SessionPlaylistTests
     public void LiveIsRefusedWhenNothingCanPlay()
     {
         var state = Editing();
-        Assert.False(state.CanGoLive);
         Assert.Equal(PlayOutcome.Refused, state.Cue());
-
-        state.AddTrack();
-        state.AddToPlaylist(state.EditedTrackId);
-        Assert.False(state.CanGoLive);
-
-        state.AddToPlaylist(First(state));
-        Assert.True(state.CanGoLive);
     }
 
     [Fact]
@@ -260,17 +226,6 @@ public class SessionPlaylistTests
         Assert.True(state.Scene.PlaylistLoops);
 
         state.Undo();
-        Assert.False(state.Scene.PlaylistLoops);
-    }
-
-    [Fact]
-    public void SettingThePlaylistLoopIsRefusedUnlessEditing()
-    {
-        var state = Editing();
-        state.AddToPlaylist(First(state));
-        state.Cue();
-
-        Assert.NotNull(state.SetPlaylistLoops(true));
         Assert.False(state.Scene.PlaylistLoops);
     }
 

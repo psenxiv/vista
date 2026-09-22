@@ -307,13 +307,21 @@ public class SessionEditingTests
     }
 
     [Fact]
-    public void FrameAtMatchesTheEvaluatorAndIsNullForAnEmptyTrack()
+    public void FrameAtIsTheCameraOnThePathAndNullForAnEmptyTrack()
     {
         Assert.Null(new SessionState().FrameAt(1.0));
 
-        var state = Editing();
-        var expected = new TrackEvaluator(state.Track).Evaluate(2.5);
-        Assert.Equal(expected, state.FrameAt(2.5));
+        // 2.5 s at 2 yalms per second is 5 yalms along, to within the arc-length table's resolution.
+        var frame = Editing().FrameAt(2.5)!.Value;
+
+        Assert.Equal(5f, frame.Position.X, 0.001f);
+        Assert.Equal(0f, frame.Position.Y, 1e-4f);
+        Assert.Equal(0f, frame.Position.Z, 1e-4f);
+        Assert.Equal(5f, frame.LookAt.X, 0.001f);
+        Assert.Equal(0f, frame.LookAt.Y, 1e-4f);
+        Assert.Equal(-10f, frame.LookAt.Z, 1e-4f);
+        Assert.Equal(1f, frame.Fov, 1e-4f);
+        Assert.Equal(0f, frame.Roll, 1e-4f);
     }
 
     [Fact]

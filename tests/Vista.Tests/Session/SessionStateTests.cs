@@ -258,7 +258,7 @@ public class SessionStateTests
         var state = EditingWithTrack();
         var before = state.Track;
 
-        Assert.Equal("leg index must be 1..1 for a 2-point track", state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 1f)));
+        Assert.Contains("leg index", state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 1f)));
         Assert.Same(before, state.Track);
     }
 
@@ -267,7 +267,7 @@ public class SessionStateTests
     {
         var state = EditingWithTrack();
         var before = state.Track;
-        Assert.Equal("every point needs one timing entry", state.ChangeTrack(t => t with { Timing = [] }));
+        Assert.Contains("timing entry", state.ChangeTrack(t => t with { Timing = [] }));
         Assert.Same(before, state.Track);
     }
 

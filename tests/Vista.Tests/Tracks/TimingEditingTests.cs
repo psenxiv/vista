@@ -46,6 +46,8 @@ public class TimingEditingTests
         var track = MoveKey(Build3PointTrack(), 1, 3f);
         Assert.Equal(new[] { 0f, 3f, 10f }, Times(track));
         Assert.Equal(1f, new TrackEvaluator(track).Keys[1].Position);
+        Assert.True(TrackEditing.IsPinned(track, 1));
+        Assert.True(TrackEditing.IsPinned(track, 2));
     }
 
     [Fact]
@@ -62,7 +64,10 @@ public class TimingEditingTests
     {
         var track = Build3PointTrack();
         Assert.Same(track, MoveKey(track, 0, 2f));
-        Assert.Equal(12f, new TrackEvaluator(MoveKey(track, 2, 12f)).Keys[2].Time, 2);
+
+        var longer = MoveKey(track, 2, 12f);
+        Assert.Equal(12f, new TrackEvaluator(longer).Keys[2].Time, 2);
+        Assert.False(TrackEditing.IsPinned(longer, 1));
     }
 
     [Fact]
@@ -72,6 +77,7 @@ public class TimingEditingTests
         track = MoveKey(track, 2, 8f);
         Assert.Equal(new[] { 0f, 5f, 8f, 13f }, Times(track));
         Assert.Equal(1f, new TrackEvaluator(track).Keys[2].Position);
+        Assert.Equal(3f, TrackEditing.HoldSeconds(track, 1), 2);
     }
 
     [Fact]

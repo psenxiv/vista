@@ -51,8 +51,12 @@ public class CameraOrientationTests
         var up = CameraOrientation.UpFor(Vector3.Zero, new Vector3(x, y, z) * 10f);
 
         Assert.False(float.IsNaN(up.X) || float.IsNaN(up.Y) || float.IsNaN(up.Z));
-        Assert.True(up.Length() > 0.5f, $"up collapsed to {up}");
         Assert.Equal(0f, Vector3.Dot(Vector3.Normalize(new Vector3(x, y, z)), up), 5);
+
+        // The reference falls back to -Z, which is already perpendicular, so up is exactly that.
+        Assert.Equal(0f, up.X, 5);
+        Assert.Equal(0f, up.Y, 5);
+        Assert.Equal(-1f, up.Z, 5);
     }
 
     [Fact]
@@ -84,5 +88,10 @@ public class CameraOrientationTests
         Assert.Equal(0f, Vector3.Dot(rolled, level), 4);
         Assert.Equal(0f, Vector3.Dot(rolled, Vector3.Normalize(lookAt - position)), 4);
         Assert.Equal(level.Length(), rolled.Length(), 4);
+
+        // Rolling (0, 1, 0) a quarter turn about the view direction (0, 0, -1) lands on +X, not -X.
+        Assert.Equal(1f, rolled.X, 4);
+        Assert.Equal(0f, rolled.Y, 4);
+        Assert.Equal(0f, rolled.Z, 4);
     }
 }

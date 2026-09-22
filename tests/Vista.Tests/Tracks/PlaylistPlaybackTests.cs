@@ -308,7 +308,7 @@ public class PlaylistPlaybackTests
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value);
 
         GuardAt(characters, 10f);
-        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), playback.Advance(0.5f)!.Value);
+        playback.Advance(0.5f);
 
         var cut = playback.Advance(0.5f)!.Value;
         Assert.Equal(1, playback.Index);

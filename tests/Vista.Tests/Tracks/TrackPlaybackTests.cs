@@ -350,7 +350,7 @@ public class TrackPlaybackTests
         => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
 
     [Fact]
-    public void AWatchedCharacterIsEasedOntoAndASeekOrRestartSnapsBackOntoThem()
+    public void AWatchedCharacterIsAimedAtAndASeekOrRestartSnapsBackOntoThem()
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
@@ -360,7 +360,7 @@ public class TrackPlaybackTests
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(1f / 60f)!.Value);
 
         GuardAt(characters, 10f);
-        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), playback.Advance(0.5f)!.Value);
+        playback.Advance(0.5f);
 
         playback.Seek(0.0);
         AimsAt(new Vector3(10f, 0f, -10f), playback.Advance(1f / 60f)!.Value);

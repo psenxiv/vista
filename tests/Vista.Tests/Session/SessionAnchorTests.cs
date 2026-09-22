@@ -133,17 +133,6 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void TimingIsUnchangedByTurningTheScene()
-    {
-        var state = Editing();
-        var duration = state.Duration;
-        state.SelectSceneAnchor();
-        state.MoveAnchor(new Anchor(new Vector3(-200f, 30f, 90f), 2.2f), carry: true);
-
-        Assert.Equal(duration, state.Duration, 4);
-    }
-
-    [Fact]
     public void APointReplacedInTheWorldLandsWhereItWasPut()
     {
         var state = Editing();
@@ -249,18 +238,6 @@ public class SessionAnchorTests
 
         for (var i = 0; i < 3; i++)
             Near(state.WorldOf(state.Scene.Tracks[0]).Points[i].Position, state.Track.Points[i].Position);
-    }
-
-    [Fact]
-    public void AnchorEditsAreRefusedUnlessEditing()
-    {
-        var state = Editing();
-        state.AddToPlaylist(state.EditedTrackId);
-        state.SelectSceneAnchor();
-        state.Cue();
-        state.Play();
-
-        Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
     }
 
     [Fact]

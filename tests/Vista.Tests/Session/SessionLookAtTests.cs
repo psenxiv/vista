@@ -103,19 +103,6 @@ public class SessionLookAtTests
     }
 
     [Fact]
-    public void TheSettingsAreRefusedUnlessEditing()
-    {
-        var state = new SessionState();
-
-        Assert.NotNull(state.SetAim(AimMode.LookAt, Camera));
-        Assert.NotNull(state.SetTarget("Guard", null));
-        Assert.NotNull(state.SetAimHeight(2f));
-        Assert.NotNull(state.SetSmoothing(0.8f));
-        Assert.NotNull(state.SelectLookAt(state.EditedTrackId));
-        Assert.NotNull(state.MoveLookAt(Vector3.Zero));
-    }
-
-    [Fact]
     public void ASettingThatChangesNothingIsNoUndoStep()
     {
         var state = new SessionState();

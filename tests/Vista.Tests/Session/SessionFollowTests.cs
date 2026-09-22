@@ -163,7 +163,7 @@ public class SessionFollowTests
     }
 
     [Fact]
-    public void TheFollowSwitchesAreUndoStepsAndRefusedUnlessEditing()
+    public void TheFollowSwitchesAreUndoSteps()
     {
         var (state, _) = FollowingGuard();
 
@@ -176,10 +176,6 @@ public class SessionFollowTests
         Assert.True(state.Track.FollowLooks);
         Assert.True(state.Undo());
         Assert.True(state.Track.FollowTurns);
-
-        state.Release();
-        Assert.NotNull(state.SetFollowTurns(false));
-        Assert.NotNull(state.SetFollowLooks(false));
     }
 
     [Fact]

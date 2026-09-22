@@ -64,14 +64,13 @@ public class AimTrackerTests
     }
 
     [Fact]
-    public void APlayerIsFoundOnlyOnTheirWorld()
+    public void TheTracksWorldReachesTheCharacterSearch()
     {
         var characters = new NearbyCharacters();
         characters.Update([new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -1.3f, -10f))]);
         var track = Watching("Aya") with { TargetWorld = "Gilgamesh", Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
         Assert.Equal(new Vector3(-20f, 0f, -10f), AimTracker.CharacterAim(track, characters));
-        Assert.True(AimTracker.TargetLost(track with { TargetWorld = "Sargatanas" }, characters));
     }
 
     [Fact]

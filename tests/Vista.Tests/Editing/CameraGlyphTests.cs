@@ -24,13 +24,25 @@ public class CameraGlyphTests
     [Fact]
     public void TheTabPointsUpFromTheMiddleOfTheTopEdge()
     {
+        // 90 degrees at depth 1, aspect 1: half-height 1, so the tab is 1 tall x 0.5 and 1 wide x 0.35 either side.
         var glyph = CameraGlyph.Build(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, MathF.PI / 2f, 1f, 1f);
 
-        Assert.True(glyph.TabTip.Y > 1f);
+        Assert.Equal(1.5f, glyph.TabTip.Y, 4);
         Assert.Equal(0f, glyph.TabTip.X, 4);
         Assert.Equal(1f, glyph.TabLeft.Y, 4);
         Assert.Equal(1f, glyph.TabRight.Y, 4);
-        Assert.Equal(0f, glyph.TabLeft.X + glyph.TabRight.X, 4);
+        Assert.Equal(-0.35f, glyph.TabLeft.X, 4);
+        Assert.Equal(0.35f, glyph.TabRight.X, 4);
+    }
+
+    [Fact]
+    public void AWideFaceKeepsTheTabSizedByTheShorterHalfSpan()
+    {
+        // Aspect 2 makes the half-width 2, but the tab still follows the half-height of 1.
+        var glyph = CameraGlyph.Build(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, MathF.PI / 2f, 2f, 1f);
+
+        Assert.Equal(1.5f, glyph.TabTip.Y, 4);
+        Assert.Equal(0.35f, glyph.TabRight.X, 4);
     }
 
     [Fact]
@@ -54,9 +66,12 @@ public class CameraGlyphTests
     [Fact]
     public void ANotANumberFovStaysFinite()
     {
+        // The fallback half-angle is 0.39 rad, so at depth 1 the face sits tan(0.39) = 0.411055 above the axis.
         var glyph = CameraGlyph.Build(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, float.NaN, 1f, 1f);
+
         Assert.All(glyph.Corners, c => Assert.True(float.IsFinite(c.X) && float.IsFinite(c.Y)));
-        Assert.True(glyph.TabTip.Y > glyph.Corners[0].Y);
+        Assert.Equal(0.411055f, glyph.Corners[0].Y, 4);
+        Assert.Equal(0.616582f, glyph.TabTip.Y, 4);
     }
 
     [Fact]

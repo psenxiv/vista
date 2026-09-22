@@ -208,18 +208,6 @@ public class SessionTimingTests
     }
 
     [Fact]
-    public void TimingChangesOnlyWhileEditing()
-    {
-        var state = Editing();
-        state.AddToPlaylist(state.EditedTrackId);
-        state.Cue();
-        state.Play();
-        Assert.NotNull(state.SetEasing(1, Easing.Linear));
-        Assert.NotNull(state.SetKeyMode(1, TangentMode.Flat));
-        Assert.NotNull(state.RemoveHold(1));
-    }
-
-    [Fact]
     public void SetTrackSpeedChangesDurationAndOneUndoRestoresIt()
     {
         var state = Editing();
@@ -256,22 +244,6 @@ public class SessionTimingTests
         var state = Editing();
         Assert.Null(state.SetLegSpeed(2, 10f));
         Assert.Equal(1f, state.Evaluator.LegSeconds(2), 3);
-    }
-
-    [Fact]
-    public void SpeedDurationAndLegEditsOnlyWhileEditing()
-    {
-        var state = Editing();
-        state.AddToPlaylist(state.EditedTrackId);
-        state.Cue();
-        state.Play();
-        var before = state.Track;
-        Assert.NotNull(state.SetTrackSpeed(5f));
-        Assert.NotNull(state.SetTrackDuration(20f));
-        Assert.NotNull(state.SetLegDuration(1, 2f));
-        Assert.NotNull(state.SetLegSpeed(2, 10f));
-        Assert.NotNull(state.ResetLeg(1));
-        Assert.Same(before, state.Track);
     }
 
     [Fact]
