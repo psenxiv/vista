@@ -288,7 +288,7 @@ public class PlaylistPlaybackTests
     private static Track Follow() => TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f)), 0, 1f) with { TargetName = "Guard", Smoothing = 1f };
 
     private static void GuardAt(NearbyCharacters characters, float x)
-        => characters.Update([new LoadedCharacter("Guard", new Vector3(x, -1.3f, -10f))]);
+        => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
 
     private static void AimsAt(Vector3 target, CameraState frame)
     {

@@ -20,7 +20,7 @@ public class AimTrackerTests
     private static NearbyCharacters GuardAt(float x)
     {
         var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", new Vector3(x, -1.3f, -10f))]);
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
         return characters;
     }
 
@@ -57,10 +57,21 @@ public class AimTrackerTests
     public void ADuplicateNameResolvesNearestTheTracksAnchor()
     {
         var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Guard", new Vector3(20f, -1.3f, -10f))]);
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Guard", null, new Vector3(20f, -1.3f, -10f))]);
         var track = Following() with { Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
         AimsAt(new Vector3(20f, 0f, -10f), Frame(new AimTracker(characters), track));
+    }
+
+    [Fact]
+    public void APlayerIsFoundOnlyOnTheirWorld()
+    {
+        var characters = new NearbyCharacters();
+        characters.Update([new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -1.3f, -10f))]);
+        var track = Following("Aya") with { TargetWorld = "Gilgamesh", Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
+
+        Assert.Equal(new Vector3(-20f, 0f, -10f), AimTracker.CharacterAim(track, characters));
+        Assert.True(AimTracker.TargetLost(track with { TargetWorld = "Sargatanas" }, characters));
     }
 
     [Fact]

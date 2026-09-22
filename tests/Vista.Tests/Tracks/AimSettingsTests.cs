@@ -25,6 +25,7 @@ public class AimSettingsTests
 
         Assert.False(track.LookAtPlaced);
         Assert.Null(track.TargetName);
+        Assert.Null(track.TargetWorld);
         Assert.Equal(1.3f, track.AimHeight);
         Assert.Equal(0.3f, track.Smoothing);
     }
@@ -77,11 +78,11 @@ public class AimSettingsTests
     public void TheFollowSettingsClampAndAnEmptyNameClearsTheCharacter()
     {
         var track = TrackEditing.Empty();
-        var named = TrackEditing.SetTarget(track, "Guard");
+        var named = TrackEditing.SetTarget(track, "Guard", null);
 
         Assert.Equal("Guard", named.TargetName);
-        Assert.Null(TrackEditing.SetTarget(named, "").TargetName);
-        Assert.Same(track, TrackEditing.SetTarget(track, null));
+        Assert.Null(TrackEditing.SetTarget(named, "", null).TargetName);
+        Assert.Same(track, TrackEditing.SetTarget(track, null, null));
         Assert.Equal(3f, TrackEditing.SetAimHeight(track, 9f).AimHeight);
         Assert.Equal(0f, TrackEditing.SetAimHeight(track, -1f).AimHeight);
         Assert.Same(track, TrackEditing.SetAimHeight(track, float.NaN));
@@ -93,11 +94,38 @@ public class AimSettingsTests
     [Fact]
     public void ClearForgetsTheLookAtAndTheCharacter()
     {
-        var track = TrackEditing.SetTarget(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera), "Guard");
+        var track = TrackEditing.SetTarget(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera), "Aya", "Gilgamesh");
 
         var cleared = TrackEditing.Clear(track);
 
         Assert.False(cleared.LookAtPlaced);
         Assert.Null(cleared.TargetName);
+        Assert.Null(cleared.TargetWorld);
+    }
+
+    [Fact]
+    public void SetTargetNamesAPlayerByNameAndWorld()
+    {
+        var track = TrackEditing.SetTarget(TrackEditing.Empty(), "Aya", "Gilgamesh");
+
+        Assert.Equal("Aya", track.TargetName);
+        Assert.Equal("Gilgamesh", track.TargetWorld);
+        Assert.Same(track, TrackEditing.SetTarget(track, "Aya", "Gilgamesh"));
+        Assert.Equal("Cactuar", TrackEditing.SetTarget(track, "Aya", "Cactuar").TargetWorld);
+    }
+
+    [Fact]
+    public void AnNpcHasNoWorldAndChoosingNoneForgetsTheWorld()
+    {
+        var player = TrackEditing.SetTarget(TrackEditing.Empty(), "Aya", "Gilgamesh");
+
+        var npc = TrackEditing.SetTarget(player, "Guard", null);
+        Assert.Equal("Guard", npc.TargetName);
+        Assert.Null(npc.TargetWorld);
+        Assert.Null(TrackEditing.SetTarget(player, "Aya", " ").TargetWorld);
+
+        var none = TrackEditing.SetTarget(player, null, "Gilgamesh");
+        Assert.Null(none.TargetName);
+        Assert.Null(none.TargetWorld);
     }
 }

@@ -232,11 +232,12 @@ public static class TrackEditing
         return track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
     }
 
-    /// <summary>Names the character to follow; null or blank chooses none.</summary>
-    public static Track SetTarget(Track track, string? name)
+    /// <summary>Names the character to follow, with a player's home world or null for an NPC; a null or blank name chooses none.</summary>
+    public static Track SetTarget(Track track, string? name, string? world)
     {
         var chosen = string.IsNullOrWhiteSpace(name) ? null : name;
-        return track.TargetName == chosen ? track : track with { TargetName = chosen };
+        var home = chosen is null || string.IsNullOrWhiteSpace(world) ? null : world;
+        return track.TargetName == chosen && track.TargetWorld == home ? track : track with { TargetName = chosen, TargetWorld = home };
     }
 
     /// <summary>Sets the aim height above the character's feet, clamped to 0 to <see cref="MaxAimHeight"/>.</summary>

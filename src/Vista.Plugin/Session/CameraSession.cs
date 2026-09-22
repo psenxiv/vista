@@ -317,8 +317,8 @@ internal sealed class CameraSession
         return state.Mode == CameraMode.Editing && placesFromCamera ? "Cannot read the camera." : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
     }
 
-    /// <summary>Names the character to follow, or none. Returns why it was refused, or null.</summary>
-    public string? SetTarget(string? name) => state.SetTarget(name);
+    /// <summary>Names the character to follow by name and home world, or none. Returns why it was refused, or null.</summary>
+    public string? SetTarget(string? name, string? world) => state.SetTarget(name, world);
 
     /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
     public string? SetAimHeight(float yalms) => state.SetAimHeight(yalms);

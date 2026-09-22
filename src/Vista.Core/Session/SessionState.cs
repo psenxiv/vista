@@ -370,8 +370,8 @@ public sealed class SessionState
         return ApplySetting(t => TrackEditing.SetAim(t, aim, local));
     }
 
-    /// <summary>Names the character to follow, or none. Returns why it was refused, or null.</summary>
-    public string? SetTarget(string? name) => ApplySetting(t => TrackEditing.SetTarget(t, name));
+    /// <summary>Names the character to follow by name and home world, or none. Returns why it was refused, or null.</summary>
+    public string? SetTarget(string? name, string? world) => ApplySetting(t => TrackEditing.SetTarget(t, name, world));
 
     /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
     public string? SetAimHeight(float yalms) => ApplySetting(t => TrackEditing.SetAimHeight(t, yalms));

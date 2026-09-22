@@ -345,7 +345,7 @@ public class TrackPlaybackTests
     }
 
     private static void GuardAt(NearbyCharacters characters, float x)
-        => characters.Update([new LoadedCharacter("Guard", new Vector3(x, -1.3f, -10f))]);
+        => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
 
     [Fact]
     public void AFollowedCharacterIsEasedOntoAndASeekOrRestartSnapsBackOntoThem()

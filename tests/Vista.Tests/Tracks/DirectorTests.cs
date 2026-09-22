@@ -311,7 +311,7 @@ public class DirectorTests
     public void LiveFollowsACharacterTheDirectorWasGiven()
     {
         var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", new Vector3(0f, -1.3f, -10f))]);
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, -1.3f, -10f))]);
         var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard" };
         var director = new Director(characters);
         director.GoLive(new TrackShot(track));
@@ -328,16 +328,16 @@ public class DirectorTests
     public void APausedLiveTickHoldsTheEasedAimAfterTheCharacterMoves()
     {
         var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", new Vector3(0f, -1.3f, -10f))]);
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, -1.3f, -10f))]);
         var track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
         var director = new Director(characters);
         director.GoLive(new TrackShot(track));
         director.Tick(1f / 60f);
-        characters.Update([new LoadedCharacter("Guard", new Vector3(10f, -1.3f, -10f))]);
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(10f, -1.3f, -10f))]);
         var eased = director.Tick(0.5f)!.Value;
 
         director.Pause();
-        characters.Update([new LoadedCharacter("Guard", new Vector3(-20f, -1.3f, -10f))]);
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f))]);
         var held = director.Tick(1f / 60f)!.Value;
 
         var want = Vector3.Normalize(eased.LookAt - eased.Position);

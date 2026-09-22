@@ -131,13 +131,14 @@ public class SceneEditingTests
         var scene = SceneEditing.New();
         scene = SceneEditing.Replace(scene, scene.Tracks[0] with
         {
-            LookAt = new Vector3(1f, 2f, 3f), LookAtPlaced = true, TargetName = "Guard", AimHeight = 2f, Smoothing = 0.7f,
+            LookAt = new Vector3(1f, 2f, 3f), LookAtPlaced = true, TargetName = "Aya", TargetWorld = "Gilgamesh", AimHeight = 2f, Smoothing = 0.7f,
         });
         var copy = SceneEditing.Duplicate(scene, scene.Tracks[0].Id).Scene.Tracks[1];
 
         Assert.Equal(new Vector3(1f, 2f, 3f), copy.LookAt);
         Assert.True(copy.LookAtPlaced);
-        Assert.Equal("Guard", copy.TargetName);
+        Assert.Equal("Aya", copy.TargetName);
+        Assert.Equal("Gilgamesh", copy.TargetWorld);
         Assert.Equal(2f, copy.AimHeight);
         Assert.Equal(0.7f, copy.Smoothing);
     }

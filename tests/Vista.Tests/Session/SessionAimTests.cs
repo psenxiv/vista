@@ -16,7 +16,7 @@ public class SessionAimTests
 
     // Puts Guard's aim point, 1.3 above the feet, at <paramref name="aim"/>.
     private static void GuardAt(NearbyCharacters characters, Vector3 aim)
-        => characters.Update([new LoadedCharacter("Guard", aim - new Vector3(0f, 1.3f, 0f))]);
+        => characters.Update([new LoadedCharacter("Guard", null, aim - new Vector3(0f, 1.3f, 0f))]);
 
     // Editing a 2 s track, x = 0 to 10, following Guard with heavy smoothing; Guard aimed at A.
     private static (SessionState State, NearbyCharacters Characters) Following()

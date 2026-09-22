@@ -70,7 +70,7 @@ public class SessionLookAtTests
     {
         var state = Editing();
         Assert.Null(state.SetAim(AimMode.FollowTarget, Camera));
-        Assert.Null(state.SetTarget("Guard"));
+        Assert.Null(state.SetTarget("Guard", null));
         Assert.Null(state.SetAimHeight(2f));
         Assert.Null(state.SetSmoothing(0.8f));
         Assert.Equal(0.8f, state.Track.Smoothing);
@@ -87,12 +87,28 @@ public class SessionLookAtTests
     }
 
     [Fact]
+    public void ChoosingAPlayerIsOneUndoStepForNameAndWorld()
+    {
+        var state = Editing();
+        Assert.Null(state.SetTarget("Aya", "Gilgamesh"));
+        Assert.Null(state.SetTarget("Aya", "Cactuar"));
+        Assert.Equal("Cactuar", state.Track.TargetWorld);
+
+        state.Undo();
+        Assert.Equal("Aya", state.Track.TargetName);
+        Assert.Equal("Gilgamesh", state.Track.TargetWorld);
+        state.Undo();
+        Assert.Null(state.Track.TargetName);
+        Assert.Null(state.Track.TargetWorld);
+    }
+
+    [Fact]
     public void TheSettingsAreRefusedUnlessEditing()
     {
         var state = new SessionState();
 
         Assert.NotNull(state.SetAim(AimMode.LookAt, Camera));
-        Assert.NotNull(state.SetTarget("Guard"));
+        Assert.NotNull(state.SetTarget("Guard", null));
         Assert.NotNull(state.SetAimHeight(2f));
         Assert.NotNull(state.SetSmoothing(0.8f));
         Assert.NotNull(state.SelectLookAt(state.EditedTrackId));

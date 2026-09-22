@@ -15,7 +15,7 @@ public sealed class AimTracker
 
     /// <summary>The aim point on the character a track in the world follows, unsmoothed; null unless one is named and found.</summary>
     public static Vector3? CharacterAim(Track world, IAimTargets? targets)
-        => world is { Aim: AimMode.FollowTarget, TargetName: { } name } && targets?.Find(name, world.Anchor.Position) is { } feet
+        => world is { Aim: AimMode.FollowTarget, TargetName: { } name } && targets?.Find(name, world.TargetWorld, world.Anchor.Position) is { } feet
             ? feet + (Vector3.UnitY * world.AimHeight)
             : null;
 

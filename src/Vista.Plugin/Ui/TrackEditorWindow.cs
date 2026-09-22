@@ -408,7 +408,7 @@ internal sealed unsafe class TrackEditorWindow : Window
                     var text = origin is { } from ? $"{character.Name}  ({Vector3.Distance(character.Position, from):0.0} yalms)" : character.Name;
                     if (ImGui.Selectable($"{text}###character", character.Name == chosen))
                     {
-                        Report(session.SetTarget(character.Name));
+                        Report(session.SetTarget(character.Name, character.World));
                         ImGui.CloseCurrentPopup();
                     }
                 }
