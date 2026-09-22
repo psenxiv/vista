@@ -76,10 +76,12 @@ the edited track (not an undo step, like any switch).
 - **Click a row:** the track becomes the edited track, and the editor camera flies to its first
   point, as jumping to a point does now. A track with no points leaves the camera where it is.
   In 3.c this becomes the track's anchor.
-- **Double-click the name:** rename in place.
+- **Double-click the name:** rename in place. Superseded by `2026-09-22-ui-polish-design.md`
+  (3.e.1): double-click flies to the track's first point; Rename is in the right-click menu only.
 - **Right-click:** Rename, Duplicate, Delete. Delete is disabled on the last track.
 - **Drag a row:** reorder, as point rows reorder today.
-- **+ Track** under the list adds a track.
+- **+ Track** under the list adds a track. Superseded by `2026-09-22-ui-polish-design.md`
+  (3.e.1): a plus icon in the header adds a track.
 - No new keys. Delete and Backspace still delete the selected point.
 - Disabled while live.
 

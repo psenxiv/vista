@@ -75,10 +75,12 @@ Each is one undo step, like any scene edit, and refused unless editing.
 - One row per entry: its number, the track's name, its loop cell, and a remove button.
 - **Loop cell:** click to edit. Empty means follow the track. Shown as "×N" for a count, and "∞"
   when a looping track with no count holds the playlist, both in an amber tint; nothing for an
-  entry that plays once.
+  entry that plays once. Superseded by `2026-09-22-ui-polish-design.md` (3.e.1): a count shows
+  as a plain number, and an entry that plays once shows a dimmed "—".
 - Rows after an entry that holds the playlist are greyed out, since Live never reaches them.
 - Drag rows to reorder. **+ Add** under the list opens a picker of the scene's tracks and
-  appends the one picked.
+  appends the one picked. Superseded by `2026-09-22-ui-polish-design.md` (3.e.1): a plus icon in
+  the header opens the picker.
 
 **Hierarchy**
 

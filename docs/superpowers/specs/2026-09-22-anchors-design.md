@@ -91,7 +91,9 @@ where the point goes.
 
 Clicking a Hierarchy row flies the editor camera to the track's anchor instead of its first
 point: about 5 yalms behind the anchor along its yaw and 3 yalms up, looking at it. A track
-whose anchor has never been placed leaves the camera where it is.
+whose anchor has never been placed leaves the camera where it is. Superseded by
+`2026-09-22-ui-polish-design.md` (3.e.1): a single click no longer moves the camera; a
+double-click flies to the track's first point.
 
 ## Bring scene to me
 
