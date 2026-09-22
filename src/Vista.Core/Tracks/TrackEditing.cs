@@ -256,6 +256,12 @@ public static class TrackEditing
         return clamped == track.Smoothing ? track : track with { Smoothing = clamped };
     }
 
+    /// <summary>Sets whether a Follow Target offset turns as the character turns.</summary>
+    public static Track SetFollowTurns(Track track, bool turns) => track.FollowTurns == turns ? track : track with { FollowTurns = turns };
+
+    /// <summary>Sets whether a Follow Target camera looks at the character rather than keeping its recorded aim.</summary>
+    public static Track SetFollowLooks(Track track, bool looks) => track.FollowLooks == looks ? track : track with { FollowLooks = looks };
+
     /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
     public static Track SetSpeed(Track track, float speed)
     {

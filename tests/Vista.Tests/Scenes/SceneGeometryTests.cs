@@ -244,4 +244,17 @@ public class SceneGeometryTests
 
         Near(to.ToWorld(scene.Tracks[0].Anchor).ToWorld(new Vector3(0f, 3f, -10f)), WorldLookAt(moved));
     }
+
+    [Fact]
+    public void MovingAFollowTracksAnchorAloneLeavesItsOffset()
+    {
+        // The anchored scene with its track under Follow Target and one point at (0, 2, 5).
+        var anchored = Anchored();
+        var scene = SceneEditing.Replace(anchored, anchored.Tracks[0] with { Aim = AimMode.FollowTarget, Points = [new ControlPoint(new Vector3(0f, 2f, 5f), 0f, 0f, 1f)], Timing = [new PointTiming()] });
+        var track = scene.Tracks[0];
+
+        var moved = SceneGeometry.MoveTrackAnchor(scene, track.Id, new Anchor(new Vector3(30f, 0f, 30f), 1f), carry: false);
+
+        Assert.Equal(track.Points, moved.Tracks[0].Points);
+    }
 }

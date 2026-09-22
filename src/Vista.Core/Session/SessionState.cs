@@ -49,8 +49,25 @@ public sealed class SessionState
         set => Scene = SceneEditing.Replace(Scene, value);
     }
 
-    /// <summary>The edited track in the world: Edit builds it and a preview plays it. Changed only through the edit methods and undo.</summary>
-    public Track Track => WorldOf(Local);
+    /// <summary>The edited track in the world as the editor shows it; Edit builds it.</summary>
+    public Track Track => Shown(Local);
+
+    /// <summary>A scene track as the editor shows it: a Follow track's point at its character where they stand now.</summary>
+    public Track Shown(Track local)
+    {
+        var world = WorldOf(local);
+        return local.Points.Count == 1 && FollowFrame(local) is { } frame ? world with { Points = [frame.ToWorld(local.Points[0])] } : world;
+    }
+
+    /// <summary>The frame a Follow track's point is stored in: its character where they stand, or null when not a one-point Follow track or not found.</summary>
+    private Anchor? FollowFrame(Track local) => FollowFrame(local, WorldOf(local));
+
+    /// <summary>The frame a Follow track's point is stored in, for a track in <paramref name="scene"/>.</summary>
+    private Anchor? FollowFrame(Scene scene, Track local) => FollowFrame(local, SceneGeometry.InWorld(scene, local));
+
+    /// <summary>The frame a Follow track's point is stored in, finding its character near <paramref name="world"/>'s anchor.</summary>
+    private Anchor? FollowFrame(Track local, Track world)
+        => local is { Aim: AimMode.FollowTarget, Points.Count: <= 1 } && AimTracker.Character(world, aimTargets) is { } c ? new Anchor(c.Position, c.Facing) : null;
 
     /// <summary>A scene track in the world; the same instance until the track or the scene anchor changes.</summary>
     public Track WorldOf(Track local)
@@ -177,7 +194,7 @@ public sealed class SessionState
         EndLiveEdit();
         Scrubbing = false;
 
-        var playback = new TrackPlayback(Track, aimTargets);
+        var playback = new TrackPlayback(WorldOf(Local), aimTargets);
         if (!fromStart)
         {
             playback.Seek(ScrubHead);
@@ -272,17 +289,26 @@ public sealed class SessionState
     public string? ReplacePoint(int index, ControlPoint point)
         => Apply(t => TrackEditing.Replace(t, index, ToLocal(point)), _ => Selected);
 
-    /// <summary>A world point as the edited track stores it.</summary>
-    private ControlPoint ToLocal(ControlPoint world) => SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world);
+    /// <summary>A world point as the edited track stores it: relative to its character for a Follow track, otherwise to its anchor.</summary>
+    private ControlPoint ToLocal(ControlPoint world) => FollowFrame(Local) is { } frame ? frame.ToLocal(world) : SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world);
 
     /// <summary>Places the anchors under a first point if needed, then adds the world point to the edited track with <paramref name="add"/>.</summary>
     private Scene WithPoint(Scene scene, ControlPoint world, Func<Track, ControlPoint, Track> add)
     {
+        var local = SceneEditing.Get(scene, EditedTrackId);
+        if (local.Aim == AimMode.FollowTarget)
+        {
+            if (local.Points.Count >= 1) throw new ArgumentException("A Follow Target track has one point");
+            if (local.TargetName is null) throw new ArgumentException("Choose a character to follow");
+            if (FollowFrame(scene, local) is null) throw new ArgumentException("Character not found");
+        }
+
         var placed = scene.AnchorPlaced && SceneEditing.Get(scene, EditedTrackId).AnchorPlaced
             ? scene
             : SceneGeometry.PlaceFor(scene, EditedTrackId, world.Position, groundBelow(world.Position) ?? world.Position.Y);
         var track = SceneEditing.Get(placed, EditedTrackId);
-        return SceneEditing.Replace(placed, add(track, SceneGeometry.WorldAnchor(placed, track).ToLocal(world)));
+        var stored = FollowFrame(placed, track) is { } frame ? frame.ToLocal(world) : SceneGeometry.WorldAnchor(placed, track).ToLocal(world);
+        return SceneEditing.Replace(placed, add(track, stored));
     }
 
     /// <summary>Deletes the selected point and clears the selection.</summary>
@@ -363,21 +389,47 @@ public sealed class SessionState
             return Collinear(joined, Evaluator, key, Evaluator.SideSlope(key, from), null);
         });
 
-    /// <summary>Sets the aim mode; the first Look At places its point from the first point, or from the world <paramref name="camera"/> with no points. Returns why it was refused, or null.</summary>
+    /// <summary>Sets the aim mode, keeping a one-point track's point where it is shown; the first Look At places its point from the first point, or from the world <paramref name="camera"/> with no points. Returns why it was refused, or null.</summary>
     public string? SetAim(AimMode aim, ControlPoint camera)
     {
-        var local = ToLocal(camera);
-        return ApplySetting(t => TrackEditing.SetAim(t, aim, local));
+        var anchor = SceneGeometry.WorldAnchor(Scene, Local);
+        var local = anchor.ToLocal(camera);
+        var shown = ShownPoint;
+        return ApplySetting(t =>
+        {
+            if (aim == AimMode.FollowTarget && t.Points.Count > 1) throw new ArgumentException("Follow Target needs a track with one point");
+            if (t.Aim == aim) return t;
+            var leaving = t.Aim == AimMode.FollowTarget && shown is { } s ? TrackEditing.Replace(t, 0, anchor.ToLocal(s)) : t;
+            var result = TrackEditing.SetAim(leaving, aim, local);
+            return shown is { } p && FollowFrame(Scene, result) is { } frame ? TrackEditing.Replace(result, 0, frame.ToLocal(p)) : result;
+        });
     }
 
-    /// <summary>Names the character to follow by name and home world, or none. Returns why it was refused, or null.</summary>
-    public string? SetTarget(string? name, string? world) => ApplySetting(t => TrackEditing.SetTarget(t, name, world));
+    /// <summary>Names the character to watch or follow by name and home world, or none; a Follow point stays where it is shown. Returns why it was refused, or null.</summary>
+    public string? SetTarget(string? name, string? world)
+    {
+        var shown = ShownPoint;
+        return ApplySetting(t =>
+        {
+            var result = TrackEditing.SetTarget(t, name, world);
+            return !ReferenceEquals(result, t) && shown is { } s && FollowFrame(Scene, result) is { } frame ? TrackEditing.Replace(result, 0, frame.ToLocal(s)) : result;
+        });
+    }
+
+    /// <summary>The edited track's only point where it is shown, or null unless it has exactly one.</summary>
+    private ControlPoint? ShownPoint => Local.Points.Count == 1 ? Track.Points[0] : null;
 
     /// <summary>Sets the aim height above the character's feet. Returns why it was refused, or null.</summary>
     public string? SetAimHeight(float yalms) => ApplySetting(t => TrackEditing.SetAimHeight(t, yalms));
 
     /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
     public string? SetSmoothing(float smoothing) => ApplySetting(t => TrackEditing.SetSmoothing(t, smoothing));
+
+    /// <summary>Sets whether a Follow Target offset turns as the character turns. Returns why it was refused, or null.</summary>
+    public string? SetFollowTurns(bool turns) => ApplySetting(t => TrackEditing.SetFollowTurns(t, turns));
+
+    /// <summary>Sets whether a Follow Target camera looks at the character. Returns why it was refused, or null.</summary>
+    public string? SetFollowLooks(bool looks) => ApplySetting(t => TrackEditing.SetFollowLooks(t, looks));
 
     /// <summary>Applies a change to the edited track's settings as one undo step, keeping the selection.</summary>
     private string? ApplySetting(Func<Track, Track> change) => CommitEdit(ChangeEdited(change), _ => Selected);
@@ -798,10 +850,11 @@ public sealed class SessionState
     {
         get
         {
-            if (!ReferenceEquals(evaluatedTrack, Track))
+            var world = WorldOf(Local);
+            if (!ReferenceEquals(evaluatedTrack, world))
             {
-                evaluator = new TrackEvaluator(Track);
-                evaluatedTrack = Track;
+                evaluator = new TrackEvaluator(world);
+                evaluatedTrack = world;
             }
 
             return evaluator!;
@@ -813,7 +866,7 @@ public sealed class SessionState
     {
         if (Local.Points.Count == 0) return null;
         scrubAim.Reset();
-        return scrubAim.Frame(Evaluator, Track, time, 0f);
+        return scrubAim.Frame(Evaluator, WorldOf(Local), time, 0f);
     }
 
     /// <summary>The aim point on the character a track in the world follows, or null unless one is named and found.</summary>

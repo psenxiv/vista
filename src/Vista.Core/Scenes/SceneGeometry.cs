@@ -42,7 +42,7 @@ public static class SceneGeometry
         return scene with { Tracks = tracks, Anchor = to, AnchorPlaced = true };
     }
 
-    /// <summary>Moves a track's anchor to <paramref name="toWorld"/>, carrying its points and Look At point, or alone so they stay where they are.</summary>
+    /// <summary>Moves a track's anchor to <paramref name="toWorld"/>, carrying its points and Look At point, or alone so they stay where they are; a Follow Target track's point is an offset from its character and stays as it is.</summary>
     public static Scene MoveTrackAnchor(Scene scene, Guid trackId, Anchor toWorld, bool carry)
     {
         var track = SceneEditing.Get(scene, trackId);
@@ -50,7 +50,8 @@ public static class SceneGeometry
         if (!carry)
         {
             var from = WorldAnchor(scene, track);
-            moved = KeepLookAt(moved with { Points = track.Points.Select(p => toWorld.ToLocal(from.ToWorld(p))).ToArray() }, from, toWorld);
+            if (track.Aim != AimMode.FollowTarget) moved = moved with { Points = track.Points.Select(p => toWorld.ToLocal(from.ToWorld(p))).ToArray() };
+            moved = KeepLookAt(moved, from, toWorld);
         }
 
         return SceneEditing.Replace(scene, moved);

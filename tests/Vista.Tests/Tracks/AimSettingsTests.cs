@@ -128,4 +128,22 @@ public class AimSettingsTests
         Assert.Null(none.TargetName);
         Assert.Null(none.TargetWorld);
     }
+
+    [Fact]
+    public void FollowSwitchesDefaultToTurningAndNotLooking()
+    {
+        var track = TrackEditing.Empty();
+        Assert.True(track.FollowTurns);
+        Assert.False(track.FollowLooks);
+    }
+
+    [Fact]
+    public void FollowSwitchesSetAndKeepTheSameInstanceWhenUnchanged()
+    {
+        var track = TrackEditing.Empty();
+        var off = TrackEditing.SetFollowTurns(track, false);
+        Assert.False(off.FollowTurns);
+        Assert.Same(off, TrackEditing.SetFollowTurns(off, false));
+        Assert.True(TrackEditing.SetFollowLooks(track, true).FollowLooks);
+    }
 }

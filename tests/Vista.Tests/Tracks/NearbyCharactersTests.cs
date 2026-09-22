@@ -79,4 +79,16 @@ public class NearbyCharactersTests
         Assert.Equal(new Vector3(20f, 0f, 0f), characters.Find("Aya", null, new Vector3(15f, 0f, 0f)));
         Assert.Equal(new Vector3(-20f, 0f, 0f), characters.Find("Aya", null, new Vector3(-15f, 0f, 0f)));
     }
+
+    [Fact]
+    public void FindCharacterReturnsTheNearestMatchWithItsFacing()
+    {
+        var characters = new NearbyCharacters();
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(10f, 0f, 0f), 1f), new LoadedCharacter("Guard", null, new Vector3(-2f, 0f, 0f), 2f)]);
+
+        var found = characters.FindCharacter("Guard", null, Vector3.Zero);
+
+        Assert.Equal(new Vector3(-2f, 0f, 0f), found!.Value.Position);
+        Assert.Equal(2f, found.Value.Facing);
+    }
 }

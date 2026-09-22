@@ -1,0 +1,160 @@
+using System.Numerics;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Xunit;
+
+namespace Vista.Tests.Session;
+
+public class SessionFollowTests
+{
+    private static readonly ControlPoint Camera = new(new Vector3(1f, 2f, 3f), 0f, 0f, 1f);
+
+    private static LoadedCharacter Guard(Vector3 feet, float facing = 0f) => new("Guard", null, feet, facing);
+
+    // Editing with n recorded points, and Guard at (10, 0, 0) facing 0.
+    private static (SessionState State, NearbyCharacters Characters) EditingWith(int points)
+    {
+        var characters = new NearbyCharacters();
+        characters.Update([Guard(new Vector3(10f, 0f, 0f))]);
+        var state = new SessionState(null, characters);
+        state.Edit();
+        for (var i = 0; i < points; i++) state.AddToEnd(new ControlPoint(new Vector3(3f + (5f * i), 1f, -4f), 0.3f, 0.1f, 1f));
+        return (state, characters);
+    }
+
+    // Following Guard, captured at (10, 2, 5): the offset (0, 2, 5).
+    private static (SessionState State, NearbyCharacters Characters) FollowingGuard()
+    {
+        var (state, characters) = EditingWith(points: 0);
+        state.SetAim(AimMode.FollowTarget, Camera);
+        state.SetTarget("Guard", null);
+        state.AddToEnd(new ControlPoint(new Vector3(10f, 2f, 5f), 0f, 0f, 1f));
+        return (state, characters);
+    }
+
+    private static void AssertNear(Vector3 expected, Vector3 actual)
+    {
+        Assert.Equal(expected.X, actual.X, 3);
+        Assert.Equal(expected.Y, actual.Y, 3);
+        Assert.Equal(expected.Z, actual.Z, 3);
+    }
+
+    [Fact]
+    public void FollowTargetIsRefusedForATrackWithMoreThanOnePoint()
+    {
+        var (state, _) = EditingWith(points: 2);
+        Assert.Equal("Follow Target needs a track with one point", state.SetAim(AimMode.FollowTarget, Camera));
+    }
+
+    [Fact]
+    public void ASecondPointIsRefusedUnderFollowTarget()
+    {
+        var (state, _) = FollowingGuard();
+        Assert.Equal("A Follow Target track has one point", state.AddToEnd(Camera));
+    }
+
+    [Fact]
+    public void CapturingNeedsAFoundCharacter()
+    {
+        var (state, characters) = EditingWith(points: 0);
+        state.SetAim(AimMode.FollowTarget, Camera);
+        Assert.Equal("Choose a character to follow", state.AddToEnd(Camera));
+
+        state.SetTarget("Guard", null);
+        characters.Update([]);
+        Assert.Equal("Character not found", state.AddToEnd(Camera));
+    }
+
+    [Fact]
+    public void CapturingStoresTheOffsetAndTheTrackShowsItAtTheCharacter()
+    {
+        var (state, characters) = EditingWith(points: 0);
+        state.SetAim(AimMode.FollowTarget, Camera);
+        state.SetTarget("Guard", null);
+        state.AddToEnd(new ControlPoint(new Vector3(10f, 2f, 5f), 0f, 0f, 1f));
+
+        characters.Update([Guard(new Vector3(20f, 0f, 0f))]);
+
+        Assert.Equal(new Vector3(20f, 2f, 5f), state.Track.Points[0].Position);
+    }
+
+    [Fact]
+    public void SwitchingToFollowKeepsTheCameraWhereItIs()
+    {
+        var (state, _) = EditingWith(points: 1);
+        var before = state.Track.Points[0];
+        state.SetTarget("Guard", null);
+
+        state.SetAim(AimMode.FollowTarget, Camera);
+
+        AssertNear(before.Position, state.Track.Points[0].Position);
+    }
+
+    [Fact]
+    public void ChoosingANewCharacterKeepsTheCameraWhereItIs()
+    {
+        var (state, characters) = FollowingGuard();
+        characters.Update([Guard(new Vector3(10f, 0f, 0f)), new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 1f)]);
+        var before = state.Track.Points[0];
+
+        state.SetTarget("Scout", null);
+
+        AssertNear(before.Position, state.Track.Points[0].Position);
+        Assert.Equal(before.Yaw, state.Track.Points[0].Yaw, 3);
+    }
+
+    [Fact]
+    public void LeavingFollowKeepsTheCameraWhereItIs()
+    {
+        var (state, characters) = FollowingGuard();
+        characters.Update([Guard(new Vector3(20f, 0f, -3f), 0.5f)]);
+        var before = state.Track.Points[0];
+
+        state.SetAim(AimMode.AimKeys, Camera);
+
+        AssertNear(before.Position, state.Track.Points[0].Position);
+        Assert.Equal(before.Yaw, state.Track.Points[0].Yaw, 3);
+    }
+
+    [Fact]
+    public void EditingTheFollowPointEditsItWhereItIsShown()
+    {
+        var (state, _) = FollowingGuard();
+        var target = new ControlPoint(new Vector3(12f, 3f, 4f), 0.2f, 0f, 1f);
+
+        state.ReplacePoint(0, target);
+
+        AssertNear(target.Position, state.Track.Points[0].Position);
+    }
+
+    [Fact]
+    public void TheFollowSwitchesAreUndoStepsAndRefusedUnlessEditing()
+    {
+        var (state, _) = FollowingGuard();
+
+        Assert.Null(state.SetFollowTurns(false));
+        Assert.False(state.Track.FollowTurns);
+        Assert.Null(state.SetFollowLooks(true));
+        Assert.True(state.Track.FollowLooks);
+
+        Assert.True(state.Undo());
+        Assert.False(state.Track.FollowLooks);
+        Assert.True(state.Undo());
+        Assert.True(state.Track.FollowTurns);
+
+        state.Release();
+        Assert.NotNull(state.SetFollowTurns(false));
+        Assert.NotNull(state.SetFollowLooks(true));
+    }
+
+    [Fact]
+    public void PlaybackUsesTheOffsetNotTheShownPoint()
+    {
+        var (state, characters) = FollowingGuard();
+        characters.Update([Guard(new Vector3(40f, 0f, 0f))]);
+
+        var frame = state.FrameAt(0.0)!.Value;
+
+        AssertNear(new Vector3(40f, 2f, 5f), frame.Position);
+    }
+}
