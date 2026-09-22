@@ -43,7 +43,7 @@ Defaults: a new track's speed is 2 yalms per second.
 | Action | Result |
 |---|---|
 | Set track **Speed** | Unpinned legs follow it; pinned legs keep their own speed |
-| Set track **Duration** (the whole shot, holds included) | Vista sets the track speed so unpinned legs fill the time left after holds and pinned legs; the shortest it allows is what holds, pinned legs and each unpinned leg's 0.1 s take |
+| Set track **Duration** (the whole shot, holds included) | Vista sets the track speed so unpinned legs fill the time left after holds and pinned legs; the shortest it allows is what holds and pinned legs take, plus each unpinned leg at the 100 yalms per second speed limit (and at least 0.1 s) |
 | Set a leg's **Duration** or **Speed** | That leg is pinned at the matching speed |
 | Reset a leg | It follows the track speed again |
 | Move a point (overwrite, gizmo, Point window fields) | Every leg keeps its speed, so durations follow the new lengths and the shot's length can change |
