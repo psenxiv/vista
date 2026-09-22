@@ -46,6 +46,12 @@ internal sealed unsafe class TrackEditorWindow : Window
     private bool showPlaylist = true;
     private float pendingWidth;
     private string characterSearch = string.Empty;
+
+    // Where last frame's track row put its buttons, in screen X, so the top bar can line up with them.
+    private float? aimX;
+    private float? directionX;
+    private float? loopX;
+    private float? trashRight;
     private float? smoothingDrag;
 
     public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
@@ -152,17 +158,17 @@ internal sealed unsafe class TrackEditorWindow : Window
         DrawModeCombo();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
-        ImGui.SameLine(0f, gap);
+        AlignTo(aimX, gap);
         ImGui.BeginDisabled(!session.CanUndo);
         if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo")) { fields.Commit(); session.Undo(); }
         ImGui.EndDisabled();
 
-        ImGui.SameLine();
+        AlignTo(directionX, ImGui.GetStyle().ItemSpacing.X);
         ImGui.BeginDisabled(!session.CanRedo);
         if (IconButton.Draw("redo", FontAwesomeIcon.Redo, "Redo")) { fields.Commit(); session.Redo(); }
         ImGui.EndDisabled();
 
-        ImGui.SameLine();
+        AlignTo(loopX, ImGui.GetStyle().ItemSpacing.X);
         if (IconButton.Draw("timing", FontAwesomeIcon.ChartLine, "Timing")) timing.Toggle();
 
         if (editing)
@@ -184,6 +190,14 @@ internal sealed unsafe class TrackEditorWindow : Window
             session.HideUiInLive = !session.HideUiInLive;
     }
 
+    /// <summary>Continues the row at <paramref name="screenX"/> when that's at least <paramref name="gap"/> past the last item, else just after it.</summary>
+    private static void AlignTo(float? screenX, float gap)
+    {
+        ImGui.SameLine(0f, gap);
+        var at = ImGui.GetCursorScreenPos();
+        if (screenX is { } x && x > at.X) ImGui.SetCursorScreenPos(at with { X = x });
+    }
+
     /// <summary>Red LIVE text pulsing on a two-second cycle.</summary>
     private static void DrawLive()
     {
@@ -202,7 +216,11 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.TextUnformatted(FontAwesomeIcon.Feather.ToIconString());
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Fly speed");
         ImGui.SameLine();
-        ImGui.SetNextItemWidth(SpeedWidth);
+        // Stretch so the slider ends where the track row's trash does, leaving room for LIVE and the eye.
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var reserve = spacing + IconButton.Width(FontAwesomeIcon.EyeSlash) + (session.Mode == CameraMode.Live ? ImGui.CalcTextSize("LIVE").X + spacing : 0f);
+        var end = trashRight is { } right ? right - ImGui.GetCursorScreenPos().X : 0f;
+        ImGui.SetNextItemWidth(MathF.Max(SpeedWidth, MathF.Min(end, ImGui.GetContentRegionAvail().X - reserve)));
         var speed = session.Speed;
         var step = speed.Index;
         if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
@@ -251,6 +269,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         var aim = Array.IndexOf(AimModes, session.Track.Aim);
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, $"Select aim ({AimNames[aim]})")) ImGui.OpenPopup("aim-menu");
+        aimX = ImGui.GetItemRectMin().X;
         if (ImGui.BeginPopup("aim-menu"))
         {
             for (var i = 0; i < AimNames.Length; i++)
@@ -275,6 +294,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var direction = Array.IndexOf(Directions, session.Track.Direction);
         ImGui.SameLine();
         if (IconButton.Draw("direction", DirectionIcons[direction], $"Select direction ({DirectionNames[direction]})")) ImGui.OpenPopup("direction-menu");
+        directionX = ImGui.GetItemRectMin().X;
         if (ImGui.BeginPopup("direction-menu"))
         {
             for (var i = 0; i < DirectionNames.Length; i++)
@@ -304,6 +324,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track", danger: true)) { fields.Clear(); Report(session.ChangeTrack(TrackEditing.Clear)); }
+        trashRight = ImGui.GetItemRectMax().X;
         ImGui.EndDisabled();
     }
 
@@ -418,6 +439,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var loop = session.Track.Loop;
         if (IconButton.Toggle("loop", FontAwesomeIcon.Repeat, loop, loop ? "Play once" : "Loop"))
             Report(session.ChangeTrack(t => TrackEditing.SetLoop(t, !loop)));
+        loopX = ImGui.GetItemRectMin().X;
     }
 
     /// <summary>A plus icon that appends a point, and a caret opening the insert menu.</summary>
