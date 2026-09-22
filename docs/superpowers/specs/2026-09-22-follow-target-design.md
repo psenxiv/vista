@@ -46,7 +46,7 @@ Follow Target ✎.
 - Editing the point (the gizmo, the Point window, overwrite) edits it where it is drawn, relative
   to the character where they stand now.
 
-**The dialog** (opened with its pencil, and on choosing Follow Target when no character is chosen)
+**The dialog** (opened with its pencil, and whenever a track is switched to Follow Target)
 
 - Titled "Follow Target", floating, the same layout as Watch Target's: search, the character list
   ("Name · World" or "Name · NPC"), then:

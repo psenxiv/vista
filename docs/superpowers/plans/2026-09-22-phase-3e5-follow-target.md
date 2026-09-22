@@ -491,7 +491,7 @@ git commit -m "feat(tracks) follow a character at a fixed offset"
 - [ ] **Step 4: The aim menu.**
   - The Follow Target entry has a pencil ("Edit Follow Target") built the same way as Watch Target's.
   - With more than one point, the entry and its pencil are disabled, with the tooltip "Follow Target needs a track with one point", shown while disabled.
-  - Choosing it opens its dialog when no character is chosen.
+  - Switching a track into Follow Target or Watch Target always opens that mode's dialog; choosing the mode the track is already on doesn't. Change Watch Target's current "opens when no character is chosen" rule to this too.
   - Under Follow Target the aim icon is drawn in `UiColours.Accent` when found and `UiColours.Red` otherwise. Its tooltips are "Follow Target: Name", "Name (Not found): using the last position", and "Follow Target: choose a character".
   - Choosing Follow Target closes the Watch dialog, and choosing Watch Target closes the Follow dialog. Each window's own close check already covers this.
 

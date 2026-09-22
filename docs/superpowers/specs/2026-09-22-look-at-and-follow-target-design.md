@@ -82,8 +82,8 @@ becomes a fixed camera that pans to follow.
   layout. It stays open while scrubbing and previewing, so the shot can be checked while tuning.
 - In the aim menu, the Follow Target entry has a pencil icon at its right end (tooltip "Edit Follow
   Target"). Clicking the pencil opens the dialog, switching the track to Follow Target if it isn't
-  already. Choosing the entry itself switches to Follow Target and opens the dialog when no
-  character has been chosen yet. It closes with its Done button or its close button, and
+  already. Choosing the entry itself switches to the mode and, when the track wasn't already
+  on it, opens the dialog. It closes with its Done button or its close button, and
   when the edited track leaves Follow Target or another track is edited.
 - It holds, top to bottom:
   - a search box, focused when the dialog opens, filtering by any part of the name, ignoring case;
