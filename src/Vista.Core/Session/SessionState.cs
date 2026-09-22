@@ -264,7 +264,9 @@ public sealed class SessionState
         if (liveEditStart is null) return "No live edit is in progress.";
         try
         {
-            Track = TrackEditing.Replace(Track, index, point);
+            var result = TrackEditing.Replace(Track, index, point);
+            _ = new TrackEvaluator(result);
+            Track = result;
             return null;
         }
         catch (ArgumentException ex)
