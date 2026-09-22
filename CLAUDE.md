@@ -40,10 +40,14 @@ All three target .NET 10, because Dalamud 15.0.3.5 is built against net10.0.
 
 ## Build and test
 
-    ./build.sh                                              # plugin; sets DALAMUD_HOME
-    dotnet test tests/Vista.Tests/Vista.Tests.csproj
+    make build      # Debug plugin build; sets DALAMUD_HOME (./build.sh does the same)
+    make test       # Core tests
+    make package    # Release build and latest.zip, as CI makes it
+    make bump VERSION=X.Y.Z / make rc N=1 / make release   # versioning and publishing
 
-Never build the plugin with bare `dotnet build` — `DALAMUD_HOME` must be set.
+The commands live in `scripts/`. Never build the plugin with bare `dotnet build` —
+`DALAMUD_HOME` must be set. Releases run from `.github/workflows/release.yml` when a `v*` tag is
+pushed; only the user pushes tags.
 
 In-game verification is the user's; see `docs/dev-setup.md`. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
