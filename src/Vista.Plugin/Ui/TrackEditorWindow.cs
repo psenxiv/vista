@@ -404,8 +404,9 @@ internal sealed unsafe class TrackEditorWindow : Window
                 {
                     var character = listed[i];
                     using var id = ImRaii.PushId($"character{i}");
+                    // The distance changes as characters move, so the ID mustn't include it or a click never lands.
                     var text = origin is { } from ? $"{character.Name}  ({Vector3.Distance(character.Position, from):0.0} yalms)" : character.Name;
-                    if (ImGui.Selectable(text, character.Name == chosen))
+                    if (ImGui.Selectable($"{text}###character", character.Name == chosen))
                     {
                         Report(session.SetTarget(character.Name));
                         ImGui.CloseCurrentPopup();
