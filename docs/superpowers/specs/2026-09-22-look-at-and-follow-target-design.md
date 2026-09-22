@@ -64,33 +64,50 @@ becomes a fixed camera that pans to follow.
 
 **The character**
 
-- A track under Follow Target names one character, saved by name. It starts with none.
-- **Choosing one:** a character button appears in the track row beside the Aim icon. It opens a
-  list of the characters loaded nearby, players and NPCs, sorted by name, each with its distance
-  from the camera. A search box at the top, focused when the list opens, filters it by any part of
-  the name, ignoring case. Picking one saves its name.
-- **Duplicate names (decided):** the character followed is the one with that name nearest to the
-  track's anchor.
+- A track under Follow Target names one character: a player by name and home world, or an NPC by
+  name. It starts with none.
+- **Duplicate names (decided):** among characters matching that name (and world, for a player),
+  the one nearest the track's anchor is followed.
 - **Aim height:** per track, in yalms above the character's feet, from 0 to 3. The default is
-  1.3, about chest height. It sits in the track row as a small field with a tooltip, shown only
-  under Follow Target.
-- **Smoothing:** per track, from 0 (exact) to 1 (heavy). The default is 0.3. It is a slider in
-  the track row, shown only under Follow Target. The aim eases towards the character rather than
-  snapping, so bobbing and animation don't shake the shot: the aim point closes on the character with a
-  time constant of Smoothing × 0.5 seconds, so at 1 it takes about half a second to catch up.
+  1.3, about chest height.
+- **Smoothing:** per track, from 0 (exact) to 1 (heavy). The default is 0.3. The aim point closes
+  on the character with a time constant of Smoothing × 0.5 seconds, so at 1 it takes about half a
+  second to catch up.
   - Smoothing starts afresh, with no easing, whenever playback starts, cuts to the entry, is
     seeked or scrubbed, or a preview starts.
 
+**The Follow Target dialog**
+
+- A floating window titled "Follow Target" holds the settings, so the track row keeps its fixed
+  layout. It stays open while scrubbing and previewing, so the shot can be checked while tuning.
+- It opens when Follow Target is chosen in the aim menu, and when the aim icon is right-clicked
+  while the track is under Follow Target. It closes with its Done button or its close button, and
+  when the edited track leaves Follow Target or another track is edited.
+- It holds, top to bottom:
+  - a search box, focused when the dialog opens, filtering by any part of the name, ignoring case;
+  - the characters loaded nearby, players and NPCs, sorted by name, each shown as
+    "Name · World", or "Name · NPC" for an NPC. The one followed is highlighted. Picking one
+    follows it and leaves the dialog open;
+  - Aim height and Smoothing, each with a tooltip;
+  - Done.
+- Every change in it is one undo step, and it is disabled unless editing.
+
+**The aim icon under Follow Target**
+
+- The aim icon is drawn in the accent colour while the track follows a character that is found,
+  and in red while it follows one that isn't, or none is chosen.
+- Its tooltip names the state: "Follow Target: Name. Right-click to edit.", or
+  "Name (Not found): using recorded aim. Right-click to edit.", or "Follow Target: choose a
+  character. Right-click to edit."
+- Look At and the other modes keep the plain icon.
+
 **When the character can't be found**
 
-- When no character by that name is loaded, or none has been chosen, the camera uses the track's
-  recorded aim.
-- The character button then shows the name followed by "(Not found)", with a warning icon, in
-  red. Its tooltip reads "Not found nearby: using recorded aim". With none chosen it reads
-  "Choose a character".
-- **Playlist (decided):** an entry whose track follows a character that can't be found shows the
-  same warning icon in its row, with the same tooltip, so the operator sees it before cutting to
-  it.
+- When no matching character is loaded, or none has been chosen, the camera uses the track's
+  recorded aim, and the aim icon turns red as above.
+- **Playlist (decided):** an entry whose track follows a named character that can't be found shows
+  a warning icon in its row, with the tooltip "Not found nearby: using recorded aim", so the
+  operator sees it before cutting to it.
 - Once the character is found again, the aim eases back onto them.
 
 **Editing and scrubbing**
@@ -112,11 +129,11 @@ smoothing are each one undo step, as any track edit is.
 - `Track` gains:
   - `LookAt`, a position relative to the track's anchor;
   - `LookAtPlaced`;
-  - `TargetName`, a string or null;
+  - `TargetName`, a string or null, and `TargetWorld`, a player's home world or null for an NPC;
   - `AimHeight`, a float;
   - `Smoothing`, a float.
-- A new target source interface, `IAimTargets`, in Core: `Vector3? Find(string name, Vector3
-  near)`. Core never reads the game; the Plugin supplies it. `near` is the track anchor, used to
+- A new target source interface, `IAimTargets`, in Core: `Vector3? Find(string name, string? world,
+  Vector3 near)`. Core never reads the game; the Plugin supplies it. `near` is the track anchor, used to
   pick among duplicate names.
 - `TrackEvaluator` takes an optional aim override: a world target position, or null for the
   recorded aim. It aims at that position when given, and uses recorded aim otherwise.
@@ -138,7 +155,8 @@ smoothing are each one undo step, as any track edit is.
 - An `IAimTargets` implementation over Dalamud's object table: players and NPCs by name, nearest
   to `near`.
 - A nearby-character list for the picker, sorted by distance to the camera.
-- `TrackEditorWindow` gains the aim modes, the character button, aim height and smoothing.
+- `TrackEditorWindow` gains the aim modes and the aim icon's colour, tooltip and right-click; a
+  `FollowTargetWindow` holds the character list, aim height and smoothing.
 - `PointWindow` handles the Look At point.
 - `Overlay`/`EditorLayer` draw the Look At point and the character marker, and click the Look At
   point.
