@@ -19,10 +19,10 @@ public class SessionAnchorTests
         Assert.Equal(expected.Z, actual.Z, Tolerance);
     }
 
-    // Editing with the character's feet at y = 1; Track 1 has points at x = 10, 20, 30 (y = 5).
+    // Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 (y = 5).
     private static SessionState Editing()
     {
-        var state = new SessionState(() => 1f);
+        var state = new SessionState(_ => 1f);
         state.Edit();
         state.AddToEnd(Point(10f));
         state.AddToEnd(Point(20f));
@@ -31,7 +31,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void TheFirstPointPlacesBothAnchorsUnderItAtFootHeight()
+    public void TheFirstPointPlacesBothAnchorsOnTheGroundUnderIt()
     {
         var state = Editing();
 
@@ -195,18 +195,28 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void BringSceneMovesTheSceneAnchorToTheCameraAtFootHeightKeepingItsYaw()
+    public void TheGroundIsReadUnderTheFirstPoint()
     {
-        var state = Editing();
-        state.SelectSceneAnchor();
-        state.MoveAnchor(new Anchor(state.Scene.Anchor.Position, 0.6f), carry: true);
-        var offset = state.Track.Points[0].Position - state.Scene.Anchor.Position;
+        Vector3? asked = null;
+        var state = new SessionState(p => { asked = p; return 2f; });
+        state.Edit();
 
-        Assert.Null(state.BringScene(new Vector3(-50f, 20f, 70f)));
+        state.AddToEnd(Point(10f));
 
-        Assert.Equal(new Anchor(new Vector3(-50f, 1f, 70f), 0.6f), state.Scene.Anchor);
-        Near(new Vector3(-50f, 1f, 70f) + offset, state.Track.Points[0].Position);
-        Assert.True(state.Undo());
+        Assert.Equal(new Vector3(10f, 5f, 0f), asked);
+        Assert.Equal(2f, state.Scene.Anchor.Position.Y);
+        Assert.Equal(2f, SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[0]).Position.Y);
+    }
+
+    [Fact]
+    public void WithNoGroundTheAnchorsSitAtThePointsHeight()
+    {
+        var state = new SessionState(_ => null);
+        state.Edit();
+
+        state.AddToEnd(Point(10f));
+
+        Assert.Equal(5f, state.Scene.Anchor.Position.Y);
     }
 
     [Fact]
@@ -244,13 +254,12 @@ public class SessionAnchorTests
         state.Play();
 
         Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
-        Assert.NotNull(state.BringScene(Vector3.Zero));
     }
 
     [Fact]
     public void UndoingTheFirstPointDropsTheSceneAnchorSelection()
     {
-        var state = new SessionState(() => 1f);
+        var state = new SessionState(_ => 1f);
         state.Edit();
         state.AddToEnd(Point(10f));
         state.SelectSceneAnchor();
@@ -274,17 +283,6 @@ public class SessionAnchorTests
 
         Assert.False(state.Scene.Tracks[1].AnchorPlaced);
         Assert.Null(state.SelectedAnchor);
-    }
-
-    [Fact]
-    public void BringSceneIsRefusedUntilTheSceneAnchorIsPlaced()
-    {
-        var state = new SessionState(() => 1f);
-        state.Edit();
-
-        Assert.NotNull(state.BringScene(new Vector3(5f, 5f, 5f)));
-        Assert.False(state.Scene.AnchorPlaced);
-        Assert.False(state.CanUndo);
     }
 
     [Fact]

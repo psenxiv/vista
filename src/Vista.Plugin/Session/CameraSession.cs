@@ -9,7 +9,7 @@ namespace Vista.Plugin.Session;
 /// <summary>Carries out the session's mode changes in game: free-cam, movement lock, camera ownership and UI.</summary>
 internal sealed class CameraSession
 {
-    private readonly SessionState state = new(() => Plugin.ObjectTable.LocalPlayer?.Position.Y);
+    private readonly SessionState state = new(Ground.Below);
     private readonly FreeCam freeCam = new();
     private readonly MovementLock movement;
     private readonly CameraOwnership ownership = new();
@@ -92,10 +92,6 @@ internal sealed class CameraSession
 
     /// <summary>During a live edit, moves the selected anchor. Returns why it was refused, or null.</summary>
     public string? PreviewAnchor(Anchor world, bool carry) => state.PreviewAnchor(world, carry);
-
-    /// <summary>Moves the scene anchor to the editor camera, at the character's feet. Returns why it was refused, or null.</summary>
-    public string? BringSceneToMe()
-        => CameraAccess.ReadState() is { } camera ? state.BringScene(camera.Position) : "Cannot read the camera.";
 
     /// <summary>Edits a track and flies the editor camera to look at its anchor. Returns why it was refused, or null.</summary>
     public string? OpenTrack(Guid id)

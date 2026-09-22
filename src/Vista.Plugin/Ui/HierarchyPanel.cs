@@ -29,13 +29,11 @@ internal sealed unsafe class HierarchyPanel
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Scene");
         ImGui.BeginDisabled(!editing);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + IconButton.Width(FontAwesomeIcon.StreetView) + ImGui.GetStyle().ItemSpacing.X;
+        var buttons = IconButton.Width(FontAwesomeIcon.Anchor);
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
-        ImGui.SameLine();
-        if (IconButton.Draw("bring-scene", FontAwesomeIcon.StreetView, "Bring scene to me")) Report(session.BringSceneToMe());
         ImGui.EndDisabled();
         ImGui.EndDisabled();
         ImGui.Separator();

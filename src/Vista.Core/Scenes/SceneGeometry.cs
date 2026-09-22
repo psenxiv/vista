@@ -24,10 +24,10 @@ public static class SceneGeometry
         return track with { Points = track.Points.Select(anchor.ToWorld).ToArray() };
     }
 
-    /// <summary>Places the scene's and the track's anchors under a first point at foot height, yaw 0, where not placed yet.</summary>
-    public static Scene PlaceFor(Scene scene, Guid trackId, Vector3 worldPosition, float footHeight)
+    /// <summary>Places the scene's and the track's anchors under a first point at ground height, yaw 0, where not placed yet.</summary>
+    public static Scene PlaceFor(Scene scene, Guid trackId, Vector3 worldPosition, float groundHeight)
     {
-        var ground = new Anchor(worldPosition with { Y = footHeight }, 0f);
+        var ground = new Anchor(worldPosition with { Y = groundHeight }, 0f);
         var result = scene.AnchorPlaced ? scene : scene with { Anchor = ground, AnchorPlaced = true };
         var track = SceneEditing.Get(result, trackId);
         if (track.AnchorPlaced) return result;

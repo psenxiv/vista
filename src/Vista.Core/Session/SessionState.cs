@@ -23,7 +23,7 @@ public sealed class SessionState
     private EditSnapshot? liveEditStart;
     private Track? evaluatedStart;
     private TrackEvaluator? liveStartEvaluator;
-    private readonly Func<float?> footHeight;
+    private readonly Func<Vector3, float?> groundBelow;
     private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
     private TrackPlayback? preview;
 
@@ -59,10 +59,10 @@ public sealed class SessionState
         return world;
     }
 
-    /// <summary>A session; <paramref name="footHeight"/> reads the character's feet, or null when it can't.</summary>
-    public SessionState(Func<float?>? footHeight = null)
+    /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't.</summary>
+    public SessionState(Func<Vector3, float?>? groundBelow = null)
     {
-        this.footHeight = footHeight ?? (() => null);
+        this.groundBelow = groundBelow ?? (_ => null);
         EditedTrackId = Scene.Tracks[0].Id;
     }
 
@@ -273,7 +273,7 @@ public sealed class SessionState
     /// <summary>Places the anchors under a first point if needed, then adds the world point to the edited track with <paramref name="add"/>.</summary>
     private Scene WithPoint(Scene scene, ControlPoint world, Func<Track, ControlPoint, Track> add)
     {
-        var placed = SceneGeometry.PlaceFor(scene, EditedTrackId, world.Position, footHeight() ?? world.Position.Y);
+        var placed = SceneGeometry.PlaceFor(scene, EditedTrackId, world.Position, groundBelow(world.Position) ?? world.Position.Y);
         var track = SceneEditing.Get(placed, EditedTrackId);
         return SceneEditing.Replace(placed, add(track, SceneGeometry.WorldAnchor(placed, track).ToLocal(world)));
     }
@@ -550,14 +550,6 @@ public sealed class SessionState
         if (UnplacedRefusal(kind) is { } unplaced) return unplaced;
         Scene = Moved(start.Scene, kind, world, carry);
         return null;
-    }
-
-    /// <summary>Moves a placed scene anchor to the camera's X and Z at foot height, keeping its yaw and carrying every track. Returns why it was refused, or null.</summary>
-    public string? BringScene(Vector3 camera)
-    {
-        if (UnplacedRefusal(AnchorKind.Scene) is { } unplaced) return unplaced;
-        var height = footHeight() ?? Scene.Anchor.Position.Y;
-        return CommitScene(scene => (SceneGeometry.MoveSceneAnchor(scene, scene.Anchor with { Position = new Vector3(camera.X, height, camera.Z) }, carry: true), EditedTrackId));
     }
 
     private Scene Moved(Scene scene, AnchorKind kind, Anchor world, bool carry)

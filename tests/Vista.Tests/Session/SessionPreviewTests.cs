@@ -167,7 +167,7 @@ public class SessionPreviewTests
     }
 
     [Fact]
-    public void MovingOrBringingTheAnchorStopsThePreview()
+    public void MovingTheAnchorStopsThePreview()
     {
         var state = Editing();
 
@@ -178,7 +178,7 @@ public class SessionPreviewTests
         Assert.False(state.Previewing);
 
         state.Play();
-        Assert.Null(state.BringScene(new Vector3(2f, 0f, 0f)));
+        Assert.Null(state.MoveAnchor(new Anchor(new Vector3(2f, 0f, 0f), 0f), carry: true));
         Assert.False(state.Previewing);
     }
 
