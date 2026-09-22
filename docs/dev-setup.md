@@ -9,7 +9,7 @@
    folder containing it. A directory path is rejected with "not a valid path to
    a potential Dev Plugin". The Wine prefix maps `Z:` to the macOS root:
 
-       Z:\Users\<your-macos-username>\code\ffxiv-projects\cinematic-camera\src\Vista.Plugin\bin\Debug\Vista.dll
+       Z:\Users\<your-macos-username>\code\ffxiv-projects\vista\src\Vista.Plugin\bin\Debug\Vista.dll
 
    Substitute your own username. `Z:` maps to the macOS root, so this is just
    the absolute path to the repo with backslashes.
