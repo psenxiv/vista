@@ -11,6 +11,7 @@ public sealed class AimTracker
     private (float Yaw, float Pitch)? lastAim;
     private readonly AimSmoother positionSmoother = new();
     private float? heldFacing;
+    private float? easedYaw;
     private CameraState? lastFollow;
 
     /// <summary>A tracker finding followed characters with <paramref name="targets"/>; with none, no character is ever found.</summary>
@@ -57,6 +58,7 @@ public sealed class AimTracker
         lastAim = null;
         positionSmoother.Reset();
         heldFacing = null;
+        easedYaw = null;
         lastFollow = null;
     }
 
@@ -73,12 +75,25 @@ public sealed class AimTracker
         var facing = world.FollowTurns ? character.Facing : heldFacing ??= character.Facing;
         var at = new Anchor(character.Position, facing).ToWorld(offset);
         var position = positionSmoother.Step(at.Position, dt, world.Smoothing);
-        var look = FreeCamMotion.LookAtFrom(position, at.Yaw, at.Pitch);
+        var look = FreeCamMotion.LookAtFrom(position, EaseYaw(at.Yaw, dt, world.Smoothing), at.Pitch);
         if (world.FollowLooks && TrackAim.Toward(position, smoother.Step(character.Position + (Vector3.UnitY * world.AimHeight), dt, world.Smoothing)) is { } aim)
             look = FreeCamMotion.LookAtFrom(position, aim.Yaw, aim.Pitch);
 
         lastFollow = new CameraState(position, look, offset.Fov, offset.Roll);
         return lastFollow.Value;
+    }
+
+    /// <summary>Eases the Follow yaw the short way round towards <paramref name="target"/>, with the smoother's time constant.</summary>
+    private float EaseYaw(float target, float dt, float smoothing)
+    {
+        if (easedYaw is not { } from) return (easedYaw = target).Value;
+        if (dt <= 0f) return from;
+        var delta = target - from;
+        delta -= MathF.Tau * MathF.Round(delta / MathF.Tau);
+        var timeConstant = Math.Clamp(smoothing, 0f, 1f) * AimSmoother.SecondsPerSmoothing;
+        var next = timeConstant <= 0f ? from + delta : from + (delta * (1f - MathF.Exp(-dt / timeConstant)));
+        easedYaw = next;
+        return next;
     }
 
     private Vector3? Target(Track world, float dt) => world.Aim switch

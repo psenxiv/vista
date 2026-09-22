@@ -231,4 +231,34 @@ public class AimTrackerTests
         tracker.Reset();
         Assert.Equal(10f, Frame(tracker, track, 0.5f).Position.X, 4);
     }
+
+    private static float LookYaw(CameraState frame) => TrackAim.FromDirection(frame.LookAt - frame.Position).Yaw;
+
+    [Fact]
+    public void SmoothingEasesTheRecordedAimAsTheCharacterTurns()
+    {
+        var quarter = MathF.PI / 2f;
+        var characters = GuardStanding(Vector3.Zero, 0f);
+        var tracker = new AimTracker(characters);
+        var track = FollowingAt(Behind, smoothing: 1f);
+        Frame(tracker, track, 0.5f);
+
+        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, quarter)]);
+
+        Assert.Equal(quarter * (1f - MathF.Exp(-1f)), LookYaw(Frame(tracker, track, 0.5f)), 3);
+    }
+
+    [Fact]
+    public void WithoutSmoothingTheRecordedAimTurnsExactly()
+    {
+        var quarter = MathF.PI / 2f;
+        var characters = GuardStanding(Vector3.Zero, 0f);
+        var tracker = new AimTracker(characters);
+        var track = FollowingAt(Behind);
+        Frame(tracker, track, 0.5f);
+
+        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, quarter)]);
+
+        Assert.Equal(quarter, LookYaw(Frame(tracker, track, 0.5f)), 4);
+    }
 }

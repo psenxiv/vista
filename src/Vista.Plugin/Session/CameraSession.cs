@@ -42,8 +42,11 @@ internal sealed class CameraSession
         }
     }
 
-    /// <summary>The edited track: Edit builds it and a preview plays it. Changed only through the edit methods and undo.</summary>
+    /// <summary>The edited track in the world as the editor shows it.</summary>
     public Track Track => state.Track;
+
+    /// <summary>The edited track as stored; a new instance only when it is edited.</summary>
+    public Track StoredTrack => state.StoredTrack;
 
     /// <summary>The tracks being edited, their order and which are hidden.</summary>
     public Scene Scene => state.Scene;

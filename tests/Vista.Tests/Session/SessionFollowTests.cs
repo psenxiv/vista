@@ -157,4 +157,28 @@ public class SessionFollowTests
 
         AssertNear(new Vector3(40f, 2f, 5f), frame.Position);
     }
+
+    [Fact]
+    public void TheShownTrackIsTheSameInstanceWhileTheCharacterStandsStill()
+    {
+        var (state, characters) = FollowingGuard();
+        Assert.Same(state.Track, state.Track);
+
+        characters.Update([Guard(new Vector3(11f, 0f, 0f))]);
+
+        var moved = state.Track;
+        Assert.Equal(11f, moved.Points[0].Position.X, 3);
+        Assert.Same(moved, state.Track);
+    }
+
+    [Fact]
+    public void TheStoredTrackIsTheSameInstanceWhileTheCharacterWalks()
+    {
+        var (state, characters) = FollowingGuard();
+        var stored = state.StoredTrack;
+
+        characters.Update([Guard(new Vector3(30f, 0f, 0f), 1f)]);
+
+        Assert.Same(stored, state.StoredTrack);
+    }
 }

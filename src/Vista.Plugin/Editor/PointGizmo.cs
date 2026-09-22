@@ -53,7 +53,7 @@ internal sealed unsafe class PointGizmo
     /// <summary>Draws the gizmo on the selected point into the current window. Call inside the editor window.</summary>
     public void Draw(EditorView view, CameraSession session)
     {
-        if (Dragging && (!ReferenceEquals(session.Track, dragTrack) || session.Selected != dragIndex)) Abandon();
+        if (Dragging && (!ReferenceEquals(session.StoredTrack, dragTrack) || session.Selected != dragIndex)) Abandon();
 
         if (session.Selected is not { } index || index >= session.Track.Points.Count)
         {
@@ -71,7 +71,7 @@ internal sealed unsafe class PointGizmo
 
         var (usingNow, over, ring) = Mode == GizmoMode.Move
             ? DrawMove(view, point)
-            : DrawRings(view, Preview?.Point ?? point, session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget ? AllRings : RollOnly);
+            : DrawRings(view, Preview?.Point ?? point, session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget ? AllRings : RollOnly);
         Hot = usingNow || over;
 
         if (waitForRelease)
@@ -88,7 +88,7 @@ internal sealed unsafe class PointGizmo
                 if (Mode == GizmoMode.Rotate && ring is null) { waitForRelease = true; ResetImGuizmo(); return; }
                 dragStart = point;
                 dragIndex = index;
-                dragTrack = session.Track;
+                dragTrack = session.StoredTrack;
                 dragRing = ring;
             }
 

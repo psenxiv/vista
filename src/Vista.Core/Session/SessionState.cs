@@ -25,6 +25,7 @@ public sealed class SessionState
     private TrackEvaluator? liveStartEvaluator;
     private readonly Func<Vector3, float?> groundBelow;
     private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
+    private readonly Dictionary<Guid, (Track World, Anchor Frame, Track Shown)> shown = new();
     private TrackPlayback? preview;
     private readonly IAimTargets? aimTargets;
     private readonly AimTracker scrubAim;
@@ -49,14 +50,21 @@ public sealed class SessionState
         set => Scene = SceneEditing.Replace(Scene, value);
     }
 
+    /// <summary>The edited track as stored, local to its anchor; a new instance only when it is edited.</summary>
+    public Track StoredTrack => Local;
+
     /// <summary>The edited track in the world as the editor shows it; Edit builds it.</summary>
     public Track Track => Shown(Local);
 
-    /// <summary>A scene track as the editor shows it: a Follow track's point at its character where they stand now.</summary>
+    /// <summary>A scene track as the editor shows it: a Follow track's point at its character where they stand now; the same instance while neither changes.</summary>
     public Track Shown(Track local)
     {
         var world = WorldOf(local);
-        return local.Points.Count == 1 && FollowFrame(local) is { } frame ? world with { Points = [frame.ToWorld(local.Points[0])] } : world;
+        if (local.Points.Count != 1 || FollowFrame(local) is not { } frame) return world;
+        if (shown.TryGetValue(local.Id, out var cached) && ReferenceEquals(cached.World, world) && cached.Frame == frame) return cached.Shown;
+        var result = world with { Points = [frame.ToWorld(local.Points[0])] };
+        shown[local.Id] = (world, frame, result);
+        return result;
     }
 
     /// <summary>The frame a Follow track's point is stored in: its character where they stand, or null when not a one-point Follow track or not found.</summary>
