@@ -55,6 +55,7 @@ Defaults: a new track's speed is 2 yalms per second.
 | Drag a point's key in the graph | Time moves between the leg before it and whatever follows (the next leg, or the point's hold); the shot's length is unchanged, and each leg whose time changed becomes pinned at its new speed. The first key is fixed; the last key has nothing after it, so dragging it changes the last leg's time and the shot's length |
 | Drag a hold end | The hold changes; later keys shift and the shot's length changes |
 | Easing | Unchanged: it spreads motion inside the leg's fixed duration |
+| A dragged handle (Custom) | Keeps its shape through every edit: it is stored as a multiple of its span's average speed, so speed, duration, pin and point edits never reshape it (decided 2026-09-22) |
 
 When every leg is pinned, the track Speed and Duration fields are disabled.
 
@@ -69,10 +70,18 @@ A leg whose duration would pass 600 s at its speed is held at 600 s.
 - The second row gains **Speed** (yalms per second) and **Duration** (s) fields beside
   Aim and Playback. Both apply when editing finishes, as the Leg field does today.
 - Each point row shows the leg arriving at it: **Duration** (s) and **Speed** fields,
-  coupled, then **Hold**. A pinned leg shows a pin icon button; clicking it resets the
-  leg to the track speed. An unpinned leg shows no icon. Row 1 has no leg fields.
+  coupled, then **Hold**. The Speed field shows the leg's actual average speed, its
+  length over its duration, so the two always agree even at a limit; typing into it
+  pins the leg at that speed (decided 2026-09-22). Row 1 has no leg fields.
+- Every row from 2 on has a pin icon button. A pinned leg's pin is lit; clicking it
+  unpins the leg, which follows the track speed again. An unpinned leg's pin is greyed;
+  clicking it pins the leg at its current speed (decided 2026-09-22).
 
-**Timing window.** The graph, the per-leg easing drop-down, Custom, the key buttons,
+**Timing window.** A yalm scale runs down the graph's right edge: tick marks at a
+round step (1, 2 or 5 times a power of ten), at most about six, labelled in yalms.
+Hovering the plot, when nothing is being dragged, shows a readout of the time, the
+distance and the speed at that moment, with a marker on the curve (decided
+2026-09-22). The graph, the per-leg easing drop-down, Custom, the key buttons,
 handles and Break and Unify all stay. A point key drag follows the rule above. Hold end
 drags change the hold. Keys between points are removed: no diamonds, no double-click
 to add, and no Delete key in the key menu. Remove hold stays.
