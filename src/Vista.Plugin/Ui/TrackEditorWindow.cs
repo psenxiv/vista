@@ -23,6 +23,10 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
     private const float FieldWidth = 70f;
+    private const float AimWidth = 200f;
+    private const float PlaybackWidth = 140f;
+    private const float MinWidth = 420f;
+    private const float MinHeight = 260f;
 
     private readonly CameraSession session;
     private readonly PendingField fields;
@@ -37,8 +41,11 @@ internal sealed unsafe class TrackEditorWindow : Window
         this.fields = fields;
         this.timing = timing;
         RespectCloseHotkey = false;
-        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(420f, 260f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
+        SetMinimumWidth(MinWidth);
     }
+
+    /// <summary>Widens the minimum size to fit the track row, so Clear track stays on screen.</summary>
+    public override void PreDraw() => SetMinimumWidth(MathF.Max(MinWidth, TrackRowWidth()));
 
     /// <summary>Applies an unfinished field edit and ends a scrub, since a closed window never reports either finishing.</summary>
     public override void OnClose()
@@ -133,7 +140,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
-        ImGui.SetNextItemWidth(200f);
+        ImGui.SetNextItemWidth(AimWidth);
         if (ImGui.BeginCombo("##aim", $"Aim: {AimNames[aim]}"))
         {
             for (var i = 0; i < AimNames.Length; i++)
@@ -148,7 +155,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         var playback = session.Track.Playback == PlaybackMode.Once ? 0 : 1;
         ImGui.SameLine();
-        ImGui.SetNextItemWidth(140f);
+        ImGui.SetNextItemWidth(PlaybackWidth);
         if (ImGui.BeginCombo("##playback", $"Playback: {PlaybackNames[playback]}"))
         {
             for (var i = 0; i < PlaybackNames.Length; i++)
@@ -297,6 +304,18 @@ internal sealed unsafe class TrackEditorWindow : Window
         var step = speed.Index;
         if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
     }
+
+    /// <summary>The track row's full width: its items, the six gaps between them, and the window padding.</summary>
+    private static float TrackRowWidth()
+    {
+        var style = ImGui.GetStyle();
+        var items = AimWidth + PlaybackWidth + ImGui.CalcTextSize("Speed").X + ImGui.CalcTextSize("Duration").X
+            + (FieldWidth * 2f) + IconButton.Width(FontAwesomeIcon.Trash);
+        return items + (Spacing.X * 6f) + (style.WindowPadding.X * 2f);
+    }
+
+    private void SetMinimumWidth(float width)
+        => SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(width, MinHeight), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
 
     /// <summary>A text label, then a number field with a tooltip that shows even while disabled.</summary>
     private void LabelledField(string label, string id, float current, string format, string tooltip, Action<float> apply)
