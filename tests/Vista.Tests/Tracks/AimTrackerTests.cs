@@ -182,7 +182,7 @@ public class AimTrackerTests
     [Fact]
     public void WithTurningOffTheFacingIsHeldFromTheFirstFrame()
     {
-        var characters = GuardStanding(Vector3.Zero, 0f);
+        var characters = GuardStanding(Vector3.Zero, 0.7f);
         var tracker = new AimTracker(characters);
         var track = FollowingAt(Behind, turns: false);
         Frame(tracker, track);
@@ -190,7 +190,7 @@ public class AimTrackerTests
         characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, MathF.PI / 2f)]);
         var frame = Frame(tracker, track);
 
-        Assert.Equal(new Vector3(0f, 2f, 5f), frame.Position);
+        Near(new Anchor(Vector3.Zero, 0.7f).ToWorld(Behind.Position), frame.Position);
     }
 
     [Fact]
@@ -232,6 +232,13 @@ public class AimTrackerTests
         Assert.Equal(10f, Frame(tracker, track, 0.5f).Position.X, 4);
     }
 
+    private static void Near(Vector3 expected, Vector3 actual)
+    {
+        Assert.Equal(expected.X, actual.X, 4);
+        Assert.Equal(expected.Y, actual.Y, 4);
+        Assert.Equal(expected.Z, actual.Z, 4);
+    }
+
     private static float LookYaw(CameraState frame) => TrackAim.FromDirection(frame.LookAt - frame.Position).Yaw;
 
     [Fact]
@@ -260,5 +267,45 @@ public class AimTrackerTests
         characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, quarter)]);
 
         Assert.Equal(quarter, LookYaw(Frame(tracker, track, 0.5f)), 4);
+    }
+
+    [Fact]
+    public void AResetAfterLosingTheCharacterFallsBackToTheAnchor()
+    {
+        var characters = GuardStanding(new Vector3(10f, 0f, 0f), 0f);
+        var tracker = new AimTracker(characters);
+        var track = FollowingAt(Behind);
+        Frame(tracker, track);
+        characters.Update([]);
+
+        tracker.Reset();
+
+        Assert.Equal(Behind.Position, Frame(tracker, track).Position);
+    }
+
+    [Fact]
+    public void AResetHoldsTheFacingTheCharacterHasThen()
+    {
+        var characters = GuardStanding(Vector3.Zero, 0.7f);
+        var tracker = new AimTracker(characters);
+        var track = FollowingAt(Behind, turns: false);
+        Frame(tracker, track);
+        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, 1.2f)]);
+
+        tracker.Reset();
+        Frame(tracker, track);
+        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, 2f)]);
+
+        Near(new Anchor(Vector3.Zero, 1.2f).ToWorld(Behind.Position), Frame(tracker, track).Position);
+    }
+
+    [Fact]
+    public void ARotatedAnchorGivesBackTheOffsetAndItsFallback()
+    {
+        var anchor = new Anchor(new Vector3(5f, 1f, -3f), 0.8f);
+        var world = FollowingAt(Behind) with { Anchor = anchor, Points = [anchor.ToWorld(Behind)] };
+
+        Near(new Vector3(10f, 2f, 5f), Frame(new AimTracker(GuardStanding(new Vector3(10f, 0f, 0f), 0f)), world).Position);
+        Near(anchor.ToWorld(Behind.Position), Frame(new AimTracker(new NearbyCharacters()), world).Position);
     }
 }

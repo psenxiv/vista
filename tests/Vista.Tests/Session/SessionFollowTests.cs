@@ -81,13 +81,15 @@ public class SessionFollowTests
     [Fact]
     public void SwitchingToFollowKeepsTheCameraWhereItIs()
     {
-        var (state, _) = EditingWith(points: 1);
+        var (state, characters) = EditingWith(points: 1);
+        characters.Update([Guard(new Vector3(10f, 0f, 0f), 0.5f)]);
         var before = state.Track.Points[0];
         state.SetTarget("Guard", null);
 
         state.SetAim(AimMode.FollowTarget, Camera);
 
         AssertNear(before.Position, state.Track.Points[0].Position);
+        Assert.Equal(before.Yaw, state.Track.Points[0].Yaw, 3);
     }
 
     [Fact]
@@ -156,6 +158,37 @@ public class SessionFollowTests
         var frame = state.FrameAt(0.0)!.Value;
 
         AssertNear(new Vector3(40f, 2f, 5f), frame.Position);
+    }
+
+    [Fact]
+    public void UndoingTheSwitchToFollowRestoresThePointsNumbers()
+    {
+        var (state, characters) = EditingWith(points: 1);
+        characters.Update([Guard(new Vector3(10f, 0f, 0f), 0.5f)]);
+        state.SetTarget("Guard", null);
+        var stored = state.StoredTrack.Points[0];
+        state.SetAim(AimMode.FollowTarget, Camera);
+        Assert.NotEqual(stored, state.StoredTrack.Points[0]);
+
+        Assert.True(state.Undo());
+
+        Assert.Equal(stored, state.StoredTrack.Points[0]);
+        Assert.Equal(AimMode.AimKeys, state.StoredTrack.Aim);
+    }
+
+    [Fact]
+    public void UndoingANewCharacterRestoresThePointsNumbers()
+    {
+        var (state, characters) = FollowingGuard();
+        characters.Update([Guard(new Vector3(10f, 0f, 0f)), new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 1f)]);
+        var stored = state.StoredTrack.Points[0];
+        state.SetTarget("Scout", null);
+        Assert.NotEqual(stored, state.StoredTrack.Points[0]);
+
+        Assert.True(state.Undo());
+
+        Assert.Equal(stored, state.StoredTrack.Points[0]);
+        Assert.Equal("Guard", state.StoredTrack.TargetName);
     }
 
     [Fact]
