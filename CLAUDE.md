@@ -1,4 +1,4 @@
-# Cinematic Cam
+# Vista
 
 FFXIV Dalamud plugin: camera tracks and a live switchboard.
 
@@ -29,18 +29,19 @@ not in git.
 
 ## Structure
 
-- `src/CinematicCam.Core` — pure logic. Must never reference Dalamud or
+- `src/Vista.Core` — pure logic. Must never reference Dalamud or
   FFXIVClientStructs, and must not use `unsafe`. Enforced by the project file.
-- `src/CinematicCam.Plugin` — Dalamud, hooks, ImGui. The only place with
-  `unsafe`.
-- `tests/CinematicCam.Tests` — references Core only.
+- `src/Vista.Plugin` — Dalamud, hooks, ImGui. The only place with
+  `unsafe`. Never create a `Vista.Plugin.Camera` namespace: it shadows
+  FFXIVClientStructs' `Camera`.
+- `tests/Vista.Tests` — references Core only.
 
 All three target .NET 10, because Dalamud 15.0.3.5 is built against net10.0.
 
 ## Build and test
 
     ./build.sh                                              # plugin; sets DALAMUD_HOME
-    dotnet test tests/CinematicCam.Tests/CinematicCam.Tests.csproj
+    dotnet test tests/Vista.Tests/Vista.Tests.csproj
 
 Never build the plugin with bare `dotnet build` — `DALAMUD_HOME` must be set.
 

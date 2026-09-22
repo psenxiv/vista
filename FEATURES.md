@@ -22,7 +22,7 @@ separate task, decided with the switchboard.
 **Why deferred:** the serialisable data model ships in v1 regardless, because
 the plugin config needs it. What export adds on top is file pickers, import
 validation and version migration, none of which help
-testing. As long as `CinematicCam.Core` stays free of game types, adding this
+testing. As long as `Vista.Core` stays free of game types, adding this
 later is a UI layer rather than a refactor.
 
 **Cost when picked up:** small.

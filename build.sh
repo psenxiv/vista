@@ -5,4 +5,4 @@ if [ ! -f "$DALAMUD_HOME/Dalamud.dll" ]; then
   echo "Dalamud dev assemblies not found at: $DALAMUD_HOME" >&2
   exit 1
 fi
-dotnet build src/CinematicCam.Plugin/CinematicCam.Plugin.csproj -c Debug "$@"
+dotnet build src/Vista.Plugin/Vista.Plugin.csproj -c Debug "$@"

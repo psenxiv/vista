@@ -9,7 +9,7 @@
    folder containing it. A directory path is rejected with "not a valid path to
    a potential Dev Plugin". The Wine prefix maps `Z:` to the macOS root:
 
-       Z:\Users\<your-macos-username>\code\ffxiv-projects\cinematic-camera\src\CinematicCam.Plugin\bin\Debug\CinematicCam.dll
+       Z:\Users\<your-macos-username>\code\ffxiv-projects\cinematic-camera\src\Vista.Plugin\bin\Debug\Vista.dll
 
    Substitute your own username. `Z:` maps to the macOS root, so this is just
    the absolute path to the repo with backslashes.
@@ -22,7 +22,7 @@
 ## Each iteration
 
 1. On macOS: `./build.sh`
-2. In game: `/xlplugins` -> **Dev Tools** tab -> find **Cinematic Cam** ->
+2. In game: `/xlplugins` -> **Dev Tools** tab -> find **Vista** ->
    click the reload icon.
 3. No game restart required. If reload does not pick up changes, record that
    here and restart the game instead.
@@ -49,7 +49,7 @@ game restart:
 
 Filter to this plugin:
 
-    grep CinematicCam ~/Library/Application\ Support/XIV\ on\ Mac/logs/dalamud.log | tail -40
+    grep Vista ~/Library/Application\ Support/XIV\ on\ Mac/logs/dalamud.log | tail -40
 
 ## Build environment reference
 
