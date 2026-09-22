@@ -15,16 +15,15 @@ internal sealed class WatchTargetWindow : Window
     private const float FieldWidth = 70f;
 
     private readonly CameraSession session;
-    private readonly PendingField fields;
     private string search = string.Empty;
     private float? smoothingDrag;
     private Guid openedFor;
+    private bool dragging;
 
-    public WatchTargetWindow(CameraSession session, PendingField fields)
+    public WatchTargetWindow(CameraSession session)
         : base("Watch Target###vista-watch-target", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.session = session;
-        this.fields = fields;
         RespectCloseHotkey = false;
     }
 
@@ -42,11 +41,11 @@ internal sealed class WatchTargetWindow : Window
         if (session.Mode != CameraMode.Editing || session.EditedTrackId != openedFor || session.Track.Aim != AimMode.WatchTarget) IsOpen = false;
     }
 
-    /// <summary>Applies an unfinished aim height and drops an unfinished smoothing drag, since a closed window never reports either finishing.</summary>
+    /// <summary>Drops an unfinished smoothing drag and ends a live drag, since a closed window never reports either letting go.</summary>
     public override void OnClose()
     {
-        fields.Commit();
         smoothingDrag = null;
+        LiveDrag.End(session, ref dragging);
     }
 
     public override void Draw()
@@ -66,11 +65,14 @@ internal sealed class WatchTargetWindow : Window
         if (ImGui.Button("Done", new Vector2(ListWidth, 0f))) IsOpen = false;
     }
 
-    /// <summary>The aim height above the character's feet, as a labelled field.</summary>
+    /// <summary>The aim height above the character's feet: a labelled drag field, live and one undo step per drag.</summary>
     private void DrawAimHeight()
     {
         Label("Aim height");
-        fields.Draw("aim-height", session.Track.AimHeight, "%.1f", FieldWidth, v => Report(session.SetAimHeight(v)));
+        var height = session.Track.AimHeight;
+        var changed = BorderedField.Draw("aim-height", "Aim height", null, ref height, 0.02f, "%.2f", FieldWidth);
+        // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
+        LiveDrag.Handle(session, changed, () => _ = session.PreviewAimHeight(height), ref dragging);
     }
 
     /// <summary>The smoothing slider; a drag is applied as one undo step when it lets go.</summary>

@@ -61,8 +61,8 @@ public sealed class Plugin : IDalamudPlugin
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
         pointWindow = new PointWindow(Session, pointGizmo);
         timingWindow = new TimingWindow(Session);
-        watchTargetWindow = new WatchTargetWindow(Session, fields);
-        followTargetWindow = new FollowTargetWindow(Session, fields);
+        watchTargetWindow = new WatchTargetWindow(Session);
+        followTargetWindow = new FollowTargetWindow(Session);
         trackEditor = new TrackEditorWindow(Session, fields, timingWindow, watchTargetWindow, followTargetWindow);
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);

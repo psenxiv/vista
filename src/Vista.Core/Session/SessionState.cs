@@ -540,6 +540,14 @@ public sealed class SessionState
     /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
     public Orbit? FollowOrbit => Local is { Aim: AimMode.FollowTarget, Points.Count: 1 } local ? Tracks.FollowOrbit.Of(local.Points[0]) : null;
 
+    /// <summary>During a live edit, sets the aim height without recording a step. Returns why it was refused, or null.</summary>
+    public string? PreviewAimHeight(float yalms)
+    {
+        if (liveEditStart is null) return "No live edit is in progress.";
+        Local = TrackEditing.SetAimHeight(Local, yalms);
+        return null;
+    }
+
     /// <summary>During a live edit, moves the Follow Target point to <paramref name="orbit"/> without recording a step. Returns why it was refused, or null.</summary>
     public string? PreviewFollowOrbit(Orbit orbit)
     {

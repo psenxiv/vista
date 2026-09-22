@@ -424,6 +424,9 @@ internal sealed class CameraSession
     /// <summary>Ends a live edit as one undo step if anything changed.</summary>
     public void EndLiveEdit() => state.EndLiveEdit();
 
+    /// <summary>During a live edit, sets the aim height. Returns why it was refused, or null.</summary>
+    public string? PreviewAimHeight(float yalms) => state.PreviewAimHeight(yalms);
+
     /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
     public Orbit? FollowOrbit => state.FollowOrbit;
 

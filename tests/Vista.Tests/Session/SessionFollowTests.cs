@@ -287,4 +287,22 @@ public class SessionFollowTests
         recorded.BeginLiveEdit();
         Assert.NotNull(recorded.PreviewFollowOrbit(new Orbit(5f, 0f, 2f)));
     }
+
+    [Fact]
+    public void DraggingTheAimHeightIsLiveAndOneUndoStep()
+    {
+        var (state, _) = FollowingGuard();
+        var before = state.Track.AimHeight;
+
+        Assert.NotNull(state.PreviewAimHeight(2f));
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewAimHeight(2f));
+        Assert.Equal(2f, state.Track.AimHeight);
+        Assert.Null(state.PreviewAimHeight(2.5f));
+        state.EndLiveEdit();
+
+        Assert.Equal(2.5f, state.Track.AimHeight);
+        Assert.True(state.Undo());
+        Assert.Equal(before, state.Track.AimHeight);
+    }
 }
