@@ -52,6 +52,8 @@ internal sealed class EditorLayer
             AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false));
             if (other.AnchorPlaced)
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
+            if (other is { Aim: AimMode.LookAt, LookAtPlaced: true })
+                markers.Add(new TrackMarker(other.Id, -1, overlay.DrawLookAt(view, otherWorld.LookAt, FirstPosition(otherWorld), edited: false, selected: false), MarkerKind.LookAt));
         }
 
         var track = gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
@@ -63,6 +65,9 @@ internal sealed class EditorLayer
         var editedLocal = SceneEditing.Get(scene, edited);
         if (editedLocal.AnchorPlaced)
             markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
+        if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
+            markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: session.SelectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
+        if (session.CharacterAim(track) is { } characterAim) overlay.DrawTargetMarker(view, characterAim);
         if (scene.AnchorPlaced)
             markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, session.SelectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
 
@@ -93,7 +98,7 @@ internal sealed class EditorLayer
         ImGui.PopStyleVar();
     }
 
-    /// <summary>Selects a clicked point or anchor, switching to its track first when it isn't the edited one; a click on empty space clears the selection.</summary>
+    /// <summary>Selects a clicked point, anchor or Look At point, switching to its track first when it isn't the edited one; a click on empty space clears the selection.</summary>
     private void Apply(ClickOutcome outcome, IReadOnlyList<TrackMarker> markers)
     {
         switch (outcome.Kind)
@@ -104,6 +109,7 @@ internal sealed class EditorLayer
                 {
                     MarkerKind.SceneAnchor => session.SelectSceneAnchor(),
                     MarkerKind.TrackAnchor => session.SelectTrackAnchor(hit.Track),
+                    MarkerKind.LookAt => session.SelectLookAt(hit.Track),
                     _ when hit.Track == session.EditedTrackId => Select(hit.Point),
                     _ => session.SelectPoint(hit.Track, hit.Point),
                 };

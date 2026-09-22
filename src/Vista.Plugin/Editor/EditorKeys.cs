@@ -45,7 +45,7 @@ internal sealed class EditorKeys
             VirtualKey.OEM_3 => session.AddToEnd(),
             VirtualKey.Z => session.Undo() ? null : "Nothing to undo.",
             VirtualKey.Y => session.Redo() ? null : "Nothing to redo.",
-            VirtualKey.R when session.Selected is not null || session.SelectedAnchor is not null => Toggle(gizmo),
+            VirtualKey.R when session.Selected is not null || session.SelectedAnchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
             VirtualKey.DELETE or VirtualKey.BACK => session.DeleteSelected(),
             _ => null,
         };

@@ -11,7 +11,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The selected point's or anchor's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
+/// <summary>The selected point's, anchor's or Look At point's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
 {
     private const float FieldWidth = 70f;
@@ -46,6 +46,7 @@ internal sealed class PointWindow : Window
         {
             (_, AnchorKind.Scene, _) => "Scene anchor###vista-point",
             (_, AnchorKind.Track, _) => "Track anchor###vista-point",
+            (_, AnchorKind.LookAt, _) => "Look At point###vista-point",
             ({ } index, _, _) => $"Point {index + 1}###vista-point",
             _ => WindowName,
         };
@@ -57,8 +58,14 @@ internal sealed class PointWindow : Window
     public override void Draw()
     {
         Anchor? anchor = null;
+        Vector3? lookAt = null;
         var index = -1;
-        if (session.SelectedAnchor is not null)
+        if (session.SelectedAnchor == AnchorKind.LookAt)
+        {
+            if (session.SelectedLookAtInWorld is not { } point) return;
+            lookAt = point;
+        }
+        else if (session.SelectedAnchor is not null)
         {
             if (session.SelectedAnchorInWorld is not { } a) return;
             anchor = a;
@@ -67,27 +74,30 @@ internal sealed class PointWindow : Window
         else return;
 
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
-        if (!DrawHeader(anchor is null ? index : null)) return;
+        if (!DrawHeader(index >= 0 ? index : null, rotates: lookAt is null)) return;
 
         using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
         if (!ImGui.BeginTable("fields", 4, ImGuiTableFlags.SizingFixedFit)) return;
 
-        if (anchor is { } shownAnchor) DrawAnchorRows(shownAnchor);
+        if (lookAt is { } shownLookAt) DrawLookAtRows(shownLookAt);
+        else if (anchor is { } shownAnchor) DrawAnchorRows(shownAnchor);
         else DrawPointRows(index, session.Track.Points[index]);
 
         ImGui.EndTable();
         fieldsWidth = ImGui.GetItemRectSize().X;
     }
 
-    /// <summary>Gizmo mode, then copy, paste and delete, disabled for an anchor; false once the point is deleted.</summary>
-    private bool DrawHeader(int? pointIndex)
+    /// <summary>Gizmo mode, with Rotate disabled when the selection only moves, then copy, paste and delete, disabled unless a point; false once the point is deleted.</summary>
+    private bool DrawHeader(int? pointIndex, bool rotates)
     {
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Gizmo");
         ImGui.SameLine();
-        if (ImGui.RadioButton("Move", gizmo.Mode == GizmoMode.Move)) gizmo.SetMode(GizmoMode.Move);
+        if (ImGui.RadioButton("Move", !rotates || gizmo.Mode == GizmoMode.Move)) gizmo.SetMode(GizmoMode.Move);
         ImGui.SameLine();
-        if (ImGui.RadioButton("Rotate", gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
+        ImGui.BeginDisabled(!rotates);
+        if (ImGui.RadioButton("Rotate", rotates && gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
+        ImGui.EndDisabled();
 
         // Right-align to last frame's field grid, not the window: the window sizes itself to its content.
         var gap = ImGui.GetStyle().ItemSpacing.X;
@@ -112,7 +122,7 @@ internal sealed class PointWindow : Window
         return !deleted;
     }
 
-    /// <summary>The point's position, rotation and FoV rows; pitch and yaw are disabled under direction of travel.</summary>
+    /// <summary>The point's position, rotation and FoV rows; pitch and yaw are disabled under Direction of travel and Look At.</summary>
     private void DrawPointRows(int index, ControlPoint point)
     {
         ImGui.TableNextRow();
@@ -122,7 +132,7 @@ internal sealed class PointWindow : Window
         RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
 
         ImGui.TableNextRow();
-        ImGui.BeginDisabled(session.Track.Aim == AimMode.PathTangent);
+        ImGui.BeginDisabled(session.Track.Aim is AimMode.PathTangent or AimMode.LookAt);
         PointField($"pitch{index}", "Pitch", EditorColours.AxisX, index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
         PointField($"yaw{index}", "Yaw", EditorColours.AxisY, index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
         ImGui.EndDisabled();
@@ -152,6 +162,25 @@ internal sealed class PointWindow : Window
         MissingField("anchor-fov", "FoV", null);
     }
 
+    /// <summary>The Look At point's rows: X, Y and Z move it, and rotation and FoV show "—".</summary>
+    private void DrawLookAtRows(Vector3 lookAt)
+    {
+        ImGui.TableNextRow();
+        LookAtField("look-x", "X", EditorColours.AxisX, lookAt.X, (p, v) => p with { X = EditLimits.Coordinate(v, p.X) });
+        LookAtField("look-y", "Y", EditorColours.AxisY, lookAt.Y, (p, v) => p with { Y = EditLimits.Coordinate(v, p.Y) });
+        LookAtField("look-z", "Z", EditorColours.AxisZ, lookAt.Z, (p, v) => p with { Z = EditLimits.Coordinate(v, p.Z) });
+        RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
+
+        ImGui.TableNextRow();
+        MissingField("look-pitch", "Pitch", EditorColours.AxisX);
+        MissingField("look-yaw", "Yaw", EditorColours.AxisY);
+        MissingField("look-roll", "Roll", EditorColours.AxisZ);
+        RowIcon(FontAwesomeIcon.SyncAlt, "Rotation");
+
+        ImGui.TableNextRow();
+        MissingField("look-fov", "FoV", null);
+    }
+
     /// <summary>A point's field: dragging moves the point live, and each drag is one undo step.</summary>
     private void PointField(string id, string name, uint? border, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
     {
@@ -170,6 +199,16 @@ internal sealed class PointWindow : Window
         var changed = BorderedField(id, name, border, ref edited, speed, format);
         if (ImGui.IsItemActivated()) session.BeginLiveEdit();
         if (changed && session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
+        if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
+    }
+
+    /// <summary>A Look At point's field: dragging moves it live, and each drag is one undo step.</summary>
+    private void LookAtField(string id, string name, uint border, float value, Func<Vector3, float, Vector3> set)
+    {
+        var edited = value;
+        var changed = BorderedField(id, name, border, ref edited, PositionSpeed, "%.2f");
+        if (ImGui.IsItemActivated()) session.BeginLiveEdit();
+        if (changed && session.SelectedLookAtInWorld is { } current) _ = session.PreviewLookAt(set(current, edited));
         if (ImGui.IsItemDeactivated()) session.EndLiveEdit();
     }
 

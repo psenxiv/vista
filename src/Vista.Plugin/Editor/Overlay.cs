@@ -22,6 +22,8 @@ internal sealed class Overlay
     private const float SceneAnchorArrow = 1.6f;
     private const int AnchorSegments = 24;
     private const float NameGap = 4f;
+    private const float LookAtCross = 0.5f;
+    private const float TargetCross = 0.25f;
 
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
@@ -90,6 +92,27 @@ internal sealed class Overlay
         return view.ToScreen(world.Position);
     }
 
+    /// <summary>A Look At point: a crosshair in the anchor colour and a faint line to the first point. Returns its centre on screen, or null.</summary>
+    public Vector2? DrawLookAt(EditorView view, Vector3 world, Vector3? firstPoint, bool edited, bool selected)
+    {
+        var list = ImGui.GetBackgroundDrawList();
+        var colour = selected ? EditorColours.Selected : edited ? EditorColours.Anchor : EditorColours.OtherAnchor;
+        if (firstPoint is { } first) DrawEdge(list, view, world, first, edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink, GlyphThickness);
+        DrawCross(list, view, world, LookAtCross, colour, selected ? SelectedGlyphThickness : GlyphThickness);
+        return view.ToScreen(world);
+    }
+
+    /// <summary>The aim point on a followed character: a small crosshair in the anchor colour.</summary>
+    public void DrawTargetMarker(EditorView view, Vector3 world)
+        => DrawCross(ImGui.GetBackgroundDrawList(), view, world, TargetCross, EditorColours.Anchor, GlyphThickness);
+
+    private static void DrawCross(ImDrawListPtr list, EditorView view, Vector3 centre, float size, uint colour, float thickness)
+    {
+        DrawEdge(list, view, centre - (Vector3.UnitX * size), centre + (Vector3.UnitX * size), colour, thickness);
+        DrawEdge(list, view, centre - (Vector3.UnitY * size), centre + (Vector3.UnitY * size), colour, thickness);
+        DrawEdge(list, view, centre - (Vector3.UnitZ * size), centre + (Vector3.UnitZ * size), colour, thickness);
+    }
+
     /// <summary>An offset on the ground at angle <paramref name="angle"/>, measured like yaw.</summary>
     private static Vector3 Ring(float angle, float radius) => Anchor.Turn(new Vector3(0f, 0f, -radius), angle);
 
@@ -130,11 +153,14 @@ internal sealed class Overlay
         }
     }
 
-    /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: recorded, or along the path in Direction-of-travel mode.</summary>
+    /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: at the Look At point, along the path in Direction-of-travel mode, or recorded.</summary>
     private static (Vector3 Forward, float Roll, float Fov) Pose(Track track, TrackCache cache, int index)
     {
         var point = track.Points[index];
-        if (track.Aim == AimMode.AimKeys)
+        if (track is { Aim: AimMode.LookAt, LookAtPlaced: true } && TrackAim.Toward(point.Position, track.LookAt) is { } toward)
+            return (FreeCamMotion.LookAtFrom(Vector3.Zero, toward.Yaw, toward.Pitch), point.Roll, point.Fov);
+
+        if (track.Aim != AimMode.PathTangent)
             return (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
 
         if (!ReferenceEquals(cache.EvaluatedTrack, track))

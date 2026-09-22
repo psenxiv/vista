@@ -9,7 +9,7 @@ using Dalamud.Game.ClientState.Keys;
 
 namespace Vista.Plugin.Editor;
 
-/// <summary>The move gizmo and yaw ring on the selected anchor; a drag previews live and holding Alt moves the anchor alone.</summary>
+/// <summary>The move gizmo and yaw ring on the selected anchor, or the move gizmo alone on the Look At point; a drag previews live and holding Alt moves an anchor alone.</summary>
 internal sealed unsafe class AnchorGizmo
 {
     private const int MoveId = 10;
@@ -47,7 +47,7 @@ internal sealed unsafe class AnchorGizmo
             Reset();
         }
 
-        if (session.SelectedAnchor is not { } kind || session.SelectedAnchorInWorld is not { } anchor)
+        if (session.SelectedAnchor is not { } kind || Shown(session, kind) is not { } anchor)
         {
             Hot = false;
             dragStart = null;
@@ -61,7 +61,7 @@ internal sealed unsafe class AnchorGizmo
 
         var shown = dragStart ?? anchor;
         if (dragStart is null) matrix = PoseMatrix.From(shown.Position, shown.Yaw, 0f, 0f);
-        var rotate = dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate;
+        var rotate = kind != AnchorKind.LookAt && (dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate);
         ImGuizmo.SetID(rotate ? YawId : MoveId);
         Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate ? ImGuizmoMode.Local : ImGuizmoMode.World);
         var usingNow = ImGuizmo.IsUsing();
@@ -87,8 +87,10 @@ internal sealed unsafe class AnchorGizmo
             var edited = rotate
                 ? dragStart.Value with { Yaw = TrackAim.FromDirection(-new Vector3(matrix.M31, matrix.M32, matrix.M33)).Yaw }
                 : dragStart.Value with { Position = matrix.Translation };
-            var carry = !PhysicalKeys.IsDown(VirtualKey.MENU);
-            if (session.PreviewAnchor(edited, carry) is { } refusal)
+            var refusal = kind == AnchorKind.LookAt
+                ? session.PreviewLookAt(edited.Position)
+                : session.PreviewAnchor(edited, carry: !PhysicalKeys.IsDown(VirtualKey.MENU));
+            if (refusal is not null)
             {
                 Plugin.Log.Warning("[editor] anchor drag abandoned: {Refusal}", refusal);
                 dragStart = null;
@@ -104,6 +106,13 @@ internal sealed unsafe class AnchorGizmo
             dragStart = null;
             session.EndLiveEdit();
         }
+    }
+
+    /// <summary>The selected anchor in the world, or the Look At point as an anchor with no yaw.</summary>
+    private static Anchor? Shown(CameraSession session, AnchorKind kind)
+    {
+        if (kind != AnchorKind.LookAt) return session.SelectedAnchorInWorld;
+        return session.SelectedLookAtInWorld is { } point ? new Anchor(point, 0f) : null;
     }
 
     private void Manipulate(EditorView view, ImGuizmoOperation operation, ImGuizmoMode space)
