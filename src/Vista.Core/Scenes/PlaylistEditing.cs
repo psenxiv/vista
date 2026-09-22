@@ -57,9 +57,9 @@ public static class PlaylistEditing
         return -1;
     }
 
-    /// <summary>True when an entry holds the playlist for good: no loop count and a looping track.</summary>
+    /// <summary>True when an entry holds the playlist for good: no loop count and a looping track with points.</summary>
     public static bool HoldsPlaylist(Scene scene, PlaylistEntry entry)
-        => entry.Loops is null && SceneEditing.Get(scene, entry.TrackId).Loop;
+        => entry.Loops is null && SceneEditing.Get(scene, entry.TrackId) is { Loop: true, Points.Count: > 0 };
 
     /// <summary>True when an entry's track has points, so Live has something to play.</summary>
     public static bool CanPlay(Scene scene) => scene.Playlist.Any(e => SceneEditing.Get(scene, e.TrackId).Points.Count > 0);

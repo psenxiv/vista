@@ -85,6 +85,16 @@ public class PlaylistEditingTests
     }
 
     [Fact]
+    public void ALoopingTrackWithNoPointsDoesNotHoldThePlaylist()
+    {
+        var scene = TwoTracks();
+        scene = SceneEditing.Replace(scene, TrackEditing.SetLoop(scene.Tracks[1], true));
+        var (a, _) = PlaylistEditing.Add(scene, scene.Tracks[1].Id);
+
+        Assert.False(PlaylistEditing.HoldsPlaylist(a, a.Playlist[0]));
+    }
+
+    [Fact]
     public void ThePlaylistCanPlayOnlyWithAnEntryWhoseTrackHasPoints()
     {
         var scene = TwoTracks();
