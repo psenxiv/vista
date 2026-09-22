@@ -65,7 +65,7 @@ public static class TrackAim
         var m0 = (p2 - p0) / 2f;
         var m1 = (p3 - p1) / 2f;
 
-        return Hermite(p1, p2, m0, m1, fraction);
+        return Hermite.At(p1, p2, m0, m1, fraction);
     }
 
     /// <summary>The path's direction of travel, pitch-clamped, falling back to the nearest valid direction where coincident points collapse the derivative.</summary>
@@ -148,17 +148,6 @@ public static class TrackAim
 
     private static (float Yaw, float Pitch) ClampPitch((float Yaw, float Pitch) aim)
         => (aim.Yaw, Math.Clamp(aim.Pitch, -PitchLimit, PitchLimit));
-
-    private static float Hermite(float p0, float p1, float m0, float m1, float t)
-    {
-        var t2 = t * t;
-        var t3 = t2 * t;
-        var h00 = (2f * t3) - (3f * t2) + 1f;
-        var h10 = t3 - (2f * t2) + t;
-        var h01 = (-2f * t3) + (3f * t2);
-        var h11 = t3 - t2;
-        return (h00 * p0) + (h10 * m0) + (h01 * p1) + (h11 * m1);
-    }
 
     /// <summary>Endpoints duplicate to supply the phantom values, matching <c>CatmullRom</c>.</summary>
     private static float GetValue(IReadOnlyList<float> values, int index)

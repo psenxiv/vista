@@ -45,7 +45,7 @@ public sealed class TimingCurve
 
         var m0 = _outTangent[k] * span;
         var m1 = _inTangent[k + 1] * span;
-        return Hermite(k0.Position, k1.Position, m0, m1, localT);
+        return Hermite.At(k0.Position, k1.Position, m0, m1, localT);
     }
 
     private int FindInterval(double t)
@@ -59,17 +59,6 @@ public sealed class TimingCurve
         }
 
         return lo;
-    }
-
-    private static float Hermite(float p0, float p1, float m0, float m1, float t)
-    {
-        var t2 = t * t;
-        var t3 = t2 * t;
-        var h00 = (2f * t3) - (3f * t2) + 1f;
-        var h10 = t3 - (2f * t2) + t;
-        var h01 = (-2f * t3) + (3f * t2);
-        var h11 = t3 - t2;
-        return (h00 * p0) + (h10 * m0) + (h01 * p1) + (h11 * m1);
     }
 
     /// <summary>Raw (pre-clamp) in/out tangent per key, then a monotonicity clamp per interval.</summary>
