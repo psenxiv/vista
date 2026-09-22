@@ -87,6 +87,17 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void RenameTrimsTheName()
+    {
+        var scene = Three();
+        var id = scene.Tracks[1].Id;
+
+        var renamed = SceneEditing.Rename(scene, id, "  Crane  ");
+
+        Assert.Equal("Crane", renamed.Tracks[1].Name);
+    }
+
+    [Fact]
     public void DuplicateInsertsACopyAfterTheOriginalWithANewIdAndCopyName()
     {
         var scene = Three();

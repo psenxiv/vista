@@ -40,6 +40,7 @@ public static class SceneEditing
     public static Scene Rename(Scene scene, Guid id, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A track needs a name.");
+        name = name.Trim();
         var track = Get(scene, id);
         return track.Name == name ? scene : Replace(scene, track with { Name = name });
     }

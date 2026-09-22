@@ -32,6 +32,7 @@ internal sealed unsafe class HierarchyPanel
         // Rows can delete or reorder tracks, so every row reads this snapshot.
         var scene = session.Scene;
         var edited = session.EditedTrackId;
+        if (renaming is { } id && (!editing || SceneEditing.IndexOf(scene, id) < 0)) renaming = null;
         ImGui.BeginDisabled(!editing);
         var footer = ImGui.GetFrameHeightWithSpacing();
         if (ImGui.BeginChild("tracks", new Vector2(0f, -footer)))
