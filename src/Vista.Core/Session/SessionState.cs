@@ -435,7 +435,7 @@ public sealed class SessionState
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
     public bool Scrubbing { get; private set; }
 
-    /// <summary>Seconds under the scrub head: playback time while live, otherwise the last scrubbed or jumped-to time.</summary>
+    /// <summary>Seconds under the scrub head: shot time while live, otherwise the last scrubbed or jumped-to time.</summary>
     public double ScrubHead => Mode == CameraMode.Live ? Director.ShotTime : Math.Min(scrubTime, Duration);
 
     /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect when off.</summary>

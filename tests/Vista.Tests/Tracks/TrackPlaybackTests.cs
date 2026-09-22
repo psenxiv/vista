@@ -45,7 +45,7 @@ public class TrackPlaybackTests
     }
 
     [Fact]
-    public void AFinishedOnceTrackHoldsItsLastFrame()
+    public void AFinishedForwardTrackHoldsItsLastFrame()
     {
         var playback = new TrackPlayback(StraightTrack(false));
 
@@ -64,7 +64,7 @@ public class TrackPlaybackTests
     {
         var playback = new TrackPlayback(StraightTrack(true));
 
-        var wrapped = playback.Advance(10f); // exactly the duration: wraps to elapsed 0
+        var wrapped = playback.Advance(10f); // exactly the duration: wraps to shot time 0
         Assert.False(playback.IsFinished);
         Assert.Equal(0.0, playback.ShotTime, 5);
 
@@ -132,7 +132,7 @@ public class TrackPlaybackTests
     }
 
     [Fact]
-    public void SeekOnceClampsAndFinishesAtTheEnd()
+    public void SeekForwardClampsAndFinishesAtTheEnd()
     {
         var playback = new TrackPlayback(StraightTrack(false));
         playback.Seek(4.0);
@@ -173,6 +173,15 @@ public class TrackPlaybackTests
 
         playback.Seek(-1.0);
         Assert.Equal(0.0, playback.ShotTime, 5);
+    }
+
+    [Fact]
+    public void SeekingALoopingReverseShotToItsStartShowsItsEnd()
+    {
+        var playback = new TrackPlayback(StraightTrack(true, PlaybackDirection.Reverse));
+        playback.Seek(0.0);
+        Assert.Equal(10.0, playback.ShotTime, 5);
+        Assert.False(playback.IsFinished);
     }
 
     [Fact]
@@ -223,7 +232,7 @@ public class TrackPlaybackTests
     }
 
     [Fact]
-    public void PingPongOnceFinishesAfterTwiceTheShot()
+    public void PingPongFinishesAfterTwiceTheShot()
     {
         var playback = new TrackPlayback(StraightTrack(false, PlaybackDirection.PingPong));
         playback.Advance(19.5f);

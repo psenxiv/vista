@@ -373,7 +373,7 @@ public class SessionEditingTests
     }
 
     [Fact]
-    public void ScrubbingAFinishedOnceShotBackUnfinishesIt()
+    public void ScrubbingAFinishedForwardShotBackUnfinishesIt()
     {
         var state = Editing();
         state.Play();

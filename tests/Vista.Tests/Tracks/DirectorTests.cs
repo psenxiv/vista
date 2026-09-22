@@ -191,7 +191,7 @@ public class DirectorTests
     }
 
     [Fact]
-    public void IsFinishedIsFalseUntilAOnceTrackReachesItsEnd()
+    public void IsFinishedIsFalseUntilATrackThatDoesNotLoopReachesItsEnd()
     {
         var director = new Director();
         director.GoLive(new TrackShot(StraightTrack()));

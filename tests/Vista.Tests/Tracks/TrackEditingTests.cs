@@ -27,7 +27,7 @@ public class TrackEditingTests
     private static float Total(Track track) => (float)new TrackEvaluator(track).Duration;
 
     [Fact]
-    public void EmptyHasNoPointsNoKeysAndPlaysOnce()
+    public void EmptyHasNoPointsNoKeysAndPlaysForwardWithoutLooping()
     {
         var track = TrackEditing.Empty();
 

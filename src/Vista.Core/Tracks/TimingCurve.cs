@@ -1,6 +1,6 @@
 namespace Vista.Core.Tracks;
 
-/// <summary>Maps elapsed time to a place on the path, in path units, via a monotone cubic Hermite curve.</summary>
+/// <summary>Maps time in the shot to a place on the path, in path units, via a monotone cubic Hermite curve.</summary>
 public sealed class TimingCurve
 {
     /// <summary>Below this, a secant is treated as a hold rather than divided by.</summary>
