@@ -47,7 +47,8 @@ public class GizmoEditTests
     {
         var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Yaw), Matrix4x4.CreateRotationY(0.3f));
         var edited = GizmoEdit.Rotate(Original, GimbalRing.Yaw, dragged);
-        Assert.Equal(0.3f, MathF.Abs(Delta(edited.Yaw, Original.Yaw)), 4);
+        // Ry(t) * frame turns forward about up by +t, so the yaw rises by the drag angle.
+        Assert.Equal(0.3f, Delta(edited.Yaw, Original.Yaw), 4);
         Assert.Equal(Original with { Yaw = edited.Yaw }, edited);
     }
 
@@ -56,18 +57,20 @@ public class GizmoEditTests
     {
         var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(0.2f));
         var edited = GizmoEdit.Rotate(Original, GimbalRing.Pitch, dragged);
-        Assert.Equal(0.2f, MathF.Abs(edited.Pitch - Original.Pitch), 4);
+        // Rx(p) * frame leaves row 3 as the back vector for pitch + p, so the pitch rises by the drag angle.
+        Assert.Equal(0.2f, edited.Pitch - Original.Pitch, 4);
         Assert.Equal(Original with { Pitch = edited.Pitch }, edited);
     }
 
     [Fact]
     public void ThePitchRingStopsAtThePitchLimit()
     {
+        // pitch + phi, so +2 rad takes 0.3 to 2.3 and -2 rad takes it to -1.7; each clamps to its own end.
         var up = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(2f));
         var down = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(-2f));
-        var pitches = new[] { GizmoEdit.Rotate(Original, GimbalRing.Pitch, up).Pitch, GizmoEdit.Rotate(Original, GimbalRing.Pitch, down).Pitch };
-        Assert.Contains(pitches, p => MathF.Abs(p - TrackAim.PitchLimit) < 1e-4f);
-        Assert.Contains(pitches, p => MathF.Abs(p + TrackAim.PitchLimit) < 1e-4f);
+
+        Assert.Equal(TrackAim.PitchLimit, GizmoEdit.Rotate(Original, GimbalRing.Pitch, up).Pitch, 4);
+        Assert.Equal(-TrackAim.PitchLimit, GizmoEdit.Rotate(Original, GimbalRing.Pitch, down).Pitch, 4);
     }
 
     [Fact]
@@ -75,7 +78,9 @@ public class GizmoEditTests
     {
         var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Roll), Matrix4x4.CreateRotationZ(0.5f));
         var edited = GizmoEdit.Rotate(Original, GimbalRing.Roll, dragged);
-        Assert.Equal(0.5f, MathF.Abs(Delta(edited.Roll, Original.Roll)), 4);
+        // Row 3 is back, not forward, so a +psi turn about the frame's own Z is a -psi turn
+        // about the view direction, which is what ToPose measures the roll against.
+        Assert.Equal(-0.5f, Delta(edited.Roll, Original.Roll), 4);
         Assert.Equal(Original with { Roll = edited.Roll }, edited);
     }
 
