@@ -641,4 +641,77 @@ public class TrackEditingTests
         Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 1));
         Assert.Equal(new Vector3(20f, 0f, 0f), track.Points[0].Position);
     }
+
+    private static Track Track(float[] xs, params TimingKey[] keys)
+    {
+        var points = xs.Select(x => Point(x, 0f, 0f)).ToList();
+        return new Track(points, keys, AimMode.AimKeys, PlaybackMode.Once);
+    }
+
+    private static TimingKey Manual(float time, float position, float inSlope, float outSlope)
+        => new(time, position, TangentMode.Manual, TangentMode.Manual, inSlope, outSlope);
+
+    private static int KeyAt(Track track, float time)
+        => track.Timing.Select((k, i) => (k, i)).Single(p => MathF.Abs(p.k.Time - time) < 1e-4f).i;
+
+    private static void AssertSlopesKept(Track before, Track after, params (float Time, KeySide Side)[] sides)
+    {
+        var was = new TrackEvaluator(before);
+        var now = new TrackEvaluator(after);
+        foreach (var (time, side) in sides)
+            Assert.Equal(was.SideSlope(KeyAt(before, time), side), now.SideSlope(KeyAt(after, time), side), 3);
+    }
+
+    [Fact]
+    public void InsertAfterKeepsManualSlopesInDistancePerSecond()
+    {
+        // Leg 0..10 m over 0..5 s, split at x = 4 (share 0.4); every secant is 2 m/s and every Manual side 2 or 2.5 m/s.
+        var track = Track(
+            new[] { 0f, 10f, 20f },
+            new TimingKey(0f, 0f, OutMode: TangentMode.Manual, OutTangent: 0.2f),
+            Manual(1f, 0.2f, 0.25f, 0.25f),
+            Manual(4f, 0.8f, 0.2f, 0.2f),
+            new TimingKey(5f, 1f, InMode: TangentMode.Manual, InTangent: 0.2f),
+            new TimingKey(10f, 2f));
+
+        var result = TrackEditing.InsertAfter(track, 0, Point(4f, 0f, 0f));
+
+        AssertSlopesKept(track, result, (0f, KeySide.Out), (1f, KeySide.In), (1f, KeySide.Out), (4f, KeySide.In), (4f, KeySide.Out), (5f, KeySide.In));
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointKeepsManualSlopesInDistancePerSecond()
+    {
+        // Legs of 6 and 14 m merge into one of 20 m; every Manual side is 2 m/s, at most twice its secant.
+        var track = Track(
+            new[] { 0f, 6f, 20f },
+            new TimingKey(0f, 0f, OutMode: TangentMode.Manual, OutTangent: 2f / 6f),
+            Manual(2f, 0.5f, 2f / 6f, 2f / 6f),
+            new TimingKey(5f, 1f),
+            Manual(7f, 1.5f, 2f / 14f, 2f / 14f),
+            new TimingKey(10f, 2f, InMode: TangentMode.Manual, InTangent: 2f / 14f));
+
+        var result = TrackEditing.Delete(track, 1);
+
+        AssertSlopesKept(track, result, (0f, KeySide.Out), (2f, KeySide.In), (2f, KeySide.Out), (7f, KeySide.In), (7f, KeySide.Out), (10f, KeySide.In));
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointNextToATinySegmentKeepsInnerKeysInside()
+    {
+        // Leg 2 is 0.1 m against a leg 3 of a million, so its inner key would merge onto point 1's place.
+        var track = Track(
+            new[] { 0f, 10f, 10.05f, 1_000_000f },
+            new TimingKey(0f, 0f),
+            new TimingKey(5f, 1f),
+            new TimingKey(6f, 1.5f),
+            new TimingKey(10f, 2f),
+            new TimingKey(15f, 3f));
+
+        var result = TrackEditing.Delete(track, 2);
+
+        var inner = KeyAt(result, 6f);
+        Assert.True(result.Timing[inner].Position > 1f);
+        Assert.Equal(KeyRole.Inner, TrackEditing.RoleOf(result, inner));
+    }
 }

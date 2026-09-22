@@ -212,25 +212,31 @@ public static class TrackEditing
         var time = start + ((keys[endIndex].Time - start) * share);
 
         var timing = new List<TimingKey>(keys.Count + 1);
-        timing.AddRange(keys.Take(startIndex + 1));
+        timing.AddRange(keys.Take(startIndex));
+        timing.Add(Scaled(keys[startIndex], 1f, 1f / share));
         var second = new List<TimingKey>();
         for (var i = startIndex + 1; i < endIndex; i++)
         {
             var key = keys[i];
             if (MathF.Abs(key.Time - time) < MinKeyGap) continue;
             var fraction = key.Position - index;
-            if (key.Time < time) timing.Add(key with { Position = index + InsideLeg(fraction / share) });
-            else second.Add(key with { Position = index + 1 + InsideLeg((fraction - share) / (1f - share)) });
+            if (key.Time < time) timing.Add(Scaled(key, 1f / share, 1f / share) with { Position = index + InsideLeg(fraction / share) });
+            else second.Add(Scaled(key, 1f / (1f - share), 1f / (1f - share)) with { Position = index + 1 + InsideLeg((fraction - share) / (1f - share)) });
         }
 
         timing.Add(new TimingKey(time, index + 1));
         timing.AddRange(second);
-        timing.AddRange(keys.Skip(endIndex).Select(k => k with { Position = k.Position + 1 }));
+        timing.Add(Scaled(keys[endIndex], 1f / (1f - share), 1f) with { Position = keys[endIndex].Position + 1 });
+        timing.AddRange(keys.Skip(endIndex + 1).Select(k => k with { Position = k.Position + 1 }));
         return track with { Points = points, Timing = timing };
     }
 
     /// <summary>A fraction of a leg kept strictly inside it.</summary>
     private static float InsideLeg(float fraction) => Math.Clamp(fraction, 0.001f, 0.999f);
+
+    /// <summary>The key with its stored tangents multiplied, so a slope keeps its distance per second when its segment's length changes.</summary>
+    private static TimingKey Scaled(TimingKey key, float inScale, float outScale)
+        => key with { InTangent = key.InTangent * inScale, OutTangent = key.OutTangent * outScale };
 
     /// <summary>Removes point <paramref name="index"/>: a middle point's legs and hold merge, an end point's leg and hold go.</summary>
     public static Track Delete(Track track, int index)
@@ -259,13 +265,21 @@ public static class TrackEditing
         var after = MathF.Max(table.SegmentLength(index), TrackEvaluator.MinTimingLength);
         var total = before + after;
 
+        var startIndex = LastKeyIndex(keys, index - 1);
+        var endIndex = FirstKeyIndex(keys, index + 1);
+        var first = before / total;
+        var second = after / total;
+
         var timing = new List<TimingKey>(keys.Count);
-        foreach (var key in keys)
+        for (var i = 0; i < keys.Count; i++)
         {
-            if (key.Position <= index - 1) timing.Add(key);
-            else if (key.Position < index) timing.Add(key with { Position = index - 1 + ((key.Position - (index - 1)) * before / total) });
+            var key = keys[i];
+            if (i == startIndex) timing.Add(Scaled(key, 1f, first));
+            else if (key.Position <= index - 1) timing.Add(key);
+            else if (key.Position < index) timing.Add(Scaled(key, first, first) with { Position = index - 1 + InsideLeg((key.Position - (index - 1)) * first) });
             else if (key.Position == index) continue;
-            else if (key.Position < index + 1) timing.Add(key with { Position = index - 1 + ((before + ((key.Position - index) * after)) / total) });
+            else if (key.Position < index + 1) timing.Add(Scaled(key, second, second) with { Position = index - 1 + InsideLeg((before + ((key.Position - index) * after)) / total) });
+            else if (i == endIndex) timing.Add(Scaled(key, second, 1f) with { Position = key.Position - 1 });
             else timing.Add(key with { Position = key.Position - 1 });
         }
 
