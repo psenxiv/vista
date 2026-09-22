@@ -26,8 +26,9 @@ internal sealed unsafe class PlaylistPanel
     private string loopsText = string.Empty;
     private bool focusLoops;
 
-    // The mouse was over a loop cell last frame, so the list must not scroll with the wheel this frame.
-    private bool wheelOverLoops;
+    // Wheel travel over the loop cells not yet taken as a step, so a trackpad steps once per notch.
+    private float wheelCarry;
+    private bool loopsHovered;
 
     public PlaylistPanel(CameraSession session) => this.session = session;
 
@@ -38,8 +39,7 @@ internal sealed unsafe class PlaylistPanel
         var scene = session.Scene;
         var playing = session.PlayingEntry;
         if (editingLoops is { } id && (!editing || PlaylistEditing.IndexOf(scene, id) < 0)) editingLoops = null;
-        var noWheel = wheelOverLoops;
-        wheelOverLoops = false;
+        loopsHovered = false;
 
         ImGui.AlignTextToFramePadding();
         var header = playing is { } now
@@ -71,7 +71,7 @@ internal sealed unsafe class PlaylistPanel
         ImGui.Separator();
 
         ImGui.BeginDisabled(!editing);
-        if (ImGui.BeginChild("entries", new Vector2(0f, 0f), false, noWheel ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None))
+        if (ImGui.BeginChild("entries", new Vector2(0f, 0f)))
         {
             var held = false;
             for (var i = 0; i < scene.Playlist.Count; i++)
@@ -87,6 +87,7 @@ internal sealed unsafe class PlaylistPanel
 
         ImGui.EndChild();
         ImGui.EndDisabled();
+        if (!loopsHovered) wheelCarry = 0f;
     }
 
     /// <summary>One entry: its number and track, drag to reorder or drop a track on it, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
@@ -135,9 +136,10 @@ internal sealed unsafe class PlaylistPanel
         using (ImRaii.PushColor(ImGuiCol.Text, colour))
             if (ImGui.Selectable($"{text}##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight())))
                 StartLoops(entry);
+        if (editing) ImGuiP.SetItemUsingMouseWheel();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeat Count");
         if (!editing || !ImGui.IsItemHovered()) return;
-        wheelOverLoops = true;
+        loopsHovered = true;
         StepLoops(entry);
     }
 
@@ -159,7 +161,8 @@ internal sealed unsafe class PlaylistPanel
         }
 
         if (!entered && !ImGui.IsItemDeactivated()) return;
-        var count = int.TryParse(loopsText, out var n) && n > 0 ? n : (int?)null;
+        var digits = new string(loopsText.Where(char.IsAsciiDigit).ToArray());
+        var count = int.TryParse(digits, out var n) && n > 0 ? n : (int?)null;
         Report(session.SetEntryLoops(entry.Id, count));
         editingLoops = null;
     }
@@ -171,15 +174,22 @@ internal sealed unsafe class PlaylistPanel
         focusLoops = true;
     }
 
-    /// <summary>The mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>
+    /// <summary>Each whole notch of the mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>
     private void StepLoops(PlaylistEntry entry)
     {
-        var wheel = ImGui.GetIO().MouseWheel;
-        if (wheel == 0f) return;
-        int? next = wheel > 0f
-            ? Math.Min((entry.Loops ?? 0) + 1, PlaylistEditing.MaxLoops)
-            : entry.Loops is { } n && n > 1 ? n - 1 : null;
-        if (next != entry.Loops) Report(session.SetEntryLoops(entry.Id, next));
+        wheelCarry += ImGui.GetIO().MouseWheel;
+        var loops = entry.Loops;
+        while (MathF.Abs(wheelCarry) >= 1f)
+        {
+            var up = wheelCarry > 0f;
+            wheelCarry -= up ? 1f : -1f;
+            int? next = up
+                ? Math.Min((loops ?? 0) + 1, PlaylistEditing.MaxLoops)
+                : loops is { } n && n > 1 ? n - 1 : null;
+            if (next == loops) continue;
+            Report(session.SetEntryLoops(entry.Id, next));
+            loops = next;
+        }
     }
 
     /// <summary>Accepts an entry (to reorder) or a Hierarchy track (to add) dropped on the last item, placing it at <paramref name="index"/>.</summary>
