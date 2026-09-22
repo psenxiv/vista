@@ -13,7 +13,7 @@ public class TrackEvaluatorTests
         => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
 
     private static TimingKey Key(float time, float position, TangentMode mode = TangentMode.Auto)
-        => new(time, position, mode, 0f, 0f);
+        => new(time, position, mode, mode, 0f, 0f);
 
     [Fact]
     public void EvaluateReturnsNullForATrackWithNoPoints()

@@ -261,8 +261,8 @@ public class SessionStateTests
         var before = state.Track;
         var backwards = new[]
         {
-            new TimingKey(5f, 0f, TangentMode.Auto, 0f, 0f),
-            new TimingKey(0f, 1f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(5f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
+            new TimingKey(0f, 1f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
         };
 
         Assert.Equal("timing keys must have strictly increasing times", state.ChangeTrack(t => t with { Timing = backwards }));

@@ -11,7 +11,7 @@ public class TrackPlaybackTests
         => new(new Vector3(x, y, z), 0f, 0f, 1f);
 
     private static TimingKey Key(float time, float position)
-        => new(time, position, TangentMode.Auto, 0f, 0f);
+        => new(time, position, TangentMode.Auto, TangentMode.Auto, 0f, 0f);
 
     private static Track StraightTrack(PlaybackMode mode)
     {

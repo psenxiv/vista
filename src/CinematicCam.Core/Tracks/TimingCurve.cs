@@ -89,38 +89,11 @@ public sealed class TimingCurve
         for (var k = 0; k < n; k++)
         {
             var key = keys[k];
-            switch (key.Mode)
-            {
-                case TangentMode.Flat:
-                    rawIn[k] = 0f;
-                    rawOut[k] = 0f;
-                    break;
-
-                case TangentMode.Manual:
-                    rawIn[k] = key.InTangent;
-                    rawOut[k] = key.OutTangent;
-                    break;
-
-                case TangentMode.Linear:
-                    rawIn[k] = k > 0 ? delta[k - 1] : 0f;
-                    rawOut[k] = k < n - 1 ? delta[k] : 0f;
-                    break;
-
-                case TangentMode.Auto:
-                    float value;
-                    if (k == 0)
-                        value = delta[0];
-                    else if (k == n - 1)
-                        value = delta[n - 2];
-                    else
-                        value = InteriorRaw(delta[k - 1], delta[k], h[k - 1], h[k]);
-                    rawIn[k] = value;
-                    rawOut[k] = value;
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(keys), $"unknown tangent mode {key.Mode}");
-            }
+            var auto = k == 0 ? delta[0]
+                : k == n - 1 ? delta[n - 2]
+                : InteriorRaw(delta[k - 1], delta[k], h[k - 1], h[k]);
+            rawIn[k] = SideRaw(key.InMode, key.InTangent, auto, k > 0 ? delta[k - 1] : 0f);
+            rawOut[k] = SideRaw(key.OutMode, key.OutTangent, auto, k < n - 1 ? delta[k] : 0f);
         }
 
         var inTangent = new float[n];
@@ -134,6 +107,16 @@ public sealed class TimingCurve
 
         return (inTangent, outTangent);
     }
+
+    /// <summary>One side's slope before the monotone clamp.</summary>
+    private static float SideRaw(TangentMode mode, float manual, float auto, float linear) => mode switch
+    {
+        TangentMode.Auto => auto,
+        TangentMode.Linear => linear,
+        TangentMode.Flat => 0f,
+        TangentMode.Manual => manual,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), $"unknown tangent mode {mode}"),
+    };
 
     /// <summary>PCHIP weighted harmonic mean of the two neighbouring secants; 0 if either is a hold.</summary>
     private static float InteriorRaw(float deltaPrev, float deltaNext, float hPrev, float hNext)
@@ -159,13 +142,40 @@ public sealed class TimingCurve
     {
         for (var i = 0; i < keys.Count; i++)
         {
-            if (!Enum.IsDefined(keys[i].Mode))
+            if (!Enum.IsDefined(keys[i].InMode) || !Enum.IsDefined(keys[i].OutMode))
                 throw new ArgumentException($"timing key {i} has an unknown tangent mode");
+            if (!float.IsFinite(keys[i].InTangent) || !float.IsFinite(keys[i].OutTangent))
+                throw new ArgumentException($"timing key {i} has a non-finite tangent");
             if (i == 0) continue;
             if (keys[i].Time <= keys[i - 1].Time)
                 throw new ArgumentException("timing keys must have strictly increasing times");
             if (keys[i].Position < keys[i - 1].Position)
                 throw new ArgumentException("timing key positions must not decrease");
         }
+    }
+
+    /// <summary>The resolved slope on one side of key <paramref name="index"/>, in position per second; 0 on a side with no span.</summary>
+    public float SideSlope(int index, KeySide side)
+    {
+        if (_keys.Count < 2) return 0f;
+        return side == KeySide.In ? _inTangent[index] : _outTangent[index];
+    }
+
+    /// <summary>The curve's slope at <paramref name="time"/>, in position per second; 0 outside the keys.</summary>
+    public float SlopeAt(double time)
+    {
+        if (_keys.Count < 2 || time <= _keys[0].Time || time >= Duration) return 0f;
+
+        var k = FindInterval(time);
+        var span = _keys[k + 1].Time - _keys[k].Time;
+        var t = (float)((time - _keys[k].Time) / span);
+        var t2 = t * t;
+        var m0 = _outTangent[k] * span;
+        var m1 = _inTangent[k + 1] * span;
+        var d = (((6f * t2) - (6f * t)) * _keys[k].Position)
+              + (((3f * t2) - (4f * t) + 1f) * m0)
+              + (((-6f * t2) + (6f * t)) * _keys[k + 1].Position)
+              + (((3f * t2) - (2f * t)) * m1);
+        return d / span;
     }
 }

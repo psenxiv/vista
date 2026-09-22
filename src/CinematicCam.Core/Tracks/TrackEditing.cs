@@ -17,7 +17,7 @@ public static class TrackEditing
         var index = track.Points.Count;
         var time = track.Timing.Count == 0 ? 0f : track.Timing[^1].Time + DefaultLegSeconds;
 
-        var timing = new List<TimingKey>(track.Timing) { new(time, index, TangentMode.Auto, 0f, 0f) };
+        var timing = new List<TimingKey>(track.Timing) { new(time, index) };
         return track with { Points = points, Timing = timing };
     }
 
@@ -90,7 +90,7 @@ public static class TrackEditing
 
             result.Add(keys[i]);
             if (!hasHold && i == firstIndex && seconds > 0f)
-                result.Add(new TimingKey(keys[i].Time + seconds, index, TangentMode.Auto, 0f, 0f));
+                result.Add(new TimingKey(keys[i].Time + seconds, index));
         }
 
         return track with { Timing = result };
@@ -124,7 +124,7 @@ public static class TrackEditing
         var keys = track.Timing;
         var start = keys[LastKeyIndex(keys, index)].Time;
         var leg = keys[FirstKeyIndex(keys, index + 1)].Time - start;
-        var inserted = new TimingKey(start + (leg * before / (before + after)), index + 1, TangentMode.Auto, 0f, 0f);
+        var inserted = new TimingKey(start + (leg * before / (before + after)), index + 1);
 
         var timing = new List<TimingKey>(keys.Count + 1);
         timing.AddRange(keys.Where(k => k.Position <= index));

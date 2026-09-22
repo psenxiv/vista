@@ -8,7 +8,10 @@ namespace CinematicCam.Tests.Tracks;
 public class TimingCurveTests
 {
     private static TimingKey Key(float time, float position, TangentMode mode = TangentMode.Auto, float inTangent = 0f, float outTangent = 0f)
-        => new(time, position, mode, inTangent, outTangent);
+        => new(time, position, mode, mode, inTangent, outTangent);
+
+    private static TimingKey Sided(float time, float position, TangentMode inMode, TangentMode outMode, float inTangent = 0f, float outTangent = 0f)
+        => new(time, position, inMode, outMode, inTangent, outTangent);
 
     [Fact]
     public void ZeroKeysGiveZeroDurationAndZeroPosition()
@@ -248,5 +251,96 @@ public class TimingCurveTests
         var mean = distances.Average();
         foreach (var d in distances)
             Assert.True(MathF.Abs(d - mean) < mean * 0.05f, $"world step {d} strays from mean {mean}");
+    }
+
+    [Fact]
+    public void LinearSidesMakeEachSpanStraight()
+    {
+        var curve = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Linear, TangentMode.Linear),
+            Sided(2f, 4f, TangentMode.Linear, TangentMode.Linear),
+            Sided(4f, 5f, TangentMode.Linear, TangentMode.Linear),
+        });
+
+        Assert.Equal(2f, curve.PositionAt(1.0), 4);
+        Assert.Equal(2f, curve.SlopeAt(1.0), 4);
+        Assert.Equal(4.5f, curve.PositionAt(3.0), 4);
+        Assert.Equal(0.5f, curve.SlopeAt(3.0), 4);
+    }
+
+    [Fact]
+    public void AFlatInSideArrivesAtRestAndAFlatOutSideLeavesFromRest()
+    {
+        var curve = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Auto, TangentMode.Flat),
+            Sided(2f, 4f, TangentMode.Flat, TangentMode.Auto),
+        });
+
+        Assert.Equal(0f, curve.SideSlope(0, KeySide.Out));
+        Assert.Equal(0f, curve.SideSlope(1, KeySide.In));
+        Assert.True(curve.SlopeAt(0.001) < 0.05f);
+        Assert.True(curve.SlopeAt(1.999) < 0.05f);
+        Assert.True(curve.SlopeAt(1.0) > 2f);
+    }
+
+    [Fact]
+    public void EachSideOfAKeyFollowsItsOwnMode()
+    {
+        var curve = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Auto, TangentMode.Auto),
+            Sided(2f, 4f, TangentMode.Flat, TangentMode.Linear),
+            Sided(4f, 5f, TangentMode.Auto, TangentMode.Auto),
+        });
+
+        Assert.Equal(0f, curve.SideSlope(1, KeySide.In));
+        Assert.Equal(0.5f, curve.SideSlope(1, KeySide.Out), 4);
+    }
+
+    [Fact]
+    public void AManualSideUsesItsTangentWithinTheMonotoneLimit()
+    {
+        var gentle = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 1f, 1f),
+            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+        });
+        Assert.Equal(1f, gentle.SideSlope(0, KeySide.Out), 4);
+
+        var steep = new TimingCurve(new[]
+        {
+            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 100f, 100f),
+            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+        });
+        Assert.Equal(6f, steep.SideSlope(0, KeySide.Out), 4);
+    }
+
+    [Fact]
+    public void SlopeAtMatchesTheCurvesRateOfChange()
+    {
+        var curve = new TimingCurve(new[] { Key(0f, 0f), Key(2f, 4f), Key(5f, 5f), Key(6f, 9f) });
+        foreach (var t in new[] { 0.5, 1.7, 3.2, 5.5 })
+        {
+            var estimate = (curve.PositionAt(t + 1e-3) - curve.PositionAt(t - 1e-3)) / 2e-3f;
+            Assert.Equal(estimate, curve.SlopeAt(t), 2);
+        }
+    }
+
+    [Fact]
+    public void SlopeIsZeroOutsideTheKeysAndDuringAHold()
+    {
+        var curve = new TimingCurve(new[] { Key(0f, 0f), Key(2f, 1f), Key(4f, 1f), Key(6f, 2f) });
+        Assert.Equal(0f, curve.SlopeAt(-1.0));
+        Assert.Equal(0f, curve.SlopeAt(7.0));
+        Assert.Equal(0f, curve.SlopeAt(3.0), 4);
+    }
+
+    [Fact]
+    public void ANonFiniteTangentIsRejected()
+    {
+        var keys = new[] { Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, float.NaN, 0f), Key(1f, 1f) };
+        Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
     }
 }

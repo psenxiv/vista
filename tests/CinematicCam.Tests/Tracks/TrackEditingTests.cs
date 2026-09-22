@@ -47,7 +47,7 @@ public class TrackEditingTests
         Assert.Single(track.Timing);
         Assert.Equal(0f, track.Timing[0].Time);
         Assert.Equal(0f, track.Timing[0].Position);
-        Assert.Equal(TangentMode.Auto, track.Timing[0].Mode);
+        Assert.Equal(TangentMode.Auto, track.Timing[0].InMode);
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class TrackEditingTests
     public void APointWithNoTimingKeyIsRefusedAsAnArgumentError()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f) };
+        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f) };
         var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
 
         var leg = Assert.Throws<ArgumentException>(() => TrackEditing.LegSeconds(track, 1));
@@ -277,7 +277,7 @@ public class TrackEditingTests
 
         foreach (var key in track.Timing)
         {
-            Assert.Equal(TangentMode.Auto, key.Mode);
+            Assert.Equal(TangentMode.Auto, key.InMode);
             Assert.Equal(0f, key.InTangent);
             Assert.Equal(0f, key.OutTangent);
         }
@@ -447,9 +447,9 @@ public class TrackEditingTests
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
         var timing = new[]
         {
-            new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f),
-            new TimingKey(2f, 0.5f, TangentMode.Auto, 0f, 0f),
-            new TimingKey(5f, 1f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
+            new TimingKey(2f, 0.5f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
+            new TimingKey(5f, 1f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
         };
         var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
 
@@ -463,7 +463,7 @@ public class TrackEditingTests
     public void EditsRefuseAPointWithNoTimingKey()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
-        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f) };
+        var timing = new[] { new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f) };
         var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
 
         const string message = "timing keys between points are not supported yet";
@@ -478,10 +478,10 @@ public class TrackEditingTests
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f) };
         var timing = new[]
         {
-            new TimingKey(0f, 0f, TangentMode.Auto, 0f, 0f),
-            new TimingKey(1f, 0f, TangentMode.Auto, 0f, 0f),
-            new TimingKey(2f, 0f, TangentMode.Auto, 0f, 0f),
-            new TimingKey(7f, 1f, TangentMode.Auto, 0f, 0f),
+            new TimingKey(0f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
+            new TimingKey(1f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
+            new TimingKey(2f, 0f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
+            new TimingKey(7f, 1f, TangentMode.Auto, TangentMode.Auto, 0f, 0f),
         };
         var track = new Track(points, timing, AimMode.AimKeys, PlaybackMode.Once);
 
