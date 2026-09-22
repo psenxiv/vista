@@ -301,7 +301,8 @@ the game keeps its camera.
 A shot is a Track, a SnapPoint, or GameCamera. A SnapPoint holds position, yaw,
 pitch, roll and FoV, captured in editing mode. It stays a distinct type
 rather than a one-point track, which keeps degenerate cases out of the spline
-code.
+code. Superseded by `2026-09-22-playlist-and-live-design.md`: a snap point is now
+a single-point track, and there is no `SnapPoint` type.
 
 **A finished `Once` track holds its final frame.** It does not revert to the game
 camera. Snapping back to the player's head mid-broadcast would be a disaster on
