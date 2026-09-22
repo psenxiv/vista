@@ -10,7 +10,8 @@ namespace Vista.Plugin.Session;
 /// <summary>Carries out the session's mode changes in game: free-cam, movement lock, camera ownership and UI.</summary>
 internal sealed class CameraSession
 {
-    private readonly SessionState state = new(Ground.Below);
+    private readonly NearbyCharacters characters = new();
+    private readonly SessionState state;
     private readonly FreeCam freeCam = new();
     private readonly MovementLock movement;
     private readonly CameraOwnership ownership = new();
@@ -19,7 +20,11 @@ internal sealed class CameraSession
     private bool previewedLastFrame;
     private bool hideUiInLive;
 
-    public CameraSession(MovementLock movement) => this.movement = movement;
+    public CameraSession(MovementLock movement)
+    {
+        this.movement = movement;
+        state = new SessionState(Ground.Below, characters);
+    }
 
     public CameraMode Mode => state.Mode;
 
@@ -148,6 +153,15 @@ internal sealed class CameraSession
 
     /// <summary>Read-only view of playback state. Check IsLive before IsPaused or IsFinished.</summary>
     public Director Director => state.Director;
+
+    /// <summary>The characters loaded nearby, as last read.</summary>
+    public NearbyCharacters Characters => characters;
+
+    /// <summary>Reads the characters loaded nearby. Call once a frame from Framework.Update.</summary>
+    public void RefreshCharacters() => characters.Update(CharacterTable.Read());
+
+    /// <summary>Where the camera is now, or null when it can't be read.</summary>
+    public Vector3? CameraPosition => CameraAccess.ReadState()?.Position;
 
     /// <summary>True while an Edit preview is playing.</summary>
     public bool Previewing => state.Previewing;

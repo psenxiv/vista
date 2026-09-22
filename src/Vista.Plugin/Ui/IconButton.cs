@@ -6,7 +6,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>Frameless icon buttons with a tooltip, their toggle and row-action variants, and their width for right-aligning them.</summary>
+/// <summary>Frameless icon buttons with a tooltip, their toggle and row-action variants, the not-found warning, and their width for right-aligning them.</summary>
 internal static class IconButton
 {
     // The danger button hovered last frame, so its icon can be red while hovered; older frames are stale.
@@ -42,6 +42,26 @@ internal static class IconButton
     /// <summary>True when the mouse is over the rectangle and the window or one of its children is hovered.</summary>
     public static bool RowHovered(Vector2 min, Vector2 max)
         => ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows | ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) && ImGui.IsMouseHoveringRect(min, max, false);
+
+    /// <summary>The tooltip on every warning that a followed character can't be found.</summary>
+    public const string NotFoundTooltip = "Not found nearby: using recorded aim";
+
+    /// <summary>A red warning icon saying the followed character can't be found, its tooltip shown even while disabled.</summary>
+    public static void TargetNotFound()
+    {
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
+            ImGui.TextUnformatted(FontAwesomeIcon.ExclamationTriangle.ToIconString());
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(NotFoundTooltip);
+    }
+
+    /// <summary>The warning icon's width.</summary>
+    public static float WarningWidth()
+    {
+        using var font = ImRaii.PushFont(UiBuilder.IconFont);
+        return ImGui.CalcTextSize(FontAwesomeIcon.ExclamationTriangle.ToIconString()).X;
+    }
 
     /// <summary>The width Dalamud gives an icon button: the glyph plus frame padding on both sides.</summary>
     public static float Width(FontAwesomeIcon icon)

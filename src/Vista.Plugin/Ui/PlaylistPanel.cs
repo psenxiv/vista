@@ -90,7 +90,7 @@ internal sealed unsafe class PlaylistPanel
         if (!loopsHovered) wheelCarry = 0f;
     }
 
-    /// <summary>One entry: its number and track, drag to reorder or drop a track on it, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
+    /// <summary>One entry: its number and track, a warning when its followed character isn't found, drag to reorder or drop a track on it, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
     private void DrawRow(Scene scene, PlaylistEntry entry, int index, bool unreachable, Guid? playing, bool editing)
     {
         using var id = ImRaii.PushId(entry.Id.ToString());
@@ -98,9 +98,13 @@ internal sealed unsafe class PlaylistPanel
 
         var remove = IconButton.Width(FontAwesomeIcon.Times);
         var gap = ImGui.GetStyle().ItemSpacing.X;
-        var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f));
-        var name = SceneEditing.Get(scene, entry.TrackId).Name;
-        ImGui.Selectable($"{index + 1}  {name}", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(nameWidth, ImGui.GetFrameHeight()));
+        var track = SceneEditing.Get(scene, entry.TrackId);
+        var lost = session.TargetLost(session.WorldOf(track));
+        var warning = lost ? IconButton.WarningWidth() + gap : 0f;
+        var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f) - warning);
+        var name = track.Name;
+        ImGui.Selectable("##entry", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(nameWidth, ImGui.GetFrameHeight()));
+        DrawRowText($"{index + 1}  {name}");
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);
         var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
@@ -113,6 +117,12 @@ internal sealed unsafe class PlaylistPanel
         }
 
         DropTarget(scene, index, editing);
+
+        if (lost)
+        {
+            ImGui.SameLine();
+            IconButton.TargetNotFound();
+        }
 
         ImGui.SameLine();
         DrawLoops(scene, entry, editing);
@@ -133,9 +143,9 @@ internal sealed unsafe class PlaylistPanel
         var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
         var text = entry.Loops is { } n ? n.ToString() : holds ? "∞" : "—";
         var colour = entry.Loops is not null || holds ? UiColours.Amber : UiColours.Dim();
+        if (ImGui.Selectable("##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight()))) StartLoops(entry);
         using (ImRaii.PushColor(ImGuiCol.Text, colour))
-            if (ImGui.Selectable($"{text}##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight())))
-                StartLoops(entry);
+            DrawRowText(text);
         if (editing) ImGuiP.SetItemUsingMouseWheel();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeats");
         if (!editing || !ImGui.IsItemHovered()) return;
@@ -206,6 +216,19 @@ internal sealed unsafe class PlaylistPanel
             Report(session.AddToPlaylist(scene.Tracks[t].Id, index));
 
         ImGui.EndDragDropTarget();
+    }
+
+    /// <summary>Text inside the row just drawn: centred on its height and inset like a field's, clipped to the row.</summary>
+    private static void DrawRowText(string text)
+    {
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        var padding = ImGui.GetStyle().FramePadding.X;
+        var at = new Vector2(min.X + padding, min.Y + ((max.Y - min.Y - ImGui.GetTextLineHeight()) * 0.5f));
+        var list = ImGui.GetWindowDrawList();
+        list.PushClipRect(min, max with { X = max.X - padding }, true);
+        list.AddText(at, ImGui.GetColorU32(ImGuiCol.Text), text);
+        list.PopClipRect();
     }
 
     private static void Report(string? refusal)

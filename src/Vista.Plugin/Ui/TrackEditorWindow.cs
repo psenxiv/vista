@@ -17,7 +17,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     private const string PointPayload = "VISTA_POINT";
 
     private static readonly string[] ModeNames = ["Off", "Edit", "Live"];
-    private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
+    private static readonly string[] AimNames = ["Recorded aim", "Direction of travel", "Look At", "Follow Target"];
+    private static readonly AimMode[] AimModes = [AimMode.AimKeys, AimMode.PathTangent, AimMode.LookAt, AimMode.FollowTarget];
     private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
     private static readonly PlaybackDirection[] Directions = [PlaybackDirection.Forward, PlaybackDirection.Reverse, PlaybackDirection.PingPong];
     private static readonly FontAwesomeIcon[] DirectionIcons = [FontAwesomeIcon.ArrowRight, FontAwesomeIcon.ArrowLeft, FontAwesomeIcon.ArrowsAltH];
@@ -26,6 +27,8 @@ internal sealed unsafe class TrackEditorWindow : Window
     private const float SpeedWidth = 90f;
     private const float ModeWidth = 80f;
     private const float FieldWidth = 70f;
+    private const float CharacterWidth = 140f;
+    private const float SmallFieldWidth = 50f;
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
 
@@ -39,6 +42,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
+    private float? smoothingDrag;
 
     public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing)
         : base("Vista###vista-track-editor")
@@ -56,7 +60,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
     public override void PreDraw()
     {
-        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth());
+        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth(session.Track.Aim == AimMode.FollowTarget)) + CompartmentsWidth(), TopRowWidth());
         SetMinimumWidth(width);
         Size = new Vector2(width, MinHeight);
     }
@@ -238,21 +242,30 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndCombo();
     }
 
-    /// <summary>Aim and direction icons with their menus, the loop toggle, the Speed and Duration fields, the add button and its menu, and Clear track at the right end.</summary>
+    /// <summary>Aim and direction icons with their menus, the character, aim height and smoothing under Follow Target, the loop toggle, the Speed and Duration fields, the add button and its menu, and Clear track at the right end.</summary>
     private void DrawTrackRow()
     {
-        var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
+        var aim = Array.IndexOf(AimModes, session.Track.Aim);
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, $"Select aim ({AimNames[aim]})")) ImGui.OpenPopup("aim-menu");
         if (ImGui.BeginPopup("aim-menu"))
         {
             for (var i = 0; i < AimNames.Length; i++)
             {
                 if (!ImGui.Selectable(AimNames[i], i == aim) || i == aim) continue;
-                var mode = i == 0 ? AimMode.AimKeys : AimMode.PathTangent;
-                Report(session.ChangeTrack(t => t with { Aim = mode }));
+                Report(session.SetAim(AimModes[i]));
             }
 
             ImGui.EndPopup();
+        }
+
+        if (session.Track.Aim == AimMode.FollowTarget)
+        {
+            ImGui.SameLine();
+            DrawCharacter();
+            ImGui.SameLine();
+            DrawAimHeight();
+            ImGui.SameLine();
+            DrawSmoothing();
         }
 
         var direction = Array.IndexOf(Directions, session.Track.Direction);
@@ -288,6 +301,69 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
         if (IconButton.Draw("clear-track", FontAwesomeIcon.Trash, "Clear track", danger: true)) { fields.Clear(); Report(session.ChangeTrack(TrackEditing.Clear)); }
         ImGui.EndDisabled();
+    }
+
+    /// <summary>The followed character's button: its name, or red with a warning and "(Not found)" when not loaded; opens the nearby list.</summary>
+    private void DrawCharacter()
+    {
+        var track = session.Track;
+        var lost = session.TargetLost(track);
+        if (lost)
+        {
+            IconButton.TargetNotFound();
+            ImGui.SameLine(0f, 4f);
+        }
+
+        var label = track.TargetName is not { } name ? "Choose a character" : lost ? $"{name} (Not found)" : name;
+        bool pressed;
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red, lost))
+            pressed = ImGui.Button($"{label}##character", new Vector2(CharacterWidth, 0f));
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(lost ? IconButton.NotFoundTooltip : "Choose a character");
+        if (pressed) ImGui.OpenPopup("character-menu");
+        DrawCharacterMenu(track.TargetName);
+    }
+
+    /// <summary>The characters loaded nearby, nearest the camera first, each with its distance; picking one follows it.</summary>
+    private void DrawCharacterMenu(string? chosen)
+    {
+        if (!ImGui.BeginPopup("character-menu")) return;
+
+        var camera = session.CameraPosition ?? Vector3.Zero;
+        var nearby = session.Characters.NearestTo(camera);
+        if (nearby.Count == 0)
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+                ImGui.TextUnformatted("No characters nearby");
+        }
+
+        for (var i = 0; i < nearby.Count; i++)
+        {
+            var character = nearby[i];
+            using var id = ImRaii.PushId($"character{i}");
+            if (ImGui.Selectable($"{character.Name}  ({Vector3.Distance(character.Position, camera):0.0} yalms)", character.Name == chosen))
+                Report(session.SetTarget(character.Name));
+        }
+
+        ImGui.EndPopup();
+    }
+
+    /// <summary>The aim height above the character's feet, as a small field.</summary>
+    private void DrawAimHeight()
+    {
+        fields.Draw("aim-height", session.Track.AimHeight, "%.1f", SmallFieldWidth, v => Report(session.SetAimHeight(v)));
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Aim height above the character's feet, in yalms");
+    }
+
+    /// <summary>The smoothing slider; a drag is applied as one undo step when it lets go.</summary>
+    private void DrawSmoothing()
+    {
+        var value = smoothingDrag ?? session.Track.Smoothing;
+        ImGui.SetNextItemWidth(SmallFieldWidth);
+        if (ImGui.SliderFloat("##smoothing", ref value, 0f, 1f, "%.2f")) smoothingDrag = value;
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Smoothing: 0 exact, 1 heavy");
+        if (ImGui.IsItemActive() || smoothingDrag is not { } done) return;
+        smoothingDrag = null;
+        Report(session.SetSmoothing(done));
     }
 
     /// <summary>The loop toggle: accent when the track loops, dimmed when it plays once.</summary>
@@ -424,15 +500,16 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>The track row's full width: its items, the eight gaps between them, and the window's and the editor's padding.</summary>
-    private static float TrackRowWidth()
+    /// <summary>The track row's full width: its items, the Follow Target items when <paramref name="following"/>, the gaps between them, and the window's and the editor's padding.</summary>
+    private static float TrackRowWidth(bool following)
     {
         var style = ImGui.GetStyle();
         var direction = DirectionIcons.Max(IconButton.Width);
         var items = IconButton.Width(FontAwesomeIcon.Crosshairs) + direction + IconButton.Width(FontAwesomeIcon.Repeat)
             + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
             + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);
-        return items + (Spacing.X * 8f) + (style.WindowPadding.X * 4f);
+        var follow = following ? IconButton.WarningWidth() + 4f + CharacterWidth + (SmallFieldWidth * 2f) + (Spacing.X * 3f) : 0f;
+        return items + follow + (Spacing.X * 8f) + (style.WindowPadding.X * 4f);
     }
 
     /// <summary>The top bar's full width: its items, the larger of LIVE and fly speed, the gaps between them, and the window padding.</summary>
