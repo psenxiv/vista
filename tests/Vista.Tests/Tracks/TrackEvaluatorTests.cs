@@ -29,11 +29,13 @@ public class TrackEvaluatorTests
         Assert.Null(evaluator.Evaluate(5.0));
     }
 
-    [Fact]
-    public void EvaluateOfASinglePointTrackSitsAtThatPointRegardlessOfTime()
+    [Theory]
+    [InlineData(AimMode.AimKeys)]
+    [InlineData(AimMode.PathTangent)]
+    public void EvaluateOfASinglePointTrackSitsAtThatPointRegardlessOfTime(AimMode aim)
     {
         var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f, fov: 1.2f);
-        var evaluator = new TrackEvaluator(Build(new[] { point }));
+        var evaluator = new TrackEvaluator(Build(new[] { point }, aim));
         var expectedLookAt = FreeCamMotion.LookAtFrom(point.Position, point.Yaw, point.Pitch);
 
         foreach (var time in new[] { -1.0, 0.0, 5.0 })
