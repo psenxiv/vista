@@ -16,10 +16,25 @@ internal sealed class CameraSession
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
     private bool previewedLastFrame;
+    private bool hideUiInLive;
 
     public CameraSession(MovementLock movement) => this.movement = movement;
 
     public CameraMode Mode => state.Mode;
+
+    /// <summary>Whether Live hides the game UI while it plays; toggling it while Live plays applies at once.</summary>
+    public bool HideUiInLive
+    {
+        get => hideUiInLive;
+        set
+        {
+            if (hideUiInLive == value) return;
+            hideUiInLive = value;
+            if (state.Mode != CameraMode.Live) return;
+            if (value && !state.Director.IsPaused) GameUi.Hide();
+            else if (!value) GameUi.Restore();
+        }
+    }
 
     /// <summary>The edited track: Edit builds it and a preview plays it. Changed only through the edit methods and undo.</summary>
     public Track Track => state.Track;
@@ -413,10 +428,10 @@ internal sealed class CameraSession
                     : "[vista] nothing to play: add a track with points to the playlist.");
                 return;
             case PlayOutcome.ReHid:
-                GameUi.Hide();
+                if (hideUiInLive) GameUi.Hide();
                 return;
             case PlayOutcome.Resumed:
-                GameUi.Hide();
+                if (hideUiInLive) GameUi.Hide();
                 Plugin.Log.Information("[vista] resumed");
                 return;
             case PlayOutcome.StartedFromOff or PlayOutcome.CuedFromOff:
@@ -432,7 +447,7 @@ internal sealed class CameraSession
             return;
         }
 
-        GameUi.Hide();
+        if (hideUiInLive) GameUi.Hide();
         Plugin.Log.Information("[vista] mode: live, {Count} playlist entries", state.Scene.Playlist.Count);
     }
 

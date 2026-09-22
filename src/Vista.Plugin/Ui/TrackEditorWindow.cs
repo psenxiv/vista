@@ -20,12 +20,11 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel"];
     private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
     private static readonly PlaybackDirection[] Directions = [PlaybackDirection.Forward, PlaybackDirection.Reverse, PlaybackDirection.PingPong];
+    private static readonly FontAwesomeIcon[] DirectionIcons = [FontAwesomeIcon.ArrowRight, FontAwesomeIcon.ArrowLeft, FontAwesomeIcon.ArrowsAltH];
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
     private const float FieldWidth = 70f;
-    private const float AimWidth = 200f;
-    private const float DirectionWidth = 180f;
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
 
@@ -95,7 +94,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 
             DrawPoints(editing);
             ImGui.Separator();
-            DrawScrubRow(editing);
+            DrawScrubRow();
         }
 
         ImGui.EndChild();
@@ -132,13 +131,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.SameLine();
         DrawModeCombo();
+        DrawLive();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
-        ImGui.SameLine(0f, gap);
-        ImGui.BeginDisabled(!editing);
-        DrawAddButton();
-        ImGui.EndDisabled();
-
         ImGui.SameLine(0f, gap);
         ImGui.BeginDisabled(!session.CanUndo);
         if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo")) { fields.Commit(); session.Undo(); }
@@ -151,6 +146,44 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.SameLine();
         if (IconButton.Draw("timing", FontAwesomeIcon.ChartLine, "Timing")) timing.Toggle();
+
+        if (editing)
+        {
+            ImGui.SameLine(0f, gap);
+            DrawFlySpeed();
+        }
+
+        ImGui.SameLine();
+        RightAlign(IconButton.Width(FontAwesomeIcon.EyeSlash));
+        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, session.HideUiInLive, "Hide game UI in Live"))
+            session.HideUiInLive = !session.HideUiInLive;
+    }
+
+    /// <summary>Red LIVE text pulsing on a two-second cycle while the mode is Live.</summary>
+    private void DrawLive()
+    {
+        if (session.Mode != CameraMode.Live) return;
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        var pulse = 0.55f + (0.45f * MathF.Cos((float)ImGui.GetTime() * MathF.PI));
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
+        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * pulse))
+            ImGui.TextUnformatted("LIVE");
+    }
+
+    /// <summary>The free-cam's speed: a feather icon and a short slider showing the multiplier.</summary>
+    private void DrawFlySpeed()
+    {
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            ImGui.TextUnformatted(FontAwesomeIcon.Feather.ToIconString());
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Fly speed");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(SpeedWidth);
+        var speed = session.Speed;
+        var step = speed.Index;
+        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Fly speed");
     }
 
     /// <summary>Play/Pause and Restart, left of the scrub bar on the same line.</summary>
@@ -190,12 +223,12 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndCombo();
     }
 
-    /// <summary>Aim and direction drop-downs, the loop toggle, track Speed and Duration, and Clear track as a trash icon at the right end.</summary>
+    /// <summary>Aim and direction menus, the loop toggle, track Speed and Duration, + Add, and Clear track as a trash icon at the right end.</summary>
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
-        ImGui.SetNextItemWidth(AimWidth);
-        if (ImGui.BeginCombo("##aim", $"Aim: {AimNames[aim]}"))
+        if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, $"Select aim ({AimNames[aim]})")) ImGui.OpenPopup("aim-menu");
+        if (ImGui.BeginPopup("aim-menu"))
         {
             for (var i = 0; i < AimNames.Length; i++)
             {
@@ -204,13 +237,13 @@ internal sealed unsafe class TrackEditorWindow : Window
                 Report(session.ChangeTrack(t => t with { Aim = mode }));
             }
 
-            ImGui.EndCombo();
+            ImGui.EndPopup();
         }
 
         var direction = Array.IndexOf(Directions, session.Track.Direction);
         ImGui.SameLine();
-        ImGui.SetNextItemWidth(DirectionWidth);
-        if (ImGui.BeginCombo("##direction", $"Direction: {DirectionNames[direction]}"))
+        if (IconButton.Draw("direction", DirectionIcons[direction], $"Select direction ({DirectionNames[direction]})")) ImGui.OpenPopup("direction-menu");
+        if (ImGui.BeginPopup("direction-menu"))
         {
             for (var i = 0; i < DirectionNames.Length; i++)
             {
@@ -219,7 +252,7 @@ internal sealed unsafe class TrackEditorWindow : Window
                 Report(session.ChangeTrack(t => TrackEditing.SetDirection(t, chosen)));
             }
 
-            ImGui.EndCombo();
+            ImGui.EndPopup();
         }
 
         ImGui.SameLine();
@@ -227,10 +260,13 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.BeginDisabled(TrackEditing.AllPinned(session.Track));
         ImGui.SameLine();
-        LabelledField("Speed", "track-speed", session.Track.Speed, "%.2f", "Track speed, yalms per second", v => Report(session.SetTrackSpeed(v)));
+        LabelledField(FontAwesomeIcon.TachometerAlt, "track-speed", session.Track.Speed, "%.2f", "Track speed, yalms per second", v => Report(session.SetTrackSpeed(v)));
         ImGui.SameLine();
-        LabelledField("Duration", "track-duration", (float)session.Duration, "%.1f", "Whole shot, holds included, in seconds", v => Report(session.SetTrackDuration(v)));
+        LabelledField(FontAwesomeIcon.Stopwatch, "track-duration", (float)session.Duration, "%.1f s", "Whole shot, holds included, in seconds", v => Report(session.SetTrackDuration(v)));
         ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        DrawAddButton();
 
         ImGui.SameLine();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
@@ -247,11 +283,12 @@ internal sealed unsafe class TrackEditorWindow : Window
             Report(session.ChangeTrack(t => TrackEditing.SetLoop(t, !loop)));
     }
 
+    /// <summary>A plus icon that appends a point, and a caret opening the insert menu.</summary>
     private void DrawAddButton()
     {
-        if (ImGui.Button("+ Add")) Report(session.AddToEnd());
+        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, "Add point (Backtick)")) Report(session.AddToEnd());
         ImGui.SameLine(0f, 0f);
-        if (ImGui.ArrowButton("##add-menu", ImGuiDir.Down)) ImGui.OpenPopup("add-menu");
+        if (IconButton.Draw("add-menu", FontAwesomeIcon.CaretDown, "More ways to add")) ImGui.OpenPopup("add-menu");
         if (!ImGui.BeginPopup("add-menu")) return;
 
         var selected = session.Selected is not null;
@@ -361,51 +398,51 @@ internal sealed unsafe class TrackEditorWindow : Window
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 
-    /// <summary>Play/Pause and Restart, the scrub bar showing current and total time, and fly speed at its right while editing.</summary>
-    private void DrawScrubRow(bool editing)
+    /// <summary>Play/Pause and Restart, then the scrub bar showing current and total time.</summary>
+    private void DrawScrubRow()
     {
         var duration = (float)session.ScrubLength;
         var head = (float)session.ScrubHead;
-        var speedWidth = editing ? ImGui.CalcTextSize("Speed").X + SpeedWidth + (ImGui.GetStyle().ItemSpacing.X * 2f) : 0f;
 
         DrawTransport();
         ImGui.BeginDisabled(session.Mode == CameraMode.Off || duration <= 0f);
-        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - speedWidth);
+        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
         if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); scrubbing = session.Scrubbing; }
         if (moved || ImGui.IsItemActivated()) session.ScrubTo(head);
         // A window that stops drawing mid-drag never reports the slider deactivating, so any idle frame ends the scrub too.
         if (ImGui.IsItemDeactivated() || !ImGui.IsItemActive()) EndScrub();
         ImGui.EndDisabled();
-
-        if (!editing) return;
-        ImGui.SameLine();
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Speed");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(SpeedWidth);
-        var speed = session.Speed;
-        var step = speed.Index;
-        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
     }
 
-    /// <summary>The track row's full width: its items, the seven gaps between them, and the window padding.</summary>
+    /// <summary>The track row's full width: its items, the eight gaps between them, and the window padding.</summary>
     private static float TrackRowWidth()
     {
         var style = ImGui.GetStyle();
-        var items = AimWidth + DirectionWidth + IconButton.Width(FontAwesomeIcon.Repeat) + ImGui.CalcTextSize("Speed").X
-            + ImGui.CalcTextSize("Duration").X + (FieldWidth * 2f) + IconButton.Width(FontAwesomeIcon.Trash);
-        return items + (Spacing.X * 7f) + (style.WindowPadding.X * 2f);
+        var direction = DirectionIcons.Max(IconButton.Width);
+        var items = IconButton.Width(FontAwesomeIcon.Crosshairs) + direction + IconButton.Width(FontAwesomeIcon.Repeat)
+            + IconWidth(FontAwesomeIcon.TachometerAlt) + IconWidth(FontAwesomeIcon.Stopwatch) + (FieldWidth * 2f)
+            + IconButton.Width(FontAwesomeIcon.Plus) + IconButton.Width(FontAwesomeIcon.CaretDown) + IconButton.Width(FontAwesomeIcon.Trash);
+        return items + (Spacing.X * 8f) + (style.WindowPadding.X * 2f);
+    }
+
+    /// <summary>The width of an icon drawn as text in the icon font.</summary>
+    private static float IconWidth(FontAwesomeIcon icon)
+    {
+        using var font = ImRaii.PushFont(UiBuilder.IconFont);
+        return ImGui.CalcTextSize(icon.ToIconString()).X;
     }
 
     private void SetMinimumWidth(float width)
         => SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(width, MinHeight), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
 
-    /// <summary>A text label, then a number field with a tooltip that shows even while disabled.</summary>
-    private void LabelledField(string label, string id, float current, string format, string tooltip, Action<float> apply)
+    /// <summary>An icon, then a number field; both show the tooltip, even while disabled.</summary>
+    private void LabelledField(FontAwesomeIcon icon, string id, float current, string format, string tooltip, Action<float> apply)
     {
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(label);
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            ImGui.TextUnformatted(icon.ToIconString());
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
         ImGui.SameLine();
         fields.Draw(id, current, format, FieldWidth, apply);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
