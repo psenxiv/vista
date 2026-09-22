@@ -2,13 +2,12 @@ using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionTimingTests
 {
-    private static ControlPoint Point(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
-
     // Editing, three points at x = 0, 10, 20 with keys at 0, 5 and 10 s, nothing selected.
     private static SessionState Editing()
     {

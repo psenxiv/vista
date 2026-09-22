@@ -1,21 +1,12 @@
 using System.Numerics;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
 public class DirectorTests
 {
-    private static ControlPoint Point(float x, float y, float z)
-        => new(new Vector3(x, y, z), 0f, 0f, 1f);
-
-    private static Track StraightTrack(bool loop = false)
-    {
-        var track = TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop);
-        foreach (var x in new[] { 0f, 5f, 10f }) track = TrackEditing.Append(track, Point(x, 0f, 0f));
-        return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
-    }
-
     [Fact]
     public void TickIsNullBeforeGoingLive()
     {

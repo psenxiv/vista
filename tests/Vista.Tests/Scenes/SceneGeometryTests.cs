@@ -2,22 +2,12 @@ using System.Numerics;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Scenes;
 
 public class SceneGeometryTests
 {
-    private const float Tolerance = 1e-4f;
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, Tolerance);
-        Assert.Equal(expected.Y, actual.Y, Tolerance);
-        Assert.Equal(expected.Z, actual.Z, Tolerance);
-    }
-
-    private static ControlPoint Point(float x, float y = 0f, float z = 0f) => new(new Vector3(x, y, z), 0f, 0f, 1f);
-
     // One track with points at x = 0, 10, 20, local to a track anchor at (5, 0, 0) yaw 0.5, under a scene anchor at (100, 2, 50) yaw 1.
     // The two together put the track's anchor at (102.701512, 2, 45.792645) yaw 1.5.
     private static Scene Anchored()
@@ -37,8 +27,8 @@ public class SceneGeometryTests
         var scene = Anchored();
         var world = SceneGeometry.InWorld(scene, scene.Tracks[0]);
 
-        Near(new Vector3(103.408884f, 2f, 35.817695f), world.Points[1].Position);
-        Assert.Equal(1.5f, world.Points[1].Yaw, Tolerance);
+        Near(new Vector3(103.408884f, 2f, 35.817695f), world.Points[1].Position, 1e-4f);
+        Assert.Equal(1.5f, world.Points[1].Yaw, 1e-4f);
     }
 
     [Fact]
@@ -80,8 +70,8 @@ public class SceneGeometryTests
         var placed = SceneGeometry.PlaceFor(added, id, new Vector3(120f, 8f, 40f), 3f);
 
         Assert.Equal(scene.Anchor, placed.Anchor);
-        Near(new Vector3(120f, 3f, 40f), SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Position);
-        Assert.Equal(0f, SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Yaw, Tolerance);
+        Near(new Vector3(120f, 3f, 40f), SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Position, 1e-4f);
+        Assert.Equal(0f, SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Yaw, 1e-4f);
     }
 
     [Fact]
@@ -98,7 +88,7 @@ public class SceneGeometryTests
         var before = WorldPositions(scene);
         var moved = SceneGeometry.MoveSceneAnchor(scene, new Anchor(new Vector3(-30f, 1f, 8f), -0.7f), carry: false);
 
-        for (var i = 0; i < before.Count; i++) Near(before[i], WorldPositions(moved)[i]);
+        for (var i = 0; i < before.Count; i++) Near(before[i], WorldPositions(moved)[i], 1e-4f);
         Assert.Equal(-0.7f, moved.Anchor.Yaw);
     }
 
@@ -109,9 +99,9 @@ public class SceneGeometryTests
         var to = new Anchor(new Vector3(90f, 2f, 60f), 0.2f);
         var moved = SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, to, carry: true);
 
-        Near(to.Position, SceneGeometry.WorldAnchor(moved, moved.Tracks[0]).Position);
+        Near(to.Position, SceneGeometry.WorldAnchor(moved, moved.Tracks[0]).Position, 1e-4f);
         Assert.Same(scene.Tracks[0].Points, moved.Tracks[0].Points);
-        Near(new Vector3(99.800666f, 2f, 58.013307f), WorldPositions(moved)[1]);
+        Near(new Vector3(99.800666f, 2f, 58.013307f), WorldPositions(moved)[1], 1e-4f);
     }
 
     [Fact]
@@ -125,8 +115,8 @@ public class SceneGeometryTests
         var world = SceneGeometry.InWorld(moved, moved.Tracks[0]);
         for (var i = 0; i < before.Count; i++)
         {
-            Near(before[i], world.Points[i].Position);
-            Assert.Equal(worldYawsBefore[i], world.Points[i].Yaw, Tolerance);
+            Near(before[i], world.Points[i].Position, 1e-4f);
+            Assert.Equal(worldYawsBefore[i], world.Points[i].Yaw, 1e-4f);
         }
     }
 
@@ -150,9 +140,9 @@ public class SceneGeometryTests
         var scene = WithLookAt(Anchored());
         var world = SceneGeometry.InWorld(scene, scene.Tracks[0]);
 
-        Near(new Vector3(92.726562f, 5f, 45.085273f), world.LookAt);
-        Near(new Vector3(102.701512f, 2f, 45.792645f), world.Anchor.Position);
-        Assert.Equal(1.5f, world.Anchor.Yaw, Tolerance);
+        Near(new Vector3(92.726562f, 5f, 45.085273f), world.LookAt, 1e-4f);
+        Near(new Vector3(102.701512f, 2f, 45.792645f), world.Anchor.Position, 1e-4f);
+        Assert.Equal(1.5f, world.Anchor.Yaw, 1e-4f);
     }
 
     [Fact]
@@ -161,7 +151,7 @@ public class SceneGeometryTests
         var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 0f), AnchorPlaced = true };
         scene = SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(1f, 0f, 0f), LookAtPlaced = true });
 
-        Near(new Vector3(101f, 2f, 50f), WorldLookAt(scene));
+        Near(new Vector3(101f, 2f, 50f), WorldLookAt(scene), 1e-4f);
     }
 
     [Fact]
@@ -172,7 +162,7 @@ public class SceneGeometryTests
 
         var moved = SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, to, carry: true);
 
-        Near(new Vector3(88.013307f, 5f, 50.199334f), WorldLookAt(moved));
+        Near(new Vector3(88.013307f, 5f, 50.199334f), WorldLookAt(moved), 1e-4f);
     }
 
     [Fact]
@@ -183,7 +173,7 @@ public class SceneGeometryTests
 
         var moved = SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, new Anchor(new Vector3(80f, 0f, 30f), 2f), carry: false);
 
-        Near(before, WorldLookAt(moved));
+        Near(before, WorldLookAt(moved), 1e-4f);
     }
 
     [Fact]
@@ -194,7 +184,7 @@ public class SceneGeometryTests
 
         var moved = SceneGeometry.MoveSceneAnchor(scene, new Anchor(new Vector3(-30f, 1f, 8f), -0.7f), carry: false);
 
-        Near(before, WorldLookAt(moved));
+        Near(before, WorldLookAt(moved), 1e-4f);
     }
 
     [Fact]
@@ -205,7 +195,7 @@ public class SceneGeometryTests
 
         var placed = SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(20f, 9f, -3f), 2f);
 
-        Near(new Vector3(5f, 6f, 7f), WorldLookAt(placed));
+        Near(new Vector3(5f, 6f, 7f), WorldLookAt(placed), 1e-4f);
     }
 
     [Fact]
@@ -218,7 +208,7 @@ public class SceneGeometryTests
         var placed = SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(20f, 9f, -3f), 2f);
 
         Assert.True(placed.Tracks[0].AnchorPlaced);
-        Near(before, WorldLookAt(placed));
+        Near(before, WorldLookAt(placed), 1e-4f);
     }
 
     [Fact]

@@ -1,26 +1,13 @@
 using System;
 using System.Linq;
-using System.Numerics;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
 public class TimingEditingTests
 {
-    private static ControlPoint Point(float x, float y, float z)
-        => new(new Vector3(x, y, z), 0f, 0f, 1f);
-
-    // Points at 0,10,20 at 2 yalms per second: keys at times 0, 5, 10.
-    private static Track Build3PointTrack()
-    {
-        var track = TrackEditing.Empty() with { Speed = 2f };
-        track = TrackEditing.Append(track, Point(0f, 0f, 0f));
-        track = TrackEditing.Append(track, Point(10f, 0f, 0f));
-        track = TrackEditing.Append(track, Point(20f, 0f, 0f));
-        return track;
-    }
-
     private static Track MoveKey(Track track, int key, float time) => TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
 
     private static float[] Times(Track track) => new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();

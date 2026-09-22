@@ -3,6 +3,7 @@ using Vista.Core.Camera;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
 
@@ -10,8 +11,6 @@ public class SessionAimTests
 {
     private static readonly Vector3 A = new(0f, 0f, -10f);
     private static readonly Vector3 B = new(10f, 0f, -10f);
-    private static ControlPoint Point(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
-
     // Puts Guard's aim point, 1.3 above the feet, at <paramref name="aim"/>.
     private static void GuardAt(NearbyCharacters characters, Vector3 aim)
         => characters.Update([new LoadedCharacter("Guard", null, aim - new Vector3(0f, 1.3f, 0f))]);

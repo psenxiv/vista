@@ -1,15 +1,12 @@
-using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionStateTests
 {
-    private static ControlPoint Point(float x)
-        => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
-
     // Two points, one 5 s leg.
     private static SessionState EditingWithTrack()
     {

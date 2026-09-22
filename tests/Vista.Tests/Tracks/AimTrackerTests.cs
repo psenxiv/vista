@@ -2,6 +2,7 @@ using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
@@ -189,7 +190,7 @@ public class AimTrackerTests
         characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, MathF.PI / 2f)]);
         var frame = Frame(tracker, track);
 
-        Near(new Anchor(Vector3.Zero, 0.7f).ToWorld(Behind.Position), frame.Position);
+        Near(new Anchor(Vector3.Zero, 0.7f).ToWorld(Behind.Position), frame.Position, 1e-4f);
     }
 
     [Fact]
@@ -229,13 +230,6 @@ public class AimTrackerTests
 
         tracker.Reset();
         Assert.Equal(10f, Frame(tracker, track, 0.5f).Position.X, 4);
-    }
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, 4);
-        Assert.Equal(expected.Y, actual.Y, 4);
-        Assert.Equal(expected.Z, actual.Z, 4);
     }
 
     private static float LookYaw(CameraState frame) => TrackAim.FromDirection(frame.LookAt - frame.Position).Yaw;
@@ -295,7 +289,7 @@ public class AimTrackerTests
         Frame(tracker, track);
         characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, 2f)]);
 
-        Near(new Anchor(Vector3.Zero, 1.2f).ToWorld(Behind.Position), Frame(tracker, track).Position);
+        Near(new Anchor(Vector3.Zero, 1.2f).ToWorld(Behind.Position), Frame(tracker, track).Position, 1e-4f);
     }
 
     [Fact]
@@ -304,8 +298,8 @@ public class AimTrackerTests
         var anchor = new Anchor(new Vector3(5f, 1f, -3f), 0.8f);
         var world = FollowingAt(Behind) with { Anchor = anchor, Points = [anchor.ToWorld(Behind)] };
 
-        Near(new Vector3(10f, 2f, 5f), Frame(new AimTracker(GuardStanding(new Vector3(10f, 0f, 0f), 0f)), world).Position);
-        Near(anchor.ToWorld(Behind.Position), Frame(new AimTracker(new NearbyCharacters()), world).Position);
+        Near(new Vector3(10f, 2f, 5f), Frame(new AimTracker(GuardStanding(new Vector3(10f, 0f, 0f), 0f)), world).Position, 1e-4f);
+        Near(anchor.ToWorld(Behind.Position), Frame(new AimTracker(new NearbyCharacters()), world).Position, 1e-4f);
     }
 
     [Fact]

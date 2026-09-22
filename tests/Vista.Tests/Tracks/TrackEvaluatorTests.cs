@@ -2,15 +2,13 @@ using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
 public class TrackEvaluatorTests
 {
     private const float Deg = MathF.PI / 180f;
-
-    private static ControlPoint Point(float x, float y, float z, float yaw = 0f, float pitch = 0f, float fov = 1f, float roll = 0f)
-        => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
 
     private static Track Build(IEnumerable<ControlPoint> points, AimMode aim = AimMode.AimKeys)
     {

@@ -1,14 +1,12 @@
 using System.Numerics;
 using Vista.Core.Editing;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Editing;
 
 public class CameraGlyphTests
 {
-    private static void Near(Vector3 expected, Vector3 actual)
-        => Assert.True(Vector3.Distance(expected, actual) < 1e-4f, $"expected {expected}, got {actual}");
-
     [Fact]
     public void TheFaceSitsAheadAtDepthSizedByFovAndAspect()
     {
@@ -59,7 +57,7 @@ public class CameraGlyphTests
         var at = new Vector3(5f, 6f, 7f);
         var glyph = CameraGlyph.Build(at, Vector3.UnitZ * 3f, new Vector3(0f, 2f, 0.5f), MathF.PI / 2f, 1f, 1f);
         Assert.Equal(at, glyph.Apex);
-        Near(at + new Vector3(0f, 0f, 1f), (glyph.Corners[0] + glyph.Corners[2]) / 2f);
+        Near(at + new Vector3(0f, 0f, 1f), (glyph.Corners[0] + glyph.Corners[2]) / 2f, 1e-4f);
         Assert.True(glyph.TabTip.Y > at.Y + 1f);
     }
 

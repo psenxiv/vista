@@ -1,6 +1,7 @@
 using System.Numerics;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
@@ -10,13 +11,6 @@ public class FollowOrbitTests
 
     // Five yalms behind and two up, looking the way the character faces (yaw 0).
     private static readonly ControlPoint Behind = new(new Vector3(0f, 2f, 5f), 0f, 0.1f, 1f, 0.2f);
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, 4);
-        Assert.Equal(expected.Y, actual.Y, 4);
-        Assert.Equal(expected.Z, actual.Z, 4);
-    }
 
     [Fact]
     public void AnOffsetBehindIsAtAngleZero()
@@ -41,7 +35,7 @@ public class FollowOrbitTests
     {
         var moved = FollowOrbit.With(Behind, new Orbit(5f, Quarter, 2f));
 
-        Near(new Vector3(5f, 2f, 0f), moved.Position);
+        Near(new Vector3(5f, 2f, 0f), moved.Position, 1e-4f);
         Assert.Equal(Quarter, moved.Yaw, 4);
         Assert.Equal(Behind.Pitch, moved.Pitch);
         Assert.Equal(Behind.Roll, moved.Roll);
@@ -53,7 +47,7 @@ public class FollowOrbitTests
     {
         var moved = FollowOrbit.With(Behind, new Orbit(8f, 0f, 3f));
 
-        Near(new Vector3(0f, 3f, 8f), moved.Position);
+        Near(new Vector3(0f, 3f, 8f), moved.Position, 1e-4f);
         Assert.Equal(Behind.Yaw, moved.Yaw);
     }
 
@@ -62,7 +56,7 @@ public class FollowOrbitTests
     {
         var onThem = Behind with { Position = Vector3.Zero };
 
-        Near(new Vector3(0f, 1f, -4f), FollowOrbit.With(onThem, new Orbit(4f, MathF.PI, 1f)).Position);
+        Near(new Vector3(0f, 1f, -4f), FollowOrbit.With(onThem, new Orbit(4f, MathF.PI, 1f)).Position, 1e-4f);
     }
 
     [Fact]

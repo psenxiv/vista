@@ -1,14 +1,12 @@
-using System.Numerics;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Scenes;
 
 public class SceneEditingTests
 {
-    private static ControlPoint Point(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
-
     // Three tracks: Track 1, Track 2, Track 3.
     private static Scene Three()
     {

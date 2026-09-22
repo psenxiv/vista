@@ -1,22 +1,14 @@
 using System.Numerics;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
 public class AimSettingsTests
 {
-    private const float Tolerance = 1e-4f;
-
     // A camera at (100, 5, 100) looking along yaw 90°, which faces −x.
     private static readonly ControlPoint Camera = new(new Vector3(100f, 5f, 100f), MathF.PI / 2f, 0f, 1f);
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, Tolerance);
-        Assert.Equal(expected.Y, actual.Y, Tolerance);
-        Assert.Equal(expected.Z, actual.Z, Tolerance);
-    }
 
     [Fact]
     public void ANewTrackHasNoLookAtNoCharacterAndTheDefaultWatchSettings()
@@ -39,12 +31,12 @@ public class AimSettingsTests
 
         Assert.Equal(AimMode.LookAt, looking.Aim);
         Assert.True(looking.LookAtPlaced);
-        Near(new Vector3(-9f, 2f, 3f), looking.LookAt);
+        Near(new Vector3(-9f, 2f, 3f), looking.LookAt, 1e-4f);
     }
 
     [Fact]
     public void WithNoPointsTheLookAtGoesTenYalmsAheadOfTheCamera()
-        => Near(new Vector3(90f, 5f, 100f), TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera).LookAt);
+        => Near(new Vector3(90f, 5f, 100f), TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera).LookAt, 1e-4f);
 
     [Fact]
     public void ComingBackToLookAtKeepsThePointWhereItWas()

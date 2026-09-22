@@ -2,6 +2,7 @@ using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
 
@@ -30,13 +31,6 @@ public class SessionFollowTests
         state.SetTarget("Guard", null);
         state.AddToEnd(new ControlPoint(new Vector3(10f, 2f, 5f), 0f, 0f, 1f));
         return (state, characters);
-    }
-
-    private static void AssertNear(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, 3);
-        Assert.Equal(expected.Y, actual.Y, 3);
-        Assert.Equal(expected.Z, actual.Z, 3);
     }
 
     [Fact]
@@ -109,7 +103,7 @@ public class SessionFollowTests
 
         state.SetAim(AimMode.FollowTarget, Camera);
 
-        AssertNear(before.Position, state.Track.Points[0].Position);
+        Near(before.Position, state.Track.Points[0].Position, 1e-3f);
         Assert.Equal(before.Yaw, state.Track.Points[0].Yaw, 3);
     }
 
@@ -123,7 +117,7 @@ public class SessionFollowTests
         state.SetTarget("Scout", null);
 
         Assert.Equal(stored, state.StoredTrack.Points[0]);
-        AssertNear(new Vector3(-5f, 2f, 13f), state.Track.Points[0].Position);
+        Near(new Vector3(-5f, 2f, 13f), state.Track.Points[0].Position, 1e-3f);
     }
 
     [Fact]
@@ -135,7 +129,7 @@ public class SessionFollowTests
 
         state.SetTarget("Guard", null);
 
-        AssertNear(before.Position, state.Track.Points[0].Position);
+        Near(before.Position, state.Track.Points[0].Position, 1e-3f);
     }
 
     [Fact]
@@ -147,7 +141,7 @@ public class SessionFollowTests
 
         state.SetAim(AimMode.AimKeys, Camera);
 
-        AssertNear(before.Position, state.Track.Points[0].Position);
+        Near(before.Position, state.Track.Points[0].Position, 1e-3f);
         Assert.Equal(before.Yaw, state.Track.Points[0].Yaw, 3);
     }
 
@@ -159,7 +153,7 @@ public class SessionFollowTests
 
         state.ReplacePoint(0, target);
 
-        AssertNear(target.Position, state.Track.Points[0].Position);
+        Near(target.Position, state.Track.Points[0].Position, 1e-3f);
     }
 
     [Fact]
@@ -186,7 +180,7 @@ public class SessionFollowTests
 
         var frame = state.FrameAt(0.0)!.Value;
 
-        AssertNear(new Vector3(40f, 2f, 5f), frame.Position);
+        Near(new Vector3(40f, 2f, 5f), frame.Position, 1e-3f);
     }
 
     [Fact]
@@ -267,10 +261,10 @@ public class SessionFollowTests
         Assert.Null(state.PreviewFollowOrbit(new Orbit(5f, MathF.PI / 2f, 2f)));
         state.EndLiveEdit();
 
-        AssertNear(new Vector3(15f, 2f, 0f), state.Track.Points[0].Position);
+        Near(new Vector3(15f, 2f, 0f), state.Track.Points[0].Position, 1e-3f);
         Assert.Equal(MathF.PI / 2f, state.FollowOrbit!.Value.Angle, 3);
         state.Undo();
-        AssertNear(before, state.Track.Points[0].Position);
+        Near(before, state.Track.Points[0].Position, 1e-3f);
     }
 
     [Fact]

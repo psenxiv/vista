@@ -2,20 +2,12 @@ using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks;
 
 public class AnchorTests
 {
-    private const float Tolerance = 1e-4f;
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, Tolerance);
-        Assert.Equal(expected.Y, actual.Y, Tolerance);
-        Assert.Equal(expected.Z, actual.Z, Tolerance);
-    }
-
     [Fact]
     public void TheOriginChangesNothing()
     {
@@ -28,7 +20,7 @@ public class AnchorTests
     public void AQuarterTurnTurnsTheForwardOffsetTheWayTheLookTurns()
     {
         var anchor = new Anchor(Vector3.Zero, MathF.PI / 2f);
-        Near(new Vector3(-1f, 0f, 0f), anchor.ToWorld(new Vector3(0f, 0f, -1f)));
+        Near(new Vector3(-1f, 0f, 0f), anchor.ToWorld(new Vector3(0f, 0f, -1f)), 1e-4f);
     }
 
     [Theory]
@@ -38,7 +30,7 @@ public class AnchorTests
     public void TurningAPointAgreesWithAddingToItsYaw(float yaw, float pitch, float turn)
     {
         var look = FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch);
-        Near(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw + turn, pitch), Anchor.Turn(look, turn));
+        Near(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw + turn, pitch), Anchor.Turn(look, turn), 1e-4f);
     }
 
     [Fact]
@@ -47,8 +39,8 @@ public class AnchorTests
         var anchor = new Anchor(new Vector3(10f, -2f, 7f), 1.1f);
         var local = new Vector3(3f, 1.5f, -4f);
 
-        Near(local, anchor.ToLocal(anchor.ToWorld(local)));
-        Near(new Vector3(10f, -0.5f, 7f) + Anchor.Turn(new Vector3(3f, 0f, -4f), 1.1f), anchor.ToWorld(local));
+        Near(local, anchor.ToLocal(anchor.ToWorld(local)), 1e-4f);
+        Near(new Vector3(10f, -0.5f, 7f) + Anchor.Turn(new Vector3(3f, 0f, -4f), 1.1f), anchor.ToWorld(local), 1e-4f);
     }
 
     [Fact]
@@ -58,12 +50,12 @@ public class AnchorTests
         var local = new ControlPoint(new Vector3(0f, 0f, -2f), 0.2f, 0.3f, 1.1f, 0.4f);
         var world = anchor.ToWorld(local);
 
-        Assert.Equal(1.0f, world.Yaw, Tolerance);
+        Assert.Equal(1.0f, world.Yaw, 1e-4f);
         Assert.Equal(0.3f, world.Pitch);
         Assert.Equal(0.4f, world.Roll);
         Assert.Equal(1.1f, world.Fov);
-        Near(local.Position, anchor.ToLocal(world).Position);
-        Assert.Equal(local.Yaw, anchor.ToLocal(world).Yaw, Tolerance);
+        Near(local.Position, anchor.ToLocal(world).Position, 1e-4f);
+        Assert.Equal(local.Yaw, anchor.ToLocal(world).Yaw, 1e-4f);
     }
 
     [Fact]
@@ -74,11 +66,11 @@ public class AnchorTests
         var point = new Vector3(1f, 2f, 3f);
 
         var composed = scene.ToWorld(track);
-        Near(scene.ToWorld(track.ToWorld(point)), composed.ToWorld(point));
-        Assert.Equal(0.6f - 1.3f, composed.Yaw, Tolerance);
+        Near(scene.ToWorld(track.ToWorld(point)), composed.ToWorld(point), 1e-4f);
+        Assert.Equal(0.6f - 1.3f, composed.Yaw, 1e-4f);
 
         var back = scene.ToLocal(composed);
-        Near(track.Position, back.Position);
-        Assert.Equal(track.Yaw, back.Yaw, Tolerance);
+        Near(track.Position, back.Position, 1e-4f);
+        Assert.Equal(track.Yaw, back.Yaw, 1e-4f);
     }
 }

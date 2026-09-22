@@ -3,21 +3,14 @@ using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionAnchorTests
 {
-    private const float Tolerance = 1e-4f;
-
-    private static ControlPoint Point(float x, float y = 5f, float z = 0f) => new(new Vector3(x, y, z), 0f, 0f, 1f);
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, Tolerance);
-        Assert.Equal(expected.Y, actual.Y, Tolerance);
-        Assert.Equal(expected.Z, actual.Z, Tolerance);
-    }
+    // These tests put every point at head height, so y defaults to 5 here.
+    private static ControlPoint Point(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
 
     // Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 (y = 5).
     private static SessionState Editing()
@@ -40,7 +33,7 @@ public class SessionAnchorTests
         Assert.True(state.Scene.Tracks[0].AnchorPlaced);
         Assert.Equal(Anchor.Origin, state.Scene.Tracks[0].Anchor);
         Assert.Equal(new Vector3(0f, 4f, 0f), state.Scene.Tracks[0].Points[0].Position);
-        Near(new Vector3(20f, 5f, 0f), state.Track.Points[1].Position);
+        Near(new Vector3(20f, 5f, 0f), state.Track.Points[1].Position, 1e-4f);
     }
 
     [Fact]
@@ -51,8 +44,8 @@ public class SessionAnchorTests
         state.AddToEnd(Point(50f, 7f, 5f));
 
         Assert.Equal(new Vector3(10f, 1f, 0f), state.Scene.Anchor.Position);
-        Near(new Vector3(50f, 1f, 5f), SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[1]).Position);
-        Near(new Vector3(50f, 7f, 5f), state.Track.Points[0].Position);
+        Near(new Vector3(50f, 1f, 5f), SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[1]).Position, 1e-4f);
+        Near(new Vector3(50f, 7f, 5f), state.Track.Points[0].Position, 1e-4f);
     }
 
     [Fact]
@@ -114,9 +107,9 @@ public class SessionAnchorTests
 
         Assert.Null(state.MoveAnchor(new Anchor(new Vector3(15f, 1f, 3f), 0f), carry: true));
 
-        Near(before + new Vector3(5f, 0f, 3f), state.Track.Points[2].Position);
+        Near(before + new Vector3(5f, 0f, 3f), state.Track.Points[2].Position, 1e-4f);
         Assert.True(state.Undo());
-        Near(before, state.Track.Points[2].Position);
+        Near(before, state.Track.Points[2].Position, 1e-4f);
     }
 
     [Fact]
@@ -128,8 +121,8 @@ public class SessionAnchorTests
 
         Assert.Null(state.MoveAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false));
 
-        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position);
-        Near(new Vector3(-4f, 0f, 9f), state.SelectedAnchorInWorld!.Value.Position);
+        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);
+        Near(new Vector3(-4f, 0f, 9f), state.SelectedAnchorInWorld!.Value.Position, 1e-4f);
     }
 
     [Fact]
@@ -142,8 +135,8 @@ public class SessionAnchorTests
 
         Assert.Null(state.ReplacePoint(1, target));
 
-        Near(target.Position, state.Track.Points[1].Position);
-        Assert.Equal(0.4f, state.Track.Points[1].Yaw, Tolerance);
+        Near(target.Position, state.Track.Points[1].Position, 1e-4f);
+        Assert.Equal(0.4f, state.Track.Points[1].Yaw, 1e-4f);
     }
 
     [Fact]
@@ -227,7 +220,7 @@ public class SessionAnchorTests
         state.AddToEnd(Point(90f));
 
         Assert.Equal(anchor, state.Scene.Tracks[0].Anchor);
-        Near(new Vector3(90f, 5f, 0f), state.Track.Points[0].Position);
+        Near(new Vector3(90f, 5f, 0f), state.Track.Points[0].Position, 1e-4f);
     }
 
     [Fact]
@@ -237,7 +230,7 @@ public class SessionAnchorTests
         state.DuplicateTrack(state.EditedTrackId);
 
         for (var i = 0; i < 3; i++)
-            Near(state.WorldOf(state.Scene.Tracks[0]).Points[i].Position, state.Track.Points[i].Position);
+            Near(state.WorldOf(state.Scene.Tracks[0]).Points[i].Position, state.Track.Points[i].Position, 1e-4f);
     }
 
     [Fact]
@@ -297,7 +290,7 @@ public class SessionAnchorTests
         Assert.Null(state.DeleteTrack(second));
 
         Assert.True(state.Scene.AnchorPlaced);
-        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position);
+        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);
     }
 
     // Editing() with both anchors moved and turned by different, non-zero yaws.
@@ -319,8 +312,8 @@ public class SessionAnchorTests
 
         Assert.Null(state.AddToEnd(target));
 
-        Near(target.Position, state.Track.Points[^1].Position);
-        Assert.Equal(target.Yaw, state.Track.Points[^1].Yaw, Tolerance);
+        Near(target.Position, state.Track.Points[^1].Position, 1e-4f);
+        Assert.Equal(target.Yaw, state.Track.Points[^1].Yaw, 1e-4f);
     }
 
     [Fact]
@@ -332,8 +325,8 @@ public class SessionAnchorTests
 
         Assert.Null(state.AddAfterSelected(target));
 
-        Near(target.Position, state.Track.Points[2].Position);
-        Assert.Equal(target.Yaw, state.Track.Points[2].Yaw, Tolerance);
+        Near(target.Position, state.Track.Points[2].Position, 1e-4f);
+        Assert.Equal(target.Yaw, state.Track.Points[2].Yaw, 1e-4f);
     }
 
     [Fact]
@@ -344,8 +337,8 @@ public class SessionAnchorTests
 
         state.BeginLiveEdit();
         Assert.Null(state.PreviewPoint(0, target));
-        Near(target.Position, state.Track.Points[0].Position);
-        Assert.Equal(target.Yaw, state.Track.Points[0].Yaw, Tolerance);
+        Near(target.Position, state.Track.Points[0].Position, 1e-4f);
+        Assert.Equal(target.Yaw, state.Track.Points[0].Yaw, 1e-4f);
         state.EndLiveEdit();
     }
 }

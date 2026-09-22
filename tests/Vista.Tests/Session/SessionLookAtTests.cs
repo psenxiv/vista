@@ -2,23 +2,16 @@ using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionLookAtTests
 {
-    private const float Tolerance = 1e-4f;
-
     private static readonly ControlPoint Camera = new(new Vector3(0f, 5f, 0f), 0f, 0f, 1f);
 
-    private static ControlPoint Point(float x, float y = 5f, float z = 0f) => new(new Vector3(x, y, z), 0f, 0f, 1f);
-
-    private static void Near(Vector3 expected, Vector3 actual)
-    {
-        Assert.Equal(expected.X, actual.X, Tolerance);
-        Assert.Equal(expected.Y, actual.Y, Tolerance);
-        Assert.Equal(expected.Z, actual.Z, Tolerance);
-    }
+    // These tests put every point at head height, so y defaults to 5 here.
+    private static ControlPoint Point(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
 
     // Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 (y = 5), all aimed along −z.
     private static SessionState Editing()
@@ -46,7 +39,7 @@ public class SessionLookAtTests
 
         Assert.Null(state.SetAim(AimMode.LookAt, Camera));
 
-        Near(new Vector3(10f, 5f, -10f), state.Track.LookAt);
+        Near(new Vector3(10f, 5f, -10f), state.Track.LookAt, 1e-4f);
         Assert.True(state.Undo());
         Assert.Equal(AimMode.AimKeys, state.Track.Aim);
         Assert.False(state.Track.LookAtPlaced);
@@ -58,11 +51,11 @@ public class SessionLookAtTests
         var state = new SessionState(_ => 1f);
         state.Edit();
         state.SetAim(AimMode.LookAt, new ControlPoint(new Vector3(50f, 5f, 50f), 0f, 0f, 1f));
-        Near(new Vector3(50f, 5f, 40f), state.Track.LookAt);
+        Near(new Vector3(50f, 5f, 40f), state.Track.LookAt, 1e-4f);
 
         state.AddToEnd(Point(10f));
 
-        Near(new Vector3(50f, 5f, 40f), state.Track.LookAt);
+        Near(new Vector3(50f, 5f, 40f), state.Track.LookAt, 1e-4f);
     }
 
     [Fact]
@@ -159,7 +152,7 @@ public class SessionLookAtTests
         Assert.NotNull(state.PreviewLookAt(new Vector3(6f, 5f, 0f)));
         state.EndLiveEdit();
 
-        Near(start, state.Track.LookAt);
+        Near(start, state.Track.LookAt, 1e-4f);
     }
 
     [Fact]
@@ -175,7 +168,7 @@ public class SessionLookAtTests
         Assert.Equal(AnchorKind.LookAt, state.SelectedAnchor);
         Assert.Null(state.Selected);
         Assert.Null(state.SelectedAnchorInWorld);
-        Near(new Vector3(10f, 5f, -10f), state.SelectedLookAtInWorld!.Value);
+        Near(new Vector3(10f, 5f, -10f), state.SelectedLookAtInWorld!.Value, 1e-4f);
     }
 
     [Fact]
@@ -206,9 +199,9 @@ public class SessionLookAtTests
 
         Assert.Null(state.MoveLookAt(target));
 
-        Near(target, state.SelectedLookAtInWorld!.Value);
+        Near(target, state.SelectedLookAtInWorld!.Value, 1e-4f);
         Assert.True(state.Undo());
-        Near(before, state.Track.LookAt);
+        Near(before, state.Track.LookAt, 1e-4f);
     }
 
     [Fact]
@@ -223,9 +216,9 @@ public class SessionLookAtTests
         Assert.Null(state.PreviewLookAt(new Vector3(3f, 5f, 0f)));
         state.EndLiveEdit();
 
-        Near(new Vector3(3f, 5f, 0f), state.Track.LookAt);
+        Near(new Vector3(3f, 5f, 0f), state.Track.LookAt, 1e-4f);
         Assert.True(state.Undo());
-        Near(start, state.Track.LookAt);
+        Near(start, state.Track.LookAt, 1e-4f);
     }
 
     [Fact]
@@ -236,10 +229,10 @@ public class SessionLookAtTests
         state.SelectTrackAnchor(state.EditedTrackId);
 
         state.MoveAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false);
-        Near(before, state.Track.LookAt);
+        Near(before, state.Track.LookAt, 1e-4f);
 
         state.MoveAnchor(new Anchor(new Vector3(6f, 0f, 9f), 1.3f), carry: true);
-        Near(before + new Vector3(10f, 0f, 0f), state.Track.LookAt);
+        Near(before + new Vector3(10f, 0f, 0f), state.Track.LookAt, 1e-4f);
     }
 
     [Fact]
