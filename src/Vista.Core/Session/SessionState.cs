@@ -11,7 +11,7 @@ public enum EditOutcome { Unchanged, FromOff, FromLive }
 /// <summary>What <see cref="SessionState.Play"/>, <see cref="SessionState.Restart"/> or <see cref="SessionState.Cue"/> did.</summary>
 public enum PlayOutcome { Refused, ReHid, Resumed, Started, StartedFromOff, Cued, CuedFromOff }
 
-/// <summary>The mode, the Director and the track, and the rules for moving between modes.</summary>
+/// <summary>The mode, the Director, the scene and the edited track, and the rules for moving between modes.</summary>
 public sealed class SessionState
 {
     private readonly EditHistory history = new();
@@ -211,7 +211,7 @@ public sealed class SessionState
         return Apply(t => TrackEditing.Move(t, from, to), _ => selected is { } s ? Follow(s, from, to) : null);
     }
 
-    /// <summary>Restores the track and selection before the last change. Returns false if nothing was undone.</summary>
+    /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
     public bool Undo()
     {
         EndLiveEdit();

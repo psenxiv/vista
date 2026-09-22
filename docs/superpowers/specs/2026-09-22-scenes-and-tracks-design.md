@@ -1,7 +1,7 @@
 # Vista — Scenes and Tracks (Phase 3.b)
 
 Date: 2026-09-22
-Status: Approved design, awaiting spec review
+Status: Approved
 
 A scene holds several named tracks, one of which is edited at a time. The track editor
 window becomes the main Vista window, with a Hierarchy compartment beside the track editor.

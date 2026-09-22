@@ -238,7 +238,7 @@ internal sealed class CameraSession
     /// <summary>True while editing with a step to redo.</summary>
     public bool CanRedo => state.CanRedo;
 
-    /// <summary>Restores the track and selection before the last change.</summary>
+    /// <summary>Restores the scene, the edited track and the selection before the last change.</summary>
     public bool Undo() => state.Undo();
 
     /// <summary>Re-applies the last undone change.</summary>
