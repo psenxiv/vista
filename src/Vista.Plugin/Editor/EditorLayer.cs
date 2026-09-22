@@ -52,7 +52,8 @@ internal sealed class EditorLayer
         {
             if (other.Id == edited || scene.Hidden.Contains(other.Id)) continue;
             var otherWorld = session.Shown(other);
-            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false));
+            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false, session.AimPoint(otherWorld)));
+            if (session.TargetPoint(otherWorld) is { } otherTarget) overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
             if (other is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
             if (other is { Aim: AimMode.LookAt, LookAtPlaced: true })
@@ -62,7 +63,7 @@ internal sealed class EditorLayer
         var track = editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
             ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
             : session.Track;
-        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.Selected : null, edited: true));
+        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.Selected : null, edited: true, session.AimPoint(track)));
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
@@ -70,7 +71,7 @@ internal sealed class EditorLayer
             markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
         if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
             markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
-        if (session.CharacterAim(track) is { } characterAim) overlay.DrawTargetMarker(view, characterAim);
+        if (session.TargetPoint(track) is { } target) overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
         if (scene.AnchorPlaced)
             markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
         if (!editing) return;

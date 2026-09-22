@@ -308,4 +308,28 @@ public class AimTrackerTests
         Near(new Vector3(10f, 2f, 5f), Frame(new AimTracker(GuardStanding(new Vector3(10f, 0f, 0f), 0f)), world).Position);
         Near(anchor.ToWorld(Behind.Position), Frame(new AimTracker(new NearbyCharacters()), world).Position);
     }
+
+    [Fact]
+    public void TheTargetPointIsTheCharactersAimPointForWatchAndFollow()
+    {
+        var guard = GuardStanding(new Vector3(3f, 0f, 4f), 0f);
+
+        Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.TargetPoint(Watching() with { AimHeight = 1.3f }, guard));
+        Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.TargetPoint(FollowingAt(Behind) with { AimHeight = 1.3f }, guard));
+        Assert.Null(AimTracker.TargetPoint(Single(AimMode.AimKeys) with { TargetName = "Guard" }, guard));
+        Assert.Null(AimTracker.TargetPoint(Watching(), new NearbyCharacters()));
+    }
+
+    [Fact]
+    public void TheAimPointIsWhereTheCameraLooks()
+    {
+        var guard = GuardStanding(new Vector3(3f, 0f, 4f), 0f);
+        var lookAt = Single(AimMode.LookAt) with { LookAt = new Vector3(1f, 2f, 3f), LookAtPlaced = true };
+
+        Assert.Equal(new Vector3(1f, 2f, 3f), AimTracker.AimPoint(lookAt, guard));
+        Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.AimPoint(Watching() with { AimHeight = 1.3f }, guard));
+        Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.AimPoint(FollowingAt(Behind, looks: true) with { AimHeight = 1.3f }, guard));
+        Assert.Null(AimTracker.AimPoint(FollowingAt(Behind, looks: false), guard));
+        Assert.Null(AimTracker.AimPoint(Single(AimMode.AimKeys), guard));
+    }
 }

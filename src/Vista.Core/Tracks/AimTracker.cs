@@ -23,9 +23,19 @@ public sealed class AimTracker
 
     /// <summary>The aim point on the character a Watch track in the world watches, unsmoothed; null unless one is named and found.</summary>
     public static Vector3? CharacterAim(Track world, IAimTargets? targets)
-        => world.Aim == AimMode.WatchTarget && Character(world, targets) is { } character
-            ? character.Position + (Vector3.UnitY * world.AimHeight)
-            : null;
+        => world.Aim == AimMode.WatchTarget ? TargetPoint(world, targets) : null;
+
+    /// <summary>The aim point on the character a Watch or Follow track in the world names: their feet plus the aim height; null unless found.</summary>
+    public static Vector3? TargetPoint(Track world, IAimTargets? targets)
+        => Character(world, targets) is { } character ? character.Position + (Vector3.UnitY * world.AimHeight) : null;
+
+    /// <summary>Where a track in the world points its camera: its Look At point, or its character's aim point when it watches them or follows looking at them; null for a recorded or path aim.</summary>
+    public static Vector3? AimPoint(Track world, IAimTargets? targets) => world switch
+    {
+        { Aim: AimMode.LookAt, LookAtPlaced: true } => world.LookAt,
+        { Aim: AimMode.WatchTarget } or { Aim: AimMode.FollowTarget, FollowLooks: true } => TargetPoint(world, targets),
+        _ => null,
+    };
 
     /// <summary>True when a Watch or Follow track in the world names a character who isn't found.</summary>
     public static bool TargetLost(Track world, IAimTargets? targets)

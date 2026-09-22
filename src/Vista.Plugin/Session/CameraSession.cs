@@ -102,11 +102,15 @@ internal sealed class CameraSession
     /// <summary>A scene track as the editor shows it: a Follow track's point at its character where they stand now.</summary>
     public Track Shown(Track local) => state.Shown(local);
 
-    /// <summary>The aim point on the character a Watch track in the world watches, or null unless one is found.</summary>
-    public Vector3? CharacterAim(Track world) => state.CharacterAim(world);
 
     /// <summary>True when a track in the world watches or follows a named character who isn't found nearby.</summary>
     public bool TargetLost(Track world) => state.TargetLost(world);
+
+    /// <summary>The aim point on the character a Watch or Follow track in the world names, or null unless found.</summary>
+    public Vector3? TargetPoint(Track world) => state.TargetPoint(world);
+
+    /// <summary>Where a track in the world points its camera, or null for a recorded or path aim.</summary>
+    public Vector3? AimPoint(Track world) => state.AimPoint(world);
 
     /// <summary>The selected anchor, or null.</summary>
     public AnchorKind? SelectedAnchor => state.SelectedAnchor;

@@ -85,11 +85,11 @@ public class SessionAimTests
     {
         var (state, characters) = Watching();
         Assert.False(state.TargetLost(state.Track));
-        Assert.Equal(A, state.CharacterAim(state.Track));
+        Assert.Equal(A, state.TargetPoint(state.Track));
 
         characters.Update([]);
 
         Assert.True(state.TargetLost(state.Track));
-        Assert.Null(state.CharacterAim(state.Track));
+        Assert.Null(state.TargetPoint(state.Track));
     }
 }

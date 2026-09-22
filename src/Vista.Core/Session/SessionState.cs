@@ -880,11 +880,15 @@ public sealed class SessionState
         return scrubAim.Frame(Evaluator, WorldOf(Local), time, 0f);
     }
 
-    /// <summary>The aim point on the character a Watch track in the world watches, or null unless one is named and found.</summary>
-    public Vector3? CharacterAim(Track world) => AimTracker.CharacterAim(world, aimTargets);
 
     /// <summary>True when a track in the world watches or follows a named character who isn't found.</summary>
     public bool TargetLost(Track world) => AimTracker.TargetLost(world, aimTargets);
+
+    /// <summary>The aim point on the character a Watch or Follow track in the world names, or null unless found.</summary>
+    public Vector3? TargetPoint(Track world) => AimTracker.TargetPoint(world, aimTargets);
+
+    /// <summary>Where a track in the world points its camera, or null for a recorded or path aim.</summary>
+    public Vector3? AimPoint(Track world) => AimTracker.AimPoint(world, aimTargets);
 
     /// <summary>True between <see cref="BeginScrub"/> and <see cref="EndScrub"/>.</summary>
     public bool Scrubbing { get; private set; }

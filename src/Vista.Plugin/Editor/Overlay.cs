@@ -27,8 +27,8 @@ internal sealed class Overlay
 
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
-    /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, and returns each number's absolute screen position, null when off screen.</summary>
-    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, int? selected, bool edited)
+    /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, its glyphs facing <paramref name="aimPoint"/> when given, and returns each number's absolute screen position, null when off screen.</summary>
+    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, int? selected, bool edited, Vector3? aimPoint = null)
     {
         if (!caches.TryGetValue(track.Id, out var cache)) caches[track.Id] = cache = new TrackCache();
         var palette = edited ? Palette.Edited : Palette.Other;
@@ -39,7 +39,7 @@ internal sealed class Overlay
         var labels = new Vector2?[track.Points.Count];
         for (var i = 0; i < track.Points.Count; i++)
         {
-            var (forward, roll, fov) = Pose(track, cache, i);
+            var (forward, roll, fov) = Pose(track, cache, i, aimPoint);
             var up = CameraOrientation.UpFor(Vector3.Zero, forward, roll);
             var glyph = CameraGlyph.Build(track.Points[i].Position, forward, up, fov, aspect, GlyphDepth);
             DrawGlyph(list, view, glyph, i == selected, palette);
@@ -102,9 +102,13 @@ internal sealed class Overlay
         return view.ToScreen(world);
     }
 
-    /// <summary>The aim point on a watched character: a small crosshair in the anchor colour.</summary>
-    public void DrawTargetMarker(EditorView view, Vector3 world)
-        => DrawCross(ImGui.GetBackgroundDrawList(), view, world, TargetCross, EditorColours.Anchor, GlyphThickness);
+    /// <summary>The aim point on a watched or followed character: a small crosshair and a faint line to the first point, dimmed unless <paramref name="edited"/>.</summary>
+    public void DrawTargetMarker(EditorView view, Vector3 world, Vector3? firstPoint, bool edited)
+    {
+        var list = ImGui.GetBackgroundDrawList();
+        if (firstPoint is { } first) DrawEdge(list, view, world, first, edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink, GlyphThickness);
+        DrawCross(list, view, world, TargetCross, edited ? EditorColours.Anchor : EditorColours.OtherAnchor, GlyphThickness);
+    }
 
     private static void DrawCross(ImDrawListPtr list, EditorView view, Vector3 centre, float size, uint colour, float thickness)
     {
@@ -153,11 +157,11 @@ internal sealed class Overlay
         }
     }
 
-    /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: at the Look At point, along the path in Direction-of-travel mode, or recorded.</summary>
-    private static (Vector3 Forward, float Roll, float Fov) Pose(Track track, TrackCache cache, int index)
+    /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded.</summary>
+    private static (Vector3 Forward, float Roll, float Fov) Pose(Track track, TrackCache cache, int index, Vector3? aimPoint)
     {
         var point = track.Points[index];
-        if (track is { Aim: AimMode.LookAt, LookAtPlaced: true } && TrackAim.Toward(point.Position, track.LookAt) is { } toward)
+        if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is { } toward)
             return (FreeCamMotion.LookAtFrom(Vector3.Zero, toward.Yaw, toward.Pitch), point.Roll, point.Fov);
 
         if (track.Aim != AimMode.PathTangent)
