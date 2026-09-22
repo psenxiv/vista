@@ -29,10 +29,10 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void StartsInViewWithAnEmptyTrackAndNothingLocked()
+    public void StartsInOffWithAnEmptyTrackAndNothingLocked()
     {
         var state = new SessionState();
-        Assert.Equal(CameraMode.View, state.Mode);
+        Assert.Equal(CameraMode.Off, state.Mode);
         Assert.Empty(state.Track.Points);
         Assert.False(state.LocksInput);
     }
@@ -41,7 +41,7 @@ public class SessionStateTests
     public void EditFromViewEntersEditingAndLocksInput()
     {
         var state = new SessionState();
-        Assert.Equal(EditOutcome.FromView, state.Edit());
+        Assert.Equal(EditOutcome.FromGame, state.Edit());
         Assert.Equal(CameraMode.Editing, state.Mode);
         Assert.True(state.LocksInput);
     }
@@ -68,7 +68,7 @@ public class SessionStateTests
     {
         var view = new SessionState();
         Assert.Equal(PlayOutcome.Refused, view.Play());
-        Assert.Equal(CameraMode.View, view.Mode);
+        Assert.Equal(CameraMode.Off, view.Mode);
 
         var editing = new SessionState();
         editing.Edit();
@@ -90,12 +90,12 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void PlayFromViewSaysItStartedFromView()
+    public void PlayFromViewSaysItStartedFromGame()
     {
         var state = EditingWithTrack();
         state.AddToPlaylist(state.EditedTrackId);
         state.Release();
-        Assert.Equal(PlayOutcome.StartedFromView, state.Play());
+        Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
     }
 
@@ -164,12 +164,12 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void CueFromViewSaysItCuedFromView()
+    public void CueFromViewSaysItCuedFromGame()
     {
         var state = EditingWithTrack();
         state.AddToPlaylist(state.EditedTrackId);
         state.Release();
-        Assert.Equal(PlayOutcome.CuedFromView, state.Cue());
+        Assert.Equal(PlayOutcome.CuedFromGame, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);
     }
 
@@ -204,17 +204,17 @@ public class SessionStateTests
     }
 
     [Fact]
-    public void ReleaseReturnsEverythingToView()
+    public void ReleaseReturnsEverythingToOff()
     {
         Assert.False(new SessionState().Release());
 
         var editing = EditingWithTrack();
         Assert.True(editing.Release());
-        Assert.Equal(CameraMode.View, editing.Mode);
+        Assert.Equal(CameraMode.Off, editing.Mode);
 
         var live = Live();
         Assert.True(live.Release());
-        Assert.Equal(CameraMode.View, live.Mode);
+        Assert.Equal(CameraMode.Off, live.Mode);
         Assert.False(live.Director.IsLive);
         Assert.Null(live.Director.Tick(1f / 60f));
     }
@@ -269,5 +269,48 @@ public class SessionStateTests
         var before = state.Track;
         Assert.Equal("every point needs one timing entry", state.ChangeTrack(t => t with { Timing = [] }));
         Assert.Same(before, state.Track);
+    }
+
+    [Fact]
+    public void ReleasingToViewAndBackToOffKeepsInputUnlocked()
+    {
+        var editing = EditingWithTrack();
+        Assert.True(editing.Release(CameraMode.View));
+        Assert.Equal(CameraMode.View, editing.Mode);
+        Assert.False(editing.LocksInput);
+        Assert.True(editing.Released);
+
+        Assert.False(editing.Release());
+        Assert.Equal(CameraMode.Off, editing.Mode);
+        Assert.False(editing.LocksInput);
+        Assert.Throws<ArgumentOutOfRangeException>(() => editing.Release(CameraMode.Live));
+    }
+
+    [Fact]
+    public void EditAndPlayWorkFromOff()
+    {
+        var state = new SessionState();
+        Assert.Equal(EditOutcome.FromGame, state.Edit());
+        Assert.Equal(CameraMode.Editing, state.Mode);
+    }
+
+    [Fact]
+    public void ClearingTheSceneStartsAfreshInOff()
+    {
+        var state = EditingWithTrack();
+        state.AddTrack();
+        Assert.True(state.CanUndo);
+
+        state.ClearScene();
+
+        Assert.Equal(CameraMode.Off, state.Mode);
+        Assert.Single(state.Scene.Tracks);
+        Assert.Empty(state.Track.Points);
+        Assert.Empty(state.Scene.Playlist);
+        Assert.False(state.Scene.AnchorPlaced);
+        Assert.Null(state.Selected);
+        Assert.Equal(0.0, state.ScrubHead);
+        state.Edit();
+        Assert.False(state.CanUndo);
     }
 }

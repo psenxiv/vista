@@ -244,7 +244,7 @@ public class SessionPreviewTests
         state.AddToPlaylist(state.EditedTrackId);
         state.Release();
 
-        Assert.Equal(PlayOutcome.StartedFromView, state.Play());
+        Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
     }
 }

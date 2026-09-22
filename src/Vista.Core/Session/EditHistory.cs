@@ -17,6 +17,13 @@ public sealed class EditHistory
 
     public bool CanRedo => redo.Count > 0;
 
+    /// <summary>Forgets every step.</summary>
+    public void Clear()
+    {
+        undo.Clear();
+        redo.Clear();
+    }
+
     /// <summary>Records the state before a change and clears redo.</summary>
     public void Record(EditSnapshot before)
     {

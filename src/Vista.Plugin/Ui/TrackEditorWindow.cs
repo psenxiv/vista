@@ -16,7 +16,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 {
     private const string PointPayload = "VISTA_POINT";
 
-    private static readonly string[] ModeNames = ["View", "Edit", "Live"];
+    private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
     private static readonly string[] AimNames = ["Recorded aim", "Direction of travel", "Look At", "Watch Target", "Follow Target"];
     private static readonly AimMode[] AimModes = [AimMode.AimKeys, AimMode.PathTangent, AimMode.LookAt, AimMode.WatchTarget, AimMode.FollowTarget];
     private static readonly string[] DirectionNames = ["Forward", "Reverse", "Ping-pong"];
@@ -244,7 +244,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode == CameraMode.View || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
+        ImGui.BeginDisabled(session.Released || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
         if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
         ImGui.EndDisabled();
         ImGui.SameLine();
@@ -253,14 +253,15 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>View, Edit and Live; View releases the camera and Live cues the playlist paused at its first entry's start.</summary>
     private void DrawModeCombo()
     {
-        var current = session.Mode switch { CameraMode.Editing => 1, CameraMode.Live => 2, _ => 0 };
+        var current = session.Mode switch { CameraMode.View => 1, CameraMode.Editing => 2, CameraMode.Live => 3, _ => 0 };
         ImGui.SetNextItemWidth(ModeWidth);
         if (!ImGui.BeginCombo("##mode", ModeNames[current])) return;
 
         if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
-        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Edit(); }
+        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Release("window", CameraMode.View); }
+        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Edit(); }
         ImGui.BeginDisabled(!session.CanGoLive);
-        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Cue(); }
+        if (ImGui.Selectable(ModeNames[3], current == 3) && current != 3) { fields.Commit(); session.Cue(); }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !session.CanGoLive) ImGui.SetTooltip("Add a track with points to the playlist");
         ImGui.EndDisabled();
         ImGui.EndCombo();
@@ -508,7 +509,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var head = (float)session.ScrubHead;
 
         DrawTransport();
-        ImGui.BeginDisabled(session.Mode == CameraMode.View || duration <= 0f);
+        ImGui.BeginDisabled(session.Released || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
         if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); scrubbing = session.Scrubbing; }

@@ -17,8 +17,8 @@ Vista is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin. Open it with `
   placed somewhere else.
 - **Playlist and Live.** Line tracks up in a playlist with repeat counts, then play it live, with the
   game UI hidden if you want.
-- **Modes.** View shows your scene over the normal game camera, Edit is where you build it, and Live
-  plays it.
+- **Modes.** Off leaves the game alone, View shows your scene over the normal game camera, Edit is
+  where you build it, and Live plays it. Changing zone starts a fresh scene.
 
 ## Keys
 

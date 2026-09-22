@@ -163,7 +163,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnTerritoryChanged(uint territory)
-        => Session.Release($"zone change to {territory}");
+        => Session.ClearScene($"zone change to {territory}");
 
     private void OnLogout(int type, int code)
         => Session.Release("logout");

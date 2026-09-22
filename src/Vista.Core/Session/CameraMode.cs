@@ -3,6 +3,9 @@ namespace Vista.Core.Session;
 /// <summary>What the plugin is doing with the camera. Exactly one at a time.</summary>
 public enum CameraMode
 {
+    /// <summary>The game has its camera and nothing is drawn; nothing is locked or blocked. Vista starts here.</summary>
+    Off,
+
     /// <summary>The game has its camera; the scene is drawn, view-only; nothing is locked or blocked.</summary>
     View,
 
