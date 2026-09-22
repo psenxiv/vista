@@ -6,7 +6,8 @@ public enum Easing { Smooth, Linear, EaseIn, EaseOut, EaseInOut, Custom }
 /// <summary>Maps easing presets onto the two sides that bound a leg.</summary>
 public static class LegEasing
 {
-    private static readonly Easing[] Presets = [Easing.Smooth, Easing.Linear, Easing.EaseIn, Easing.EaseOut, Easing.EaseInOut];
+    /// <summary>The presets, in menu order; Custom is not one of them.</summary>
+    public static readonly IReadOnlyList<Easing> Presets = [Easing.Smooth, Easing.Linear, Easing.EaseIn, Easing.EaseOut, Easing.EaseInOut];
 
     /// <summary>The out mode of a leg's first key and the in mode of its last key for <paramref name="easing"/>.</summary>
     public static (TangentMode Out, TangentMode In) Modes(Easing easing) => easing switch

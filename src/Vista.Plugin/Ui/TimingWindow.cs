@@ -32,7 +32,6 @@ internal sealed class TimingWindow : Window
     private const string EmptyText = "Add two points to shape timing.";
     private const string KeyPopup = "##timing-key";
 
-    private static readonly Easing[] Presets = [Easing.Smooth, Easing.Linear, Easing.EaseIn, Easing.EaseOut, Easing.EaseInOut];
     private static readonly KeySide[] Sides = [KeySide.In, KeySide.Out];
     private static readonly float[] NiceFactors = [1f, 2f, 5f, 10f];
 
@@ -125,7 +124,7 @@ internal sealed class TimingWindow : Window
         ImGui.SetNextItemWidth(EasingWidth);
         if (ImGui.BeginCombo("##easing", EasingName(current)))
         {
-            foreach (var preset in Presets)
+            foreach (var preset in LegEasing.Presets)
             {
                 if (!ImGui.Selectable(EasingName(preset), preset == current) || preset == current) continue;
                 Report(session.SetEasing(leg, preset));
