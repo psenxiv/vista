@@ -60,8 +60,7 @@ Releasing is then: bump the version, commit, tag, push the tag.
 - `Changelog` for 0.2.0: "First closed beta."
 - `AcceptsFeedback`: false. Testers report to the user directly.
 - `RepoUrl`: `https://github.com/psenxiv/vista`. `IconUrl`: the icon's raw URL.
-- The `/vista` command's help text: "Open the Vista window. /vista release hands the camera back to
-  the game."
+- The `/vista` command's help text: "/vista opens the editor".
 
 ## Icon
 
