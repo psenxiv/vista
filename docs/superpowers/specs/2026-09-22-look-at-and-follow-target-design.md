@@ -66,8 +66,9 @@ becomes a fixed camera that pans to follow.
 
 - A track under Follow Target names one character, saved by name. It starts with none.
 - **Choosing one:** a character button appears in the track row beside the Aim icon. It opens a
-  list of the characters loaded nearby, players and NPCs, nearest to the camera first, each with
-  its name and distance. Picking one saves its name.
+  list of the characters loaded nearby, players and NPCs, sorted by name, each with its distance
+  from the camera. A search box at the top, focused when the list opens, filters it by any part of
+  the name, ignoring case. Picking one saves its name.
 - **Duplicate names (decided):** the character followed is the one with that name nearest to the
   track's anchor.
 - **Aim height:** per track, in yalms above the character's feet, from 0 to 3. The default is
