@@ -297,7 +297,7 @@ public class SessionSceneTests
     }
 
     [Fact]
-    public void LivePlaysTheEditedTrack()
+    public void LivePlaysThePlaylist()
     {
         var state = Editing();
         state.AddTrack();
@@ -310,5 +310,25 @@ public class SessionSceneTests
         state.Director.Tick(10f);
 
         Assert.Equal(2.0, state.Director.ShotTime, 3);
+    }
+
+    [Fact]
+    public void LiveCuesAndPlaysThePlaylistEntryNotTheEditedTrack()
+    {
+        var state = Editing();
+        state.AddTrack();
+        state.AddToEnd(Point(0f));
+        state.AddToEnd(Point(4f));
+        var first = First(state);
+        state.AddToPlaylist(first);
+        Assert.NotEqual(first, state.EditedTrackId);
+
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Equal(first, state.PlayingEntry!.TrackId);
+        Assert.Equal(10.0, state.ScrubLength, 3);
+
+        state.Release();
+        Assert.Equal(PlayOutcome.StartedFromOff, state.Play());
+        Assert.Equal(first, state.PlayingEntry!.TrackId);
     }
 }

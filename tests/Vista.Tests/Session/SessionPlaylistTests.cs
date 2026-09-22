@@ -61,6 +61,19 @@ public class SessionPlaylistTests
     }
 
     [Fact]
+    public void MovePlaylistEntryIsRefusedWhileLive()
+    {
+        var state = Editing();
+        state.AddToPlaylist(First(state));
+        state.AddToPlaylist(Second(state));
+        state.Cue();
+
+        Assert.NotNull(state.MovePlaylistEntry(1, 0));
+        Assert.Equal(First(state), state.Scene.Playlist[0].TrackId);
+        Assert.Equal(Second(state), state.Scene.Playlist[1].TrackId);
+    }
+
+    [Fact]
     public void DeletingATrackRemovesItsEntriesInOneStep()
     {
         var state = Editing();
@@ -87,6 +100,19 @@ public class SessionPlaylistTests
 
         state.AddToPlaylist(First(state));
         Assert.True(state.CanGoLive);
+    }
+
+    [Fact]
+    public void PlayAndRestartFromOffAreRefusedWhenNothingCanPlay()
+    {
+        var state = Editing();
+        state.Release();
+
+        Assert.Equal(PlayOutcome.Refused, state.Play());
+        Assert.Equal(CameraMode.Off, state.Mode);
+
+        Assert.Equal(PlayOutcome.Refused, state.Restart());
+        Assert.Equal(CameraMode.Off, state.Mode);
     }
 
     [Fact]
@@ -128,6 +154,23 @@ public class SessionPlaylistTests
     }
 
     [Fact]
+    public void ScrubbingPastThePlayingEntrysLengthClampsAndStaysOnIt()
+    {
+        var state = Editing();
+        state.AddToPlaylist(Second(state));
+        state.AddToPlaylist(First(state));
+        state.Cue();
+        state.Play();
+
+        state.BeginScrub();
+        state.ScrubTo(99.0);
+        state.EndScrub();
+
+        Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
+        Assert.Equal(2.0, state.ScrubHead, 4);
+    }
+
+    [Fact]
     public void TheEndHoldsAndPlayStartsAgain()
     {
         var state = Editing();
@@ -157,6 +200,23 @@ public class SessionPlaylistTests
         state.Restart();
 
         Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
+        Assert.Equal(0.0, state.ScrubHead, 4);
+    }
+
+    [Fact]
+    public void RestartInLiveSkipsALeadingEntryWithNoPoints()
+    {
+        var state = Editing();
+        state.AddTrack();
+        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist(First(state));
+        state.Cue();
+        state.Play();
+        state.Director.Tick(3f);
+
+        state.Restart();
+
+        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
         Assert.Equal(0.0, state.ScrubHead, 4);
     }
 
