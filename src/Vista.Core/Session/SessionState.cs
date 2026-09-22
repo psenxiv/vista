@@ -273,7 +273,9 @@ public sealed class SessionState
     /// <summary>Places the anchors under a first point if needed, then adds the world point to the edited track with <paramref name="add"/>.</summary>
     private Scene WithPoint(Scene scene, ControlPoint world, Func<Track, ControlPoint, Track> add)
     {
-        var placed = SceneGeometry.PlaceFor(scene, EditedTrackId, world.Position, groundBelow(world.Position) ?? world.Position.Y);
+        var placed = scene.AnchorPlaced && SceneEditing.Get(scene, EditedTrackId).AnchorPlaced
+            ? scene
+            : SceneGeometry.PlaceFor(scene, EditedTrackId, world.Position, groundBelow(world.Position) ?? world.Position.Y);
         var track = SceneEditing.Get(placed, EditedTrackId);
         return SceneEditing.Replace(placed, add(track, SceneGeometry.WorldAnchor(placed, track).ToLocal(world)));
     }

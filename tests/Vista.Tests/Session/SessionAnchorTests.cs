@@ -44,16 +44,6 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void WithoutAFootHeightAnchorsSitAtThePointsHeight()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.AddToEnd(Point(10f));
-
-        Assert.Equal(new Vector3(10f, 5f, 0f), state.Scene.Anchor.Position);
-    }
-
-    [Fact]
     public void ALaterTracksAnchorIsPlacedUnderItsOwnFirstPoint()
     {
         var state = Editing();
@@ -216,7 +206,24 @@ public class SessionAnchorTests
 
         state.AddToEnd(Point(10f));
 
-        Assert.Equal(5f, state.Scene.Anchor.Position.Y);
+        Assert.Equal(new Vector3(10f, 5f, 0f), state.Scene.Anchor.Position);
+    }
+
+    [Fact]
+    public void TheGroundIsNotReadOnceBothAnchorsArePlaced()
+    {
+        var reads = 0;
+        var state = new SessionState(_ => { reads++; return 1f; });
+        state.Edit();
+        state.AddToEnd(Point(10f));
+        Assert.Equal(1, reads);
+
+        state.AddToEnd(Point(20f));
+        state.Select(0);
+        state.AddAfterSelected(Point(15f));
+
+        Assert.Equal(1, reads);
+        Assert.Equal(3, state.Track.Points.Count);
     }
 
     [Fact]

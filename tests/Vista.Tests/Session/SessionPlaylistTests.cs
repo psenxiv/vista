@@ -287,4 +287,26 @@ public class SessionPlaylistTests
         Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
         Assert.Equal(1.0, state.ScrubHead, 4);
     }
+
+    [Fact]
+    public void ALoopingPlaylistWrapsToItsFirstPlayableEntry()
+    {
+        var state = Editing();
+        state.AddTrack();
+        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist(Second(state));
+        state.AddToPlaylist(First(state));
+        state.SetPlaylistLoops(true);
+        state.Cue();
+        state.Play();
+
+        state.Director.Tick(3f);
+        Assert.Equal(state.Scene.Playlist[2].Id, state.PlayingEntry!.Id);
+
+        state.Director.Tick(10f);
+
+        Assert.False(state.Director.IsFinished);
+        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(1.0, state.ScrubHead, 4);
+    }
 }

@@ -62,7 +62,7 @@ public class SceneGeometryTests
     }
 
     [Fact]
-    public void PlaceForPutsBothAnchorsUnderTheFirstPointAtFootHeight()
+    public void PlaceForPutsBothAnchorsUnderTheFirstPointAtGroundHeight()
     {
         var scene = SceneEditing.New();
         var placed = SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(7f, 9f, -3f), 2f);
