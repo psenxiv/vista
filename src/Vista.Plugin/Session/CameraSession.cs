@@ -139,7 +139,7 @@ internal sealed class CameraSession
     /// <summary>Sets a leg's easing. Returns why it was refused, or null.</summary>
     public string? SetEasing(int leg, Easing easing) => state.SetEasing(leg, easing);
 
-    /// <summary>Sets both sides of a key to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
+    /// <summary>Sets a key's sides to Auto, Linear or Flat. Returns why it was refused, or null.</summary>
     public string? SetKeyMode(int key, TangentMode mode) => state.SetKeyMode(key, mode);
 
     /// <summary>Removes the hold a hold end closes. Returns why it was refused, or null.</summary>
