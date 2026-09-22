@@ -173,7 +173,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         if (editing)
         {
-            ImGui.SameLine(0f, gap);
+            AlignTo(FlySpeedStart(), gap);
             DrawFlySpeed();
         }
 
@@ -188,6 +188,15 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, session.HideUiInLive, "Hide game UI when Live"))
             session.HideUiInLive = !session.HideUiInLive;
+    }
+
+    /// <summary>Where fly speed starts so its slider ends under the track row's trash, leaving room for the eye; null before the first frame.</summary>
+    private float? FlySpeedStart()
+    {
+        if (trashRight is not { } right) return null;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var eyeLeft = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.EyeSlash) - spacing;
+        return MathF.Min(right, eyeLeft) - SpeedWidth - spacing - IconWidth(FontAwesomeIcon.Feather);
     }
 
     /// <summary>Continues the row at <paramref name="screenX"/> when that's at least <paramref name="gap"/> past the last item, else just after it.</summary>
@@ -216,11 +225,7 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.TextUnformatted(FontAwesomeIcon.Feather.ToIconString());
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Fly speed");
         ImGui.SameLine();
-        // Stretch so the slider ends where the track row's trash does, leaving room for LIVE and the eye.
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var reserve = spacing + IconButton.Width(FontAwesomeIcon.EyeSlash) + (session.Mode == CameraMode.Live ? ImGui.CalcTextSize("LIVE").X + spacing : 0f);
-        var end = trashRight is { } right ? right - ImGui.GetCursorScreenPos().X : 0f;
-        ImGui.SetNextItemWidth(MathF.Max(SpeedWidth, MathF.Min(end, ImGui.GetContentRegionAvail().X - reserve)));
+        ImGui.SetNextItemWidth(SpeedWidth);
         var speed = session.Speed;
         var step = speed.Index;
         if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
