@@ -244,4 +244,56 @@ public class SessionAnchorTests
         Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
         Assert.NotNull(state.BringScene(Vector3.Zero));
     }
+
+    [Fact]
+    public void UndoingTheFirstPointDropsTheSceneAnchorSelection()
+    {
+        var state = new SessionState(() => 1f);
+        state.Edit();
+        state.AddToEnd(Point(10f));
+        state.SelectSceneAnchor();
+
+        Assert.True(state.Undo());
+
+        Assert.False(state.Scene.AnchorPlaced);
+        Assert.Null(state.SelectedAnchor);
+        Assert.NotNull(state.MoveAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
+    }
+
+    [Fact]
+    public void UndoingALaterTracksFirstPointDropsItsAnchorSelection()
+    {
+        var state = Editing();
+        state.AddTrack();
+        state.AddToEnd(Point(40f));
+        state.SelectTrackAnchor(state.EditedTrackId);
+
+        Assert.True(state.Undo());
+
+        Assert.False(state.Scene.Tracks[1].AnchorPlaced);
+        Assert.Null(state.SelectedAnchor);
+    }
+
+    [Fact]
+    public void BringSceneIsRefusedUntilTheSceneAnchorIsPlaced()
+    {
+        var state = new SessionState(() => 1f);
+        state.Edit();
+
+        Assert.NotNull(state.BringScene(new Vector3(5f, 5f, 5f)));
+        Assert.False(state.Scene.AnchorPlaced);
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void MovingAnAnchorToWhereItIsRecordsNoStep()
+    {
+        var state = Editing();
+        state.SelectSceneAnchor();
+
+        Assert.Null(state.MoveAnchor(state.SelectedAnchorInWorld!.Value, carry: true));
+
+        Assert.True(state.Undo());
+        Assert.Equal(2, state.Track.Points.Count);
+    }
 }

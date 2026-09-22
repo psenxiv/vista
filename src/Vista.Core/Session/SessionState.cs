@@ -386,16 +386,16 @@ public sealed class SessionState
         else history.Record(start);
     }
 
-    /// <summary>True when two scenes hold the same anchor and tracks by value.</summary>
+    /// <summary>True when two scenes hold the same anchor, hidden set and tracks by value.</summary>
     private static bool SameValues(Scene a, Scene b)
     {
-        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.Tracks.Count != b.Tracks.Count) return false;
+        if (a.Anchor != b.Anchor || a.AnchorPlaced != b.AnchorPlaced || a.Tracks.Count != b.Tracks.Count || !a.Hidden.SetEquals(b.Hidden)) return false;
         for (var i = 0; i < a.Tracks.Count; i++)
         {
             var x = a.Tracks[i];
             var y = b.Tracks[i];
             if (ReferenceEquals(x, y)) continue;
-            if (x.Id != y.Id || x.Anchor != y.Anchor || x.AnchorPlaced != y.AnchorPlaced || x.Speed != y.Speed
+            if (x with { Points = y.Points, Timing = y.Timing } != y
                 || !x.Points.SequenceEqual(y.Points) || !x.Timing.SequenceEqual(y.Timing)) return false;
         }
 
@@ -417,7 +417,7 @@ public sealed class SessionState
     public string? SelectSceneAnchor()
     {
         if (Mode != CameraMode.Editing) return "Anchors can only be selected while editing.";
-        if (!Scene.AnchorPlaced) return "The scene anchor is placed with the scene's first point.";
+        if (UnplacedRefusal(AnchorKind.Scene) is { } unplaced) return unplaced;
         SelectAnchor(AnchorKind.Scene);
         return null;
     }
@@ -427,11 +427,20 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing) return "Anchors can only be selected while editing.";
         if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
-        if (!SceneEditing.Get(Scene, id).AnchorPlaced) return "A track's anchor is placed with its first point.";
+        if (!SceneEditing.Get(Scene, id).AnchorPlaced) return TrackAnchorUnplaced;
         if (SwitchTrack(id) is { } refusal) return refusal;
         SelectAnchor(AnchorKind.Track);
         return null;
     }
+
+    private const string SceneAnchorUnplaced = "The scene anchor is placed with the scene's first point.";
+    private const string TrackAnchorUnplaced = "A track's anchor is placed with its first point.";
+
+    /// <summary>Why the <paramref name="kind"/> anchor cannot be used yet because it is unplaced, or null.</summary>
+    private string? UnplacedRefusal(AnchorKind kind)
+        => kind == AnchorKind.Scene
+            ? (Scene.AnchorPlaced ? null : SceneAnchorUnplaced)
+            : (Local.AnchorPlaced ? null : TrackAnchorUnplaced);
 
     private void SelectAnchor(AnchorKind kind)
     {
@@ -445,6 +454,7 @@ public sealed class SessionState
     public string? MoveAnchor(Anchor world, bool carry)
     {
         if (SelectedAnchor is not { } kind) return "Select an anchor first.";
+        if (UnplacedRefusal(kind) is { } unplaced) return unplaced;
         return CommitScene(scene => (Moved(scene, kind, world, carry), EditedTrackId));
     }
 
@@ -453,13 +463,15 @@ public sealed class SessionState
     {
         if (liveEditStart is not { } start) return "No live edit is in progress.";
         if (SelectedAnchor is not { } kind) return "Select an anchor first.";
+        if (UnplacedRefusal(kind) is { } unplaced) return unplaced;
         Scene = Moved(start.Scene, kind, world, carry);
         return null;
     }
 
-    /// <summary>Moves the scene anchor to the camera's X and Z at foot height, keeping its yaw and carrying every track. Returns why it was refused, or null.</summary>
+    /// <summary>Moves a placed scene anchor to the camera's X and Z at foot height, keeping its yaw and carrying every track. Returns why it was refused, or null.</summary>
     public string? BringScene(Vector3 camera)
     {
+        if (UnplacedRefusal(AnchorKind.Scene) is { } unplaced) return unplaced;
         var height = footHeight() ?? Scene.Anchor.Position.Y;
         return CommitScene(scene => (SceneGeometry.MoveSceneAnchor(scene, scene.Anchor with { Position = new Vector3(camera.X, height, camera.Z) }, carry: true), EditedTrackId));
     }
@@ -537,7 +549,7 @@ public sealed class SessionState
         try
         {
             var (result, edited) = change(Scene);
-            if (ReferenceEquals(result, Scene) && edited == EditedTrackId) return null;
+            if (edited == EditedTrackId && (ReferenceEquals(result, Scene) || SameValues(result, Scene))) return null;
 
             history.Record(Current);
             if (edited != EditedTrackId) ClearForSwitch();
@@ -569,7 +581,7 @@ public sealed class SessionState
         Scene = s.Scene;
         EditedTrackId = s.Edited;
         Selected = s.Selected;
-        if (Selected is not null) SelectedAnchor = null;
+        if (Selected is not null || (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null)) SelectedAnchor = null;
         RefreshTimingSelection(pointsBefore);
         return true;
     }
