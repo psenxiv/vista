@@ -22,6 +22,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private static readonly Vector2 Spacing = new(8f, 7f);
     private static readonly Vector2 CellPadding = new(6f, 4f);
     private const float SpeedWidth = 90f;
+    private const float FieldWidth = 70f;
 
     private readonly CameraSession session;
     private readonly PendingField fields;
@@ -128,7 +129,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndCombo();
     }
 
-    /// <summary>Aim and playback drop-downs showing their setting, and Clear track as a trash icon at the right end.</summary>
+    /// <summary>Aim and playback drop-downs, track Speed and Duration, and Clear track as a trash icon at the right end.</summary>
     private void DrawTrackRow()
     {
         var aim = session.Track.Aim == AimMode.AimKeys ? 0 : 1;
@@ -160,6 +161,13 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.EndCombo();
         }
 
+        ImGui.BeginDisabled(TrackEditing.AllPinned(session.Track));
+        ImGui.SameLine();
+        LabelledField("Speed", "track-speed", session.Track.Speed, "%.2f", "Track speed, yalms per second", v => Report(session.SetTrackSpeed(v)));
+        ImGui.SameLine();
+        LabelledField("Duration", "track-duration", (float)session.Duration, "%.1f", "Whole shot, holds included, in seconds", v => Report(session.SetTrackDuration(v)));
+        ImGui.EndDisabled();
+
         ImGui.SameLine();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
         ImGui.BeginDisabled(session.Track.Points.Count == 0);
@@ -189,12 +197,14 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (ImGui.BeginChild("points", new Vector2(0f, -footer)) && track.Points.Count > 0)
         {
             using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
-            if (ImGui.BeginTable("point-table", 5, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable("point-table", 7, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg))
             {
                 ImGui.TableSetupColumn("##handle");
                 ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("Leg (s)");
+                ImGui.TableSetupColumn("Duration (s)");
+                ImGui.TableSetupColumn("Speed");
                 ImGui.TableSetupColumn("Hold (s)");
+                ImGui.TableSetupColumn("##pin", ImGuiTableColumnFlags.WidthFixed, IconButton.Width(FontAwesomeIcon.Thumbtack));
                 ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
 
@@ -206,7 +216,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.EndChild();
     }
 
-    /// <summary>One point: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon deletes it.</summary>
+    /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon deletes it.</summary>
     private void DrawPointRow(Track track, int index, bool editing)
     {
         ImGui.TableNextRow();
@@ -235,20 +245,19 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.TextUnformatted($"{index + 1}");
 
         ImGui.TableNextColumn();
-        if (index == 0)
-        {
-            ImGui.AlignTextToFramePadding();
-            ImGui.TextUnformatted("-");
-        }
-        else
-        {
-            fields.Draw($"leg{index}", session.Evaluator.LegSeconds(index), "%.1f", 70f,
-                v => Report(session.ChangeTrack(t => TrackEditing.SetLegDuration(t, index, EditLimits.Leg(v)))));
-        }
+        if (index > 0) fields.Draw($"leg{index}", session.Evaluator.LegSeconds(index), "%.1f", FieldWidth, v => Report(session.SetLegDuration(index, v)));
 
         ImGui.TableNextColumn();
-        fields.Draw($"hold{index}", TrackEditing.HoldSeconds(track, index), "%.1f", 70f,
+        if (index > 0) fields.Draw($"leg-speed{index}", TrackEditing.LegSpeed(track, index), "%.2f", FieldWidth, v => Report(session.SetLegSpeed(index, v)));
+
+        ImGui.TableNextColumn();
+        fields.Draw($"hold{index}", TrackEditing.HoldSeconds(track, index), "%.1f", FieldWidth,
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v)))));
+
+        ImGui.TableNextColumn();
+        if (index > 0 && TrackEditing.IsPinned(track, index)
+            && IconButton.Draw($"pin{index}", FontAwesomeIcon.Thumbtack, "Pinned: click to follow the track speed"))
+            Report(session.ResetLeg(index));
 
         ImGui.TableNextColumn();
         RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
@@ -287,6 +296,16 @@ internal sealed unsafe class TrackEditorWindow : Window
         var speed = session.Speed;
         var step = speed.Index;
         if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
+    }
+
+    /// <summary>A text label, then a number field with a tooltip that shows even while disabled.</summary>
+    private void LabelledField(string label, string id, float current, string format, string tooltip, Action<float> apply)
+    {
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted(label);
+        ImGui.SameLine();
+        fields.Draw(id, current, format, FieldWidth, apply);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
     }
 
     /// <summary>Moves the dragged point to <paramref name="index"/> when it is dropped on this item.</summary>
