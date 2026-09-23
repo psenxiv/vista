@@ -9,9 +9,8 @@ a place to park speculative ideas.
 
 On 2026-09-21 the user set phase 3, ahead of the switchboard. 3.a, Reverse and Ping-pong
 playback, was done on 2026-09-22. On the same day the rest of phase 3 was reshaped around
-Scenes, Tracks, anchors, a Playlist, saving and presets; `BRAINSPLAT.md` holds those
-requirements and the work order, and each step is specced as it comes up. Export/import was
-dropped: sharing a Scene means sharing its file.
+Scenes, Tracks, anchors, a Playlist, saving and presets, each specced as it came up. Export/import
+was dropped: sharing a Scene means sharing its file.
 
 ## Under consideration
 
