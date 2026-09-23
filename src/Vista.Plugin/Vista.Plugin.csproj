@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="Guide\*.md" LogicalName="Vista.Guide.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Demo\*.json" LogicalName="Vista.Demo.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <!-- Without SetPlatform, x64 propagates to Core and design-time builds look in a bin/x64 no build writes. -->

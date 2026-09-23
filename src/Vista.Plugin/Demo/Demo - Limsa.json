@@ -1,0 +1,698 @@
+{
+  "format": 1,
+  "anchor": {
+    "position": {
+      "x": -94.725105,
+      "y": 19.562155,
+      "z": -10.473951
+    },
+    "yaw": 0
+  },
+  "anchorPlaced": true,
+  "playlistLoops": true,
+  "hidden": [],
+  "playlist": [
+    {
+      "id": "3b7fa88d-8888-4124-b207-29893e56e637",
+      "trackId": "f8688d0d-14c7-47af-8df5-edb2bb6d0553",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "207bbd93-54f1-4772-84bf-970f541ef70c",
+      "trackId": "643e8e6b-e089-4664-bed2-04826979c289",
+      "loops": 2,
+      "transition": "Cut"
+    },
+    {
+      "id": "af961abd-b459-43b8-b68b-46d05926a199",
+      "trackId": "e30aece0-efd0-4c9b-8f01-65017a4b66c0",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "e0a09bda-658a-4a57-ad61-4ee0982f5913",
+      "trackId": "c4fd65bd-4eca-49d5-aa11-f67d1cbb7594",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "7855e698-f816-43ca-8265-14f7e8194582",
+      "trackId": "d776513b-f0dd-4367-b1ac-ae58cc1dc132",
+      "loops": null,
+      "transition": "Cut"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "f8688d0d-14c7-47af-8df5-edb2bb6d0553",
+      "name": "East Hawker fly through",
+      "anchor": {
+        "position": {
+          "x": 10.631844,
+          "y": -0.32786942,
+          "z": -39.97928
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 14.245169,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5.2264442,
+            "z": 7.9038544
+          },
+          "yaw": 3.135286,
+          "pitch": -0.17282167,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -0.5760498,
+            "y": 1.1110439,
+            "z": 27.469685
+          },
+          "yaw": 2.728972,
+          "pitch": -0.0073645916,
+          "fov": 0.78,
+          "roll": 0.61248744
+        },
+        {
+          "position": {
+            "x": -12.359734,
+            "y": 0.52368927,
+            "z": 46.25087
+          },
+          "yaw": 2.4902065,
+          "pitch": -0.015742172,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -27.830872,
+            "y": 0.3770504,
+            "z": 61.550217
+          },
+          "yaw": 2.1886075,
+          "pitch": -0.0052701943,
+          "fov": 0.78,
+          "roll": 0.5388325
+        },
+        {
+          "position": {
+            "x": -45.893295,
+            "y": 2.5018673,
+            "z": 74.29338
+          },
+          "yaw": 1.402039,
+          "pitch": -0.06181887,
+          "fov": 0.78,
+          "roll": 0.62407947
+        },
+        {
+          "position": {
+            "x": -54.555405,
+            "y": 0.86073303,
+            "z": 68.85911
+          },
+          "yaw": 1.8873428,
+          "pitch": -0.042969298,
+          "fov": 0.78,
+          "roll": -0.60773945
+        },
+        {
+          "position": {
+            "x": -65.229004,
+            "y": 1.0049171,
+            "z": 71.606544
+          },
+          "yaw": 2.2849498,
+          "pitch": -0.07019643,
+          "fov": 0.78,
+          "roll": -0.42279214
+        },
+        {
+          "position": {
+            "x": -74.57628,
+            "y": -0.39312744,
+            "z": 84.69256
+          },
+          "yaw": 1.9628918,
+          "pitch": 0.070343934,
+          "fov": 0.78,
+          "roll": 0.1468975
+        },
+        {
+          "position": {
+            "x": -86.45152,
+            "y": 0.15852547,
+            "z": 88.91675
+          },
+          "yaw": 1.960311,
+          "pitch": -0.0031757737,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": 4.231855,
+          "hold": 1,
+          "inMode": "Manual",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 1
+    },
+    {
+      "id": "643e8e6b-e089-4664-bed2-04826979c289",
+      "name": "Aetheryte loop",
+      "anchor": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "yaw": 0.7329698
+      },
+      "anchorPlaced": true,
+      "speed": 15.44713,
+      "aim": "LookAt",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0.8263726,
+        "y": 2.26272,
+        "z": 15.080397
+      },
+      "lookAtPlaced": true,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": 7.1181545,
+            "z": 0
+          },
+          "yaw": -3.1017518,
+          "pitch": -0.34557685,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 13.296377,
+            "y": 11.222141,
+            "z": 1.1277294
+          },
+          "yaw": -3.855731,
+          "pitch": -0.47124475,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 17.447569,
+            "y": 14.1249485,
+            "z": 14.137777
+          },
+          "yaw": 1.6315863,
+          "pitch": -0.64089173,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 12.878733,
+            "y": 9.274471,
+            "z": 25.060883
+          },
+          "yaw": 0.898549,
+          "pitch": -0.41260284,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 2.4765892,
+            "y": 9.271715,
+            "z": 31.904753
+          },
+          "yaw": 0.094302,
+          "pitch": -0.40213177,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -10.593592,
+            "y": 6.5219536,
+            "z": 27.363565
+          },
+          "yaw": -0.7350785,
+          "pitch": -0.28275213,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -16.482231,
+            "y": 7.3854084,
+            "z": 15.925104
+          },
+          "yaw": -1.4995327,
+          "pitch": -0.307885,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -11.80285,
+            "y": 6.7380123,
+            "z": 3.431007
+          },
+          "yaw": -2.2765532,
+          "pitch": -0.30160278,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 7.1181545,
+            "z": 0
+          },
+          "yaw": -3.1017518,
+          "pitch": -0.34557685,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "e30aece0-efd0-4c9b-8f01-65017a4b66c0",
+      "name": "Ship",
+      "anchor": {
+        "position": {
+          "x": -88.19402,
+          "y": -2.5621548,
+          "z": 42.769714
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 8.880206,
+      "aim": "AimKeys",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -43.28441,
+            "y": 6.777626,
+            "z": 148.76755
+          },
+          "yaw": 1.892726,
+          "pitch": -0.076067485,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -96.38449,
+            "y": 4.563776,
+            "z": 144.97665
+          },
+          "yaw": 2.095885,
+          "pitch": -0.017424414,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 1,
+          "inMode": "Manual",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "c4fd65bd-4eca-49d5-aa11-f67d1cbb7594",
+      "name": "High camera pan",
+      "anchor": {
+        "position": {
+          "x": 32.163597,
+          "y": -0.32786942,
+          "z": 28.403011
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 0.024999999,
+      "aim": "AimKeys",
+      "direction": "PingPong",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": 21.977472,
+            "z": 0
+          },
+          "yaw": 1.5094514,
+          "pitch": -0.6788443,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 21.977472,
+            "z": 0
+          },
+          "yaw": 0.35334536,
+          "pitch": -0.6352709,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 1,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 1,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "d776513b-f0dd-4367-b1ac-ae58cc1dc132",
+      "name": "Slow Zoom",
+      "anchor": {
+        "position": {
+          "x": -41.396126,
+          "y": -1.362154,
+          "z": 25.896744
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 0.16933356,
+      "aim": "AimKeys",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": 1.0412846,
+            "z": -9.536743E-07
+          },
+          "yaw": -0.034083858,
+          "pitch": 0.08512046,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0.034500122,
+            "y": 1.1276627,
+            "z": -1.0117359
+          },
+          "yaw": -0.034083858,
+          "pitch": 0.08512046,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 1,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    }
+  ]
+}
