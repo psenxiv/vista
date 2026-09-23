@@ -64,13 +64,16 @@ timing, which are hidden, the playlist and its loop setting, and the scene ancho
 edited track, the selection, the scrub head, the mode, and undo history.
 
 The file carries `"format": 1`. A file with another format, or one that can't be read, is left out
-of the scene list and logged as a warning. There is no migration: Vista is unreleased.
+of the scene list and logged as a warning. So is one whose values are out of range: speeds, holds,
+aim height, smoothing and repeats outside the editor's limits, a point's pitch past straight up or
+down or a field of view outside 0 to 180°, anything non-finite, or a track that can't be played. The
+same applies to presets. There is no migration: Vista is unreleased.
 
 ### 2.3 Loading and switching
 
 - When the plugin starts with a folder chosen, it opens the last scene used (kept in the config). If
   that file is gone, it opens the first scene by name; if there are none, it makes **Scene 1**. With
-  no folder chosen yet, the same happens when Setup's **Continue** is pressed.
+  no folder chosen yet, the same happens when Setup's **Ok** is pressed.
 - The last scene used is updated whenever a scene is loaded, renamed or deleted.
 - Loading a scene edits its first track, clears the selection and scrub head, and clears undo
   history. The mode and the camera are left alone.
