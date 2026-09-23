@@ -76,7 +76,6 @@ public sealed class Plugin : IDalamudPlugin
         Input = new InputBlocker(() => Session.LocksInput, () => blockEscape);
 
         Framework.Update += OnFrameworkUpdate;
-        ClientState.TerritoryChanged += OnTerritoryChanged;
         ClientState.Logout += OnLogout;
 
         Log.Information("Vista loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown");
@@ -123,8 +122,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (!Session.OwnsCamera) return;
 
-        // TerritoryChanged misses transitions that keep the same territory id, such as an
-        // aethernet hop, a cutscene or a duty starting. This flag covers all of them.
+        // Covers every transition: a teleport, an aethernet hop, a cutscene, a duty starting.
         if (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51])
         {
             Session.Release("area transition");
@@ -162,9 +160,6 @@ public sealed class Plugin : IDalamudPlugin
         windows.Draw();
     }
 
-    private void OnTerritoryChanged(uint territory)
-        => Session.ClearScene($"zone change to {territory}");
-
     private void OnLogout(int type, int code)
         => Session.Release("logout");
 
@@ -174,7 +169,6 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi -= OpenTrackEditor;
         windows.RemoveAllWindows();
         Framework.Update -= OnFrameworkUpdate;
-        ClientState.TerritoryChanged -= OnTerritoryChanged;
         ClientState.Logout -= OnLogout;
         Session?.Release("plugin unload");
         Movement?.Dispose();
