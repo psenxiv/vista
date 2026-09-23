@@ -137,6 +137,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
             DrawPoints(editing);
             ImGui.Separator();
+            // The points list reserves more than a row for this footer; centre the row in it.
+            var slack = ImGui.GetContentRegionAvail().Y - ImGui.GetFrameHeight();
+            if (slack > 0f) ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (slack / 2f));
             DrawScrubRow();
         }
 
