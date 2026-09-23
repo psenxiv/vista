@@ -115,7 +115,7 @@ checklist.
 
 ## Build and test
 
-    make build      # Debug plugin build; sets DALAMUD_HOME (./build.sh does the same)
+    make build      # Debug plugin build; sets DALAMUD_HOME
     make test       # Core tests
     make package    # Release build and latest.zip, as CI makes it
     make bump VERSION=X.Y.Z.N   # set and commit the version
