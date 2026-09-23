@@ -18,9 +18,9 @@ internal sealed class TempFolder : IDisposable
     /// <summary>The file names reported unreadable, in the order reported.</summary>
     internal List<string> Unreadable { get; } = [];
 
-    internal string Scenes => Path.Combine(Folder.Root, "scenes");
+    internal string Scenes => Folder.ScenesDir;
 
-    internal string Presets => Path.Combine(Folder.Root, "presets");
+    internal string Presets => Folder.PresetsDir;
 
     /// <summary>The file names in scenes/, sorted ordinally.</summary>
     internal string[] SceneFiles() => Directory.GetFiles(Scenes).Select(f => Path.GetFileName(f)).Order(StringComparer.Ordinal).ToArray();
