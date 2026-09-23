@@ -9,7 +9,7 @@ using Dalamud.Game.ClientState.Keys;
 
 namespace Vista.Plugin.Editor;
 
-/// <summary>The move gizmo and yaw ring on the selected anchor, or the move gizmo alone on the Look At point; a drag previews live and holding Alt moves an anchor alone.</summary>
+/// <summary>The move gizmo, in world or the anchor's own space, and yaw ring on the selected anchor, or the move gizmo alone on the Look At point; a drag previews live and holding Alt moves an anchor alone.</summary>
 internal sealed class AnchorGizmo
 {
     private const int MoveId = 10;
@@ -21,6 +21,7 @@ internal sealed class AnchorGizmo
     private AnchorKind? dragKind;
     private Guid dragTrack;
     private bool dragRotate;
+    private bool dragLocal;
     private bool waitForRelease;
 
     public AnchorGizmo(PointGizmo points) => this.points = points;
@@ -62,8 +63,10 @@ internal sealed class AnchorGizmo
         var shown = dragStart ?? anchor;
         if (dragStart is null) matrix = PoseMatrix.From(shown.Position, shown.Yaw, 0f, 0f);
         var rotate = kind != AnchorKind.LookAt && (dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate);
+        // The Look At point has no heading, so its local axes are the world's anyway.
+        var local = dragStart is not null ? dragLocal : points.Mode == GizmoMode.MoveLocal;
         ImGuizmo.SetID(rotate ? YawId : MoveId);
-        Gizmo.Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate ? ImGuizmoMode.Local : ImGuizmoMode.World, ref matrix);
+        Gizmo.Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate || local ? ImGuizmoMode.Local : ImGuizmoMode.World, ref matrix);
         var usingNow = ImGuizmo.IsUsing();
         Hot = usingNow || ImGuizmo.IsOver();
 
@@ -81,6 +84,7 @@ internal sealed class AnchorGizmo
                 dragKind = kind;
                 dragTrack = session.EditedTrackId;
                 dragRotate = rotate;
+                dragLocal = local;
                 session.BeginLiveEdit();
             }
 
