@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['test-v*', 'prod-v*']
 
 permissions:
   contents: write
@@ -20,50 +20,80 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Fetch Dalamud (release channel)
-        run: |
-          $dalamud = Join-Path $env:APPDATA 'XIVLauncher\addon\Hooks\dev'
-          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile dalamud.zip
-          Expand-Archive -Force dalamud.zip $dalamud
-          "DALAMUD_HOME=$dalamud" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Check the tag against the version
-        id: version
+      - name: Read the tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $tag = '${{ github.ref_name }}'
+          if ($tag -notmatch '^(test|prod)-v(\d+\.\d+\.\d+\.\d+)$') { throw "Tag $tag isn't test-vX.Y.Z.N or prod-vX.Y.Z.N." }
+          $channel = $Matches[1]
+          $version = $Matches[2]
+
           [xml]$project = Get-Content src/Vista.Plugin/Vista.Plugin.csproj
-          $version = ($project.Project.PropertyGroup | Where-Object { $_.Version }).Version
-          $base = $tag.TrimStart('v').Split('-')[0]
-          if ($base -ne $version) { throw "Tag $tag doesn't match the project version $version." }
-          $prerelease = $tag.Contains('-')
+          $projectVersion = ($project.Project.PropertyGroup | Where-Object { $_.Version }).Version
+          if ($projectVersion -ne $version) { throw "Tag $tag doesn't match the project version $projectVersion." }
+
+          # What's live is main's repo.json, not the tagged commit's.
+          git fetch origin main
+          $live = @(git show origin/main:repo.json | ConvertFrom-Json)[0]
+          if ([version]$version -le [version]$live.AssemblyVersion) { throw "$version isn't above the live release $($live.AssemblyVersion)." }
+          if ($channel -eq 'test' -and [version]$version -le [version]$live.TestingAssemblyVersion) { throw "$version isn't above the live test build $($live.TestingAssemblyVersion)." }
+
+          # A release on a commit already shipped as a test build reuses that build.
+          $promote = $false
+          if ($channel -eq 'prod' -and (git tag --list "test-v$version")) {
+            if ((git rev-list -n 1 "test-v$version") -ne (git rev-parse HEAD)) { throw "test-v$version is on a different commit." }
+            $promote = $true
+          }
+
+          "channel=$channel" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "prerelease=$($prerelease.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "promote=$($promote.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Read the changelog
         run: |
-          $version = '${{ steps.version.outputs.version }}'
+          $version = '${{ steps.tag.outputs.version }}'
           $lines = Get-Content CHANGELOG.md
           $start = [array]::IndexOf($lines, "## $version")
           if ($start -lt 0) { throw "CHANGELOG.md has no section for $version." }
           $body = for ($i = $start + 1; $i -lt $lines.Count -and -not $lines[$i].StartsWith('## '); $i++) { $lines[$i] }
           ($body -join "`n").Trim() | Set-Content notes.md -Encoding utf8NoBOM
 
+      - name: Set up .NET
+        if: steps.tag.outputs.promote == 'false'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Fetch Dalamud (release channel)
+        if: steps.tag.outputs.promote == 'false'
+        run: |
+          $dalamud = Join-Path $env:APPDATA 'XIVLauncher\addon\Hooks\dev'
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile dalamud.zip
+          Expand-Archive -Force dalamud.zip $dalamud
+          "DALAMUD_HOME=$dalamud" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Test
+        if: steps.tag.outputs.promote == 'false'
         run: dotnet test tests/Vista.Tests/Vista.Tests.csproj -c Release
 
       - name: Build
+        if: steps.tag.outputs.promote == 'false'
         run: dotnet build src/Vista.Plugin/Vista.Plugin.csproj -c Release
 
       - name: Find the package
         id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $zip = Get-ChildItem -Path src/Vista.Plugin/bin/Release -Recurse -Filter latest.zip | Select-Object -First 1
-          if (-not $zip) { throw 'DalamudPackager produced no latest.zip.' }
+          if ('${{ steps.tag.outputs.promote }}' -eq 'true') {
+            gh release download 'test-v${{ steps.tag.outputs.version }}' --pattern latest.zip --dir promoted
+            $zip = Get-Item promoted/latest.zip
+          } else {
+            $zip = Get-ChildItem -Path src/Vista.Plugin/bin/Release -Recurse -Filter latest.zip | Select-Object -First 1
+          }
+          if (-not $zip) { throw 'No latest.zip to publish.' }
           "zip=$($zip.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Publish the release
@@ -71,33 +101,37 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $flags = @()
-          if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { $flags += '--prerelease' }
-          gh release create '${{ github.ref_name }}' '${{ steps.package.outputs.zip }}' --title 'Vista ${{ github.ref_name }}' --notes-file notes.md @flags
+          if ('${{ steps.tag.outputs.channel }}' -eq 'test') { $flags += '--prerelease' }
+          gh release create '${{ github.ref_name }}' '${{ steps.package.outputs.zip }}' --title 'Vista v${{ steps.tag.outputs.version }}' --notes-file notes.md @flags
 
       - name: Update repo.json
-        if: steps.version.outputs.prerelease == 'false'
         run: |
-          git fetch origin main
-          git checkout main
+          $channel = '${{ steps.tag.outputs.channel }}'
+          $version = '${{ steps.tag.outputs.version }}'
+          $notes = (Get-Content notes.md -Raw).Trim()
           $manifest = Get-Content src/Vista.Plugin/Vista.json -Raw | ConvertFrom-Json
-          $version = '${{ steps.version.outputs.version }}'
-          while ($version.Split('.').Count -lt 4) { $version += '.0' }
+          git checkout main
+          git pull origin main
           $link = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/latest.zip"
           $repo = @(Get-Content repo.json -Raw | ConvertFrom-Json)
           $entry = $repo[0]
-          $entry.AssemblyVersion = $version
+          $entry | Add-Member -NotePropertyName TestingDalamudApiLevel -NotePropertyValue $entry.DalamudApiLevel -Force
+          $entry | Add-Member -NotePropertyName TestingChangelog -NotePropertyValue $notes -Force
           $entry.TestingAssemblyVersion = $version
-          $entry.Punchline = $manifest.Punchline
-          $entry.Description = $manifest.Description
-          $entry.Tags = $manifest.Tags
-          $entry.Changelog = (Get-Content notes.md -Raw).Trim()
-          $entry.DownloadLinkInstall = $link
-          $entry.DownloadLinkUpdate = $link
           $entry.DownloadLinkTesting = $link
+          if ($channel -eq 'prod') {
+            $entry.AssemblyVersion = $version
+            $entry.Punchline = $manifest.Punchline
+            $entry.Description = $manifest.Description
+            $entry.Tags = $manifest.Tags
+            $entry.Changelog = $notes
+            $entry.DownloadLinkInstall = $link
+            $entry.DownloadLinkUpdate = $link
+          }
           $entry.LastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
           ConvertTo-Json -InputObject $repo -Depth 5 | Set-Content repo.json -Encoding utf8NoBOM
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add repo.json
-          git commit -m 'chore(release) publish ${{ github.ref_name }}'
+          git commit -m "chore(release) publish $channel v$version"
           git push origin main

@@ -1,4 +1,4 @@
-.PHONY: help build test package bump release rc
+.PHONY: help build test package bump testing release
 
 help: ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-8s %s\n", $$1, $$2}'
@@ -12,11 +12,11 @@ test: ## Run the Core tests
 package: ## Release build and latest.zip, as CI makes it
 	@scripts/package.sh
 
-bump: ## Set the version and commit it: make bump VERSION=0.3.0
+bump: ## Set the version and commit it: make bump VERSION=0.6.0.1
 	@scripts/bump.sh $(VERSION)
 
-release: ## Tag and push the current version, publishing it
-	@scripts/release.sh
+testing: ## Ship the current version to opted-in testers (test-vX.Y.Z.N)
+	@scripts/release.sh test
 
-rc: ## Tag and push a prerelease: make rc N=1
-	@scripts/release.sh rc $(N)
+release: ## Ship the current version to everyone (prod-vX.Y.Z.N)
+	@scripts/release.sh prod

@@ -118,15 +118,22 @@ checklist.
     make build      # Debug plugin build; sets DALAMUD_HOME (./build.sh does the same)
     make test       # Core tests
     make package    # Release build and latest.zip, as CI makes it
-    make bump VERSION=X.Y.Z / make rc N=1 / make release   # versioning and publishing
+    make bump VERSION=X.Y.Z.N   # set and commit the version
+    make testing                # ship it to opted-in testers (test-vX.Y.Z.N)
+    make release                # ship it to everyone (prod-vX.Y.Z.N)
 
 The commands live in `scripts/`. Never build the plugin with bare `dotnet build` —
-`DALAMUD_HOME` must be set. Releases run from `.github/workflows/release.yml` when a `v*` tag is
-pushed; only the user pushes tags.
+`DALAMUD_HOME` must be set. Releases run from `.github/workflows/release.yml` when a `test-v*` or
+`prod-v*` tag is pushed; only the user pushes tags.
 
-Before a release, add a `## X.Y.Z` section to `CHANGELOG.md`, newest first: a few short bullets for
-players, in `GUIDES.md`'s voice, and show it to the user first. The workflow uses it for the GitHub
-release notes and `repo.json`, and `make release` refuses a version without one.
+Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z (1, 2, …),
+up by one for every shipped build. A test build that holds up is promoted by releasing the same
+version: the workflow reuses its zip. A fix after a test build is the next N.
+
+Before shipping a build, add a `## X.Y.Z.N` section to `CHANGELOG.md`, newest first: a few short
+bullets for players, in `GUIDES.md`'s voice, and show it to the user first. The workflow uses it for
+the GitHub release notes and `repo.json`, and `make testing` / `make release` refuse a version
+without one.
 
 In-game verification is the user's. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
