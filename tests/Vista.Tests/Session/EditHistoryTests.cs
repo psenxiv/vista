@@ -6,7 +6,7 @@ namespace Vista.Tests.Session;
 
 public class EditHistoryTests
 {
-    private static EditSnapshot Snap(int? selected) => new(SceneEditing.New(), Guid.Empty, selected);
+    private static EditSnapshot Snap(int? selected) => new(SceneEditing.New(), Guid.Empty, selected is { } s ? new Selection([s], [], []) : Selection.None);
 
     [Fact]
     public void UndoReturnsTheRecordedStateAndRedoReturnsTheCurrentOne()
@@ -14,8 +14,8 @@ public class EditHistoryTests
         var history = new EditHistory();
         history.Record(Snap(1));
 
-        Assert.Equal(1, history.Undo(Snap(2))!.Value.Selected);
-        Assert.Equal(2, history.Redo(Snap(1))!.Value.Selected);
+        Assert.Equal([1], history.Undo(Snap(2))!.Value.Selection.Points);
+        Assert.Equal([2], history.Redo(Snap(1))!.Value.Selection.Points);
     }
 
     [Fact]

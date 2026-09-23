@@ -150,7 +150,7 @@ public class PointTransferTests
     public void HiddenTracksAndThePlaylistAreLeftAlone()
     {
         var two = TwoTracks();
-        var scene = SceneEditing.SetHidden(two, two.Tracks[1].Id, true) with { Playlist = [new PlaylistEntry(Guid.NewGuid(), two.Tracks[0].Id)] };
+        var scene = SceneEditing.SetHidden(two, [two.Tracks[1].Id], true) with { Playlist = [new PlaylistEntry(Guid.NewGuid(), two.Tracks[0].Id)] };
         var result = PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[1].Id, NoGround).Scene;
 
         Assert.Equal(scene.Hidden, result.Hidden);

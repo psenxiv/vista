@@ -66,7 +66,7 @@ public class SessionTimingTests
         state.AddToEnd(Point(30f));
         state.SelectLeg(2);
 
-        Assert.Null(state.DeletePoint(1));
+        Assert.Null(state.DeletePoints([1]));
         Assert.Null(state.SelectedLeg);
     }
 

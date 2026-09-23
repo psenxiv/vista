@@ -112,7 +112,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.Select(selected);
-        Assert.Null(state.DeletePoint(index));
+        Assert.Null(state.DeletePoints([index]));
         Assert.Equal(2, state.Track.Points.Count);
         Assert.Equal(expected, state.Selected);
     }
@@ -122,7 +122,7 @@ public class SessionEditingTests
     {
         var state = Editing();
         state.Select(2);
-        state.DeletePoint(0);
+        state.DeletePoints([0]);
         Assert.True(state.Undo());
         Assert.Equal(3, state.Track.Points.Count);
         Assert.Equal(2, state.Selected);
@@ -132,7 +132,7 @@ public class SessionEditingTests
     public void DeletePointOutOfRangeIsRefused()
     {
         var state = Editing();
-        Assert.NotNull(state.DeletePoint(3));
+        Assert.NotNull(state.DeletePoints([3]));
         Assert.Equal(3, state.Track.Points.Count);
     }
 
