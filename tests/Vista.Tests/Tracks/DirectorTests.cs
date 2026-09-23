@@ -109,10 +109,10 @@ public class DirectorTests
         director.Tick(5f);
 
         director.GoLive(shot);
-        var frame = director.Tick(0f);
-        var expected = new TrackEvaluator(shot.Track).Evaluate(0.0);
+        var frame = director.Tick(0f)!.Value;
 
-        Assert.Equal(expected, frame);
+        // Restarted, so shot time 0: x = t puts the camera at the origin. See StraightTrackFrame.
+        StraightTrackFrame(0f, frame);
     }
 
     [Fact]
@@ -121,10 +121,20 @@ public class DirectorTests
         var director = new Director();
         director.GoLive(new TrackShot(StraightTrack()));
 
-        var frame = director.Tick(5f);
+        var frame = director.Tick(5f)!.Value;
 
-        var expected = new TrackEvaluator(StraightTrack()).Evaluate(5.0);
-        Assert.Equal(expected, frame);
+        StraightTrackFrame(5f, frame);
+    }
+
+    // StraightTrack at shot time t: position (t, 0, 0) by the x = t derivation further down. Its aim
+    // is PathTangent along a straight +x line, so it looks along +x, and every point has FoV 1 and
+    // roll 0, so those hold throughout.
+    private static void StraightTrackFrame(float t, Vista.Core.Camera.CameraState frame)
+    {
+        Near(new Vector3(t, 0f, 0f), frame.Position, 1e-3f);
+        Near(Vector3.UnitX, Vector3.Normalize(frame.LookAt - frame.Position), 1e-3f);
+        Assert.Equal(1f, frame.Fov, 1e-5f);
+        Assert.Equal(0f, frame.Roll, 1e-5f);
     }
 
     [Fact]
