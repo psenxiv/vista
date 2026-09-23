@@ -10,7 +10,7 @@ using Dalamud.Game.ClientState.Keys;
 namespace Vista.Plugin.Editor;
 
 /// <summary>The move gizmo and yaw ring on the selected anchor, or the move gizmo alone on the Look At point; a drag previews live and holding Alt moves an anchor alone.</summary>
-internal sealed unsafe class AnchorGizmo
+internal sealed class AnchorGizmo
 {
     private const int MoveId = 10;
     private const int YawId = 11;

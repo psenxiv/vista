@@ -7,7 +7,7 @@ using Dalamud.Bindings.ImGuizmo;
 namespace Vista.Plugin.Editor;
 
 /// <summary>The move gizmo and gimbal rotate rings on the selected point; a drag commits on release.</summary>
-internal sealed unsafe class PointGizmo
+internal sealed class PointGizmo
 {
     private const int MoveId = 1;
     private const int FirstRingId = 2;
