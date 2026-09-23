@@ -42,6 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PointWindow pointWindow;
     private readonly TimingWindow timingWindow;
     private readonly CameraWindow cameraWindow;
+    private readonly GuideWindow guideWindow;
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
     private readonly PendingField fields;
@@ -63,13 +64,15 @@ public sealed class Plugin : IDalamudPlugin
         pointWindow = new PointWindow(Session, pointGizmo);
         timingWindow = new TimingWindow(Session);
         cameraWindow = new CameraWindow(Session);
+        guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(Session);
         followTargetWindow = new FollowTargetWindow(Session);
-        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, cameraWindow, watchTargetWindow, followTargetWindow);
+        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow);
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
         windows.AddWindow(cameraWindow);
+        windows.AddWindow(guideWindow);
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -171,6 +174,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= OnDraw;
         PluginInterface.UiBuilder.OpenMainUi -= OpenTrackEditor;
         windows.RemoveAllWindows();
+        guideWindow.Dispose();
         Framework.Update -= OnFrameworkUpdate;
         ClientState.Logout -= OnLogout;
         Session?.Release("plugin unload");

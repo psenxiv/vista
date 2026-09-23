@@ -9,6 +9,9 @@
     <RootNamespace>Vista.Plugin</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Guide\*.md" LogicalName="Vista.Guide.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Without SetPlatform, x64 propagates to Core and design-time builds look in a bin/x64 no build writes. -->
     <ProjectReference Include="../Vista.Core/Vista.Core.csproj" SetPlatform="Platform=AnyCPU" />
   </ItemGroup>

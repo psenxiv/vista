@@ -53,6 +53,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private readonly PendingField fields;
     private readonly TimingWindow timing;
     private readonly CameraWindow camera;
+    private readonly GuideWindow guide;
     private readonly WatchTargetWindow watchTarget;
     private readonly FollowTargetWindow followTarget;
     private readonly HierarchyPanel hierarchy;
@@ -69,13 +70,14 @@ internal sealed unsafe class TrackEditorWindow : Window
     private float? loopX;
     private float? trashRight;
 
-    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, CameraWindow camera, WatchTargetWindow watchTarget, FollowTargetWindow followTarget)
+    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, CameraWindow camera, GuideWindow guide, WatchTargetWindow watchTarget, FollowTargetWindow followTarget)
         : base("Vista###vista-track-editor")
     {
         this.session = session;
         this.fields = fields;
         this.timing = timing;
         this.camera = camera;
+        this.guide = guide;
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
         hierarchy = new HierarchyPanel(session);
@@ -205,7 +207,7 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         var live = session.Mode == CameraMode.Live ? ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X : 0f;
         ImGui.SameLine();
-        RightAlign(live + IconButton.Width(FontAwesomeIcon.EyeSlash));
+        RightAlign(live + IconButton.Width(FontAwesomeIcon.EyeSlash) + ImGui.GetStyle().ItemSpacing.X + IconButton.Width(FontAwesomeIcon.Question));
         if (session.Mode == CameraMode.Live)
         {
             DrawLive();
@@ -214,6 +216,10 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, session.HideUiInLive, "Hide game UI when Live"))
             session.HideUiInLive = !session.HideUiInLive;
+
+        // Plain white when closed, like the camera button.
+        ImGui.SameLine();
+        if (IconButton.Draw("guide", FontAwesomeIcon.Question, "User Guide", guide.IsOpen ? UiColours.Accent : null)) guide.Toggle();
     }
 
     /// <summary>Where the camera tools start so fly speed's slider still ends under the track row's trash, leaving room for the eye; null before the first frame.</summary>
@@ -221,7 +227,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         if (trashRight is not { } right) return null;
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var eyeLeft = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.EyeSlash) - spacing;
+        var eyeLeft = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.Question) - spacing - IconButton.Width(FontAwesomeIcon.EyeSlash) - spacing;
         var tools = IconButton.Width(FontAwesomeIcon.RulerHorizontal) + spacing + IconButton.Width(FontAwesomeIcon.Camera) + spacing;
         return MathF.Min(right, eyeLeft) - SpeedWidth - spacing - IconWidth(FontAwesomeIcon.Feather) - tools;
     }
@@ -566,10 +572,11 @@ internal sealed unsafe class TrackEditorWindow : Window
         var style = ImGui.GetStyle();
         var items = IconButton.Width(FontAwesomeIcon.Sitemap) + IconButton.Width(FontAwesomeIcon.ListOl) + ModeWidth
             + IconButton.Width(FontAwesomeIcon.Undo) + IconButton.Width(FontAwesomeIcon.Redo) + IconButton.Width(FontAwesomeIcon.ChartLine)
-            + IconButton.Width(FontAwesomeIcon.EyeSlash);
+            + IconButton.Width(FontAwesomeIcon.EyeSlash) + IconButton.Width(FontAwesomeIcon.Question);
         var live = ImGui.CalcTextSize("LIVE").X + Spacing.X;
-        var flySpeed = (Spacing.X * 3f) + IconWidth(FontAwesomeIcon.Feather) + Spacing.X + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Spacing.X * 8f) + (style.WindowPadding.X * 2f);
+        var tools = IconButton.Width(FontAwesomeIcon.RulerHorizontal) + Spacing.X + IconButton.Width(FontAwesomeIcon.Camera) + Spacing.X;
+        var flySpeed = (Spacing.X * 3f) + tools + IconWidth(FontAwesomeIcon.Feather) + Spacing.X + SpeedWidth;
+        return items + MathF.Max(live, flySpeed) + (Spacing.X * 9f) + (style.WindowPadding.X * 2f);
     }
 
     /// <summary>The width of an icon drawn as text in the icon font.</summary>
