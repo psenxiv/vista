@@ -12,12 +12,9 @@ People who make screenshots and videos in FFXIV and want better camera shots. Th
 programmers. Most will open a page because they are stuck or curious about one thing, read it,
 and go back to the game.
 
-Write the way a patient friend would explain it sitting next to them.
+Write the way a patient friend would explain it sitting next to them, briefly.
 
-## Clear and simple, not short
-
-Aim for clear and simple. That is not the same as concise. A slightly longer sentence that is easy
-to follow beats a short one the reader has to decode.
+## Clear, simple and short
 
 - Use plain, everyday words. Say "use", not "utilise". Say "start", not "initiate".
 - Keep sentences short, and put one idea in each.
@@ -26,6 +23,29 @@ to follow beats a short one the reader has to decode.
   the track", not "The track can be played by pressing Space".
 - Say what something is for before you say how to use it.
 - If a word needs explaining, explain it the first time you use it on that page.
+
+## What to leave out
+
+- **Error handling and edge cases.** Don't describe what happens when a character isn't found, a
+  button is greyed out, an action is refused, or a value is clamped. The reader finds these out by
+  using Vista, and they rarely matter.
+- **Limits and ranges**, unless the reader has to choose a value and would otherwise guess wrong.
+- **Where a control is and what it looks like** when an icon already shows it. Show the icon.
+- **Obvious consequences.** "**Level camera roll** levels the camera's roll" is the whole
+  description. Don't add "so the horizon is flat" or "you don't need the window open to do this".
+- **How it works inside:** class names, file names, maths, data formats.
+- **History and plans:** what it used to do, phase numbers, versions, features that don't exist
+  yet.
+
+## Lengths
+
+- A sub-page aims for 150 to 250 words. A topic page can be a little longer.
+- Keep paragraphs to one to three sentences.
+- A control gets one line saying what it does. Where a section covers several controls, put them in
+  a table (see below) rather than a paragraph each.
+- Use a numbered list for steps the reader follows in order, and a bullet list for things that
+  don't have an order.
+- Stop once the reader knows what to do. Don't add a summary.
 
 ## No AI speak
 
@@ -39,58 +59,76 @@ The guide should read as if a person wrote it. Leave out:
   harness, delve, game-changer, cutting-edge.
 - Padding in threes, and "not just X, but Y".
 - Rhetorical questions, exclamation marks, and emoji.
-- Bold used for emphasis. Bold is kept for the names of controls (see below).
+- Bold used for emphasis. Bold is kept for the names of controls.
 
-## Reasonable lengths
-
-- A page should be readable in a minute or two. If it runs longer, split it into sub-topics.
-- Keep paragraphs to two to four sentences.
-- Use a numbered list for steps the reader follows in order, and a bullet list for things that
-  don't have an order.
-- Stop once the reader knows what to do. Don't add a summary of what you just said.
-
-## It's a user guide, not a specification
-
-Describe what the reader sees and does. Leave out:
-
-- How it works inside: class names, file names, maths, data formats.
-- History and provenance: what it used to do, why it was built this way, phase numbers, versions.
-- Plans and features that don't exist yet. Only document what is in the current build.
-- Long explanations of edge cases. If one matters to the reader, give it one sentence.
-
-## Words and formatting
+## Words
 
 - Name every control exactly as it appears on screen or in its tooltip, in bold: "click **Fit**",
   "open the **Camera** window".
-- Put keys in code formatting and name them in words: `Backtick`, `Space`, `Ctrl + Q`. Write key
-  combinations with spaces around the plus.
 - Use the same word for the same thing every time. Vista's words are: scene, track, point, anchor,
   scene anchor, track anchor, leg, hold, key (in the timing graph), playlist, gizmo, and the modes
   Off, View, Edit and Live. The windows are the **Vista** window, the **Point** window, the
-  **Camera** window, the **Timing** window and the **User Guide**.
-- Each page starts with a `#` heading that matches its title in `index.md`. Use `##` and `###` for
-  sections within it.
+  **Camera** window, the **Timing** window and the **User Guide**. The main window's side panels
+  are the Hierarchy and the Playlist.
+- Each page starts with a `#` heading that matches its title in `index.md`. Use `##` for sections
+  and `###` rarely.
 
-## What the page renderer supports
+## Formatting you can use
 
-Only use this Markdown. Anything else shows up as plain text:
+Use these to make a page easy to scan. Anything not listed here shows as plain text.
 
-- `#`, `##` and `###` headings
-- paragraphs, separated by a blank line
-- bullet lists (`-` or `*`) and numbered lists (`1.`), one level only
-- tables written with pipes, with a `---` row under the header
-- `---` on its own line, for a divider
-- `**bold**`, which shows in the accent colour
-- `` `code` ``, which shows in a muted colour
+| Write | Shows as | Use it for |
+|---|---|---|
+| `# Title` | a large heading | the page title, once, at the top |
+| `## Section` | a heading with a faint line above it | each section; the line is added for you |
+| `### Sub-section` | a smaller heading | rarely, inside a long section |
+| a blank line | a new paragraph | separating paragraphs |
+| `- item` or `* item` | a bullet list, one level | things in no particular order |
+| `1. step` | a numbered list, one level | steps in order |
+| a pipe table with a `---` row under the header | a table | controls and what they do, keys, options |
+| `---` alone on a line | a faint divider | separating parts of a page that has no `##` between them |
+| `**Name**` | the accent colour | a control's name, exactly as on screen |
+| `` `Space` `` | a keycap | a key; `` `Ctrl + Space` `` shows two caps joined by + |
+| `` `/vista` `` | muted text, no keycap | a chat command, anything starting with `/` |
+| `{icon:Camera}` | the icon itself | an icon-only button, next to or instead of its name |
+| `[Playlist](playlist.md)` | an underlined link that opens the page | pointing to another page |
 
-Links show their text but don't go anywhere yet, so don't rely on them. There are no images and
-no nested lists.
+There are no images, no nested lists and no callout boxes.
+
+### Icons
+
+Every button in the **Vista** window that shows only an icon should appear on the page as its icon,
+so the reader can match it to the screen. Write the icon with its name first:
+"{icon:ChartLine} **Timing** opens the **Timing** window."
+
+`{icon:Name}` takes a name from Dalamud's `FontAwesomeIcon`. To find a control's icon, search
+`src/Vista.Plugin` for its tooltip text; the icon is the `FontAwesomeIcon` on the same line. A name
+that doesn't exist shows as its tag, `{icon:Name}`, so check the page in game.
+
+### Tables of controls
+
+When a section covers several buttons, a table is clearer than prose:
+
+```markdown
+| | Button | Does |
+|---|---|---|
+| {icon:Undo} | **Undo** | Undoes your last change. |
+| {icon:Redo} | **Redo** | Redoes it. |
+```
+
+Keep each "Does" cell to one short sentence.
+
+### Links
+
+Link to another page by its file name, as it appears in `index.md`: `[Timing](timing.md)`. Write
+"See [Timing](timing.md)." rather than "The Timing page explains this." A link to a file that isn't
+in `index.md` does nothing when clicked.
 
 ## Adding, moving or removing a page
 
 - To add a page, create the `.md` file and add a line to `index.md`. Indent the line under another
   entry to make it a sub-topic.
-- To remove a page, delete the file and its line in `index.md`.
+- To remove a page, delete the file and its line in `index.md`, and fix any links to it.
 - File names are lowercase words joined by hyphens, like `timing-graph.md`.
 
 ## Keep it true
@@ -103,13 +141,14 @@ no nested lists.
 
 ## An example
 
-Too technical, and full of AI speak:
+Too long, and it explains the obvious:
 
-> The timing graph now seamlessly supports zoom — simply scroll to leverage the new TimingView,
-> which fits the distance axis to the visible range for a more intuitive editing experience.
+> The button at the start of the Rotation row is **Level roll**. It sets the roll back to zero, so
+> the horizon is flat. You don't need the window open to level the camera. The **Level camera
+> roll** button on the top row of the **Vista** window does the same as **Level roll**.
 
-Clear and simple:
+Clear and short:
 
-> To see keys that sit close together, zoom in. Hold the mouse over the graph and scroll up. The
-> graph zooms in around the mouse, and the keys spread apart. Click **Fit** to see the whole track
-> again.
+> | | Button | Does |
+> |---|---|---|
+> | {icon:RulerHorizontal} | **Level camera roll** | Levels the camera's roll. |
