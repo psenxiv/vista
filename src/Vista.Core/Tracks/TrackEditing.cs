@@ -170,6 +170,9 @@ public static class TrackEditing
         return track with { Points = points, Timing = timing };
     }
 
+    /// <summary>Removes points <paramref name="indices"/>, highest first, each as <see cref="Delete(Track, int)"/> removes one.</summary>
+    public static Track Delete(Track track, IReadOnlyCollection<int> indices) => indices.Distinct().OrderDescending().Aggregate(track, Delete);
+
     /// <summary>Puts the points in <paramref name="order"/> (old indices); holds travel with their point, leg speeds and easing stay in their slots.</summary>
     public static Track Reorder(Track track, IReadOnlyList<int> order)
     {

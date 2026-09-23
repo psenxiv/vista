@@ -63,20 +63,20 @@ internal sealed class CameraSession
     /// <summary>Copies a track after itself and edits the copy. Returns why it was refused, or null.</summary>
     public string? DuplicateTrack(Guid id) => state.DuplicateTrack(id);
 
-    /// <summary>Deletes a track. Returns why it was refused, or null.</summary>
-    public string? DeleteTrack(Guid id) => state.DeleteTrack(id);
+    /// <summary>Deletes tracks. Returns why it was refused, or null.</summary>
+    public string? DeleteTracks(IReadOnlyCollection<Guid> ids) => state.DeleteTracks(ids);
 
     /// <summary>Moves tracks as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
     public string? MoveTracks(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target) => state.MoveTracks(ids, grabbed, target);
 
-    /// <summary>Hides or shows a track. Returns why it was refused, or null.</summary>
-    public string? SetTrackHidden(Guid id, bool hidden) => state.SetTrackHidden(id, hidden);
+    /// <summary>Hides or shows tracks; hiding skips the edited one. Returns why it was refused, or null.</summary>
+    public string? SetTracksHidden(IReadOnlyCollection<Guid> ids, bool hidden) => state.SetTracksHidden(ids, hidden);
 
-    /// <summary>Adds a playlist entry for a track. Returns why it was refused, or null.</summary>
-    public string? AddToPlaylist(Guid trackId, int? index = null) => state.AddToPlaylist(trackId, index);
+    /// <summary>Adds a playlist entry for each track, in Hierarchy order. Returns why it was refused, or null.</summary>
+    public string? AddToPlaylist(IReadOnlyCollection<Guid> ids, int? index = null) => state.AddToPlaylist(ids, index);
 
-    /// <summary>Removes a playlist entry. Returns why it was refused, or null.</summary>
-    public string? RemoveFromPlaylist(Guid entryId) => state.RemoveFromPlaylist(entryId);
+    /// <summary>Removes playlist entries. Returns why it was refused, or null.</summary>
+    public string? RemoveFromPlaylist(IReadOnlyCollection<Guid> ids) => state.RemoveFromPlaylist(ids);
 
     /// <summary>Moves playlist entries as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
     public string? MoveEntries(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target) => state.MoveEntries(ids, grabbed, target);

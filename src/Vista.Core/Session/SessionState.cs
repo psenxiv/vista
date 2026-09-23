@@ -243,7 +243,7 @@ public sealed class SessionState
         StopPreview();
         liveEditStart = null;
         var first = scene.Tracks[0].Id;
-        Scene = SceneEditing.SetHidden(scene, first, false);
+        Scene = SceneEditing.SetHidden(scene, [first], false);
         EditedTrackId = first;
         ClearForSwitch();
         worlds.Clear();
@@ -485,13 +485,13 @@ public sealed class SessionState
     /// <summary>Copies track <paramref name="id"/> after itself and edits the copy. Returns why it was refused, or null.</summary>
     public string? DuplicateTrack(Guid id) => CommitScene(scene => SceneEditing.Duplicate(scene, id));
 
-    /// <summary>Deletes track <paramref name="id"/>; deleting the edited track edits the one taking its place, shown if it was hidden. Returns why it was refused, or null.</summary>
-    public string? DeleteTrack(Guid id)
+    /// <summary>Deletes tracks <paramref name="ids"/>; deleting the edited track edits the first remaining track after it, or the last, shown if it was hidden. Returns why it was refused, or null.</summary>
+    public string? DeleteTracks(IReadOnlyCollection<Guid> ids)
         => CommitScene(scene =>
         {
-            var (result, next) = SceneEditing.Delete(scene, id);
-            if (id == EditedTrackId && result.Hidden.Contains(next)) result = SceneEditing.SetHidden(result, next, false);
-            return (result, id == EditedTrackId ? next : EditedTrackId);
+            var (result, next) = SceneEditing.Delete(scene, ids, EditedTrackId);
+            if (result.Hidden.Contains(next)) result = SceneEditing.SetHidden(result, [next], false);
+            return (result, next);
         });
 
     /// <summary>Moves tracks <paramref name="ids"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
@@ -503,18 +503,20 @@ public sealed class SessionState
             return (order is null ? scene : SceneEditing.Reorder(scene, order), EditedTrackId);
         });
 
-    /// <summary>Hides or shows track <paramref name="id"/>; the edited track is always shown. Returns why it was refused, or null.</summary>
-    public string? SetTrackHidden(Guid id, bool hidden)
+    /// <summary>Hides or shows tracks <paramref name="ids"/>; hiding skips the edited track, which is always shown. Returns why it was refused, or null.</summary>
+    public string? SetTracksHidden(IReadOnlyCollection<Guid> ids, bool hidden)
     {
-        if (hidden && id == EditedTrackId) return "The track being edited is always shown.";
-        return CommitScene(scene => (SceneEditing.SetHidden(scene, id, hidden), EditedTrackId));
+        var change = hidden ? ids.Where(id => id != EditedTrackId).ToArray() : ids;
+        if (hidden && ids.Count > 0 && change.Count == 0) return "The track being edited is always shown.";
+        return CommitScene(scene => (SceneEditing.SetHidden(scene, change, hidden), EditedTrackId));
     }
 
-    /// <summary>Adds an entry for a track at <paramref name="index"/>, or at the end. Returns why it was refused, or null.</summary>
-    public string? AddToPlaylist(Guid trackId, int? index = null) => CommitScene(scene => (PlaylistEditing.Add(scene, trackId, index).Scene, EditedTrackId));
+    /// <summary>Adds an entry for each of tracks <paramref name="ids"/>, in Hierarchy order, at <paramref name="index"/>, or at the end. Returns why it was refused, or null.</summary>
+    public string? AddToPlaylist(IReadOnlyCollection<Guid> ids, int? index = null)
+        => CommitScene(scene => (PlaylistEditing.Add(scene, ids.OrderBy(id => SceneEditing.IndexOf(scene, id)).ToArray(), index), EditedTrackId));
 
-    /// <summary>Removes a playlist entry. Returns why it was refused, or null.</summary>
-    public string? RemoveFromPlaylist(Guid entryId) => CommitScene(scene => (PlaylistEditing.Remove(scene, entryId), EditedTrackId));
+    /// <summary>Removes playlist entries <paramref name="ids"/>. Returns why it was refused, or null.</summary>
+    public string? RemoveFromPlaylist(IReadOnlyCollection<Guid> ids) => CommitScene(scene => (PlaylistEditing.Remove(scene, ids), EditedTrackId));
 
     /// <summary>Moves playlist entries <paramref name="ids"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
     public string? MoveEntries(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target)
@@ -551,7 +553,7 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing) return "Tracks can only be switched while editing.";
         if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
-        if (Scene.Hidden.Contains(id) && SetTrackHidden(id, false) is { } refusal) return refusal;
+        if (Scene.Hidden.Contains(id) && SetTracksHidden([id], false) is { } refusal) return refusal;
         if (id == EditedTrackId) return null;
 
         StopPreview();

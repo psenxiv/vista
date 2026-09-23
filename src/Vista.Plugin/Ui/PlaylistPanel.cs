@@ -62,7 +62,7 @@ internal sealed unsafe class PlaylistPanel
             foreach (var track in scene.Tracks)
             {
                 using var trackId = ImRaii.PushId(track.Id.ToString());
-                if (ImGui.Selectable(track.Name)) Report(session.AddToPlaylist(track.Id));
+                if (ImGui.Selectable(track.Name)) Report(session.AddToPlaylist([track.Id]));
             }
 
             ImGui.EndPopup();
@@ -132,7 +132,7 @@ internal sealed unsafe class PlaylistPanel
         DrawLoops(scene, entry, editing);
 
         ImGui.SameLine();
-        if (IconButton.RowAction("remove", FontAwesomeIcon.Times, "Remove from playlist", rowHovered, danger: true)) Report(session.RemoveFromPlaylist(entry.Id));
+        if (IconButton.RowAction("remove", FontAwesomeIcon.Times, "Remove from playlist", rowHovered, danger: true)) Report(session.RemoveFromPlaylist([entry.Id]));
     }
 
     /// <summary>The repeat count as a drag field: 1 up, or 0 to follow the track, shown as ∞ when that holds the playlist or — when it plays once. Double-click to type, wheel to step; a drag applies when let go.</summary>
@@ -193,7 +193,7 @@ internal sealed unsafe class PlaylistPanel
 
         var track = ImGui.AcceptDragDropPayload(TrackPayload);
         if (!track.IsNull && *(int*)track.Handle->Data is var t && t >= 0 && t < scene.Tracks.Count)
-            Report(session.AddToPlaylist(scene.Tracks[t].Id, index));
+            Report(session.AddToPlaylist([scene.Tracks[t].Id], index));
 
         ImGui.EndDragDropTarget();
     }

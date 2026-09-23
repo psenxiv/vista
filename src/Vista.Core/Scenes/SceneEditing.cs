@@ -57,16 +57,18 @@ public static class SceneEditing
         return (scene with { Tracks = tracks }, copy.Id);
     }
 
-    /// <summary>Deletes track <paramref name="id"/> and its playlist entries, refusing the only track; names the track now at its place, or the new last.</summary>
-    public static (Scene Scene, Guid Next) Delete(Scene scene, Guid id)
+    /// <summary>Deletes tracks <paramref name="ids"/> and their playlist entries, refusing to delete every track; names the track to edit after: <paramref name="edited"/> if it stays, else the first remaining track after it, or the last.</summary>
+    public static (Scene Scene, Guid Edited) Delete(Scene scene, IReadOnlyCollection<Guid> ids, Guid edited)
     {
-        var index = Require(scene, id);
-        if (scene.Tracks.Count == 1) throw new ArgumentException("A scene keeps at least one track.");
-        var tracks = scene.Tracks.ToList();
-        tracks.RemoveAt(index);
-        var hidden = new HashSet<Guid>(scene.Hidden);
-        hidden.Remove(id);
-        return (scene with { Tracks = tracks, Hidden = hidden, Playlist = scene.Playlist.Where(e => e.TrackId != id).ToArray() }, tracks[Math.Min(index, tracks.Count - 1)].Id);
+        foreach (var id in ids) Require(scene, id);
+        var at = Require(scene, edited);
+        var gone = ids.ToHashSet();
+        var tracks = scene.Tracks.Where(t => !gone.Contains(t.Id)).ToList();
+        if (tracks.Count == 0) throw new ArgumentException("A scene keeps at least one track.");
+
+        var next = gone.Contains(edited) ? scene.Tracks.Skip(at + 1).FirstOrDefault(t => !gone.Contains(t.Id)) ?? tracks[^1] : scene.Tracks[at];
+        var hidden = new HashSet<Guid>(scene.Hidden.Where(id => !gone.Contains(id)));
+        return (scene with { Tracks = tracks, Hidden = hidden, Playlist = scene.Playlist.Where(e => !gone.Contains(e.TrackId)).ToArray() }, next.Id);
     }
 
     /// <summary>Puts the tracks in <paramref name="order"/> (old indices).</summary>
@@ -76,14 +78,18 @@ public static class SceneEditing
         return tracks.SequenceEqual(scene.Tracks) ? scene : scene with { Tracks = tracks };
     }
 
-    /// <summary>Hides or shows track <paramref name="id"/>.</summary>
-    public static Scene SetHidden(Scene scene, Guid id, bool hidden)
+    /// <summary>Hides or shows tracks <paramref name="ids"/>.</summary>
+    public static Scene SetHidden(Scene scene, IReadOnlyCollection<Guid> ids, bool hidden)
     {
-        Require(scene, id);
-        if (scene.Hidden.Contains(id) == hidden) return scene;
+        foreach (var id in ids) Require(scene, id);
+        if (ids.All(id => scene.Hidden.Contains(id) == hidden)) return scene;
         var set = new HashSet<Guid>(scene.Hidden);
-        if (hidden) set.Add(id);
-        else set.Remove(id);
+        foreach (var id in ids)
+        {
+            if (hidden) set.Add(id);
+            else set.Remove(id);
+        }
+
         return scene with { Hidden = set };
     }
 

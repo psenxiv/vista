@@ -8,23 +8,22 @@ public static class PlaylistEditing
     /// <summary>The most times an entry can play its track.</summary>
     public const int MaxLoops = 99;
 
-    /// <summary>Adds an entry for track <paramref name="trackId"/> at <paramref name="index"/>, or at the end.</summary>
-    public static (Scene Scene, Guid Added) Add(Scene scene, Guid trackId, int? index = null)
+    /// <summary>Adds an entry for each of <paramref name="trackIds"/>, in that order, at <paramref name="index"/>, or at the end.</summary>
+    public static Scene Add(Scene scene, IReadOnlyList<Guid> trackIds, int? index = null)
     {
-        SceneEditing.Get(scene, trackId);
-        var entry = new PlaylistEntry(Guid.NewGuid(), trackId);
+        foreach (var id in trackIds) SceneEditing.Get(scene, id);
+        if (trackIds.Count == 0) return scene;
         var entries = scene.Playlist.ToList();
-        entries.Insert(Math.Clamp(index ?? entries.Count, 0, entries.Count), entry);
-        return (scene with { Playlist = entries }, entry.Id);
+        entries.InsertRange(Math.Clamp(index ?? entries.Count, 0, entries.Count), trackIds.Select(id => new PlaylistEntry(Guid.NewGuid(), id)));
+        return scene with { Playlist = entries };
     }
 
-    /// <summary>Removes entry <paramref name="entryId"/>.</summary>
-    public static Scene Remove(Scene scene, Guid entryId)
+    /// <summary>Removes entries <paramref name="entryIds"/>.</summary>
+    public static Scene Remove(Scene scene, IReadOnlyCollection<Guid> entryIds)
     {
-        var index = Require(scene, entryId);
-        var entries = scene.Playlist.ToList();
-        entries.RemoveAt(index);
-        return scene with { Playlist = entries };
+        foreach (var id in entryIds) Require(scene, id);
+        if (entryIds.Count == 0) return scene;
+        return scene with { Playlist = scene.Playlist.Where(e => !entryIds.Contains(e.Id)).ToArray() };
     }
 
     /// <summary>Puts the entries in <paramref name="order"/> (old indices).</summary>

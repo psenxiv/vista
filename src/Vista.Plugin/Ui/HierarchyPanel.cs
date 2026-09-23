@@ -255,7 +255,7 @@ internal sealed unsafe class HierarchyPanel
         var toggled = hidden
             ? IconButton.Draw("eye", FontAwesomeIcon.EyeSlash, "Show", UiColours.Dim())
             : IconButton.RowAction("eye", FontAwesomeIcon.Eye, "Hide", rowHovered);
-        if (toggled) Report(session.SetTrackHidden(track.Id, !hidden));
+        if (toggled) Report(session.SetTracksHidden([track.Id], !hidden));
         ImGui.EndDisabled();
     }
 
@@ -295,7 +295,7 @@ internal sealed unsafe class HierarchyPanel
             var ticked = false;
             if (ImGui.MenuItem("Rename", string.Empty, ref ticked)) StartRename(track);
             if (ImGui.MenuItem("Duplicate", string.Empty, ref ticked)) Report(session.DuplicateTrack(track.Id));
-            if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist(track.Id));
+            if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist([track.Id]));
             if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, track.Points.Count > 0))
             {
                 presets = files.Presets();
@@ -303,7 +303,7 @@ internal sealed unsafe class HierarchyPanel
                 AskName(Naming.SavePreset, track.Name);
             }
 
-            if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1)) Report(session.DeleteTrack(track.Id));
+            if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1)) Report(session.DeleteTracks([track.Id]));
             ImGui.EndPopup();
         }
     }
