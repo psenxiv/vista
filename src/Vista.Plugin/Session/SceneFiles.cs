@@ -34,6 +34,9 @@ internal sealed class SceneFiles
     /// <summary>The scene names in the folder, read now.</summary>
     public IReadOnlyList<string> Scenes() => library?.Scenes() ?? [];
 
+    /// <summary>Why <paramref name="name"/> can't name a new scene, or with <paramref name="renaming"/> the open one, or null.</summary>
+    public string? NameRefusal(string name, bool renaming = false) => library?.NameRefusal(name, renaming) ?? SceneNames.Refusal(name);
+
     /// <summary>The preset names in the folder, read now.</summary>
     public IReadOnlyList<string> Presets() => library?.Folder.PresetNames() ?? [];
 
@@ -44,20 +47,7 @@ internal sealed class SceneFiles
         if (!changed && Ready) return null;
 
         // The same folder, gone from disk: put the open scene back in it rather than start empty.
-        if (!changed && library is { } lost && lost.CurrentName.Length > 0)
-        {
-            try
-            {
-                lost.Folder.Create();
-                lost.Folder.SaveScene(lost.CurrentName, session.Scene);
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                return Report($"Could not save {lost.CurrentName}: {e.Message}");
-            }
-
-            return Use(parent, lost.CurrentName);
-        }
+        if (!changed && library is { } lost && lost.CurrentName.Length > 0) return Report(lost.Recreate());
 
         if (library is { } current && changed) current.SaveNow();
         return Use(parent, changed && config.SaveFolder is not null ? null : config.LastScene);

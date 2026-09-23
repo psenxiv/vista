@@ -33,6 +33,7 @@ internal sealed unsafe class HierarchyPanel
     private IReadOnlyList<string> presets = [];
     private Naming? naming;
     private string nameText = string.Empty;
+    private (string Text, string? Refusal, bool Replaces)? checkedName;
     private Guid presetTrack;
     private bool openName;
     private bool focusName;
@@ -135,6 +136,7 @@ internal sealed unsafe class HierarchyPanel
     {
         naming = what;
         nameText = suggestion;
+        checkedName = null;
         openName = true;
         focusName = true;
     }
@@ -156,10 +158,15 @@ internal sealed unsafe class HierarchyPanel
         ImGui.SetNextItemWidth(260f);
         var entered = ImGui.InputText("##name", ref nameText, SceneNames.MaxLength + 8, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
 
-        var preset = what == Naming.SavePreset;
-        var others = preset ? presets : scenes.Where(n => what != Naming.RenameScene || !string.Equals(n, files.CurrentName, StringComparison.OrdinalIgnoreCase));
-        var refusal = SceneNames.Refusal(nameText) ?? (!preset && SceneNames.Taken(nameText, others) ? "A scene with that name exists" : null);
-        var replaces = preset && refusal is null && SceneNames.Taken(nameText, others);
+        // Checked when the text changes, not every frame, since a scene check lists the folder.
+        if (checkedName is not { } check || check.Text != nameText)
+        {
+            var preset = what == Naming.SavePreset;
+            var nameRefusal = preset ? SceneNames.Refusal(nameText) : files.NameRefusal(nameText, what == Naming.RenameScene);
+            checkedName = check = (nameText, nameRefusal, preset && nameRefusal is null && SceneNames.Taken(nameText, presets));
+        }
+
+        var (_, refusal, replaces) = check;
         if (refusal is not null || replaces)
         {
             using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
