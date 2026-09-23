@@ -22,6 +22,9 @@ internal sealed class Overlay
     private const float SceneAnchorArrow = 1.6f;
     private const int AnchorSegments = 24;
     private const float NameGap = 4f;
+    private const float NameScale = 1.5f;
+    private const float NameRounding = 3f;
+    private static readonly Vector2 NamePadding = new(6f, 3f);
     private const float LookAtCross = 0.5f;
     private const float TargetCross = 0.25f;
 
@@ -71,7 +74,7 @@ internal sealed class Overlay
         }
 
         DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedGlyphThickness : GlyphThickness);
-        if (name is not null) DrawName(list, view, world.Position, name, colour);
+        if (name is not null) DrawName(list, view, world.Position, name);
         return view.ToScreen(world.Position);
     }
 
@@ -120,8 +123,8 @@ internal sealed class Overlay
     /// <summary>An offset on the ground at angle <paramref name="angle"/>, measured like yaw.</summary>
     private static Vector3 Ring(float angle, float radius) => Anchor.Turn(new Vector3(0f, 0f, -radius), angle);
 
-    /// <summary>Draws <paramref name="name"/> centred above the ring round <paramref name="centre"/>, unless the centre is behind the camera.</summary>
-    private static void DrawName(ImDrawListPtr list, EditorView view, Vector3 centre, string name, uint colour)
+    /// <summary>Draws <paramref name="name"/> on a plate centred above the ring round <paramref name="centre"/>, unless the centre is behind the camera.</summary>
+    private static void DrawName(ImDrawListPtr list, EditorView view, Vector3 centre, string name)
     {
         if (view.ToScreenBeyondNear(centre) is not { } at) return;
         var top = at.Y;
@@ -130,8 +133,10 @@ internal sealed class Overlay
             if (view.ToScreenBeyondNear(centre + Ring(MathF.Tau * i / AnchorSegments, AnchorRadius)) is { } p) top = MathF.Min(top, p.Y);
         }
 
-        var size = ImGui.CalcTextSize(name);
-        list.AddText(new Vector2(at.X - (size.X / 2f), top - NameGap - size.Y), colour, name);
+        var size = ImGui.CalcTextSize(name) * NameScale;
+        var origin = new Vector2(at.X - (size.X / 2f), top - NameGap - size.Y);
+        list.AddRectFilled(origin - NamePadding, origin + size + NamePadding, EditorColours.NamePlate, NameRounding);
+        list.AddText(ImGui.GetFont(), ImGui.GetFontSize() * NameScale, origin, EditorColours.NameText, name);
     }
 
     private static void DrawArrow(ImDrawListPtr list, EditorView view, Anchor world, float length, uint colour, float thickness)

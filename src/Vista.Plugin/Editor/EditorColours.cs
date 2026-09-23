@@ -16,15 +16,17 @@ internal static class EditorColours
     public const uint GraphBackground = 0x60101010;
     public const uint GraphGrid = 0x40FFFFFF;
     public const uint Playhead = 0xFF4060FF;
-    public const uint OtherPath = 0x78A0A0A0;
-    public const uint OtherGlyph = 0x78A0A0A0;
-    public const uint OtherUpLine = 0x78A0A0A0;
-    public const uint OtherMarker = 0xA0303030;
-    public const uint OtherMarkerRing = 0x90B0B0B0;
-    public const uint OtherMarkerText = 0xB0C8C8C8;
+    public const uint OtherPath = 0xB0404040;
+    public const uint OtherGlyph = 0xB0404040;
+    public const uint OtherUpLine = 0xB0404040;
+    public const uint OtherMarker = 0xC0202020;
+    public const uint OtherMarkerRing = 0xC0808080;
+    public const uint OtherMarkerText = 0xE0E0E0E0;
     public const uint Anchor = 0xE0F0C040;
-    public const uint OtherAnchor = 0x78A0A0A0;
+    public const uint OtherAnchor = 0xB0404040;
     public const uint AnchorLink = 0x60F0C040;
-    public const uint OtherAnchorLink = 0x40A0A0A0;
+    public const uint OtherAnchorLink = 0x70404040;
     public const uint SceneAnchor = 0xF0FF60C0;
+    public const uint NamePlate = 0xC0000000;
+    public const uint NameText = 0xFFFFFFFF;
 }
