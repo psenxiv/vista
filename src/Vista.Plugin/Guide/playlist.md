@@ -22,7 +22,7 @@ The **Repeats** cell at the end of each entry sets how many times it plays befor
 |---|---|
 | A number | Plays that many times. For **Ping-pong**, one time is there and back. |
 | — | Plays once. |
-| ∞ | The track has **Loop** on, so it plays until you stop. Entries below it are greyed out, since Live never reaches them. |
+| ∞ | The track has **Loop** on, so it plays until you stop. |
 
 Clear the number to make the entry follow its track again.
 

@@ -2,7 +2,7 @@
 
 Vista moves the game camera along paths you build, so you can film smooth shots for screenshots and videos. You fly a free camera, drop points along the way, and Vista joins them into a track.
 
-Type `/vista` in chat to open the **Vista** window. Vista doesn't save scenes, so your work is lost when the game closes.
+Type `/vista` in chat to open the **Vista** window.
 
 ## Your first shot
 
