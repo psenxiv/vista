@@ -1,0 +1,1428 @@
+{
+  "title": "Vista in-game checks",
+  "written": "2026-09-23",
+  "revision": 4,
+  "intro": [
+    "A regression sweep over the code that changed and has no automated cover.",
+    "Answers save in this browser as you go. Hit Download results at the end and send me the file."
+  ],
+  "sections": [
+    {
+      "id": "prep",
+      "title": "Before you start",
+      "groups": [
+        {
+          "id": "0",
+          "title": "Setup",
+          "steps": [
+            {
+              "t": "do",
+              "id": "0.build",
+              "text": "Run `make build`."
+            },
+            {
+              "t": "do",
+              "id": "0.reload",
+              "text": "In game: `/xlplugins` -> Dev Tools -> Vista -> reload icon."
+            },
+            {
+              "t": "do",
+              "id": "0.open",
+              "text": "Type `/vista`."
+            },
+            {
+              "t": "note",
+              "text": "Worth knowing: the mouse wheel steps fly speed whenever the cursor is not over a Vista window."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s1",
+      "title": "Section 1 - baseline capture",
+      "blurb": "Cut. Kept only so the reasoning is on the record.",
+      "groups": [
+        {
+          "id": "1.1",
+          "title": "Common setup",
+          "steps": [
+            {
+              "t": "do",
+              "id": "1.1.mode",
+              "text": "Mode dropdown (top row) -> Edit."
+            },
+            {
+              "t": "do",
+              "id": "1.1.speed",
+              "text": "Fly speed, right of the feather icon, reads 1x."
+            },
+            {
+              "t": "do",
+              "id": "1.1.aim",
+              "text": "Crosshair icon (second row, left) tooltips \"Select aim (Recorded aim)\". If not, click it and pick Recorded aim."
+            },
+            {
+              "t": "do",
+              "id": "1.1.fly",
+              "text": "Fly somewhere open with a clear view of the ground."
+            },
+            {
+              "t": "pick",
+              "id": "1.1.ended",
+              "label": "Mode you ended in",
+              "options": [
+                "Edit",
+                "View",
+                "Live",
+                "Off"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.2",
+          "title": "Yaw ring",
+          "need": "Which way Yaw moves for a given drag, and whether the glyph turns with the cursor or against it.",
+          "feeds": "GizmoEditTests.TheYawRingChangesOnlyYaw, which asserted an absolute value and so passed either way. I derived +0.3.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "1.2.add",
+              "text": "Press Backtick to add a point."
+            },
+            {
+              "t": "do",
+              "id": "1.2.select",
+              "text": "Single-click row 1 in the points table. A double-click flies the camera there instead."
+            },
+            {
+              "t": "do",
+              "id": "1.2.rotate",
+              "text": "In the Point 1 window, click Rotate."
+            },
+            {
+              "t": "note",
+              "text": "Green ring is yaw — the flat one, parallel to the ground."
+            },
+            {
+              "t": "num",
+              "id": "1.2.before",
+              "label": "Yaw before",
+              "unit": "deg"
+            },
+            {
+              "t": "do",
+              "id": "1.2.drag",
+              "text": "Drag the green ring a short way. Let go."
+            },
+            {
+              "t": "text",
+              "id": "1.2.direction",
+              "label": "Which way you dragged",
+              "placeholder": "e.g. left to right across the top"
+            },
+            {
+              "t": "num",
+              "id": "1.2.after",
+              "label": "Yaw after",
+              "unit": "deg"
+            },
+            {
+              "t": "pick",
+              "id": "1.2.glyph",
+              "label": "The glyph turned",
+              "options": [
+                "with the cursor",
+                "against it"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.3",
+          "title": "Pitch ring",
+          "feeds": "GizmoEditTests.ThePitchRingChangesOnlyPitch. I derived +0.3.",
+          "steps": [
+            {
+              "t": "note",
+              "text": "Still Point 1, Rotate. Red ring is pitch — vertical, edge-on to the point's facing."
+            },
+            {
+              "t": "num",
+              "id": "1.3.before",
+              "label": "Pitch before",
+              "unit": "deg"
+            },
+            {
+              "t": "do",
+              "id": "1.3.drag",
+              "text": "Drag the red ring a short way. Let go."
+            },
+            {
+              "t": "text",
+              "id": "1.3.direction",
+              "label": "Which way you dragged",
+              "placeholder": "in your own words"
+            },
+            {
+              "t": "num",
+              "id": "1.3.after",
+              "label": "Pitch after",
+              "unit": "deg"
+            },
+            {
+              "t": "pick",
+              "id": "1.3.glyph",
+              "label": "The glyph tilted",
+              "options": [
+                "with the cursor",
+                "against it"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.4",
+          "title": "Roll ring",
+          "feeds": "GizmoEditTests.TheRollRingChangesOnlyRoll. I derived -0.3 — negative, because row 3 of PoseMatrix is back rather than forward. The one asymmetry worth seeing with your own eyes.",
+          "steps": [
+            {
+              "t": "note",
+              "text": "Still Point 1, Rotate. Blue ring is roll — face-on to the point's facing."
+            },
+            {
+              "t": "num",
+              "id": "1.4.before",
+              "label": "Roll before",
+              "unit": "deg"
+            },
+            {
+              "t": "do",
+              "id": "1.4.drag",
+              "text": "Drag the blue ring a short way. Let go."
+            },
+            {
+              "t": "text",
+              "id": "1.4.direction",
+              "label": "Which way you dragged",
+              "placeholder": "in your own words"
+            },
+            {
+              "t": "num",
+              "id": "1.4.after",
+              "label": "Roll after",
+              "unit": "deg"
+            },
+            {
+              "t": "pick",
+              "id": "1.4.glyph",
+              "label": "The glyph rolled",
+              "options": [
+                "with the cursor",
+                "against it"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.5",
+          "title": "Pitch clamp",
+          "need": "Each direction separately. The old test threw both into one array and never said which drag gave which.",
+          "feeds": "ThePitchRingStopsAtThePitchLimit. Expect plus or minus 89.0; anything else is the finding.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "1.5.up",
+              "text": "Drag the red ring the way that makes Pitch go up, past where the number stops changing. Let go."
+            },
+            {
+              "t": "num",
+              "id": "1.5.highest",
+              "label": "Highest Pitch",
+              "unit": "deg"
+            },
+            {
+              "t": "do",
+              "id": "1.5.down",
+              "text": "Drag it as far as it goes the other way. Let go."
+            },
+            {
+              "t": "num",
+              "id": "1.5.lowest",
+              "label": "Lowest Pitch",
+              "unit": "deg"
+            },
+            {
+              "t": "pick",
+              "id": "1.5.flip",
+              "label": "Glyph flips or spins at either extreme?",
+              "options": [
+                "no",
+                "yes"
+              ]
+            },
+            {
+              "t": "text",
+              "id": "1.5.flipnote",
+              "label": "If yes, what happened",
+              "optional": true
+            }
+          ]
+        },
+        {
+          "id": "1.6",
+          "title": "Which world direction W/A/S/D move the camera",
+          "need": "Position before and after a one-second press of each key, at a non-axis-aligned angle. Nothing in the UI reads out the camera's position, so a recorded point is the instrument.",
+          "feeds": "Replaces two FreeCamMotionTests that were algebraic identities — they held even with degrees and radians swapped.",
+          "steps": [
+            {
+              "t": "note",
+              "text": "Don't move the mouse or scroll until the last row is filled. Signs and rough proportions are what I need; a one-second press isn't precise and I won't treat it as though it were."
+            },
+            {
+              "t": "do",
+              "id": "1.6.clear",
+              "text": "Trash icon at the right of the second row (\"Clear track\"). Table empties."
+            },
+            {
+              "t": "do",
+              "id": "1.6.aim",
+              "text": "Aim diagonally and slightly downward. Stop touching the mouse."
+            },
+            {
+              "t": "do",
+              "id": "1.6.p1",
+              "text": "Backtick. Single-click row 1."
+            },
+            {
+              "t": "row",
+              "id": "1.6.start",
+              "label": "Point 1 (start)",
+              "cols": [
+                "X",
+                "Y",
+                "Z",
+                "Pitch",
+                "Yaw",
+                "Roll"
+              ]
+            },
+            {
+              "t": "note",
+              "text": "If Pitch or Yaw reads exactly 0.0, go back and pick a less convenient angle."
+            },
+            {
+              "t": "do",
+              "id": "1.6.w",
+              "text": "Hold W ~1s. Backtick. Select row 2."
+            },
+            {
+              "t": "row",
+              "id": "1.6.afterW",
+              "label": "After W",
+              "cols": [
+                "X",
+                "Y",
+                "Z"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.6.s",
+              "text": "Hold S ~1s. Backtick. Select row 3."
+            },
+            {
+              "t": "row",
+              "id": "1.6.afterS",
+              "label": "After S",
+              "cols": [
+                "X",
+                "Y",
+                "Z"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.6.a",
+              "text": "Hold A ~1s. Backtick. Select row 4."
+            },
+            {
+              "t": "row",
+              "id": "1.6.afterA",
+              "label": "After A",
+              "cols": [
+                "X",
+                "Y",
+                "Z"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.6.d",
+              "text": "Hold D ~1s. Backtick. Select row 5."
+            },
+            {
+              "t": "row",
+              "id": "1.6.afterD",
+              "label": "After D",
+              "cols": [
+                "X",
+                "Y",
+                "Z"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.6.space",
+              "text": "Hold Space ~1s. Backtick. Select row 6."
+            },
+            {
+              "t": "row",
+              "id": "1.6.afterSpace",
+              "label": "After Space",
+              "cols": [
+                "X",
+                "Y",
+                "Z"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.6.c",
+              "text": "Hold C ~1s. Backtick. Select row 7."
+            },
+            {
+              "t": "row",
+              "id": "1.6.afterC",
+              "label": "After C",
+              "cols": [
+                "X",
+                "Y",
+                "Z"
+              ]
+            },
+            {
+              "t": "note",
+              "text": "Mouse is free again."
+            }
+          ]
+        },
+        {
+          "id": "1.6b",
+          "title": "Optional: the same at yaw 0",
+          "optional": true,
+          "need": "At yaw 0 the answer is derivable by hand with no trigonometry, so it is the cleanest check on my derivation. Skip the group if holding the angle is fiddly.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "1.6b.setup",
+              "text": "Clear the track. Face due north (Yaw near 0.0) and level (Pitch near 0.0). Repeat the W/S/A/D captures.",
+              "optional": true
+            },
+            {
+              "t": "row",
+              "id": "1.6b.start",
+              "label": "Start",
+              "cols": [
+                "X",
+                "Y",
+                "Z",
+                "Yaw"
+              ],
+              "optional": true
+            },
+            {
+              "t": "row",
+              "id": "1.6b.afterW",
+              "label": "After W",
+              "cols": [
+                "X",
+                "Y",
+                "Z",
+                "Yaw"
+              ],
+              "optional": true
+            },
+            {
+              "t": "row",
+              "id": "1.6b.afterS",
+              "label": "After S",
+              "cols": [
+                "X",
+                "Y",
+                "Z",
+                "Yaw"
+              ],
+              "optional": true
+            },
+            {
+              "t": "row",
+              "id": "1.6b.afterA",
+              "label": "After A",
+              "cols": [
+                "X",
+                "Y",
+                "Z",
+                "Yaw"
+              ],
+              "optional": true
+            },
+            {
+              "t": "row",
+              "id": "1.6b.afterD",
+              "label": "After D",
+              "cols": [
+                "X",
+                "Y",
+                "Z",
+                "Yaw"
+              ],
+              "optional": true
+            }
+          ]
+        },
+        {
+          "id": "1.7",
+          "title": "Where the camera looks after a strafe",
+          "need": "Whether strafing changes the aim, and which way the world slides.",
+          "feeds": "Nothing in the repo pinned the slide — negate the strafe axis and every old assertion still passed, so A and D swapped would have shipped green.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "1.7.aim",
+              "text": "Aim diagonally and downward. Stop touching the mouse. Backtick, select the last row."
+            },
+            {
+              "t": "row",
+              "id": "1.7.before",
+              "label": "Before",
+              "cols": [
+                "Pitch",
+                "Yaw",
+                "Roll"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.7.d",
+              "text": "Hold D ~1s. Backtick, select the new last row."
+            },
+            {
+              "t": "row",
+              "id": "1.7.afterD",
+              "label": "After D",
+              "cols": [
+                "Pitch",
+                "Yaw",
+                "Roll"
+              ]
+            },
+            {
+              "t": "pick",
+              "id": "1.7.slideD",
+              "label": "Holding D, the world slid",
+              "options": [
+                "left",
+                "right"
+              ]
+            },
+            {
+              "t": "do",
+              "id": "1.7.a",
+              "text": "Hold A ~1s. Backtick, select the new last row."
+            },
+            {
+              "t": "row",
+              "id": "1.7.afterA",
+              "label": "After A",
+              "cols": [
+                "Pitch",
+                "Yaw",
+                "Roll"
+              ]
+            },
+            {
+              "t": "pick",
+              "id": "1.7.slideA",
+              "label": "Holding A, the world slid",
+              "options": [
+                "left",
+                "right"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.8",
+          "title": "Tidy up",
+          "steps": [
+            {
+              "t": "do",
+              "id": "1.8.off",
+              "text": "Mode dropdown -> Off."
+            }
+          ]
+        }
+      ],
+      "skip": "every sign here is already pinned by hand-derived assertions in GizmoEditTests and FreeCamMotionTests; items 12 and 13 changed no source, so nothing can have regressed"
+    },
+    {
+      "id": "s2",
+      "title": "Section 2 - regression checks",
+      "blurb": "Mark Pass, Fail or N/A. A note only matters on a Fail or something odd.",
+      "groups": [
+        {
+          "id": "2.1",
+          "title": "Live mode (item 14)",
+          "need": "IsLive went from a settable field to a property derived from the current shot. The risk is a camera that silently stops moving, so every row asks whether it actually responds.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "2.1.s1",
+              "text": "Mode -> Edit. Trash icon to clear the track."
+            },
+            {
+              "t": "do",
+              "id": "2.1.s2",
+              "text": "Backtick, fly a noticeable distance, Backtick, again — three points."
+            },
+            {
+              "t": "do",
+              "id": "2.1.s3",
+              "text": "Playlist panel: plus icon -> Track 1. One row appears."
+            },
+            {
+              "t": "check",
+              "id": "2.1.1",
+              "action": "Mode -> Live",
+              "expect": "Camera jumps to the first point and holds. LIVE pulses in the top row."
+            },
+            {
+              "t": "check",
+              "id": "2.1.2",
+              "action": "Click Play, left of the scrub bar",
+              "expect": "Camera moves. Scrub bar advances."
+            },
+            {
+              "t": "check",
+              "id": "2.1.3",
+              "action": "Click again (Pause)",
+              "expect": "Camera and scrub bar stop."
+            },
+            {
+              "t": "check",
+              "id": "2.1.4",
+              "action": "Click again (Play)",
+              "expect": "Resumes where it stopped, not from the start."
+            },
+            {
+              "t": "check",
+              "id": "2.1.5",
+              "action": "While playing, drag the scrub bar to halfway",
+              "expect": "Camera follows the drag."
+            },
+            {
+              "t": "check",
+              "id": "2.1.6",
+              "action": "Release",
+              "expect": "Playback carries on from there."
+            },
+            {
+              "t": "check",
+              "id": "2.1.7",
+              "action": "Pause, drag the scrub bar",
+              "expect": "Camera follows the drag."
+            },
+            {
+              "t": "check",
+              "id": "2.1.8",
+              "action": "Release",
+              "expect": "Stays paused. Does not start playing."
+            },
+            {
+              "t": "check",
+              "id": "2.1.9",
+              "action": "Click Restart, the step-backward icon",
+              "expect": "Jumps to the first point and plays."
+            },
+            {
+              "t": "check",
+              "id": "2.1.10",
+              "action": "Let it run to the end",
+              "expect": "Holds the last frame. No jump or mid-track freeze."
+            },
+            {
+              "t": "check",
+              "id": "2.1.11",
+              "action": "Click Play at the end",
+              "expect": "Starts again from the beginning."
+            },
+            {
+              "t": "check",
+              "id": "2.1.12",
+              "action": "Mode -> Off",
+              "expect": "Game camera returns to the character, where it was before Vista took it."
+            },
+            {
+              "t": "check",
+              "id": "2.1.13",
+              "action": "Mode -> Live, click Play",
+              "expect": "Plays as in row 2."
+            },
+            {
+              "t": "check",
+              "id": "2.1.14",
+              "action": "While playing, toggle the eye-slash icon",
+              "expect": "Game UI hides."
+            },
+            {
+              "t": "check",
+              "id": "2.1.15",
+              "action": "Press Escape",
+              "expect": "UI returns. System menu does not open."
+            }
+          ]
+        },
+        {
+          "id": "2.2",
+          "title": "Editor surface",
+          "need": "Written as a 50-row sweep for item 16, which I didn't enact. Only the rows covering code that changed are shown; the toggle up top reveals the rest.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "2.2.s1",
+              "text": "Mode -> Edit, track cleared, three points added as in 2.1."
+            },
+            {
+              "t": "check",
+              "id": "2.2.1",
+              "action": "Sitemap icon, top row",
+              "expect": "Hierarchy panel hides.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.2",
+              "action": "Click it again",
+              "expect": "Hierarchy returns.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.3",
+              "action": "List icon, top row",
+              "expect": "Playlist panel hides.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.4",
+              "action": "Click it again",
+              "expect": "Playlist returns.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.5",
+              "action": "Hierarchy: plus icon",
+              "expect": "Track 2 appears and becomes the edited one.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.6",
+              "action": "Click Track 1's row",
+              "expect": "Track 1 is edited again; its points reappear.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.7",
+              "action": "Right-click Track 1 -> Rename, type, Enter",
+              "expect": "The name changes.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.8",
+              "action": "Right-click -> Duplicate",
+              "expect": "A \"… copy\" appears below and becomes edited.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.9",
+              "action": "Right-click the copy -> Delete",
+              "expect": "It disappears.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.10",
+              "action": "Drag Track 2 above Track 1",
+              "expect": "The order changes.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.11",
+              "action": "Track 2's eye icon",
+              "expect": "Track 2 greys out in the world.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.12",
+              "action": "Click it again",
+              "expect": "Draws normally.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.13",
+              "action": "Single-click row 2",
+              "expect": "Point 2 highlights; its window opens.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.14",
+              "action": "Double-click row 2",
+              "expect": "Camera flies to point 2.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.15",
+              "action": "Drag the X field in the Point 2 window",
+              "expect": "The point slides along X as you drag.",
+              "why": "item 20"
+            },
+            {
+              "t": "check",
+              "id": "2.2.16",
+              "action": "Ctrl + Z",
+              "expect": "Undone in one step.",
+              "why": "item 20"
+            },
+            {
+              "t": "check",
+              "id": "2.2.17",
+              "action": "Ctrl + Y",
+              "expect": "Redone.",
+              "why": "item 20"
+            },
+            {
+              "t": "check",
+              "id": "2.2.18",
+              "action": "Press R",
+              "expect": "Gizmo switches Move/Rotate; radio buttons follow.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.19",
+              "action": "Copy icon, then paste icon",
+              "expect": "Values unchanged, no error.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.20",
+              "action": "Press Delete",
+              "expect": "Point 2 leaves the table.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.21",
+              "action": "Ctrl + Z",
+              "expect": "It comes back.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.22",
+              "action": "Press Backtick",
+              "expect": "A point is appended at the camera.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.23",
+              "action": "Select a point, Alt + Backtick",
+              "expect": "A point is inserted after it and selected.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.24",
+              "action": "Select a point, Ctrl + Backtick",
+              "expect": "It moves to the camera.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.25",
+              "action": "Caret beside the plus, second row",
+              "expect": "Add menu opens: three entries with shortcuts.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.26",
+              "action": "Crosshair icon -> Direction of travel",
+              "expect": "Pitch and Yaw grey out in the Point window.",
+              "why": "item 20, shared menu tables"
+            },
+            {
+              "t": "check",
+              "id": "2.2.27",
+              "action": "Crosshair icon -> Recorded aim",
+              "expect": "They are editable again.",
+              "why": "item 20"
+            },
+            {
+              "t": "check",
+              "id": "2.2.28",
+              "action": "Direction icon -> Reverse",
+              "expect": "Tooltip reads Reverse.",
+              "why": "item 20"
+            },
+            {
+              "t": "check",
+              "id": "2.2.29",
+              "action": "Repeat icon, second row",
+              "expect": "Lights up; tooltip alternates Loop / Play once.",
+              "why": "item 20"
+            },
+            {
+              "t": "check",
+              "id": "2.2.30",
+              "action": "Type a Track speed, Enter",
+              "expect": "Duration follows.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.31",
+              "action": "Type a Track duration, Enter",
+              "expect": "Speed follows.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.32",
+              "action": "Change a Duration (s) cell",
+              "expect": "That leg's pin lights; other legs keep their timing.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.33",
+              "action": "Click the lit pin",
+              "expect": "The leg returns to track speed.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.34",
+              "action": "Chart icon, top row",
+              "expect": "Timing window opens with the curve.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.35",
+              "action": "Click a key dot",
+              "expect": "It selects; time and buttons appear.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.36",
+              "action": "Drag that key sideways",
+              "expect": "Curve reshapes; table durations follow.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.37",
+              "action": "Ctrl + Z",
+              "expect": "Undone in one step.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.38",
+              "action": "Click the curve between two keys",
+              "expect": "The leg selects; easing dropdown appears.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.39",
+              "action": "Pick Ease in-out",
+              "expect": "The curve flattens at both ends of the leg.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.40",
+              "action": "Scene anchor icon in the Hierarchy header",
+              "expect": "It selects; the Scene anchor window opens.",
+              "why": "items 17, 22"
+            },
+            {
+              "t": "check",
+              "id": "2.2.41",
+              "action": "Drag the anchor's gizmo",
+              "expect": "The whole scene moves with it.",
+              "why": "items 17, 20, 22"
+            },
+            {
+              "t": "check",
+              "id": "2.2.42",
+              "action": "Alt + drag the anchor",
+              "expect": "The anchor moves, the points stay.",
+              "why": "items 17, 22"
+            },
+            {
+              "t": "check",
+              "id": "2.2.43",
+              "action": "Ctrl + Z",
+              "expect": "The anchor move undoes in one step.",
+              "why": "item 17"
+            },
+            {
+              "t": "check",
+              "id": "2.2.44",
+              "action": "A track's anchor icon in the Hierarchy",
+              "expect": "It selects; the window retitles.",
+              "why": "items 17, 22"
+            },
+            {
+              "t": "check",
+              "id": "2.2.45",
+              "action": "Drag the scrub bar in Edit",
+              "expect": "Camera previews the scrubbed time.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.46",
+              "action": "Release",
+              "expect": "Free camera takes over from that frame.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.47",
+              "action": "Click Play in Edit",
+              "expect": "Previews; UI stays; mode stays Edit.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.48",
+              "action": "Press W during the preview",
+              "expect": "Preview stops, free camera takes over.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.49",
+              "action": "Mode -> View",
+              "expect": "Camera returns to the character; track still draws.",
+              "skip": "item 16 not enacted"
+            },
+            {
+              "t": "check",
+              "id": "2.2.50",
+              "action": "Mode -> Off",
+              "expect": "The track stops drawing.",
+              "skip": "item 16 not enacted"
+            }
+          ]
+        },
+        {
+          "id": "2.3",
+          "title": "Watch Target dialog (item 19)",
+          "need": "Item 19 folded the shared body of the two dialogs into one panel; item 17 retargeted the aim-height edits onto the live-edit path.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "2.3.s1",
+              "text": "Mode -> Edit, track cleared, two points added. Stand near another character."
+            },
+            {
+              "t": "check",
+              "id": "2.3.1",
+              "action": "Crosshair icon -> Watch Target",
+              "expect": "The window opens."
+            },
+            {
+              "t": "check",
+              "id": "2.3.2",
+              "action": "Click the character dropdown",
+              "expect": "Opens with the search box focused and nearby characters listed."
+            },
+            {
+              "t": "check",
+              "id": "2.3.3",
+              "action": "Type part of a name",
+              "expect": "The list filters."
+            },
+            {
+              "t": "check",
+              "id": "2.3.4",
+              "action": "Click a character",
+              "expect": "Their name shows; the crosshair icon turns orange."
+            },
+            {
+              "t": "check",
+              "id": "2.3.5",
+              "action": "Look at the world",
+              "expect": "Every glyph faces the character; a small crosshair marks the aim point."
+            },
+            {
+              "t": "check",
+              "id": "2.3.6",
+              "action": "Drag Aim height up",
+              "expect": "The crosshair rises; glyphs re-aim as you drag."
+            },
+            {
+              "t": "check",
+              "id": "2.3.7",
+              "action": "Release",
+              "expect": "The change holds."
+            },
+            {
+              "t": "check",
+              "id": "2.3.8",
+              "action": "Ctrl + Z",
+              "expect": "The whole drag undoes in one step."
+            },
+            {
+              "t": "check",
+              "id": "2.3.9",
+              "action": "Drag Smoothing to 1.00",
+              "expect": "The number updates."
+            },
+            {
+              "t": "check",
+              "id": "2.3.10",
+              "action": "Release",
+              "expect": "The change holds."
+            },
+            {
+              "t": "check",
+              "id": "2.3.11",
+              "action": "Ctrl + Z",
+              "expect": "Smoothing returns in one step."
+            },
+            {
+              "t": "check",
+              "id": "2.3.12",
+              "action": "Click Play",
+              "expect": "The camera keeps looking at them, easing rather than snapping."
+            },
+            {
+              "t": "check",
+              "id": "2.3.13",
+              "action": "Walk them out of range, or target someone who despawns",
+              "expect": "Red warning triangle beside the track; the shot keeps its recorded aim."
+            },
+            {
+              "t": "check",
+              "id": "2.3.14",
+              "action": "Click Done",
+              "expect": "The window closes."
+            },
+            {
+              "t": "check",
+              "id": "2.3.15",
+              "action": "Click the crosshair icon",
+              "expect": "Watch Target has a pencil beside it."
+            },
+            {
+              "t": "check",
+              "id": "2.3.16",
+              "action": "Click the pencil",
+              "expect": "The window reopens."
+            },
+            {
+              "t": "check",
+              "id": "2.3.17",
+              "action": "Switch the edited track",
+              "expect": "The window closes by itself."
+            },
+            {
+              "t": "check",
+              "id": "2.3.18",
+              "action": "Mode -> Off",
+              "expect": "The window closes by itself."
+            }
+          ]
+        },
+        {
+          "id": "2.4",
+          "title": "Follow Target dialog (item 19)",
+          "need": "This dialog's content interleaves with the shared panel rather than following it. If a hook landed wrong, the checkboxes and orbit fields will have moved.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "2.4.s1",
+              "text": "Mode -> Edit. Clear the track — Follow Target needs at most one point. Stand near another character."
+            },
+            {
+              "t": "check",
+              "id": "2.4.1",
+              "action": "Crosshair icon -> Follow Target",
+              "expect": "The window opens."
+            },
+            {
+              "t": "check",
+              "id": "2.4.2",
+              "action": "Pick a character",
+              "expect": "Their name shows; the crosshair icon turns orange."
+            },
+            {
+              "t": "check",
+              "id": "2.4.3",
+              "action": "Press Backtick",
+              "expect": "A point is added at its offset from the character."
+            },
+            {
+              "t": "check",
+              "id": "2.4.4",
+              "action": "Untick Turn with character",
+              "expect": "The offset stops rotating as they turn."
+            },
+            {
+              "t": "check",
+              "id": "2.4.5",
+              "action": "Tick it again",
+              "expect": "It turns with them again."
+            },
+            {
+              "t": "check",
+              "id": "2.4.6",
+              "action": "Untick Look at character",
+              "expect": "The camera keeps its recorded aim."
+            },
+            {
+              "t": "check",
+              "id": "2.4.7",
+              "action": "Tick it again",
+              "expect": "It tracks them again."
+            },
+            {
+              "t": "check",
+              "id": "2.4.8",
+              "action": "Drag Aim height",
+              "expect": "The aim point rises or falls on them as you drag."
+            },
+            {
+              "t": "check",
+              "id": "2.4.9",
+              "action": "Ctrl + Z",
+              "expect": "Undone in one step."
+            },
+            {
+              "t": "check",
+              "id": "2.4.10",
+              "action": "Drag Smoothing, release",
+              "expect": "The value holds."
+            },
+            {
+              "t": "check",
+              "id": "2.4.11",
+              "action": "Ctrl + Z",
+              "expect": "Undone in one step."
+            },
+            {
+              "t": "check",
+              "id": "2.4.12",
+              "action": "Drag Distance, the leftmost orbit field",
+              "expect": "The camera moves nearer or further as you drag."
+            },
+            {
+              "t": "check",
+              "id": "2.4.13",
+              "action": "Ctrl + Z",
+              "expect": "Undone in one step."
+            },
+            {
+              "t": "check",
+              "id": "2.4.14",
+              "action": "Drag Height, the middle orbit field",
+              "expect": "The camera rises or falls."
+            },
+            {
+              "t": "check",
+              "id": "2.4.15",
+              "action": "Drag Angle, the rightmost orbit field",
+              "expect": "The camera swings around them, keeping its distance."
+            },
+            {
+              "t": "check",
+              "id": "2.4.16",
+              "action": "Ctrl + Z",
+              "expect": "Undone in one step."
+            },
+            {
+              "t": "check",
+              "id": "2.4.17",
+              "action": "Have them walk",
+              "expect": "The camera rides along, smoothly."
+            },
+            {
+              "t": "check",
+              "id": "2.4.18",
+              "action": "Click Done",
+              "expect": "The window closes."
+            },
+            {
+              "t": "check",
+              "id": "2.4.19",
+              "action": "Crosshair icon -> pencil beside Follow Target",
+              "expect": "Reopens with the same settings."
+            },
+            {
+              "t": "check",
+              "id": "2.4.20",
+              "action": "Look at this track's Hierarchy row",
+              "expect": "Its anchor icon is disabled, tooltip \"Follow Target tracks move with their character\"."
+            }
+          ]
+        },
+        {
+          "id": "2.5",
+          "title": "Undo mid-drag in the Point window (item 20)",
+          "need": "The behaviour item 20 is most likely to break: undo pressed while a field is still held.",
+          "steps": [
+            {
+              "t": "do",
+              "id": "2.5.s1",
+              "text": "Mode -> Edit, track cleared, two points added. Single-click row 1."
+            },
+            {
+              "t": "check",
+              "id": "2.5.1",
+              "action": "Hold the mouse on the X field and drag right, keep holding",
+              "expect": "The point slides along X as you drag."
+            },
+            {
+              "t": "check",
+              "id": "2.5.2",
+              "action": "Still holding, Ctrl + Z",
+              "expect": "The point jumps back to where it started."
+            },
+            {
+              "t": "check",
+              "id": "2.5.3",
+              "action": "Still holding, keep dragging",
+              "expect": "It does not move further. No error."
+            },
+            {
+              "t": "check",
+              "id": "2.5.4",
+              "action": "Release",
+              "expect": "It stays where the undo put it."
+            },
+            {
+              "t": "check",
+              "id": "2.5.5",
+              "action": "Ctrl + Z again",
+              "expect": "The previous edit undoes. No leftover half-step."
+            },
+            {
+              "t": "check",
+              "id": "2.5.6",
+              "action": "Drag X and release normally",
+              "expect": "One undo step."
+            },
+            {
+              "t": "check",
+              "id": "2.5.7",
+              "action": "Ctrl + Z once",
+              "expect": "The whole drag undoes, not part of it."
+            },
+            {
+              "t": "check",
+              "id": "2.5.8",
+              "action": "Drag Y, then Z, releasing each",
+              "expect": "Two separate undo steps."
+            },
+            {
+              "t": "check",
+              "id": "2.5.9",
+              "action": "Ctrl + Z twice",
+              "expect": "Both undo, one at a time."
+            },
+            {
+              "t": "check",
+              "id": "2.5.10",
+              "action": "Select the scene anchor, drag its X, release",
+              "expect": "The scene moves; one undo step."
+            },
+            {
+              "t": "check",
+              "id": "2.5.11",
+              "action": "Ctrl + Z",
+              "expect": "The scene anchor returns."
+            },
+            {
+              "t": "check",
+              "id": "2.5.12",
+              "action": "Crosshair -> Look At, click the marker, drag its X, release",
+              "expect": "The Look At point moves; one undo step."
+            },
+            {
+              "t": "check",
+              "id": "2.5.13",
+              "action": "Ctrl + Z",
+              "expect": "It returns."
+            },
+            {
+              "t": "check",
+              "id": "2.5.14",
+              "action": "Start a drag on X, then switch the edited track mid-drag",
+              "expect": "No stuck drag: the next Ctrl + Z undoes cleanly, no error."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "title": "Anything else",
+      "groups": [
+        {
+          "id": "3",
+          "title": "Free notes",
+          "need": "What this checklist cannot reach, stated rather than invented. Director.IsLive has no readout, so 2.1 checks its effects. Whether the two dialogs share code cannot be seen, so 2.3 and 2.4 check they still behave alike. The camera's position and raw yaw have no readout, which is why 1.6 uses a recorded point. And nothing here reaches PlaylistPlayback.Restart(), part of why item 15 is still open.",
+          "steps": [
+            {
+              "t": "text",
+              "id": "3.notes",
+              "label": "Anything no row asked about",
+              "placeholder": "crashes, log spam, something that felt off",
+              "long": true,
+              "optional": true
+            },
+            {
+              "t": "text",
+              "id": "3.version",
+              "label": "About the build or session",
+              "placeholder": "zone, other plugins loaded",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

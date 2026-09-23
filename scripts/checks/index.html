@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vista in-game checks</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1b1e24; --panel2: #21252c; --line: #2e333c;
+    --ink: #e6e8ec; --dim: #99a0ad; --faint: #6b7280;
+    --accent: #e0973f; --pass: #4a9d5f; --fail: #c7553f; --na: #5b6472;
+    --radius: 8px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --panel: #ffffff; --panel2: #f0f2f5; --line: #dfe3e9;
+      --ink: #1a1d22; --dim: #5b6472; --faint: #8b93a1;
+      --pass: #2f7d47; --fail: #b23d28; --na: #7b8494;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10; background: var(--panel);
+    border-bottom: 1px solid var(--line); padding: 12px 20px;
+  }
+  .bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  .spacer { flex: 1 1 auto; }
+  .meter { flex: 1 1 200px; min-width: 160px; }
+  .meter .track { height: 6px; background: var(--panel2); border-radius: 99px; overflow: hidden; }
+  .meter .fill { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .meter .lbl { font-size: 12px; color: var(--dim); margin-top: 4px; display: flex; gap: 10px; }
+  button {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #17181b; font-weight: 600; }
+  label.toggle { font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 20px 120px; }
+  .intro p { color: var(--dim); margin: 0 0 10px; }
+
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent);
+    margin: 38px 0 6px; font-weight: 700;
+  }
+  .blurb { color: var(--dim); margin: 0 0 18px; font-size: 14px; }
+
+  .group { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+  .group > summary {
+    list-style: none; cursor: pointer; padding: 13px 16px; display: flex; align-items: center; gap: 10px;
+    user-select: none;
+  }
+  .group > summary::-webkit-details-marker { display: none; }
+  .group > summary::before { content: "▸"; color: var(--faint); font-size: 12px; width: 10px; }
+  .group[open] > summary::before { content: "▾"; }
+  .gid { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .gtitle { font-weight: 600; }
+  .gtag { font-size: 11px; color: var(--faint); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; }
+  .gcount { margin-left: auto; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .gcount.done { color: var(--pass); }
+  .gbody { padding: 0 16px 14px; border-top: 1px solid var(--line); }
+
+  .why { font-size: 13px; color: var(--dim); border-left: 2px solid var(--line); padding: 8px 0 8px 12px; margin: 14px 0; }
+  .why b { color: var(--ink); font-weight: 600; }
+
+  .step { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+  .step.note { color: var(--dim); font-size: 13.5px; background: var(--panel2); margin: 10px -16px; padding: 10px 16px; border-bottom: 0; }
+
+  .do { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .do input { margin: 4px 0 0; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+  .do.done span { color: var(--faint); text-decoration: line-through; text-decoration-color: var(--line); }
+
+  .field { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .field > .lbl { min-width: 210px; color: var(--dim); font-size: 14px; }
+  .field input[type=number], .field input[type=text] {
+    font: inherit; background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 9px;
+  }
+  .field input[type=number] { width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
+  .field input[type=text] { flex: 1 1 260px; min-width: 200px; }
+  .field textarea {
+    font: inherit; background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 9px; width: 100%; min-height: 72px; resize: vertical;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .unit { color: var(--faint); font-size: 13px; }
+  .answered .lbl { color: var(--ink); }
+
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    font-size: 13px; padding: 4px 12px; border-radius: 99px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--dim); cursor: pointer;
+  }
+  .pill:hover { border-color: var(--accent); }
+  .pill.on { background: var(--accent); border-color: var(--accent); color: #17181b; font-weight: 600; }
+  .pill.on.pass { background: var(--pass); border-color: var(--pass); color: #fff; }
+  .pill.on.fail { background: var(--fail); border-color: var(--fail); color: #fff; }
+  .pill.on.na { background: var(--na); border-color: var(--na); color: #fff; }
+
+  .rowset { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .rowset > .lbl { min-width: 160px; color: var(--dim); font-size: 14px; }
+  .cell { display: flex; flex-direction: column; gap: 2px; }
+  .cell span { font-size: 11px; color: var(--faint); padding-left: 2px; }
+  .cell input { width: 108px; text-align: right; font-variant-numeric: tabular-nums;
+    font: inherit; background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 9px; }
+  .cell input:focus { outline: none; border-color: var(--accent); }
+
+  .check { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px 12px; align-items: start; }
+  .check .n { color: var(--faint); font-variant-numeric: tabular-nums; font-size: 13px; padding-top: 5px; }
+  .check .act { font-size: 14px; }
+  .check .exp { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .check .tag { font-size: 11px; color: var(--faint); margin-top: 3px; font-style: italic; }
+  .check .pills { padding-top: 2px; }
+  .check .note { grid-column: 2 / -1; }
+  .check .note input { width: 100%; font: inherit; font-size: 13px; background: var(--panel2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
+  .check .note input:focus { outline: none; border-color: var(--fail); }
+  .step.failed { background: color-mix(in srgb, var(--fail) 9%, transparent); margin: 0 -16px; padding: 9px 16px; }
+  .step.hidden { display: none; }
+  .skipnote { font-size: 11px; color: var(--faint); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
+
+  footer {
+    position: fixed; bottom: 0; left: 0; right: 0; background: var(--panel);
+    border-top: 1px solid var(--line); padding: 10px 20px;
+  }
+  footer .bar { justify-content: flex-end; }
+  .saved { font-size: 12px; color: var(--faint); }
+  .loader { max-width: 620px; margin: 80px auto; text-align: center; color: var(--dim); }
+  .loader h1 { font-size: 20px; margin-bottom: 12px; color: var(--ink); }
+  .loader p { margin: 0 0 16px; }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 34px; margin-top: 18px; }
+  .drop.over { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const LS_PREFIX = 'vista-ingame-checks:';
+let DATA = null, KEY = null;
+let state = {};   // id -> { v, r, note }
+
+/* ---------- loading ---------- */
+
+async function boot() {
+  try {
+    const res = await fetch('checks.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    start(await res.json());
+  } catch (e) {
+    showLoader();
+  }
+}
+
+function showLoader() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="loader">
+      <h1>Pick checks.json</h1>
+      <p>The browser will not let a page opened from a file read another file on its own.
+         Either drop <code>checks.json</code> below, or serve the folder and reload:</p>
+      <p class="mono">python3 -m http.server -d analysis/checks 8765</p>
+      <div class="drop" id="drop">
+        <input type="file" id="file" accept="application/json,.json">
+        <p style="margin-top:14px">or drop the file here</p>
+      </div>
+    </div>`;
+  const drop = document.getElementById('drop');
+  const read = f => f.text().then(t => start(JSON.parse(t)));
+  document.getElementById('file').onchange = e => e.target.files[0] && read(e.target.files[0]);
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && read(e.dataTransfer.files[0]); };
+}
+
+function start(data) {
+  DATA = data;
+  for (const sec of data.sections)          // a skipped section or group skips everything inside it
+    for (const g of sec.groups) {
+      g.skip = g.skip || sec.skip;
+      for (const st of g.steps) st.skip = st.skip || g.skip;
+    }
+  KEY = LS_PREFIX + (data.revision ?? 1);
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { state = {}; }
+  if (!state.__started) state.__started = new Date().toISOString();
+  render();
+}
+
+/* ---------- state ---------- */
+
+const get = id => (state[id] ||= {});
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+  const el = document.getElementById('saved');
+  if (el) { el.textContent = 'saved ' + new Date().toLocaleTimeString(); }
+  updateProgress();
+}
+
+const showSkipped = () => state.__showSkipped === true;
+const hiddenStep = s => !!s.skip && !showSkipped();
+
+function counts(step) {           // does this step count toward progress?
+  if (step.t === 'note') return false;
+  if (step.optional) return false;
+  if (hiddenStep(step)) return false;
+  return true;
+}
+function answered(step) {
+  const s = state[step.id];
+  if (!s) return false;
+  if (step.t === 'check') return !!s.r;
+  if (step.t === 'do') return s.v === true;
+  if (step.t === 'row') return s.v && Object.values(s.v).some(x => String(x).trim() !== '');
+  return s.v !== undefined && String(s.v).trim() !== '';
+}
+
+function allSteps() {
+  return DATA.sections.flatMap(sec => sec.groups.flatMap(g => g.steps));
+}
+
+/* ---------- render ---------- */
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header><div class="bar">
+      <h1>${esc(DATA.title)}</h1>
+      <div class="meter">
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="lbl"><span id="ptext"></span><span id="ftext"></span></div>
+      </div>
+      <div class="spacer"></div>
+      <label class="toggle"><input type="checkbox" id="showskip" ${showSkipped() ? 'checked' : ''}> show what I don't need</label>
+      <button id="expand">Expand all</button>
+    </div></header>
+    <main>
+      <div class="intro">${DATA.intro.map(p => `<p>${md(p)}</p>`).join('')}</div>
+      ${DATA.sections.map(section).join('')}
+    </main>
+    <footer><div class="bar">
+      <span class="saved" id="saved">autosaved in this browser</span>
+      <div class="spacer"></div>
+      <button id="reset">Reset</button>
+      <button id="import">Load results…</button>
+      <button class="primary" id="download">Download results</button>
+    </div></footer>`;
+  wire();
+  updateProgress();
+}
+
+function section(sec) {
+  const body = sec.groups.map(group).join('');
+  if (!body) return '';
+  return `<h2>${esc(sec.title)}${sec.skip ? ' <span class="gtag">skipped</span>' : ''}</h2>
+    ${sec.blurb ? `<p class="blurb">${md(sec.blurb)}</p>` : ''}
+    ${sec.skip ? `<p class="blurb"><b>Why.</b> ${md(sec.skip)}</p>` : ''}
+    ${body}`;
+}
+
+function group(g) {
+  if (g.steps.every(hiddenStep)) return '';
+  const live = g.steps.filter(counts);
+  return `<details class="group" data-group="${g.id}" open>
+    <summary>
+      <span class="gid">${esc(g.id)}</span>
+      <span class="gtitle">${esc(g.title)}</span>
+      ${g.optional ? '<span class="gtag">optional</span>' : ''}
+      <span class="gcount" data-count="${g.id}">0 / ${live.length}</span>
+    </summary>
+    <div class="gbody">
+      ${g.need ? `<div class="why"><b>Why.</b> ${md(g.need)}</div>` : ''}
+      ${g.feeds ? `<div class="why"><b>Feeds.</b> ${md(g.feeds)}</div>` : ''}
+      ${g.steps.map((s, i) => step(s, g)).join('')}
+    </div>
+  </details>`;
+}
+
+function step(s, g) {
+  const hide = hiddenStep(s) ? ' hidden' : '';
+  if (s.t === 'note') return `<div class="step note${hide}">${md(s.text)}</div>`;
+
+  const st = state[s.id] || {};
+  const opt = s.optional ? ' <span class="unit">(optional)</span>' : '';
+
+  if (s.t === 'do') {
+    const on = st.v === true;
+    return `<div class="step${hide}"><label class="do${on ? ' done' : ''}" data-do="${s.id}">
+      <input type="checkbox" ${on ? 'checked' : ''}><span>${md(s.text)}${opt}</span>
+    </label></div>`;
+  }
+
+  if (s.t === 'num' || s.t === 'text') {
+    const long = s.t === 'text' && s.long;
+    const input = long
+      ? `<textarea data-val="${s.id}" placeholder="${esc(s.placeholder || '')}">${esc(st.v || '')}</textarea>`
+      : `<input type="${s.t === 'num' ? 'number' : 'text'}" step="any" data-val="${s.id}"
+           value="${esc(st.v ?? '')}" placeholder="${esc(s.placeholder || '')}">`;
+    return `<div class="step${hide}"><div class="field ${answered(s) ? 'answered' : ''}" ${long ? 'style="display:block"' : ''}>
+      <span class="lbl">${md(s.label)}${opt}</span>${input}
+      ${s.unit ? `<span class="unit">${esc(s.unit)}</span>` : ''}
+    </div></div>`;
+  }
+
+  if (s.t === 'pick') {
+    return `<div class="step${hide}"><div class="field ${answered(s) ? 'answered' : ''}">
+      <span class="lbl">${md(s.label)}${opt}</span>
+      <div class="pills">${s.options.map(o =>
+        `<button class="pill ${st.v === o ? 'on' : ''}" data-pick="${s.id}" data-value="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+    </div></div>`;
+  }
+
+  if (s.t === 'row') {
+    const v = st.v || {};
+    return `<div class="step${hide}"><div class="rowset">
+      <span class="lbl">${md(s.label)}${opt}</span>
+      ${s.cols.map(c => `<label class="cell"><span>${esc(c)}</span>
+        <input type="number" step="any" data-cell="${s.id}" data-col="${esc(c)}" value="${esc(v[c] ?? '')}"></label>`).join('')}
+    </div></div>`;
+  }
+
+  if (s.t === 'check') {
+    const n = s.id.split('.').pop();
+    const failed = st.r === 'fail';
+    return `<div class="step${hide}${failed ? ' failed' : ''}" data-step="${s.id}">
+      <div class="check">
+        <div class="n">${esc(n)}</div>
+        <div>
+          <div class="act">${md(s.action)}</div>
+          <div class="exp">${md(s.expect)}</div>
+          ${s.why ? `<div class="tag">covers ${esc(s.why)}</div>` : ''}
+          ${s.skip ? `<div class="tag">not needed this pass — ${esc(s.skip)}</div>` : ''}
+        </div>
+        <div class="pills">
+          <button class="pill pass ${st.r === 'pass' ? 'on' : ''}" data-res="${s.id}" data-value="pass">Pass</button>
+          <button class="pill fail ${st.r === 'fail' ? 'on' : ''}" data-res="${s.id}" data-value="fail">Fail</button>
+          <button class="pill na ${st.r === 'na' ? 'on' : ''}" data-res="${s.id}" data-value="na">N/A</button>
+        </div>
+        ${failed || st.note ? `<div class="note"><input type="text" data-note="${s.id}"
+            value="${esc(st.note || '')}" placeholder="what happened instead"></div>` : ''}
+      </div></div>`;
+  }
+  return '';
+}
+
+/* ---------- interaction ---------- */
+
+function wire() {
+  const app = document.getElementById('app');
+
+  app.addEventListener('change', e => {
+    const t = e.target;
+    if (t.id === 'showskip') { state.__showSkipped = t.checked; save(); render(); return; }
+    const doLabel = t.closest('[data-do]');
+    if (doLabel && t.type === 'checkbox') {
+      get(doLabel.dataset.do).v = t.checked;
+      doLabel.classList.toggle('done', t.checked);
+      save(); return;
+    }
+    if (t.dataset.cell) {
+      const s = get(t.dataset.cell); s.v = s.v || {};
+      s.v[t.dataset.col] = t.value; save(); return;
+    }
+  });
+
+  app.addEventListener('input', e => {
+    const t = e.target;
+    if (t.dataset.val) { get(t.dataset.val).v = t.value; t.closest('.field').classList.toggle('answered', t.value.trim() !== ''); save(); }
+    else if (t.dataset.note) { get(t.dataset.note).note = t.value; save(); }
+    else if (t.dataset.cell) { const s = get(t.dataset.cell); s.v = s.v || {}; s.v[t.dataset.col] = t.value; save(); }
+  });
+
+  app.addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick]');
+    if (pick) {
+      const id = pick.dataset.pick, val = pick.dataset.value;
+      const s = get(id);
+      s.v = s.v === val ? undefined : val;
+      pick.parentElement.querySelectorAll('.pill').forEach(p => p.classList.toggle('on', p.dataset.value === s.v));
+      pick.closest('.field').classList.toggle('answered', s.v !== undefined);
+      save(); return;
+    }
+    const res = e.target.closest('[data-res]');
+    if (res) {
+      const id = res.dataset.res, val = res.dataset.value;
+      const s = get(id);
+      s.r = s.r === val ? undefined : val;
+      const stepEl = res.closest('[data-step]');
+      res.parentElement.querySelectorAll('.pill').forEach(p => p.classList.toggle('on', p.dataset.value === s.r));
+      stepEl.classList.toggle('failed', s.r === 'fail');
+      let note = stepEl.querySelector('[data-note]');
+      if (s.r === 'fail' && !note) {
+        const div = document.createElement('div');
+        div.className = 'note';
+        div.innerHTML = `<input type="text" data-note="${id}" value="" placeholder="what happened instead">`;
+        stepEl.querySelector('.check').appendChild(div);
+        div.querySelector('input').focus();
+      } else if (s.r !== 'fail' && note && !note.value) {
+        note.parentElement.remove();
+      }
+      save(); return;
+    }
+  });
+
+  document.getElementById('expand').onclick = e => {
+    const all = [...document.querySelectorAll('.group')];
+    const open = all.every(d => d.open);
+    all.forEach(d => d.open = !open);
+    e.target.textContent = open ? 'Expand all' : 'Collapse all';
+  };
+  document.getElementById('download').onclick = download;
+  document.getElementById('import').onclick = importResults;
+  document.getElementById('reset').onclick = () => {
+    if (!confirm('Clear every answer on this checklist?')) return;
+    state = { __started: new Date().toISOString() };
+    localStorage.removeItem(KEY);
+    render();
+  };
+}
+
+function updateProgress() {
+  let done = 0, total = 0, fails = 0;
+  for (const sec of DATA.sections) for (const g of sec.groups) {
+    let gd = 0, gt = 0;
+    for (const s of g.steps) {
+      if (s.t === 'check' && state[s.id]?.r === 'fail') fails++;
+      if (!counts(s)) continue;
+      gt++; if (answered(s)) gd++;
+    }
+    total += gt; done += gd;
+    const el = document.querySelector(`[data-count="${g.id}"]`);
+    if (el) { el.textContent = `${gd} / ${gt}`; el.classList.toggle('done', gt > 0 && gd === gt); }
+  }
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('fill').style.width = pct + '%';
+  document.getElementById('ptext').textContent = `${done} of ${total} done`;
+  document.getElementById('ftext').textContent = fails ? `${fails} failing` : '';
+  document.getElementById('ftext').style.color = fails ? 'var(--fail)' : '';
+}
+
+/* ---------- results ---------- */
+
+function build() {
+  const failures = [];
+  const out = {
+    tool: 'vista-ingame-checks',
+    checklist: DATA.title,
+    checksRevision: DATA.revision ?? 1,
+    started: state.__started,
+    finished: new Date().toISOString(),
+    summary: {},
+    failures,
+    sections: []
+  };
+  let done = 0, total = 0, pass = 0, na = 0, blank = 0;
+
+  for (const sec of DATA.sections) {
+    const S = { id: sec.id, title: sec.title, groups: [] };
+    for (const g of sec.groups) {
+      const G = { id: g.id, title: g.title, items: [] };
+      for (const s of g.steps) {
+        if (s.t === 'note') continue;
+        const st = state[s.id] || {};
+        const item = { id: s.id, type: s.t };
+        if (s.skip) item.notNeeded = s.skip;
+        if (s.optional) item.optional = true;
+
+        if (s.t === 'check') {
+          item.action = s.action; item.expect = s.expect;
+          item.result = st.r || 'not run';
+          if (st.note) item.note = st.note;
+          if (st.r === 'fail') failures.push({ id: s.id, group: `${g.id} ${g.title}`, action: s.action, expect: s.expect, note: st.note || '' });
+          if (st.r === 'pass') pass++; else if (st.r === 'na') na++;
+        } else if (s.t === 'do') {
+          item.text = s.text; item.done = st.v === true;
+        } else if (s.t === 'row') {
+          item.label = s.label; item.values = {};
+          for (const c of s.cols) item.values[c] = num(st.v?.[c]);
+        } else {
+          item.label = s.label;
+          item.value = s.t === 'num' ? num(st.v) : (st.v ?? null);
+          if (s.unit) item.unit = s.unit;
+        }
+        if (counts(s)) { total++; if (answered(s)) done++; else blank++; }
+        G.items.push(item);
+      }
+      S.groups.push(G);
+    }
+    out.sections.push(S);
+  }
+  out.summary = { required: total, answered: done, unanswered: blank, passed: pass, failed: failures.length, notApplicable: na };
+  return out;
+}
+
+const num = v => (v === undefined || v === null || String(v).trim() === '') ? null : Number(v);
+
+function download() {
+  const out = build();
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  a.href = URL.createObjectURL(blob);
+  a.download = `vista-check-results-${stamp}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function importResults() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'application/json,.json';
+  input.onchange = async () => {
+    const f = input.files[0]; if (!f) return;
+    let data; try { data = JSON.parse(await f.text()); } catch { alert('That is not JSON I can read.'); return; }
+    if (data.tool !== 'vista-ingame-checks') { alert('That is not a results file from this page.'); return; }
+    applyResults(data);
+  };
+  input.click();
+}
+
+function applyResults(data) {
+  {
+    const next = { __started: data.started || new Date().toISOString(), __showSkipped: state.__showSkipped };
+    for (const sec of data.sections || []) for (const g of sec.groups || []) for (const it of g.items || []) {
+      const e = {};
+      if (it.type === 'check') { if (it.result && it.result !== 'not run') e.r = it.result; if (it.note) e.note = it.note; }
+      else if (it.type === 'do') { if (it.done) e.v = true; }
+      else if (it.type === 'row') { const v = {}; let any = false;
+        for (const [k, x] of Object.entries(it.values || {})) if (x !== null) { v[k] = String(x); any = true; }
+        if (any) e.v = v; }
+      else if (it.value !== null && it.value !== undefined) e.v = String(it.value);
+      if (Object.keys(e).length) next[it.id] = e;
+    }
+    state = next; save(); render();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
