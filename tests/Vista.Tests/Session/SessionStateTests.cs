@@ -302,4 +302,60 @@ public class SessionStateTests
         state.Edit();
         Assert.False(state.CanUndo);
     }
+
+    // IsPlaying is Previewing || (Live && !IsPaused && !IsFinished). Every expectation below is
+    // read off the mode and director state the case sets up, not off the predicate itself.
+
+    [Fact]
+    public void IsPlayingIsFalseWhileReleased()
+    {
+        var state = new SessionState();
+        Assert.Equal(CameraMode.Off, state.Mode);
+        Assert.False(state.IsPlaying);
+
+        state.Edit();
+        state.Release(CameraMode.View);
+        Assert.Equal(CameraMode.View, state.Mode);
+        Assert.False(state.IsPlaying);
+    }
+
+    [Fact]
+    public void IsPlayingFollowsAnEditPreview()
+    {
+        var state = EditingWithTrack();
+        Assert.False(state.IsPlaying);
+
+        Assert.Equal(PlayOutcome.Previewed, state.Play());
+        Assert.True(state.IsPlaying);
+
+        state.Stop();
+        Assert.False(state.IsPlaying);
+    }
+
+    [Fact]
+    public void IsPlayingFollowsALiveShot()
+    {
+        var state = Live();
+        Assert.Equal(CameraMode.Live, state.Mode);
+        Assert.True(state.IsPlaying);
+
+        state.Stop();
+        Assert.True(state.Director.IsPaused);
+        Assert.False(state.IsPlaying);
+
+        state.Play();
+        Assert.True(state.IsPlaying);
+    }
+
+    [Fact]
+    public void IsPlayingIsFalseOnceALiveShotFinishes()
+    {
+        var state = Live();
+
+        // EditingWithTrack is a single 5 s leg, so the cycle ends at 5 s.
+        state.Director.Tick(6f);
+
+        Assert.True(state.Director.IsFinished);
+        Assert.False(state.IsPlaying);
+    }
 }
