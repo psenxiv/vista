@@ -5,17 +5,19 @@ using Dalamud.Game.ClientState.Keys;
 
 namespace Vista.Plugin.Editor;
 
-/// <summary>The editing-mode key bindings, read from physical key state and hidden from the game.</summary>
+/// <summary>The key bindings for the modes Vista owns the camera in, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys
 {
-    private static readonly VirtualKey[] Watched = [VirtualKey.C, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R, VirtualKey.DELETE, VirtualKey.BACK];
+    private static readonly VirtualKey[] Watched = [VirtualKey.SPACE, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R, VirtualKey.DELETE, VirtualKey.BACK];
 
     private readonly bool[] held = new bool[Watched.Length];
 
     /// <summary>Reads the keys, acts on new presses and hides ours from the game. Call from Framework.Update.</summary>
     public void Update(CameraSession session, PointGizmo gizmo)
     {
-        if (session.Mode != CameraMode.Editing || PhysicalKeys.IsTyping()) { Array.Clear(held); return; }
+        if (session.Released || PhysicalKeys.IsTyping()) { Array.Clear(held); return; }
+
+        var editing = session.Mode == CameraMode.Editing;
 
         var ctrl = PhysicalKeys.IsDown(VirtualKey.CONTROL);
         var alt = PhysicalKeys.IsDown(VirtualKey.MENU);
@@ -29,7 +31,7 @@ internal sealed class EditorKeys
             if (!down) continue;
 
             var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.Selected is not null;
-            var ours = key is VirtualKey.C or VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes;
+            var ours = key == VirtualKey.SPACE || (editing && (key is VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes));
             if (ours) PhysicalKeys.Hide(key);
             if (pressed && ours) Act(session, gizmo, key, ctrl, alt);
         }
@@ -39,6 +41,8 @@ internal sealed class EditorKeys
     {
         var refusal = key switch
         {
+            VirtualKey.SPACE when ctrl => Restart(session),
+            VirtualKey.SPACE => Transport(session),
             VirtualKey.OEM_3 when ctrl && alt => null,
             VirtualKey.OEM_3 when ctrl => session.OverwriteSelected(),
             VirtualKey.OEM_3 when alt => session.AddAfterSelected(),
@@ -51,6 +55,20 @@ internal sealed class EditorKeys
         };
 
         if (refusal is not null) Plugin.Log.Debug("[editor] {Key}: {Refusal}", key.ToString(), refusal);
+    }
+
+    /// <summary>Space does what the Play button would: pauses a running shot, starts one otherwise.</summary>
+    private static string? Transport(CameraSession session)
+    {
+        if (session.IsPlaying) session.StopPlay();
+        else session.StartPlay();
+        return null;
+    }
+
+    private static string? Restart(CameraSession session)
+    {
+        session.RestartPlay();
+        return null;
     }
 
     private static string? Toggle(PointGizmo gizmo)

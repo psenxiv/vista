@@ -87,15 +87,20 @@ internal sealed class FreeCam
         if (Plugin.KeyState[VirtualKey.S]) forward -= 1f;
         if (Plugin.KeyState[VirtualKey.D]) right += 1f;
         if (Plugin.KeyState[VirtualKey.A]) right -= 1f;
-        if (Plugin.KeyState[VirtualKey.SPACE]) up += 1f;
-        if (PhysicalKeys.IsDown(VirtualKey.C)) up -= 1f;
+        if (!PhysicalKeys.IsDown(VirtualKey.CONTROL))
+        {
+            if (Plugin.KeyState[VirtualKey.E]) up += 1f;
+            if (Plugin.KeyState[VirtualKey.Q]) up -= 1f;
+        }
 
         return new Vector3(forward, up, right);
     }
 
-    /// <summary>Q rolls left, E rolls right.</summary>
+    /// <summary>Ctrl + Q rolls left, Ctrl + E rolls right; without Ctrl, Q and E fly down and up.</summary>
     private static float ReadRoll()
-        => (Plugin.KeyState[VirtualKey.E] ? 1f : 0f) - (Plugin.KeyState[VirtualKey.Q] ? 1f : 0f);
+        => PhysicalKeys.IsDown(VirtualKey.CONTROL)
+            ? (Plugin.KeyState[VirtualKey.E] ? 1f : 0f) - (Plugin.KeyState[VirtualKey.Q] ? 1f : 0f)
+            : 0f;
 
     /// <summary>Keeps an angle within one turn of zero.</summary>
     private static float Wrap(float angle) => MathF.IEEERemainder(angle, 2f * MathF.PI);
