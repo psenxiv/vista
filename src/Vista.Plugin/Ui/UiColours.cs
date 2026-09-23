@@ -24,6 +24,9 @@ internal static class UiColours
     /// <summary>Section headers: the text colour at 60%.</summary>
     public static uint Muted() => Text(0.6f);
 
+    /// <summary>The User Guide's dividers: the text colour at 15%.</summary>
+    public static uint Faint() => Text(0.15f);
+
     /// <summary>The text colour with its alpha scaled, leaving style alpha to disabled drawing so it applies once.</summary>
     private static uint Text(float alpha)
     {

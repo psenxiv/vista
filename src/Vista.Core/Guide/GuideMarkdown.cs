@@ -4,10 +4,10 @@ using System.Text.RegularExpressions;
 namespace Vista.Core.Guide;
 
 /// <summary>How a run of text is shown.</summary>
-public enum RunStyle { Plain, Bold, Code }
+public enum RunStyle { Plain, Bold, Command, Key, Icon, Link }
 
-/// <summary>A stretch of text in one style.</summary>
-public readonly record struct Run(string Text, RunStyle Style);
+/// <summary>A stretch of text in one style: an icon's name for Icon, and a page file in <paramref name="Target"/> for Link.</summary>
+public readonly record struct Run(string Text, RunStyle Style, string? Target = null);
 
 /// <summary>One block of a guide page.</summary>
 public abstract record Block;
@@ -48,7 +48,10 @@ public static partial class GuideMarkdown
             if (HeadingLine().Match(line) is { Success: true } heading)
             {
                 EndParagraph();
-                blocks.Add(new Heading(heading.Groups["marks"].Length, Inline(heading.Groups["text"].Value.Trim())));
+                var level = heading.Groups["marks"].Length;
+                // Each section heading sits under a faint line, unless the page starts with it or one is already there.
+                if (level == 2 && blocks.Count > 0 && blocks[^1] is not Divider) blocks.Add(new Divider());
+                blocks.Add(new Heading(level, Inline(heading.Groups["text"].Value.Trim())));
                 continue;
             }
 
@@ -101,23 +104,34 @@ public static partial class GuideMarkdown
         return blocks;
     }
 
-    /// <summary>Bold, code and link text within a line; an unclosed marker stays as it was typed.</summary>
+    /// <summary>Bold, keys, commands, icons and links within a line; an unclosed marker stays as it was typed.</summary>
     public static IReadOnlyList<Run> Inline(string text)
     {
         var runs = new List<Run>();
         var plain = new StringBuilder();
 
-        void Add(string value, RunStyle style)
+        void Add(string value, RunStyle style, string? target = null)
         {
             if (plain.Length > 0) { runs.Add(new Run(plain.ToString(), RunStyle.Plain)); plain.Clear(); }
-            runs.Add(new Run(value, style));
+            runs.Add(new Run(value, style, target));
+        }
+
+        void AddSpan(string span)
+        {
+            if (span.StartsWith('/')) { Add(span, RunStyle.Command); return; }
+            var keys = span.Split(" + ");
+            for (var k = 0; k < keys.Length; k++)
+            {
+                if (k > 0) plain.Append(" + ");
+                Add(keys[k], RunStyle.Key);
+            }
         }
 
         for (var i = 0; i < text.Length;)
         {
             if (text[i] == '`' && text.IndexOf('`', i + 1) is var tick and > 0)
             {
-                Add(text[(i + 1)..tick], RunStyle.Code);
+                AddSpan(text[(i + 1)..tick]);
                 i = tick + 1;
             }
             else if (i + 1 < text.Length && text[i] == '*' && text[i + 1] == '*' && text.IndexOf("**", i + 2, StringComparison.Ordinal) is var close and > 0)
@@ -127,8 +141,13 @@ public static partial class GuideMarkdown
             }
             else if (text[i] == '[' && Link().Match(text, i) is { Success: true } link && link.Index == i)
             {
-                plain.Append(link.Groups["text"].Value);
+                Add(link.Groups["text"].Value, RunStyle.Link, link.Groups["target"].Value.Trim());
                 i += link.Length;
+            }
+            else if (text[i] == '{' && IconTag().Match(text, i) is { Success: true } icon && icon.Index == i)
+            {
+                Add(icon.Groups["name"].Value, RunStyle.Icon);
+                i += icon.Length;
             }
             else
             {
@@ -167,4 +186,7 @@ public static partial class GuideMarkdown
 
     [GeneratedRegex(@"\[(?<text>[^\]]+)\]\((?<target>[^)]+)\)")]
     private static partial Regex Link();
+
+    [GeneratedRegex(@"\{icon:(?<name>[A-Za-z0-9]+)\}")]
+    private static partial Regex IconTag();
 }
