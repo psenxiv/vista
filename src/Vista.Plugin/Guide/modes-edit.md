@@ -13,7 +13,7 @@ Edit is where you build your shots. You fly a free camera, add points and change
 | Mouse | Look around |
 | Mouse wheel | Change fly speed |
 
-{icon:Feather} **Fly speed** on the top row also sets the speed.
+**Fly speed**, the slider on the top row, also sets the speed.
 
 ## Selecting
 
