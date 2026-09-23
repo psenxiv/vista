@@ -81,6 +81,10 @@ public class AimSettingsTests
         Assert.Equal(1f, TrackEditing.SetSmoothing(track, 2f).Smoothing);
         Assert.Equal(0f, TrackEditing.SetSmoothing(track, -0.5f).Smoothing);
         Assert.Same(track, TrackEditing.SetSmoothing(track, 0.3f));
+        Assert.Equal(TrackEditing.MaxLookAhead, TrackEditing.SetLookAhead(track, 5f).LookAhead);
+        Assert.Equal(0f, TrackEditing.SetLookAhead(track, -1f).LookAhead);
+        Assert.Same(track, TrackEditing.SetLookAhead(track, float.NaN));
+        Assert.Same(track, TrackEditing.SetLookAhead(track, TrackEditing.DefaultLookAhead));
     }
 
     [Fact]

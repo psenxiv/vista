@@ -29,14 +29,23 @@ public class TurnHeatTests
         => Assert.All(TurnHeat.Samples(Turning(0.5f, 0.5f, 0.5f)), s => Assert.Equal(0f, s.DegreesPerSecond, 1e-3f));
 
     [Fact]
-    public void ItSamplesThirtyTimesASecondAndTheFirstTakesTheSecondsRate()
+    public void ItSamplesThirtyTimesASecondAndTheFirstHasNoRate()
     {
         // A 3 s track: 91 samples, 0 to 3 s.
         var samples = TurnHeat.Samples(Turning(0f, 1f, 2f, 3f));
 
         Assert.Equal(91, samples.Count);
-        Assert.Equal(samples[1].DegreesPerSecond, samples[0].DegreesPerSecond);
+        Assert.Equal(0f, samples[0].DegreesPerSecond);
         Assert.Equal(30f, samples[^1].Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void AStraightPathReadsAsZero()
+    {
+        var track = TrackEditing.Empty(AimMode.PathTangent) with { Speed = 10f };
+        foreach (var x in new[] { 0f, 10f, 20f }) track = TrackEditing.Append(track, Point(x));
+
+        Assert.All(TurnHeat.Samples(new TrackEvaluator(track)), s => Assert.Equal(0f, s.DegreesPerSecond, 1e-2f));
     }
 
     [Fact]
@@ -44,7 +53,7 @@ public class TurnHeatTests
 
     [Theory]
     [InlineData(0f, 0f)]
-    [InlineData(45f, 0.5f)]
+    [InlineData(45f, TurnHeat.Warm)]
     [InlineData(90f, 1f)]
     [InlineData(180f, 1f)]
     [InlineData(-5f, 0f)]

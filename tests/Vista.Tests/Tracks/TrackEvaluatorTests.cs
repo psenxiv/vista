@@ -330,11 +330,11 @@ public class TrackEvaluatorTests
         return Vector3.Normalize(frame.LookAt - frame.Position);
     }
 
-    private static void Along(Vector3 expected, Vector3 actual)
+    private static void Along(Vector3 expected, Vector3 actual, float tolerance)
     {
-        Assert.Equal(expected.X, actual.X, 1e-3f);
-        Assert.Equal(expected.Y, actual.Y, 1e-3f);
-        Assert.Equal(expected.Z, actual.Z, 1e-3f);
+        Assert.Equal(expected.X, actual.X, tolerance);
+        Assert.Equal(expected.Y, actual.Y, tolerance);
+        Assert.Equal(expected.Z, actual.Z, tolerance);
     }
 
     [Fact]
@@ -342,8 +342,8 @@ public class TrackEvaluatorTests
     {
         var evaluator = new TrackEvaluator(Build([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent));
 
-        Along(Vector3.UnitX, Facing(evaluator, 1.0));
-        Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration - 0.1));
+        Along(Vector3.UnitX, Facing(evaluator, 1.0), 1e-3f);
+        Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration - 0.1), 1e-3f);
     }
 
     [Fact]
@@ -353,18 +353,33 @@ public class TrackEvaluatorTests
         var track = TrackEditing.SetLookAhead(Build([Point(0f), Point(10f, z: 5f), Point(20f, z: -20f)], AimMode.PathTangent), 1f);
         var evaluator = new TrackEvaluator(TrackEditing.SetLegDuration(track, 1, 1f));
 
-        Along(Vector3.Normalize(new Vector3(10f, 0f, 5f)), Facing(evaluator, 0.0));
+        Along(Vector3.Normalize(new Vector3(10f, 0f, 5f)), Facing(evaluator, 0.0), 1e-3f);
     }
 
     [Fact]
     public void LookingAheadNothingFacesStraightAlongThePath()
     {
-        // Symmetric about the middle point, the path runs parallel to x there; 0.5 s on, it's already heading down towards the last.
-        var track = Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent);
+        // Symmetric about the middle point, the path runs parallel to x there. With the last leg taking 0.5 s,
+        // the default look 0.5 s ahead instead faces the last point: (10, 0, -10) away.
+        var track = TrackEditing.SetLegDuration(Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent), 2, 0.5f);
         var middle = new TrackEvaluator(track).PointSeconds(1);
 
-        Along(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle));
-        Assert.True(Facing(new TrackEvaluator(track), middle).Z < -0.1f);
+        Along(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle), 1e-3f);
+        Along(Vector3.Normalize(new Vector3(10f, 0f, -10f)), Facing(new TrackEvaluator(track), middle), 1e-3f);
+    }
+
+    [Theory]
+    [InlineData(1e-3)]
+    [InlineData(4e-3)]
+    [InlineData(1.6e-2)]
+    public void LookingAheadStaysSteadyJustBeforeTheEndFarFromTheOrigin(double early)
+    {
+        // Far from the origin, a look-ahead chord this short is mostly float rounding, so it falls back to the path's own
+        // direction and matches the look at the very end to within a degree (cos 1° ≈ 0.99985).
+        var track = Build([Point(612f, 42f, -488f), Point(620f, 42f, -480f), Point(631f, 43f, -489f)], AimMode.PathTangent);
+        var evaluator = new TrackEvaluator(track);
+
+        Assert.InRange(Vector3.Dot(Facing(evaluator, evaluator.Duration - early), Facing(evaluator, evaluator.Duration)), 0.99985f, 1.0001f);
     }
 
     [Fact]
@@ -374,7 +389,7 @@ public class TrackEvaluatorTests
         var track = Build([Point(0f), Point(10f), Point(10f, z: 10f)], AimMode.PathTangent);
         track = TrackEditing.SetHold(TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 1f), 2, 0.3f), 1, 2f);
 
-        Along(Vector3.UnitZ, Facing(new TrackEvaluator(track), 2.8));
+        Along(Vector3.UnitZ, Facing(new TrackEvaluator(track), 2.8), 1e-3f);
     }
 
     [Fact]
