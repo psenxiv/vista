@@ -34,7 +34,10 @@ internal sealed class TimingWindow : Window
     private const string KeyPopup = "##timing-key";
 
     private static readonly KeySide[] Sides = [KeySide.In, KeySide.Out];
-    private static readonly float[] NiceFactors = [1f, 2f, 5f, 10f];
+    private const float ZoomPerNotch = 1.25f;
+    private const int TimeTicks = 16;
+    private const int YalmTicks = 6;
+    private const float InView = 1e-4f;
 
     private readonly CameraSession session;
     private readonly List<Vector2?> keyScreens = [];
@@ -42,12 +45,17 @@ internal sealed class TimingWindow : Window
     private bool scrubbing;
     private Drag? drag;
     private int? popupKey;
+    private TimingView? view;
+    private Guid viewTrack;
+    private (float StartX, TimingView Start)? pan;
 
     public TimingWindow(CameraSession session)
         : base("Timing###vista-timing")
     {
         this.session = session;
         RespectCloseHotkey = false;
+        // The wheel zooms the graph; it must never scroll the window as well.
+        Flags |= ImGuiWindowFlags.NoScrollWithMouse;
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(360f, 200f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
     }
 
@@ -56,6 +64,7 @@ internal sealed class TimingWindow : Window
     {
         EndScrub();
         EndDrag();
+        pan = null;
     }
 
     public override void Draw()
@@ -71,6 +80,7 @@ internal sealed class TimingWindow : Window
         {
             EndScrub();
             EndDrag();
+            pan = null;
             keyScreens.Clear();
             handleEnds.Clear();
             list.AddText(topLeft + ((region - ImGui.CalcTextSize(EmptyText)) / 2f), ImGui.GetColorU32(ImGuiCol.Text), EmptyText);
@@ -79,20 +89,25 @@ internal sealed class TimingWindow : Window
         }
 
         var distance = session.Evaluator.TotalDistance;
-        var yalmStep = YalmStep(distance);
-        var rightInset = WidestYalmLabel(distance, yalmStep) + 6f;
+        var duration = (float)session.Duration;
+        var shown = UpdateView(duration);
+        var (distanceFrom, distanceTo) = view is null ? (0f, distance) : shown.Distances(session.Evaluator);
+        var yalmStep = Ticks.Step(distanceTo - distanceFrom, YalmTicks);
+        // Sized for any label up to the whole path, so zooming never shifts the plot sideways.
+        var rightInset = ImGui.CalcTextSize($"{distance:0.00} y").X + 6f;
 
         var plotTopLeft = topLeft + new Vector2(LeftInset, TopInset);
         var plotSize = Vector2.Max(region - new Vector2(LeftInset + rightInset, TopInset + AxisStrip), Vector2.One);
-        var graph = new TimingGraph(plotTopLeft, plotSize, (float)session.Duration, distance);
+        var graph = new TimingGraph(plotTopLeft, plotSize, duration, distance)
+            { TimeFrom = shown.From, TimeTo = shown.To, DistanceFrom = distanceFrom, DistanceTo = distanceTo };
         var stripBottom = topLeft.Y + region.Y;
 
         UpdateKeyScreens(graph);
         UpdateHandleEnds(graph);
         DrawPlot(list, graph);
-        DrawYalmScale(list, graph, distance, yalmStep);
+        DrawYalmScale(list, graph, yalmStep);
         DrawTimeAxis(list, graph, stripBottom, rightInset);
-        DrawCurve(list, graph, 0f, graph.Duration, EditorColours.Path);
+        DrawCurve(list, graph, graph.TimeFrom, graph.TimeTo, EditorColours.Path);
         if (SelectedLegSpan() is var (start, end)) DrawCurve(list, graph, start, end, EditorColours.Selected);
         DrawPlayhead(list, graph, stripBottom);
         DrawHandles(list);
@@ -112,6 +127,13 @@ internal sealed class TimingWindow : Window
         if (SelectedLegIndex() is { } leg) DrawLegControls(leg);
         else if (SelectedKeyIndex() is { } key) DrawKeyControls(key);
         else ImGui.TextUnformatted(string.Empty);
+
+        ImGui.SameLine();
+        var fitLeft = ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.Expand);
+        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), fitLeft));
+        ImGui.BeginDisabled(view is null);
+        if (IconButton.Draw("fit", FontAwesomeIcon.Expand, "Show the whole track")) view = null;
+        ImGui.EndDisabled();
     }
 
     /// <summary>The leg's name and a drop-down of easing presets, showing Custom when it matches none.</summary>
@@ -163,7 +185,7 @@ internal sealed class TimingWindow : Window
     {
         keyScreens.Clear();
         foreach (var key in session.Evaluator.Keys)
-            keyScreens.Add(graph.ToScreen(key.Time, session.Evaluator.DistanceOf(key.Position)));
+            keyScreens.Add(InViewTime(graph, key.Time) ? graph.ToScreen(key.Time, session.Evaluator.DistanceOf(key.Position)) : null);
     }
 
     /// <summary>Works out where the selected key's handles end this frame, while editing.</summary>
@@ -187,7 +209,9 @@ internal sealed class TimingWindow : Window
         var text = ImGui.GetColorU32(ImGuiCol.Text);
         for (var i = 0; i < session.Track.Points.Count; i++)
         {
-            var y = graph.ToScreen(0f, session.Evaluator.DistanceOf(i)).Y;
+            var along = session.Evaluator.DistanceOf(i);
+            if (along < graph.DistanceFrom - InView || along > graph.DistanceTo + InView) continue;
+            var y = graph.ToScreen(0f, along).Y;
             list.AddLine(new Vector2(graph.Origin.X, y), new Vector2(right, y), EditorColours.GraphGrid);
 
             var label = (i + 1).ToString();
@@ -196,13 +220,14 @@ internal sealed class TimingWindow : Window
         }
     }
 
-    /// <summary>Yalm ticks up the plot's right edge at a round step, at most six.</summary>
-    private void DrawYalmScale(ImDrawListPtr list, TimingGraph graph, float distance, float step)
+    /// <summary>Yalm ticks up the plot's right edge at a round step over the view, at most six, leaving out zero.</summary>
+    private void DrawYalmScale(ImDrawListPtr list, TimingGraph graph, float step)
     {
         var text = FullAlpha(EditorColours.GraphGrid);
         var right = graph.Origin.X + graph.Size.X;
-        for (var d = step; d <= distance; d += step)
+        for (var k = Math.Max(1, (int)MathF.Ceiling((graph.DistanceFrom / step) - InView)); k * step <= graph.DistanceTo + InView; k++)
         {
+            var d = k * step;
             var y = graph.ToScreen(0f, d).Y;
             list.AddLine(new Vector2(right, y), new Vector2(right + TickLength, y), EditorColours.GraphGrid);
 
@@ -222,14 +247,16 @@ internal sealed class TimingWindow : Window
         var labelY = stripBottom - totalSize.Y;
         list.AddText(new Vector2(totalLeft, labelY), text, total);
 
-        var step = graph.Duration > 30f ? 5 : 1;
+        var step = Ticks.Step(graph.TimeTo - graph.TimeFrom, TimeTicks);
+        var format = step >= 1f ? "0" : step >= 0.1f ? "0.0" : "0.00";
         var lastRight = float.MinValue;
-        for (var t = 0; t <= graph.Duration; t += step)
+        for (var k = (int)MathF.Ceiling((graph.TimeFrom / step) - InView); k * step <= graph.TimeTo + InView; k++)
         {
+            var t = k * step;
             var x = graph.ToScreen(t, 0f).X;
             list.AddLine(new Vector2(x, bottom), new Vector2(x, bottom + TickLength), EditorColours.GraphGrid);
 
-            var label = $"{t:0}";
+            var label = t.ToString(format);
             var width = ImGui.CalcTextSize(label).X;
             var left = x - (width / 2f);
             if (left < lastRight + 4f || left + width > totalLeft - 4f) continue;
@@ -241,6 +268,9 @@ internal sealed class TimingWindow : Window
     /// <summary>The curve from <paramref name="from"/> to <paramref name="to"/> seconds, sampled every few pixels.</summary>
     private void DrawCurve(ImDrawListPtr list, TimingGraph graph, float from, float to, uint colour)
     {
+        from = MathF.Max(from, graph.TimeFrom);
+        to = MathF.Min(to, graph.TimeTo);
+        if (from >= to) return;
         var left = graph.ToScreen(from, 0f).X;
         var right = graph.ToScreen(to, 0f).X;
         for (var x = left; x < right; x += SampleStep) list.PathLineTo(CurvePoint(graph, graph.TimeAt(x)));
@@ -252,6 +282,7 @@ internal sealed class TimingWindow : Window
     private void DrawPlayhead(ImDrawListPtr list, TimingGraph graph, float stripBottom)
     {
         if (session.Mode == CameraMode.Live && session.PlayingEntry?.TrackId != session.EditedTrackId) return;
+        if (!InViewTime(graph, (float)session.ScrubHead)) return;
         var x = graph.ToScreen((float)session.ScrubHead, 0f).X;
         list.AddLine(new Vector2(x, graph.Origin.Y), new Vector2(x, stripBottom), EditorColours.Playhead);
     }
@@ -308,7 +339,7 @@ internal sealed class TimingWindow : Window
         ImGui.SetTooltip($"{t:0.00} s  ·  {d:0.0} y  ·  {speed:0.00} y/s");
     }
 
-    /// <summary>Carries on or ends a scrub or a drag, acts on a right press over a key, then on a left press: a handle, then a key, then the curve, then the time axis.</summary>
+    /// <summary>Carries on or ends a scrub, a drag or a pan, zooms on the wheel, acts on a right press over a key, then on a left press: a handle, then a key, then the curve, then empty plot space to pan, then the time axis.</summary>
     private void HandleMouse(TimingGraph graph, float stripBottom)
     {
         if (scrubbing)
@@ -320,9 +351,12 @@ internal sealed class TimingWindow : Window
         ContinueDrag();
 
         var mouse = ImGui.GetMousePos();
+        ContinuePan(graph, mouse);
+        Zoom(graph, mouse);
         if (ImGui.IsItemClicked(ImGuiMouseButton.Right)) RightClickKey(mouse);
         if (!ImGui.IsItemClicked(ImGuiMouseButton.Left)) return;
         if (ClickHandle(graph, mouse) || ClickKey(graph, mouse) || ClickCurve(graph, mouse)) return;
+        if (view is { } zoomed && PlotContains(graph, mouse)) { pan = (mouse.X, zoomed); return; }
         ClickTimeAxis(graph, mouse, stripBottom);
     }
 
@@ -450,6 +484,39 @@ internal sealed class TimingWindow : Window
         scrubbing = session.Scrubbing;
     }
 
+    /// <summary>The view for this frame: whole for a new track or one that no longer needs zooming, else kept within the shot.</summary>
+    private TimingView UpdateView(float duration)
+    {
+        if (session.EditedTrackId != viewTrack) { view = null; pan = null; viewTrack = session.EditedTrackId; }
+        if (view is { } v)
+        {
+            v = v.Clamp(duration);
+            view = v.IsWhole(duration) ? null : v;
+        }
+
+        return view ?? TimingView.Whole(duration);
+    }
+
+    /// <summary>The wheel zooms time around the cursor, while nothing is being dragged.</summary>
+    private void Zoom(TimingGraph graph, Vector2 mouse)
+    {
+        var wheel = ImGui.GetIO().MouseWheel;
+        if (wheel == 0f || !ImGui.IsItemHovered() || drag is not null || scrubbing || pan is not null) return;
+        var from = view ?? TimingView.Whole(graph.Duration);
+        var next = from.Zoom(graph.TimeAt(mouse.X), MathF.Pow(ZoomPerNotch, -wheel), graph.Duration);
+        view = next.IsWhole(graph.Duration) ? null : next;
+    }
+
+    /// <summary>Slides the view with the mouse while the pan is held, from where it was grabbed.</summary>
+    private void ContinuePan(TimingGraph graph, Vector2 mouse)
+    {
+        if (pan is not { } p) return;
+        if (!ImGui.IsItemActive()) { pan = null; return; }
+        view = p.Start.Pan((p.StartX - mouse.X) / graph.Size.X * p.Start.Span, graph.Duration);
+    }
+
+    private static bool InViewTime(TimingGraph graph, float time) => time >= graph.TimeFrom - InView && time <= graph.TimeTo + InView;
+
     private void EndScrub()
     {
         if (!scrubbing) return;
@@ -460,36 +527,14 @@ internal sealed class TimingWindow : Window
     private Vector2 CurvePoint(TimingGraph graph, float time) => graph.ToScreen(time, session.Evaluator.DistanceAt(time));
 
     /// <summary>The time under pixel column <paramref name="x"/>, running on past the shot's end so the last key can lengthen it.</summary>
-    private static float DragTime(TimingGraph graph, float x)
-        => x > graph.Origin.X + graph.Size.X ? (x - graph.Origin.X) / graph.Size.X * graph.Duration : graph.TimeAt(x);
+    private static float DragTime(TimingGraph graph, float x) => graph.TimeAtOpenEnded(x);
 
     /// <summary>Whether <paramref name="point"/> falls inside the plot rectangle.</summary>
     private static bool PlotContains(TimingGraph graph, Vector2 point)
         => point.X >= graph.Origin.X && point.X <= graph.Origin.X + graph.Size.X
             && point.Y >= graph.Origin.Y && point.Y <= graph.Origin.Y + graph.Size.Y;
 
-    /// <summary>The smallest of 1, 2 or 5 times a power of ten giving at most six ticks over <paramref name="distance"/>.</summary>
-    private static float YalmStep(float distance)
-    {
-        if (distance <= 0f) return 1f;
-        var raw = distance / 6f;
-        var magnitude = MathF.Pow(10f, MathF.Floor(MathF.Log10(raw)));
-        foreach (var factor in NiceFactors)
-        {
-            var step = factor * magnitude;
-            if (step >= raw) return step;
-        }
 
-        return 10f * magnitude;
-    }
-
-    /// <summary>The widest yalm-scale label's pixel width, at <paramref name="step"/> up to <paramref name="distance"/>.</summary>
-    private static float WidestYalmLabel(float distance, float step)
-    {
-        var widest = 0f;
-        for (var d = step; d <= distance; d += step) widest = MathF.Max(widest, ImGui.CalcTextSize(YalmLabel(d)).X);
-        return widest;
-    }
 
     private static string YalmLabel(float distance) => $"{distance:0.##} y";
 

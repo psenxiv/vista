@@ -40,7 +40,9 @@ At the whole view every mapping is exactly what it is today.
   longer shots get 10 s. Labels that would overlap are still skipped, as now.
 - **The right inset** for yalm labels is sized for the total distance written to two decimals, so
   the plot doesn't shift sideways as zooming changes the labels.
-- Dragging a key while zoomed stops at the edge of the view. Zoom out to move it further. No
+- Dragging a key while zoomed stops at the view's left edge. Past the right edge it carries on at
+  the view's scale, as a drag past the plot already lengthens the shot today; that mapping moves to
+  `TimingGraph.TimeAtOpenEnded`, which at the whole view is today's formula exactly. No
   auto-scroll.
 
 ## Core

@@ -28,6 +28,9 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
     /// <summary>The time under pixel column <paramref name="x"/>, clamped to the view.</summary>
     public float TimeAt(float x) => TimeFrom + (Math.Clamp((x - Origin.X) / Size.X, 0f, 1f) * (TimeTo - TimeFrom));
 
+    /// <summary>The time under pixel column <paramref name="x"/>, clamped at the view's start but not its end, so a key dragged past the plot can lengthen the shot.</summary>
+    public float TimeAtOpenEnded(float x) => TimeFrom + (MathF.Max((x - Origin.X) / Size.X, 0f) * (TimeTo - TimeFrom));
+
     /// <summary>The distance under pixel row <paramref name="y"/>, clamped to the view.</summary>
     public float DistanceAt(float y) => DistanceFrom + (Math.Clamp((Origin.Y + Size.Y - y) / Size.Y, 0f, 1f) * (DistanceTo - DistanceFrom));
 
