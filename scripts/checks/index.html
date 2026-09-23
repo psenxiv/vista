@@ -169,8 +169,8 @@ function showLoader() {
     <div class="loader">
       <h1>Pick checks.json</h1>
       <p>The browser will not let a page opened from a file read another file on its own.
-         Either drop <code>checks.json</code> below, or serve the folder and reload:</p>
-      <p class="mono">python3 -m http.server -d analysis/checks 8765</p>
+         Serve this folder and reload — VS Code's Live Server on <code>index.html</code> does it —
+         or just drop <code>checks.json</code> below.</p>
       <div class="drop" id="drop">
         <input type="file" id="file" accept="application/json,.json">
         <p style="margin-top:14px">or drop the file here</p>

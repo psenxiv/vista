@@ -126,6 +126,10 @@ pushed; only the user pushes tags.
 In-game verification is the user's; see `docs/dev-setup.md`. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
+A checklist of in-game checks goes in `scripts/checks/` — rewrite `checks.json` and leave the
+page alone. Don't write a new Markdown checklist. The user serves the folder themselves and
+sends back the results JSON it downloads.
+
 ## Docs
 
 - Design: `docs/superpowers/specs/`
