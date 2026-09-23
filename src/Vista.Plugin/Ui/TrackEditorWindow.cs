@@ -52,6 +52,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     private readonly CameraSession session;
     private readonly PendingField fields;
     private readonly TimingWindow timing;
+    private readonly CameraWindow camera;
     private readonly WatchTargetWindow watchTarget;
     private readonly FollowTargetWindow followTarget;
     private readonly HierarchyPanel hierarchy;
@@ -68,12 +69,13 @@ internal sealed unsafe class TrackEditorWindow : Window
     private float? loopX;
     private float? trashRight;
 
-    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, WatchTargetWindow watchTarget, FollowTargetWindow followTarget)
+    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, CameraWindow camera, WatchTargetWindow watchTarget, FollowTargetWindow followTarget)
         : base("Vista###vista-track-editor")
     {
         this.session = session;
         this.fields = fields;
         this.timing = timing;
+        this.camera = camera;
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
         hierarchy = new HierarchyPanel(session);
@@ -189,7 +191,11 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         if (editing)
         {
-            AlignTo(FlySpeedStart(), gap);
+            AlignTo(CameraToolsStart(), gap);
+            if (IconButton.Draw("level-roll", FontAwesomeIcon.RulerHorizontal, "Level camera roll")) session.CameraRoll = 0f;
+            ImGui.SameLine();
+            if (IconButton.Toggle("camera", FontAwesomeIcon.Camera, camera.IsOpen, "Camera")) camera.Toggle();
+            ImGui.SameLine();
             DrawFlySpeed();
         }
 
@@ -206,13 +212,14 @@ internal sealed unsafe class TrackEditorWindow : Window
             session.HideUiInLive = !session.HideUiInLive;
     }
 
-    /// <summary>Where fly speed starts so its slider ends under the track row's trash, leaving room for the eye; null before the first frame.</summary>
-    private float? FlySpeedStart()
+    /// <summary>Where the camera tools start so fly speed's slider still ends under the track row's trash, leaving room for the eye; null before the first frame.</summary>
+    private float? CameraToolsStart()
     {
         if (trashRight is not { } right) return null;
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var eyeLeft = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.EyeSlash) - spacing;
-        return MathF.Min(right, eyeLeft) - SpeedWidth - spacing - IconWidth(FontAwesomeIcon.Feather);
+        var tools = IconButton.Width(FontAwesomeIcon.RulerHorizontal) + spacing + IconButton.Width(FontAwesomeIcon.Camera) + spacing;
+        return MathF.Min(right, eyeLeft) - SpeedWidth - spacing - IconWidth(FontAwesomeIcon.Feather) - tools;
     }
 
     /// <summary>Continues the row at <paramref name="screenX"/> when that's at least <paramref name="gap"/> past the last item, else just after it.</summary>

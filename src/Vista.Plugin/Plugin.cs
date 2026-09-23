@@ -41,6 +41,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TrackEditorWindow trackEditor;
     private readonly PointWindow pointWindow;
     private readonly TimingWindow timingWindow;
+    private readonly CameraWindow cameraWindow;
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
     private readonly PendingField fields;
@@ -61,12 +62,14 @@ public sealed class Plugin : IDalamudPlugin
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
         pointWindow = new PointWindow(Session, pointGizmo);
         timingWindow = new TimingWindow(Session);
+        cameraWindow = new CameraWindow(Session);
         watchTargetWindow = new WatchTargetWindow(Session);
         followTargetWindow = new FollowTargetWindow(Session);
-        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, watchTargetWindow, followTargetWindow);
+        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, cameraWindow, watchTargetWindow, followTargetWindow);
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
+        windows.AddWindow(cameraWindow);
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;

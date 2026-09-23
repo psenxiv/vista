@@ -146,6 +146,15 @@ internal sealed class PointWindow : Window
 
         ImGui.TableNextRow();
         PointField($"fov{index}", "FoV", null, index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = EditLimits.Fov(Radians(v)) });
+
+        // One live edit, so it lands as a single undo step like a drag on the field would.
+        ImGui.SameLine();
+        if (IconButton.Draw("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view"))
+        {
+            session.BeginLiveEdit();
+            _ = session.PreviewPoint(index, session.Track.Points[index] with { Fov = EditLimits.Fov(session.CameraFov) });
+            session.EndLiveEdit();
+        }
     }
 
     /// <summary>The anchor's rows: X, Y, Z and Yaw edit it, and the fields it lacks are disabled.</summary>

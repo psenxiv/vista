@@ -179,6 +179,25 @@ internal sealed class CameraSession
     /// <summary>The free-cam's speed setting.</summary>
     public FlySpeed Speed => freeCam.Speed;
 
+    /// <summary>The free camera's position while editing.</summary>
+    public Vector3 CameraPosition { get => freeCam.Position; set => freeCam.Position = value; }
+
+    /// <summary>The free camera's roll in radians.</summary>
+    public float CameraRoll { get => freeCam.Roll; set => freeCam.Roll = value; }
+
+    /// <summary>The field of view the camera is looking through, in radians.</summary>
+    public float CameraFov { get => freeCam.Fov; set => freeCam.Fov = value; }
+
+    /// <summary>The camera's yaw and pitch, or null when the camera cannot be read.</summary>
+    public (float Yaw, float Pitch)? CameraAngles => CameraAccess.ReadAngles();
+
+    /// <summary>Turns the camera, telling the free cam not to read it as a mouse movement.</summary>
+    public void TurnCamera(float yaw, float pitch)
+    {
+        CameraAccess.WriteAngles(yaw, pitch);
+        freeCam.Resync();
+    }
+
     /// <summary>True in Off and View, where the game has its camera.</summary>
     public bool Released => state.Released;
 
