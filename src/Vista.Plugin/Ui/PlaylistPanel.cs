@@ -24,9 +24,8 @@ internal sealed unsafe class PlaylistPanel
 
     private readonly CameraSession session;
 
-    private Guid? editingLoops;
-    private string loopsText = string.Empty;
-    private bool focusLoops;
+    // A repeat count being dragged or typed, applied when the field is let go.
+    private (Guid Id, int Value)? loopsDrag;
 
     // Wheel travel over the loop cells not yet taken as a step, so a trackpad steps once per notch.
     private float wheelCarry;
@@ -40,7 +39,7 @@ internal sealed unsafe class PlaylistPanel
         // Rows can remove or reorder entries, so every row reads this snapshot.
         var scene = session.Scene;
         var playing = session.PlayingEntry;
-        if (editingLoops is { } id && (!editing || PlaylistEditing.IndexOf(scene, id) < 0)) editingLoops = null;
+        if (loopsDrag is { } drag && (!editing || PlaylistEditing.IndexOf(scene, drag.Id) < 0)) loopsDrag = null;
         loopsHovered = false;
 
         ImGui.AlignTextToFramePadding();
@@ -133,57 +132,30 @@ internal sealed unsafe class PlaylistPanel
         if (IconButton.RowAction("remove", FontAwesomeIcon.Times, "Remove from playlist", rowHovered, danger: true)) Report(session.RemoveFromPlaylist(entry.Id));
     }
 
-    /// <summary>The repeat count: a number, ∞ when the entry holds the playlist, or — when it plays once; click to type, wheel to step.</summary>
+    /// <summary>The repeat count as a drag field: 1 up, or 0 to follow the track, shown as ∞ when that holds the playlist or — when it plays once. Double-click to type, wheel to step; a drag applies when let go.</summary>
     private void DrawLoops(Scene scene, PlaylistEntry entry, bool editing)
     {
-        if (editingLoops == entry.Id)
+        var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
+        var value = loopsDrag is { } drag && drag.Id == entry.Id ? drag.Value : entry.Loops ?? 0;
+        var format = value > 0 ? "%d" : holds ? "∞" : "—";
+        var colour = value > 0 || holds ? UiColours.Amber : UiColours.Dim();
+
+        ImGui.SetNextItemWidth(LoopWidth);
+        bool changed;
+        using (ImRaii.PushColor(ImGuiCol.Text, colour))
+            changed = ImGui.DragInt("##loops", ref value, 0.1f, 0, PlaylistEditing.MaxLoops, format, ImGuiSliderFlags.AlwaysClamp);
+        if (changed) loopsDrag = (entry.Id, value);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeats");
+        if (loopsDrag is { } done && done.Id == entry.Id && !ImGui.IsItemActive())
         {
-            DrawLoopsInput(entry);
-            return;
+            loopsDrag = null;
+            Report(session.SetEntryLoops(entry.Id, done.Value > 0 ? done.Value : null));
         }
 
-        var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
-        var text = entry.Loops is { } n ? n.ToString() : holds ? "∞" : "—";
-        var colour = entry.Loops is not null || holds ? UiColours.Amber : UiColours.Dim();
-        if (ImGui.Selectable("##loops", false, ImGuiSelectableFlags.None, new Vector2(LoopWidth, ImGui.GetFrameHeight()))) StartLoops(entry);
-        using (ImRaii.PushColor(ImGuiCol.Text, colour))
-            RowText.Draw(text);
         if (editing) ImGuiP.SetItemUsingMouseWheel();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeats");
         if (!editing || !ImGui.IsItemHovered()) return;
         loopsHovered = true;
         StepLoops(entry);
-    }
-
-    /// <summary>The number box: Enter or clicking away sets the count, Escape cancels; empty or 0 follows the track.</summary>
-    private void DrawLoopsInput(PlaylistEntry entry)
-    {
-        if (focusLoops)
-        {
-            ImGui.SetKeyboardFocusHere();
-            focusLoops = false;
-        }
-
-        ImGui.SetNextItemWidth(LoopWidth);
-        var entered = ImGui.InputText("##loops-input", ref loopsText, 3, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
-        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
-        {
-            editingLoops = null;
-            return;
-        }
-
-        if (!entered && !ImGui.IsItemDeactivated()) return;
-        var whole = loopsText.Split('.')[0];
-        var count = int.TryParse(whole, out var n) && n != 0 ? n : (int?)null;
-        Report(session.SetEntryLoops(entry.Id, count));
-        editingLoops = null;
-    }
-
-    private void StartLoops(PlaylistEntry entry)
-    {
-        editingLoops = entry.Id;
-        loopsText = entry.Loops?.ToString() ?? string.Empty;
-        focusLoops = true;
     }
 
     /// <summary>Each whole notch of the mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>

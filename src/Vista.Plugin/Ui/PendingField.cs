@@ -2,17 +2,20 @@ using Dalamud.Bindings.ImGui;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>A number field's typed value, held until the field loses focus and then applied.</summary>
+/// <summary>A number field's dragged or typed value, held until the field is let go and then applied, so each change is one undo step.</summary>
 internal sealed class PendingField(Func<bool> canApply)
 {
+    /// <summary>How far a field moves per pixel dragged, and the values it stops at.</summary>
+    public readonly record struct Range(float Speed, float Min, float Max);
+
     private (string Id, float Value, float Shown, Action<float> Apply)? pending;
 
-    /// <summary>Draws a number field showing <paramref name="current"/>, and applies a typed value once the field is no longer active.</summary>
-    public void Draw(string id, float current, string format, float width, Action<float> apply)
+    /// <summary>Draws a drag field showing <paramref name="current"/> within <paramref name="range"/>; double-click to type. Applies the new value once the field is let go.</summary>
+    public void Draw(string id, float current, string format, float width, Range range, Action<float> apply)
     {
         var value = pending is { } p && p.Id == id ? p.Value : current;
         ImGui.SetNextItemWidth(width);
-        if (ImGui.InputFloat($"##{id}", ref value, 0f, 0f, format)) pending = (id, value, current, apply);
+        if (ImGui.DragFloat($"##{id}", ref value, range.Speed, range.Min, range.Max, format, ImGuiSliderFlags.AlwaysClamp)) pending = (id, value, current, apply);
         if (pending is { } done && done.Id == id && !ImGui.IsItemActive()) Commit();
     }
 

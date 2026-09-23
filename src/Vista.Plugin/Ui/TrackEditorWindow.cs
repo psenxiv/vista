@@ -49,6 +49,12 @@ internal sealed unsafe class TrackEditorWindow : Window
     private const float MinWidth = 420f;
     private const float MinHeight = 260f;
 
+    // Speeds in yalms per second, and shot, leg and hold lengths in seconds, within the editor's limits.
+    private static readonly PendingField.Range SpeedRange = new(0.05f, TrackEditing.MinSpeed, TrackEditing.MaxSpeed);
+    private static readonly PendingField.Range ShotRange = new(0.1f, EditLimits.MinShotSeconds, TrackEditing.MaxShotSeconds);
+    private static readonly PendingField.Range LegRange = new(0.05f, TrackEditing.MinLegSeconds, TrackEditing.MaxSeconds);
+    private static readonly PendingField.Range HoldRange = new(0.05f, 0f, TrackEditing.MaxSeconds);
+
     private readonly CameraSession session;
     private readonly PendingField fields;
     private readonly TimingWindow timing;
@@ -333,9 +339,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         ImGui.BeginDisabled(TrackEditing.AllPinned(session.Track));
         ImGui.SameLine();
-        LabelledField(FontAwesomeIcon.TachometerAlt, "track-speed", session.Track.Speed, "%.2f", "Track speed", v => Report(session.SetTrackSpeed(v)));
+        LabelledField(FontAwesomeIcon.TachometerAlt, "track-speed", session.Track.Speed, "%.2f", SpeedRange, "Track speed", v => Report(session.SetTrackSpeed(v)));
         ImGui.SameLine();
-        LabelledField(FontAwesomeIcon.Stopwatch, "track-duration", (float)session.Duration, "%.1f s", "Track duration", v => Report(session.SetTrackDuration(v)));
+        LabelledField(FontAwesomeIcon.Stopwatch, "track-duration", (float)session.Duration, "%.1f s", ShotRange, "Track duration", v => Report(session.SetTrackDuration(v)));
         ImGui.EndDisabled();
 
         ImGui.SameLine();
@@ -504,14 +510,14 @@ internal sealed unsafe class TrackEditorWindow : Window
         ImGui.TextUnformatted($"{index + 1}");
 
         ImGui.TableNextColumn();
-        if (index > 0) fields.Draw($"leg{index}", evaluator.LegSeconds(index), "%.1f", FieldWidth, v => Report(session.SetLegDuration(index, v)));
+        if (index > 0) fields.Draw($"leg{index}", evaluator.LegSeconds(index), "%.1f", FieldWidth, LegRange, v => Report(session.SetLegDuration(index, v)));
 
         ImGui.TableNextColumn();
         if (index > 0)
-            fields.Draw($"leg-speed{index}", evaluator.LegLength(index) / evaluator.LegSeconds(index), "%.2f", FieldWidth, v => Report(session.SetLegSpeed(index, v)));
+            fields.Draw($"leg-speed{index}", evaluator.LegLength(index) / evaluator.LegSeconds(index), "%.2f", FieldWidth, SpeedRange, v => Report(session.SetLegSpeed(index, v)));
 
         ImGui.TableNextColumn();
-        fields.Draw($"hold{index}", TrackEditing.HoldSeconds(track, index), "%.1f", FieldWidth,
+        fields.Draw($"hold{index}", TrackEditing.HoldSeconds(track, index), "%.1f", FieldWidth, HoldRange,
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v)))));
 
         ImGui.TableNextColumn();
@@ -593,15 +599,15 @@ internal sealed unsafe class TrackEditorWindow : Window
     private void SetMinimumWidth(float width)
         => SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(width, MinHeight), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
 
-    /// <summary>An icon, then a number field; both show the tooltip, even while disabled.</summary>
-    private void LabelledField(FontAwesomeIcon icon, string id, float current, string format, string tooltip, Action<float> apply)
+    /// <summary>An icon, then a drag field; both show the tooltip, even while disabled.</summary>
+    private void LabelledField(FontAwesomeIcon icon, string id, float current, string format, PendingField.Range range, string tooltip, Action<float> apply)
     {
         ImGui.AlignTextToFramePadding();
         using (ImRaii.PushFont(UiBuilder.IconFont))
             ImGui.TextUnformatted(icon.ToIconString());
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
         ImGui.SameLine();
-        fields.Draw(id, current, format, FieldWidth, apply);
+        fields.Draw(id, current, format, FieldWidth, range, apply);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
     }
 
