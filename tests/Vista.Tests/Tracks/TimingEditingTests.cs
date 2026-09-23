@@ -12,6 +12,8 @@ public class TimingEditingTests
 
     private static float[] Times(Track track) => new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
 
+    private static Track RippleKey(Track track, int key, float time) => TimingEditing.RippleKey(track, new TrackEvaluator(track), key, time);
+
     [Fact]
     public void SetKeyModeSetsBothSidesAndRefusesManual()
     {
@@ -119,5 +121,53 @@ public class TimingEditingTests
         var track = Build3PointTrack();
         Assert.Throws<ArgumentOutOfRangeException>(() => TimingEditing.SetKeyMode(track, 3, TangentMode.Flat));
         Assert.Throws<ArgumentOutOfRangeException>(() => TimingEditing.SetBroken(track, -1, true));
+    }
+
+    // Build3PointTrack is x = 0, 10, 20 at 2 yalms per second: two 10-yalm legs of 5 s, keys at
+    // 0, 5 and 10. A leg of 10 yalms may last between 10 / MaxSpeed = 0.1 s and 10 / MinSpeed
+    // clamped to MaxSeconds, so 0.1 s to 600 s — wide enough that nothing below clamps by accident.
+
+    [Fact]
+    public void RipplingAKeyCarriesTheLaterKeysAndChangesTheLength()
+    {
+        // Leg 1 becomes 7 s, leg 2 keeps its speed and so still takes 5 s: 7 + 5 = 12.
+        var track = RippleKey(Build3PointTrack(), 1, 7f);
+
+        Assert.Equal(new[] { 0f, 7f, 12f }, Times(track));
+    }
+
+    [Fact]
+    public void RipplingDiffersFromTrimmingOnTheSameDrag()
+    {
+        // Trimming holds the last key at 10 by giving leg 2 the 3 s that leg 1 took.
+        Assert.Equal(new[] { 0f, 7f, 10f }, Times(MoveKey(Build3PointTrack(), 1, 7f)));
+        Assert.Equal(new[] { 0f, 7f, 12f }, Times(RippleKey(Build3PointTrack(), 1, 7f)));
+    }
+
+    [Fact]
+    public void RipplingTheLastKeyOnlyChangesTheLength()
+    {
+        // Nothing follows key 2, so leg 2 stretches from 5 s to 7 s and key 1 stays at 5.
+        var track = RippleKey(Build3PointTrack(), 2, 12f);
+
+        Assert.Equal(new[] { 0f, 5f, 12f }, Times(track));
+    }
+
+    [Fact]
+    public void RipplingClampsToTheLegsShortestDurationAndStillCarriesTheRest()
+    {
+        // 0.1 s is leg 1 at MaxSpeed; leg 2 is untouched, so key 2 lands at 0.1 + 5.
+        var track = RippleKey(Build3PointTrack(), 1, -4f);
+
+        Assert.Equal(new[] { 0f, 0.1f, 5.1f }, Times(track));
+    }
+
+    [Fact]
+    public void RipplingRefusesTheFirstKeyAndANonFiniteTime()
+    {
+        var track = Build3PointTrack();
+
+        Assert.Same(track, RippleKey(track, 0, 2f));
+        Assert.Same(track, RippleKey(track, 1, float.NaN));
     }
 }
