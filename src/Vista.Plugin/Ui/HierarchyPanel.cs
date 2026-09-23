@@ -9,7 +9,7 @@ using Dalamud.Interface.Utility.Raii;
 using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
-/// <summary>The scene's tracks: pick one to edit, show or hide, rename, duplicate, delete and reorder them.</summary>
+/// <summary>The scene selector and the scene's tracks: pick one to edit, show or hide, rename, duplicate, delete, reorder, and save or add presets.</summary>
 internal sealed unsafe class HierarchyPanel
 {
     /// <summary>The compartment's width.</summary>
@@ -17,28 +17,49 @@ internal sealed unsafe class HierarchyPanel
 
     private const string TrackPayload = "VISTA_TRACK";
 
+    private const string NamePopup = "Name###vista-name";
+    private const string DeletePopup = "Delete###vista-delete";
+
+    /// <summary>What the name prompt is naming.</summary>
+    private enum Naming { NewScene, RenameScene, DuplicateScene, SavePreset }
+
     private readonly CameraSession session;
+    private readonly SceneFiles files;
     private Guid? renaming;
     private string renameText = string.Empty;
     private bool focusRename;
 
-    public HierarchyPanel(CameraSession session) => this.session = session;
+    private IReadOnlyList<string> scenes = [];
+    private IReadOnlyList<string> presets = [];
+    private Naming? naming;
+    private string nameText = string.Empty;
+    private Guid presetTrack;
+    private bool openName;
+    private bool focusName;
+    private (bool Preset, string Name)? deleting;
+    private bool openDelete;
 
-    /// <summary>The "Scene" header with its anchor and add buttons, then one row per track; disabled unless editing.</summary>
+    public HierarchyPanel(CameraSession session, SceneFiles files)
+    {
+        this.session = session;
+        this.files = files;
+    }
+
+    /// <summary>The scene selector with its anchor and add buttons, then one row per track; disabled unless editing.</summary>
     public void Draw(bool editing)
     {
-        ImGui.AlignTextToFramePadding();
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-            ImGui.TextUnformatted("Scene");
         ImGui.BeginDisabled(!editing);
         var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + LastSlot() + ImGui.GetStyle().ItemSpacing.X;
+        ImGui.SetNextItemWidth(MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons - ImGui.GetStyle().ItemSpacing.X));
+        DrawSelector();
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
         ImGui.EndDisabled();
         CentreInLastSlot(FontAwesomeIcon.Plus);
-        if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track")) Report(session.AddTrack());
+        if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track")) ImGui.OpenPopup("add-track-menu");
+        DrawAddMenu();
         ImGui.EndDisabled();
         ImGui.Separator();
 
@@ -54,6 +75,137 @@ internal sealed unsafe class HierarchyPanel
 
         ImGui.EndChild();
         ImGui.EndDisabled();
+
+        // Opened here, outside the menus that asked for them, so the popups share one ID scope.
+        if (openName) { ImGui.OpenPopup(NamePopup); openName = false; }
+        if (openDelete) { ImGui.OpenPopup(DeletePopup); openDelete = false; }
+        DrawNamePrompt();
+        DrawDeleteConfirm();
+    }
+
+    /// <summary>The open scene's name as a drop-down: every scene to switch to, then New, Rename, Duplicate and Delete; the list is read when it opens.</summary>
+    private void DrawSelector()
+    {
+        var current = files.CurrentName;
+        if (!ImGui.BeginCombo("##scene", current.Length > 0 ? current : "Scene")) return;
+        if (ImGui.IsWindowAppearing()) scenes = files.Scenes();
+
+        foreach (var name in scenes)
+        {
+            using var id = ImRaii.PushId(name);
+            if (ImGui.Selectable(name, name == current) && name != current) Report(files.Switch(name));
+        }
+
+        ImGui.Separator();
+        if (ImGui.Selectable("New scene")) AskName(Naming.NewScene, SceneNames.NextFree("Scene", scenes));
+        if (ImGui.Selectable("Rename scene")) AskName(Naming.RenameScene, current);
+        if (ImGui.Selectable("Duplicate scene")) AskName(Naming.DuplicateScene, SceneNames.CopyOf(current, scenes));
+        if (ImGui.Selectable("Delete scene")) { deleting = (false, current); openDelete = true; }
+        ImGui.EndCombo();
+    }
+
+    /// <summary>Add track's menu: an empty track, or a preset; right-click a preset to delete it. The presets are read when it opens.</summary>
+    private void DrawAddMenu()
+    {
+        if (!ImGui.BeginPopup("add-track-menu")) return;
+        if (ImGui.IsWindowAppearing()) presets = files.Presets();
+
+        var ticked = false;
+        if (ImGui.MenuItem("Empty track", string.Empty, ref ticked)) Report(session.AddTrack());
+        if (ImGui.BeginMenu("From preset", presets.Count > 0))
+        {
+            foreach (var name in presets)
+            {
+                using var id = ImRaii.PushId(name);
+                if (ImGui.MenuItem(name, string.Empty, ref ticked)) Report(files.AddPreset(name));
+                if (ImGui.BeginPopupContextItem("preset-menu"))
+                {
+                    if (ImGui.MenuItem("Delete", string.Empty, ref ticked)) { deleting = (true, name); openDelete = true; }
+                    ImGui.EndPopup();
+                }
+            }
+
+            ImGui.EndMenu();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private void AskName(Naming what, string suggestion)
+    {
+        naming = what;
+        nameText = suggestion;
+        openName = true;
+        focusName = true;
+    }
+
+    /// <summary>The name prompt: Ok stays disabled while the name can't be used and says why; a preset's existing name turns Ok into Replace.</summary>
+    private void DrawNamePrompt()
+    {
+        if (!ImGui.BeginPopupModal(NamePopup, ImGuiWindowFlags.AlwaysAutoResize)) return;
+        if (naming is not { } what) { ImGui.CloseCurrentPopup(); ImGui.EndPopup(); return; }
+
+        ImGui.TextUnformatted(what switch
+        {
+            Naming.NewScene => "New scene",
+            Naming.RenameScene => "Rename scene",
+            Naming.DuplicateScene => "Duplicate scene",
+            _ => "Save as preset",
+        });
+        if (focusName) { ImGui.SetKeyboardFocusHere(); focusName = false; }
+        ImGui.SetNextItemWidth(260f);
+        var entered = ImGui.InputText("##name", ref nameText, SceneNames.MaxLength + 8, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
+
+        var preset = what == Naming.SavePreset;
+        var others = preset ? presets : scenes.Where(n => what != Naming.RenameScene || !string.Equals(n, files.CurrentName, StringComparison.OrdinalIgnoreCase));
+        var refusal = SceneNames.Refusal(nameText) ?? (!preset && SceneNames.Taken(nameText, others) ? "A scene with that name exists" : null);
+        var replaces = preset && refusal is null && SceneNames.Taken(nameText, others);
+        if (refusal is not null || replaces)
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+                ImGui.TextUnformatted(refusal ?? $"A preset called {nameText.Trim()} exists");
+        }
+
+        ImGui.BeginDisabled(refusal is not null);
+        var ok = ImGui.Button(replaces ? "Replace" : "Ok", new Vector2(127f, 0f)) || (entered && refusal is null);
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel", new Vector2(127f, 0f)) || ImGui.IsKeyPressed(ImGuiKey.Escape)) { naming = null; ImGui.CloseCurrentPopup(); }
+
+        if (ok && refusal is null)
+        {
+            var name = nameText.Trim();
+            Report(what switch
+            {
+                Naming.NewScene => files.New(name),
+                Naming.RenameScene => files.Rename(name),
+                Naming.DuplicateScene => files.Duplicate(name),
+                _ => files.SavePreset(name, presetTrack),
+            });
+            naming = null;
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    /// <summary>"Delete name? This can't be undone." for a scene or a preset.</summary>
+    private void DrawDeleteConfirm()
+    {
+        if (!ImGui.BeginPopupModal(DeletePopup, ImGuiWindowFlags.AlwaysAutoResize)) return;
+        if (deleting is not { } target) { ImGui.CloseCurrentPopup(); ImGui.EndPopup(); return; }
+
+        ImGui.TextUnformatted($"Delete {target.Name}? This can't be undone.");
+        if (ImGui.Button("Delete", new Vector2(127f, 0f)))
+        {
+            Report(target.Preset ? files.DeletePreset(target.Name) : files.Delete());
+            deleting = null;
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel", new Vector2(127f, 0f)) || ImGui.IsKeyPressed(ImGuiKey.Escape)) { deleting = null; ImGui.CloseCurrentPopup(); }
+        ImGui.EndPopup();
     }
 
     /// <summary>The name, then the anchor button and the eye: click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
@@ -119,6 +271,13 @@ internal sealed unsafe class HierarchyPanel
             if (ImGui.MenuItem("Rename", string.Empty, ref ticked)) StartRename(track);
             if (ImGui.MenuItem("Duplicate", string.Empty, ref ticked)) Report(session.DuplicateTrack(track.Id));
             if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist(track.Id));
+            if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, track.Points.Count > 0))
+            {
+                presets = files.Presets();
+                presetTrack = track.Id;
+                AskName(Naming.SavePreset, track.Name);
+            }
+
             if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1)) Report(session.DeleteTrack(track.Id));
             ImGui.EndPopup();
         }

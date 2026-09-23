@@ -49,6 +49,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly EditorKeys editorKeys = new();
     private readonly PointGizmo pointGizmo = new();
     private readonly EditorLayer editorLayer;
+    private readonly SceneFiles sceneFiles;
+    private readonly SetupWindow setupWindow;
 
     public Plugin()
     {
@@ -60,6 +62,9 @@ public sealed class Plugin : IDalamudPlugin
         var config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
+        sceneFiles = new SceneFiles(config, Session);
+        setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
+        sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
         editorLayer = new EditorLayer(Session, pointGizmo);
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
         pointWindow = new PointWindow(Session, pointGizmo);
@@ -68,7 +73,7 @@ public sealed class Plugin : IDalamudPlugin
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(Session);
         followTargetWindow = new FollowTargetWindow(Session);
-        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow);
+        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow, sceneFiles, setupWindow);
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
@@ -77,6 +82,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);
         windows.AddWindow(new WelcomeWindow(config));
+        windows.AddWindow(setupWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;
@@ -117,6 +123,7 @@ public sealed class Plugin : IDalamudPlugin
             Camera.ClearFault();
         }
 
+        sceneFiles.Tick();
         editorKeys.Update(Session, pointGizmo);
         Session.RefreshCharacters();
 
@@ -142,7 +149,12 @@ public sealed class Plugin : IDalamudPlugin
         if (Movement.Held && Movement.Count == 0) Movement.Forget();
     }
 
-    private void OpenTrackEditor() => trackEditor.IsOpen = true;
+    /// <summary>Opens the Vista window, or Setup in its place while there is no save folder.</summary>
+    private void OpenTrackEditor()
+    {
+        if (sceneFiles.Ready) trackEditor.IsOpen = true;
+        else setupWindow.IsOpen = true;
+    }
 
     /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
     private void OnDraw()
@@ -179,6 +191,7 @@ public sealed class Plugin : IDalamudPlugin
         guideWindow.Dispose();
         Framework.Update -= OnFrameworkUpdate;
         ClientState.Logout -= OnLogout;
+        sceneFiles?.SaveNow();
         Session?.Release("plugin unload");
         Movement?.Dispose();
         Input?.Dispose();

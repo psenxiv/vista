@@ -11,6 +11,12 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>True once the welcome screen has been dismissed on this install.</summary>
     public bool WelcomeSeen { get; set; }
 
+    /// <summary>The folder Vista keeps its vistaxiv folder in, or null until chosen.</summary>
+    public string? SaveFolder { get; set; }
+
+    /// <summary>The name of the scene last open, reopened on load.</summary>
+    public string? LastScene { get; set; }
+
     /// <summary>Writes the settings to disk.</summary>
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }
