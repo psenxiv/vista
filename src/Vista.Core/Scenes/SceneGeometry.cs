@@ -21,17 +21,19 @@ public static class SceneGeometry
     public static Scene PlaceFor(Scene scene, Guid trackId, Vector3 worldPosition, float groundHeight)
     {
         var ground = new Anchor(worldPosition with { Y = groundHeight }, 0f);
-        var result = scene;
-        if (!scene.AnchorPlaced)
-        {
-            var placed = scene with { Anchor = ground, AnchorPlaced = true };
-            result = placed with { Tracks = scene.Tracks.Select(t => KeepLookAt(t, WorldAnchor(scene, t), WorldAnchor(placed, t))).ToArray() };
-        }
-
+        var result = PlaceScene(scene, ground.Position);
         var track = SceneEditing.Get(result, trackId);
         if (track.AnchorPlaced) return result;
         var anchored = track with { Anchor = result.Anchor.ToLocal(ground), AnchorPlaced = true };
         return SceneEditing.Replace(result, KeepLookAt(anchored, WorldAnchor(result, track), WorldAnchor(result, anchored)));
+    }
+
+    /// <summary>Places an unplaced scene anchor at <paramref name="ground"/>, yaw 0, a Look At point already placed staying in the world; a placed scene as it is.</summary>
+    public static Scene PlaceScene(Scene scene, Vector3 ground)
+    {
+        if (scene.AnchorPlaced) return scene;
+        var placed = scene with { Anchor = new Anchor(ground, 0f), AnchorPlaced = true };
+        return placed with { Tracks = scene.Tracks.Select(t => KeepLookAt(t, WorldAnchor(scene, t), WorldAnchor(placed, t))).ToArray() };
     }
 
     /// <summary>Moves the scene anchor to <paramref name="to"/>, carrying every track, or alone so every point stays where it is.</summary>

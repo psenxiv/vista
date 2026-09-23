@@ -236,19 +236,25 @@ public sealed class SessionState
         return owned;
     }
 
-    /// <summary>Releases to Off and starts a new, empty scene, forgetting the undo history, the selection and the scrub head.</summary>
-    public void ClearScene()
+    /// <summary>Opens <paramref name="scene"/> editing its first track, shown if hidden, clearing the selection, scrub head and undo history; the mode stays. Returns why it was refused, or null.</summary>
+    public string? LoadScene(Scene scene)
     {
-        Release();
-        Scene = SceneEditing.New();
-        EditedTrackId = Scene.Tracks[0].Id;
-        Selected = null;
-        SelectedAnchor = null;
-        scrubTime = 0.0;
+        if (Mode == CameraMode.Live) return "A scene can't be loaded while Live.";
+        StopPreview();
+        liveEditStart = null;
+        var first = scene.Tracks[0].Id;
+        Scene = SceneEditing.SetHidden(scene, first, false);
+        EditedTrackId = first;
+        ClearForSwitch();
         worlds.Clear();
         shown.Clear();
         history.Clear();
+        return null;
     }
+
+    /// <summary>Adds <paramref name="preset"/> as a new track on the ground under <paramref name="camera"/>, or at its height with no ground, and edits it. Returns why it was refused, or null.</summary>
+    public string? AddPreset(Preset preset, Vector3 camera)
+        => CommitScene(scene => Presets.Place(scene, preset, camera with { Y = groundBelow(camera) ?? camera.Y }));
 
     /// <summary>The selected point's index, or null.</summary>
     public int? Selected { get; private set; }

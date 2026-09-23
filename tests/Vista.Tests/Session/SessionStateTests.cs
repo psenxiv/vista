@@ -283,26 +283,6 @@ public class SessionStateTests
         Assert.Throws<ArgumentOutOfRangeException>(() => editing.Release(CameraMode.Live));
     }
 
-    [Fact]
-    public void ClearingTheSceneStartsAfreshInOff()
-    {
-        var state = EditingWithTrack();
-        state.AddTrack();
-        Assert.True(state.CanUndo);
-
-        state.ClearScene();
-
-        Assert.Equal(CameraMode.Off, state.Mode);
-        Assert.Single(state.Scene.Tracks);
-        Assert.Empty(state.Track.Points);
-        Assert.Empty(state.Scene.Playlist);
-        Assert.False(state.Scene.AnchorPlaced);
-        Assert.Null(state.Selected);
-        Assert.Equal(0.0, state.ScrubHead);
-        state.Edit();
-        Assert.False(state.CanUndo);
-    }
-
     // IsPlaying is Previewing || (Live && !IsPaused && !IsFinished). Every expectation below is
     // read off the mode and director state the case sets up, not off the predicate itself.
 

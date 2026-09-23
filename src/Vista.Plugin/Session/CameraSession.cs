@@ -204,13 +204,14 @@ internal sealed class CameraSession
     /// <summary>True in Off and View, where the game has its camera.</summary>
     public bool Released => state.Released;
 
-    /// <summary>Releases to Off and starts a new, empty scene, forgetting undo, the selection and the scrub head.</summary>
-    public void ClearScene(string reason)
-    {
-        Release(reason);
-        state.ClearScene();
-        Plugin.Log.Information("[vista] scene cleared: {Reason}", reason);
-    }
+    /// <summary>Opens a scene editing its first track, leaving the mode and camera alone. Returns why it was refused, or null.</summary>
+    public string? LoadScene(Scene scene) => state.LoadScene(scene);
+
+    /// <summary>Adds a preset as a new track on the ground under the camera and edits it. Returns why it was refused, or null.</summary>
+    public string? AddPreset(Preset preset) => state.AddPreset(preset, CameraPosition);
+
+    /// <summary>Track <paramref name="id"/> as a preset.</summary>
+    public Preset PresetOf(Guid id) => Presets.From(state.Scene, id);
 
     /// <summary>Starts free-cam: from Off or View at the game camera, from Live at the current frame. No-op while editing.</summary>
     public void EnterEdit()
