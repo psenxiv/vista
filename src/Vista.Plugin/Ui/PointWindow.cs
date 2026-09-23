@@ -6,7 +6,6 @@ using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 using static Vista.Plugin.Ui.Refusal;
@@ -15,15 +14,10 @@ namespace Vista.Plugin.Ui;
 /// <summary>The selected point's, anchor's or Look At point's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
 {
-    private const float FieldWidth = 70f;
-    private const float PositionSpeed = 0.02f;
-    private const float AngleSpeed = 0.25f;
-    private const float FovSpeed = 0.1f;
-
     private readonly CameraSession session;
     private readonly PointGizmo gizmo;
     private (int? Point, AnchorKind? Anchor, Guid Track) shown;
-    private float fieldsWidth;
+    private float gridWidth;
     private ControlPoint? copied;
     private bool dragging;
 
@@ -75,131 +69,112 @@ internal sealed class PointWindow : Window
         else if (session.Selected is { } i && i < session.Track.Points.Count) index = i;
         else return;
 
-        using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
+        using var style = PoseGrid.Style();
         if (!DrawHeader(index >= 0 ? index : null, rotates: lookAt is null)) return;
-
-        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
-        if (!ImGui.BeginTable("fields", 4, ImGuiTableFlags.SizingFixedFit)) return;
+        if (!PoseGrid.BeginGrid()) return;
 
         if (lookAt is { } shownLookAt) DrawLookAtRows(shownLookAt);
         else if (anchor is { } shownAnchor) DrawAnchorRows(shownAnchor);
         else DrawPointRows(index, session.Track.Points[index]);
 
-        ImGui.EndTable();
-        fieldsWidth = ImGui.GetItemRectSize().X;
+        gridWidth = PoseGrid.EndGrid();
     }
 
-    /// <summary>Gizmo mode, with Rotate disabled when the selection only moves, then copy, paste and delete, disabled unless a point; false once the point is deleted.</summary>
+    /// <summary>The shared header, whose copy, paste and delete act only on a point; false once the point is deleted.</summary>
     private bool DrawHeader(int? pointIndex, bool rotates)
     {
-        // A move button lights when rotate is not the mode, or cannot be: an anchor falls back to world.
-        var moving = !rotates || gizmo.Mode != GizmoMode.Rotate;
-        var local = moving && gizmo.Mode == GizmoMode.MoveLocal;
-
-        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)")) gizmo.SetMode(GizmoMode.Move);
-        ImGui.SameLine();
-        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)")) gizmo.SetMode(GizmoMode.MoveLocal);
-        ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X * 3f);
-        ImGui.BeginDisabled(!rotates);
-        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && gizmo.Mode == GizmoMode.Rotate, "Rotate")) gizmo.SetMode(GizmoMode.Rotate);
-        ImGui.EndDisabled();
-
-        // Right-align to last frame's field grid, not the window: the window sizes itself to its content.
-        var gap = ImGui.GetStyle().ItemSpacing.X;
-        var icons = IconButton.Width(FontAwesomeIcon.Copy) + IconButton.Width(FontAwesomeIcon.Paste) + IconButton.Width(FontAwesomeIcon.Trash) + (gap * 2f);
-        ImGui.SameLine();
-        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + fieldsWidth - icons));
-
-        ImGui.BeginDisabled(pointIndex is null);
         var point = pointIndex is { } i ? session.Track.Points[i] : (ControlPoint?)null;
-        if (IconButton.Draw("copy-point", FontAwesomeIcon.Copy, "Copy position, aim, roll and FoV") && point is { } source) copied = source;
+        var clip = PoseGrid.Header(gizmo, rotates, gridWidth, canCopy: point is not null, canPaste: point is not null && copied is not null, canDelete: point is not null);
+        switch (clip)
+        {
+            case PoseGrid.Clip.Copy when point is { } source:
+                copied = source;
+                break;
+            case PoseGrid.Clip.Paste when copied is { } c && pointIndex is { } target && point is { } p:
+                Report(session.ReplacePoint(target, p with { Position = c.Position, Yaw = c.Yaw, Pitch = c.Pitch, Roll = c.Roll, Fov = c.Fov }));
+                break;
+            case PoseGrid.Clip.Delete when pointIndex is not null:
+                Report(session.DeleteSelected());
+                return false;
+        }
 
-        ImGui.SameLine();
-        ImGui.BeginDisabled(copied is null);
-        if (IconButton.Draw("paste-point", FontAwesomeIcon.Paste, "Paste position, aim, roll and FoV") && copied is { } c && pointIndex is { } target && point is { } p)
-            Report(session.ReplacePoint(target, p with { Position = c.Position, Yaw = c.Yaw, Pitch = c.Pitch, Roll = c.Roll, Fov = c.Fov }));
-        ImGui.EndDisabled();
-
-        ImGui.SameLine();
-        var deleted = IconButton.Draw("delete-point", FontAwesomeIcon.Trash, "Delete point", danger: true) && pointIndex is not null;
-        ImGui.EndDisabled();
-        if (deleted) Report(session.DeleteSelected());
-        return !deleted;
+        return true;
     }
 
     /// <summary>The point's position, rotation and FoV rows; pitch and yaw are disabled under Direction of travel and Look At.</summary>
     private void DrawPointRows(int index, ControlPoint point)
     {
         ImGui.TableNextRow();
-        PointField($"x{index}", "X", EditorColours.AxisX, index, point.Position.X, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
-        PointField($"y{index}", "Y", EditorColours.AxisY, index, point.Position.Y, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
-        PointField($"z{index}", "Z", EditorColours.AxisZ, index, point.Position.Z, PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
-        RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
+        PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
+        PointField($"x{index}", "X", EditorColours.AxisX, index, point.Position.X, PoseGrid.PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } });
+        PointField($"y{index}", "Y", EditorColours.AxisY, index, point.Position.Y, PoseGrid.PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } });
+        PointField($"z{index}", "Z", EditorColours.AxisZ, index, point.Position.Z, PoseGrid.PositionSpeed, "%.2f", (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } });
 
         ImGui.TableNextRow();
+        PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
         ImGui.BeginDisabled(session.Track.Aim is AimMode.PathTangent or AimMode.LookAt);
-        PointField($"pitch{index}", "Pitch", EditorColours.AxisX, index, Degrees(point.Pitch), AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(Radians(v)) });
-        PointField($"yaw{index}", "Yaw", EditorColours.AxisY, index, Degrees(EditLimits.Angle(point.Yaw)), AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(Radians(v)) });
+        PointField($"pitch{index}", "Pitch", EditorColours.AxisX, index, PoseGrid.Degrees(point.Pitch), PoseGrid.AngleSpeed, "%.1f°", (p, v) => p with { Pitch = EditLimits.Pitch(PoseGrid.Radians(v)) });
+        PointField($"yaw{index}", "Yaw", EditorColours.AxisY, index, PoseGrid.Degrees(EditLimits.Angle(point.Yaw)), PoseGrid.AngleSpeed, "%.1f°", (p, v) => p with { Yaw = EditLimits.Angle(PoseGrid.Radians(v)) });
         ImGui.EndDisabled();
-        PointField($"roll{index}", "Roll", EditorColours.AxisZ, index, Degrees(EditLimits.Angle(point.Roll)), AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(Radians(v)) });
-        RowIcon(FontAwesomeIcon.SyncAlt, "Rotation");
+        PointField($"roll{index}", "Roll", EditorColours.AxisZ, index, PoseGrid.Degrees(EditLimits.Angle(point.Roll)), PoseGrid.AngleSpeed, "%.1f°", (p, v) => p with { Roll = EditLimits.Angle(PoseGrid.Radians(v)) });
 
         ImGui.TableNextRow();
-        PointField($"fov{index}", "FoV", null, index, Degrees(point.Fov), FovSpeed, "%.1f°", (p, v) => p with { Fov = EditLimits.Fov(Radians(v)) });
-
         // One live edit, so it lands as a single undo step like a drag on the field would.
-        ImGui.SameLine();
-        if (IconButton.Draw("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view"))
+        if (PoseGrid.Button("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view", enabled: true))
         {
             session.BeginLiveEdit();
             _ = session.PreviewPoint(index, session.Track.Points[index] with { Fov = EditLimits.Fov(session.CameraFov) });
             session.EndLiveEdit();
         }
+
+        PointField($"fov{index}", "FoV", null, index, PoseGrid.Degrees(point.Fov), PoseGrid.FovSpeed, "%.1f°", (p, v) => p with { Fov = EditLimits.Fov(PoseGrid.Radians(v)) });
     }
 
     /// <summary>The anchor's rows: X, Y, Z and Yaw edit it, and the fields it lacks are disabled.</summary>
     private void DrawAnchorRows(Anchor anchor)
     {
         ImGui.TableNextRow();
-        AnchorField("anchor-x", "X", EditorColours.AxisX, anchor.Position.X, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { X = EditLimits.Coordinate(v, a.Position.X) } });
-        AnchorField("anchor-y", "Y", EditorColours.AxisY, anchor.Position.Y, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Y = EditLimits.Coordinate(v, a.Position.Y) } });
-        AnchorField("anchor-z", "Z", EditorColours.AxisZ, anchor.Position.Z, PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Z = EditLimits.Coordinate(v, a.Position.Z) } });
-        RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
+        PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
+        AnchorField("anchor-x", "X", EditorColours.AxisX, anchor.Position.X, PoseGrid.PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { X = EditLimits.Coordinate(v, a.Position.X) } });
+        AnchorField("anchor-y", "Y", EditorColours.AxisY, anchor.Position.Y, PoseGrid.PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Y = EditLimits.Coordinate(v, a.Position.Y) } });
+        AnchorField("anchor-z", "Z", EditorColours.AxisZ, anchor.Position.Z, PoseGrid.PositionSpeed, "%.2f", (a, v) => a with { Position = a.Position with { Z = EditLimits.Coordinate(v, a.Position.Z) } });
 
         ImGui.TableNextRow();
-        MissingField("anchor-pitch", "Pitch", EditorColours.AxisX);
-        AnchorField("anchor-yaw", "Yaw", EditorColours.AxisY, Degrees(EditLimits.Angle(anchor.Yaw)), AngleSpeed, "%.1f°", (a, v) => a with { Yaw = EditLimits.Angle(Radians(v)) });
-        MissingField("anchor-roll", "Roll", EditorColours.AxisZ);
-        RowIcon(FontAwesomeIcon.SyncAlt, "Rotation");
+        PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
+        PoseGrid.Missing("anchor-pitch", "Pitch", EditorColours.AxisX);
+        AnchorField("anchor-yaw", "Yaw", EditorColours.AxisY, PoseGrid.Degrees(EditLimits.Angle(anchor.Yaw)), PoseGrid.AngleSpeed, "%.1f°", (a, v) => a with { Yaw = EditLimits.Angle(PoseGrid.Radians(v)) });
+        PoseGrid.Missing("anchor-roll", "Roll", EditorColours.AxisZ);
 
         ImGui.TableNextRow();
-        MissingField("anchor-fov", "FoV", null);
+        _ = PoseGrid.Button("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view", enabled: false);
+        PoseGrid.Missing("anchor-fov", "FoV", null);
     }
 
     /// <summary>The Look At point's rows: X, Y and Z move it, and rotation and FoV show "—".</summary>
     private void DrawLookAtRows(Vector3 lookAt)
     {
         ImGui.TableNextRow();
+        PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
         LookAtField("look-x", "X", EditorColours.AxisX, lookAt.X, (p, v) => p with { X = EditLimits.Coordinate(v, p.X) });
         LookAtField("look-y", "Y", EditorColours.AxisY, lookAt.Y, (p, v) => p with { Y = EditLimits.Coordinate(v, p.Y) });
         LookAtField("look-z", "Z", EditorColours.AxisZ, lookAt.Z, (p, v) => p with { Z = EditLimits.Coordinate(v, p.Z) });
-        RowIcon(FontAwesomeIcon.ArrowsAlt, "Position");
 
         ImGui.TableNextRow();
-        MissingField("look-pitch", "Pitch", EditorColours.AxisX);
-        MissingField("look-yaw", "Yaw", EditorColours.AxisY);
-        MissingField("look-roll", "Roll", EditorColours.AxisZ);
-        RowIcon(FontAwesomeIcon.SyncAlt, "Rotation");
+        PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
+        PoseGrid.Missing("look-pitch", "Pitch", EditorColours.AxisX);
+        PoseGrid.Missing("look-yaw", "Yaw", EditorColours.AxisY);
+        PoseGrid.Missing("look-roll", "Roll", EditorColours.AxisZ);
 
         ImGui.TableNextRow();
-        MissingField("look-fov", "FoV", null);
+        _ = PoseGrid.Button("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view", enabled: false);
+        PoseGrid.Missing("look-fov", "FoV", null);
     }
 
     /// <summary>A point's field: dragging moves the point live, and each drag is one undo step.</summary>
     private void PointField(string id, string name, uint? border, int index, float value, float speed, string format, Func<ControlPoint, float, ControlPoint> set)
     {
         var edited = value;
-        var changed = BorderedField(id, name, border, ref edited, speed, format);
+        var changed = PoseGrid.Field(id, name, border, ref edited, speed, format);
         // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
         LiveDrag.Handle(session, changed, () =>
         {
@@ -211,7 +186,7 @@ internal sealed class PointWindow : Window
     private void AnchorField(string id, string name, uint border, float value, float speed, string format, Func<Anchor, float, Anchor> set)
     {
         var edited = value;
-        var changed = BorderedField(id, name, border, ref edited, speed, format);
+        var changed = PoseGrid.Field(id, name, border, ref edited, speed, format);
         LiveDrag.Handle(session, changed, () =>
         {
             if (session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
@@ -222,41 +197,10 @@ internal sealed class PointWindow : Window
     private void LookAtField(string id, string name, uint border, float value, Func<Vector3, float, Vector3> set)
     {
         var edited = value;
-        var changed = BorderedField(id, name, border, ref edited, PositionSpeed, "%.2f");
+        var changed = PoseGrid.Field(id, name, border, ref edited, PoseGrid.PositionSpeed, "%.2f");
         LiveDrag.Handle(session, changed, () =>
         {
             if (session.SelectedLookAtInWorld is { } current) _ = session.PreviewLookAt(set(current, edited));
         }, ref dragging);
     }
-
-    /// <summary>A disabled field showing "—", for what an anchor does not have.</summary>
-    private static void MissingField(string id, string name, uint? border)
-    {
-        var none = 0f;
-        ImGui.BeginDisabled(true);
-        _ = BorderedField(id, name, border, ref none, 0f, "—");
-        ImGui.EndDisabled();
-    }
-
-    /// <summary>One number field, bordered in its axis colour and named by its tooltip.</summary>
-    private static bool BorderedField(string id, string name, uint? border, ref float value, float speed, string format)
-    {
-        ImGui.TableNextColumn();
-        return Ui.BorderedField.Draw(id, name, border, ref value, speed, format, FieldWidth);
-    }
-
-    /// <summary>The row's icon at its right end, naming the row in its tooltip.</summary>
-    private static void RowIcon(FontAwesomeIcon icon, string name)
-    {
-        ImGui.TableNextColumn();
-        ImGui.AlignTextToFramePadding();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-            ImGui.TextUnformatted(icon.ToIconString());
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(name);
-    }
-
-    private static float Degrees(float radians) => radians * 180f / MathF.PI;
-
-    private static float Radians(float degrees) => degrees * MathF.PI / 180f;
 }

@@ -188,6 +188,9 @@ internal sealed class CameraSession
     /// <summary>The field of view the camera is looking through, in radians.</summary>
     public float CameraFov { get => freeCam.Fov; set => freeCam.Fov = value; }
 
+    /// <summary>The game's field of view from just before Vista took the camera, or null when Vista does not hold it.</summary>
+    public float? TakeoverFov => snapshotBeforeTakeover?.Fov;
+
     /// <summary>The camera's yaw and pitch, or null when the camera cannot be read.</summary>
     public (float Yaw, float Pitch)? CameraAngles => CameraAccess.ReadAngles();
 
