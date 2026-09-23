@@ -519,7 +519,7 @@ internal sealed class CameraSession
                 Plugin.Log.Information("[vista] preview");
                 return;
             case PlayOutcome.Refused:
-                Plugin.Log.Error(previewRefusal
+                Plugin.Log.Debug(previewRefusal
                     ? "[vista] cannot preview a track with no points."
                     : "[vista] nothing to play: add a track with points to the playlist.");
                 return;
