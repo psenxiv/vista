@@ -28,7 +28,6 @@ internal sealed class PointWindow : Window
         this.session = session;
         this.gizmo = gizmo;
         RespectCloseHotkey = false;
-        ShowCloseButton = false;
     }
 
     /// <summary>Opens while a point or an anchor is selected in editing mode, and applies an unfinished edit when the selection moves.</summary>
@@ -38,7 +37,7 @@ internal sealed class PointWindow : Window
         var now = (editing ? session.Selected : null, editing ? session.SelectedAnchor : null, session.EditedTrackId);
 
         // Only the close button clears IsOpen behind our back: open last frame, same selection, now shut.
-        if (openedLastFrame && !IsOpen && now == shown && ShowCloseButton)
+        if (openedLastFrame && !IsOpen && now == shown)
         {
             session.Select(null);
             now = (null, null, now.Item3);
@@ -46,7 +45,6 @@ internal sealed class PointWindow : Window
 
         if (now != shown) session.EndLiveEdit();
         shown = now;
-        ShowCloseButton = now.Item2 is AnchorKind.Scene or AnchorKind.Track;
         IsOpen = now.Item1 is not null || now.Item2 is not null;
         openedLastFrame = IsOpen;
         WindowName = now switch
