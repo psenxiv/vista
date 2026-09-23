@@ -1,3 +1,5 @@
 {
-  "checklists": []
+  "checklists": [
+    "guide-formatting.json"
+  ]
 }
