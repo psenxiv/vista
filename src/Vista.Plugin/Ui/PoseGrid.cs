@@ -21,21 +21,19 @@ internal static class PoseGrid
     public static IDisposable Style()
         => ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f)).Push(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
 
-    /// <summary>The gizmo buttons, then copy, paste and delete right-aligned over the grid. A null gizmo shows its buttons disabled, as do the clipboard buttons that cannot act.</summary>
-    public static Clip Header(PointGizmo? gizmo, bool rotates, float gridWidth, bool canCopy, bool canPaste, bool canDelete)
+    /// <summary>The move and rotate buttons for <paramref name="mode"/>, then copy, paste and delete right-aligned over the grid; the clipboard buttons that cannot act are disabled.</summary>
+    public static Clip Header(GizmoMode mode, Action<GizmoMode> setMode, bool rotates, float gridWidth, bool canCopy, bool canPaste, bool canDelete)
     {
         // A move button lights when rotate is not the mode, or cannot be: an anchor falls back to world.
-        var moving = gizmo is not null && (!rotates || gizmo.Mode != GizmoMode.Rotate);
-        var local = moving && gizmo!.Mode == GizmoMode.MoveLocal;
+        var moving = !rotates || mode != GizmoMode.Rotate;
+        var local = moving && mode == GizmoMode.MoveLocal;
 
-        ImGui.BeginDisabled(gizmo is null);
-        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)")) gizmo!.SetMode(GizmoMode.Move);
+        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)")) setMode(GizmoMode.Move);
         ImGui.SameLine();
-        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)")) gizmo!.SetMode(GizmoMode.MoveLocal);
+        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)")) setMode(GizmoMode.MoveLocal);
         ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X * 3f);
         ImGui.BeginDisabled(!rotates);
-        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && gizmo?.Mode == GizmoMode.Rotate, "Rotate")) gizmo!.SetMode(GizmoMode.Rotate);
-        ImGui.EndDisabled();
+        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && mode == GizmoMode.Rotate, "Rotate")) setMode(GizmoMode.Rotate);
         ImGui.EndDisabled();
 
         // Right-align to last frame's grid, whose width is its columns' own, not the window's.

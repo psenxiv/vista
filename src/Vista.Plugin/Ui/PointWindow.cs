@@ -93,7 +93,7 @@ internal sealed class PointWindow : Window
     private bool DrawHeader(int? pointIndex, bool rotates)
     {
         var point = pointIndex is { } i ? session.Track.Points[i] : (ControlPoint?)null;
-        var clip = PoseGrid.Header(gizmo, rotates, gridWidth, canCopy: point is not null, canPaste: point is not null && copied is not null, canDelete: point is not null);
+        var clip = PoseGrid.Header(gizmo.Mode, gizmo.SetMode, rotates, gridWidth, canCopy: point is not null, canPaste: point is not null && copied is not null, canDelete: point is not null);
         switch (clip)
         {
             case PoseGrid.Clip.Copy when point is { } source:

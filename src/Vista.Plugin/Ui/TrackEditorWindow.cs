@@ -238,7 +238,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var eyeLeft = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.Question) - spacing - IconButton.Width(FontAwesomeIcon.Cog) - spacing - IconButton.Width(FontAwesomeIcon.EyeSlash) - spacing;
         var tools = IconButton.Width(FontAwesomeIcon.RulerHorizontal) + spacing + IconButton.Width(FontAwesomeIcon.Camera) + spacing;
-        return MathF.Min(right, eyeLeft) - SpeedWidth - spacing - IconWidth(FontAwesomeIcon.Feather) - tools;
+        return MathF.Min(right, eyeLeft) - SpeedWidth - tools;
     }
 
     /// <summary>Continues the row at <paramref name="screenX"/> when that's at least <paramref name="gap"/> past the last item, else just after it.</summary>
@@ -259,14 +259,9 @@ internal sealed unsafe class TrackEditorWindow : Window
             ImGui.TextUnformatted("LIVE");
     }
 
-    /// <summary>The free-cam's speed: a feather icon and a short slider showing the multiplier.</summary>
+    /// <summary>The free-cam's speed: a short slider showing the multiplier.</summary>
     private void DrawFlySpeed()
     {
-        ImGui.AlignTextToFramePadding();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-            ImGui.TextUnformatted(FontAwesomeIcon.Feather.ToIconString());
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Fly speed");
-        ImGui.SameLine();
         ImGui.SetNextItemWidth(SpeedWidth);
         var speed = session.Speed;
         var step = speed.Index;
@@ -584,7 +579,7 @@ internal sealed unsafe class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.EyeSlash) + IconButton.Width(FontAwesomeIcon.Cog) + IconButton.Width(FontAwesomeIcon.Question);
         var live = ImGui.CalcTextSize("LIVE").X + Spacing.X;
         var tools = IconButton.Width(FontAwesomeIcon.RulerHorizontal) + Spacing.X + IconButton.Width(FontAwesomeIcon.Camera) + Spacing.X;
-        var flySpeed = (Spacing.X * 3f) + tools + IconWidth(FontAwesomeIcon.Feather) + Spacing.X + SpeedWidth;
+        var flySpeed = (Spacing.X * 3f) + tools + SpeedWidth;
         return items + MathF.Max(live, flySpeed) + (Spacing.X * 10f) + (style.WindowPadding.X * 2f);
     }
 

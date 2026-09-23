@@ -1,3 +1,5 @@
+using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
@@ -13,6 +15,7 @@ internal sealed class CameraWindow : Window
 {
     private readonly CameraSession session;
     private float gridWidth;
+    private GizmoMode mode = GizmoMode.Move;
 
     public CameraWindow(CameraSession session) : base("Camera###vista-camera")
     {
@@ -27,21 +30,17 @@ internal sealed class CameraWindow : Window
     {
         using var style = PoseGrid.Style();
 
-        // The camera has no gizmo and nothing to copy, paste or delete; the row stays so the windows match.
-        _ = PoseGrid.Header(gizmo: null, rotates: false, gridWidth, canCopy: false, canPaste: false, canDelete: false);
+        // The camera can't rotate by gizmo, or be copied, pasted or deleted; the row stays so the windows match.
+        _ = PoseGrid.Header(mode, m => mode = m, rotates: false, gridWidth, canCopy: false, canPaste: false, canDelete: false);
         if (!PoseGrid.BeginGrid()) return;
 
         var position = session.CameraPosition;
+        var (yaw, pitch) = session.CameraAngles ?? (0f, 0f);
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
-        Field("cam-x", "X", EditorColours.AxisX, position.X, PoseGrid.PositionSpeed, "%.2f",
-            v => session.CameraPosition = position with { X = EditLimits.Coordinate(v, position.X) });
-        Field("cam-y", "Y", EditorColours.AxisY, position.Y, PoseGrid.PositionSpeed, "%.2f",
-            v => session.CameraPosition = position with { Y = EditLimits.Coordinate(v, position.Y) });
-        Field("cam-z", "Z", EditorColours.AxisZ, position.Z, PoseGrid.PositionSpeed, "%.2f",
-            v => session.CameraPosition = position with { Z = EditLimits.Coordinate(v, position.Z) });
+        if (mode == GizmoMode.MoveLocal) DrawNudges(position, yaw, pitch);
+        else DrawWorld(position);
 
-        var (yaw, pitch) = session.CameraAngles ?? (0f, 0f);
         ImGui.TableNextRow();
         if (PoseGrid.Button("level-roll", FontAwesomeIcon.SyncAlt, "Level roll", enabled: true)) session.CameraRoll = 0f;
         Field("cam-pitch", "Pitch", EditorColours.AxisX, PoseGrid.Degrees(pitch), PoseGrid.AngleSpeed, "%.1f°",
@@ -59,6 +58,31 @@ internal sealed class CameraWindow : Window
             v => session.CameraFov = EditLimits.Fov(PoseGrid.Radians(v)));
 
         gridWidth = PoseGrid.EndGrid();
+    }
+
+    /// <summary>X, Y and Z: where the camera is in the world.</summary>
+    private void DrawWorld(Vector3 position)
+    {
+        Field("cam-x", "X", EditorColours.AxisX, position.X, PoseGrid.PositionSpeed, "%.2f",
+            v => session.CameraPosition = position with { X = EditLimits.Coordinate(v, position.X) });
+        Field("cam-y", "Y", EditorColours.AxisY, position.Y, PoseGrid.PositionSpeed, "%.2f",
+            v => session.CameraPosition = position with { Y = EditLimits.Coordinate(v, position.Y) });
+        Field("cam-z", "Z", EditorColours.AxisZ, position.Z, PoseGrid.PositionSpeed, "%.2f",
+            v => session.CameraPosition = position with { Z = EditLimits.Coordinate(v, position.Z) });
+    }
+
+    /// <summary>Right, Up and Forward, which read 0 and move the camera by what is dragged or typed, along the axes the fly keys use.</summary>
+    private void DrawNudges(Vector3 position, float yaw, float pitch)
+    {
+        // A drag reports this frame's movement from 0, and the field reads 0 again next frame.
+        void Nudge(string id, string name, uint border, Func<float, Vector3> input)
+            => Field(id, name, border, 0f, PoseGrid.PositionSpeed, "%.2f",
+                v => { if (float.IsFinite(v)) session.CameraPosition = FreeCamMotion.Step(position, input(v), yaw, pitch, 1f, 1f); });
+
+        // FreeCamMotion's input is (forward, up, right).
+        Nudge("cam-right", "Right", EditorColours.AxisX, v => new Vector3(0f, 0f, v));
+        Nudge("cam-up", "Up", EditorColours.AxisY, v => new Vector3(0f, v, 0f));
+        Nudge("cam-forward", "Forward", EditorColours.AxisZ, v => new Vector3(v, 0f, 0f));
     }
 
     /// <summary>A field that writes straight to the camera. Flying is not scene state, so this is not an undo step.</summary>
