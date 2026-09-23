@@ -82,3 +82,23 @@ Everything here is `Vista.Plugin` and goes on the Phase 4 in-game checklist: eac
 gizmo buttons moving and rotating a point correctly; R returning to the Move space you left;
 Rotate still greyed for an anchor; each Camera window field moving the camera and surviving a
 drag; Level roll; and Reset field of view undoing in one step.
+
+## Revision: one shared pose grid
+
+Revised the same day, after the first in-game look.
+
+- The Point and Camera windows draw one layout, `PoseGrid`: the gizmo and clipboard header, then
+  position, rotation and field-of-view rows. The row icons moved from the right end of each row
+  to a column on the left, inset like an icon button's glyph so they sit under Move (world).
+- The ✥ and ⟳ icons stay labels in the Point window. In the Camera window ⟳ is a button that
+  levels roll. The field-of-view row leads with a reset button in both: in the Point window it
+  takes the camera's field of view, as before, and in the Camera window it takes the game's
+  field of view from just before Vista took the camera (`CameraSession.TakeoverFov`, read from
+  the takeover snapshot). It is shown disabled for anchors and Look At points, which have no
+  field of view, and in the Camera window when Vista does not hold the camera.
+- The Camera window shows the header row with every button disabled, so the windows match.
+- The top-bar Level roll button stays alongside the Camera window's ⟳.
+- The grid is drawn with `NoHostExtendX`. Without it the table stretched to the window's width,
+  and because the header right-aligns to the table and the window sizes itself to its content,
+  the width latched: a narrower anchor inherited whatever width a point had last made it. Copy,
+  paste and delete now line up with the right edge of the Z field in every context.
