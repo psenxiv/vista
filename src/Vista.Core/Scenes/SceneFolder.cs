@@ -23,9 +23,11 @@ public sealed class SceneFolder
     /// <summary>The vistaxiv folder.</summary>
     public string Root { get; }
 
-    private string ScenesDir => Path.Combine(Root, "scenes");
+    /// <summary>The folder scene files are kept in.</summary>
+    public string ScenesDir => Path.Combine(Root, "scenes");
 
-    private string PresetsDir => Path.Combine(Root, "presets");
+    /// <summary>The folder preset files are kept in.</summary>
+    public string PresetsDir => Path.Combine(Root, "presets");
 
     /// <summary>True when the folder and its scenes and presets folders all exist.</summary>
     public bool Exists => Directory.Exists(Root) && Directory.Exists(ScenesDir) && Directory.Exists(PresetsDir);

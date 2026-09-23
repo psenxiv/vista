@@ -102,6 +102,8 @@ internal sealed unsafe class HierarchyPanel
         if (ImGui.Selectable("Rename scene")) AskName(Naming.RenameScene, current);
         if (ImGui.Selectable("Duplicate scene")) AskName(Naming.DuplicateScene, SceneNames.CopyOf(current, scenes));
         if (ImGui.Selectable("Delete scene")) { deleting = (false, current); openDelete = true; }
+        ImGui.Separator();
+        if (ImGui.Selectable("Open folder")) files.OpenFolder(presets: false);
         ImGui.EndCombo();
     }
 
@@ -113,8 +115,15 @@ internal sealed unsafe class HierarchyPanel
 
         var ticked = false;
         if (ImGui.MenuItem("Empty track", string.Empty, ref ticked)) Report(session.AddTrack());
-        if (ImGui.BeginMenu("From preset", presets.Count > 0))
+        if (ImGui.BeginMenu("From preset"))
         {
+            if (presets.Count == 0)
+            {
+                ImGui.BeginDisabled();
+                ImGui.MenuItem("No presets", string.Empty, ref ticked);
+                ImGui.EndDisabled();
+            }
+
             foreach (var name in presets)
             {
                 using var id = ImRaii.PushId(name);
@@ -126,6 +135,8 @@ internal sealed unsafe class HierarchyPanel
                 }
             }
 
+            ImGui.Separator();
+            if (ImGui.MenuItem("Open folder", string.Empty, ref ticked)) files.OpenFolder(presets: true);
             ImGui.EndMenu();
         }
 
@@ -167,11 +178,9 @@ internal sealed unsafe class HierarchyPanel
         }
 
         var (_, refusal, replaces) = check;
-        if (refusal is not null || replaces)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-                ImGui.TextUnformatted(refusal ?? $"A preset called {nameText.Trim()} exists");
-        }
+        // Always a line here, blank when the name is fine, so the buttons don't jump as you type.
+        using (ImRaii.PushColor(ImGuiCol.Text, refusal is not null ? UiColours.Red : UiColours.Muted()))
+            ImGui.TextUnformatted(refusal ?? (replaces ? $"A preset called {nameText.Trim()} exists" : " "));
 
         ImGui.BeginDisabled(refusal is not null);
         var ok = ImGui.Button(replaces ? "Replace" : "Ok", new Vector2(127f, 0f)) || (entered && refusal is null);

@@ -93,6 +93,12 @@ internal sealed class SceneFiles
 
     public string? DeletePreset(string name) => Files(folder => folder.DeletePreset(name));
 
+    /// <summary>Opens the scenes folder, or the presets folder, in the system's file browser, as Dalamud's installer opens folders.</summary>
+    public void OpenFolder(bool presets)
+    {
+        if (library is { } l) Dalamud.Utility.Util.OpenLink(presets ? l.Folder.PresetsDir : l.Folder.ScenesDir);
+    }
+
     private string? Use(string parent, string? last)
     {
         var folder = new SceneFolder(SceneFolder.RootFor(parent), (path, e) => Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message));

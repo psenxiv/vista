@@ -30,8 +30,8 @@ internal sealed class SetupWindow : Window
         RespectCloseHotkey = false;
     }
 
-    /// <summary>Starts with nothing chosen each time it opens.</summary>
-    public override void OnOpen() => parent = null;
+    /// <summary>Opens on the folder in use when it works, otherwise with nothing chosen.</summary>
+    public override void OnOpen() => parent = files.Ready ? files.Chosen : null;
 
     /// <summary>Centres the window the first time it appears, and offers a close button only while the folder in use works.</summary>
     public override void PreDraw()
