@@ -1,5 +1,7 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
@@ -11,11 +13,12 @@ internal sealed class WelcomeWindow : Window
 
     private static readonly string[] Paragraphs =
     [
-        "Thank you for helping test Vista.",
+        "Thank you for helping test Vista!",
         "Vista is in private beta and still a work in progress. Expect things to change, and some things to break.",
         "To learn how it works, open the User Guide with the ? at the top right of the Vista window.",
-        "If you find a bug or have an idea, let me know on Discord.",
     ];
+
+    private const string Feedback = "If you find a bug or have an idea, please reach out on Discord";
 
     private readonly Configuration config;
 
@@ -48,8 +51,23 @@ internal sealed class WelcomeWindow : Window
             ImGui.Spacing();
         }
 
+        DrawFeedback();
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         if (ImGui.Button("Ok", new Vector2(Width, 0f))) IsOpen = false;
+    }
+
+    /// <summary>The feedback line with a red heart after it, on the same line when it fits; the game font has no emoji.</summary>
+    private static void DrawFeedback()
+    {
+        var heart = FontAwesomeIcon.Heart.ToIconString();
+        float heartWidth;
+        using (ImRaii.PushFont(UiBuilder.IconFont)) heartWidth = ImGui.CalcTextSize(heart).X;
+
+        ImGui.TextUnformatted(Feedback);
+        if (ImGui.CalcTextSize(Feedback).X + ImGui.GetStyle().ItemSpacing.X + heartWidth <= Width) ImGui.SameLine();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
+            ImGui.TextUnformatted(heart);
     }
 }
