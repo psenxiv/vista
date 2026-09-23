@@ -9,17 +9,19 @@ public class GuideMarkdownTests
 
     private static Run B(string text) => new(text, RunStyle.Bold);
 
-    private static Run C(string text) => new(text, RunStyle.Code);
+    private static Run K(string text) => new(text, RunStyle.Key);
 
     [Fact]
     public void HeadingsKeepTheirLevel()
     {
         var blocks = GuideMarkdown.Parse("# One\n## Two\n### Three\n#### Four");
 
-        Assert.Equal([1, 2, 3], blocks.Take(3).Select(b => Assert.IsType<Heading>(b).Level));
-        Assert.Equal([P("Two")], ((Heading)blocks[1]).Runs);
+        // Blocks: One, the divider a section heading gets, Two, Three, then Four.
+        var headings = blocks.OfType<Heading>().ToList();
+        Assert.Equal([1, 2, 3], headings.Select(h => h.Level));
+        Assert.Equal([P("Two")], headings[1].Runs);
         // Four marks is outside the subset, so it is a paragraph of its own text.
-        Assert.Equal([P("#### Four")], Assert.IsType<Paragraph>(blocks[3]).Runs);
+        Assert.Equal([P("#### Four")], Assert.IsType<Paragraph>(blocks[4]).Runs);
     }
 
     [Fact]
@@ -52,7 +54,7 @@ public class GuideMarkdownTests
         var table = Assert.IsType<Table>(Assert.Single(blocks));
         Assert.Equal([[P("Key")], [P("Does")]], table.Header);
         Assert.Equal(2, table.Rows.Count);
-        Assert.Equal([C("E")], table.Rows[0][0]);
+        Assert.Equal([K("E")], table.Rows[0][0]);
         Assert.Equal([P("Fly "), B("up")], table.Rows[0][1]);
         Assert.Equal([P("Q")], table.Rows[1][0]);
     }
@@ -68,11 +70,11 @@ public class GuideMarkdownTests
     }
 
     [Fact]
-    public void BoldAndCodeSplitAParagraphIntoRuns()
+    public void BoldAndKeysSplitAParagraphIntoRuns()
     {
         var runs = Assert.IsType<Paragraph>(Assert.Single(GuideMarkdown.Parse("Press `Space` to **play**, then stop."))).Runs;
 
-        Assert.Equal([P("Press "), C("Space"), P(" to "), B("play"), P(", then stop.")], runs);
+        Assert.Equal([P("Press "), K("Space"), P(" to "), B("play"), P(", then stop.")], runs);
     }
 
     [Fact]
@@ -82,8 +84,63 @@ public class GuideMarkdownTests
     }
 
     [Fact]
-    public void ALinkShowsOnlyItsText()
+    public void ALinkCarriesItsPage()
     {
-        Assert.Equal([P("See Timing for more.")], GuideMarkdown.Inline("See [Timing](timing.md) for more."));
+        Assert.Equal([P("See "), new Run("Timing", RunStyle.Link, "timing.md"), P(" for more.")], GuideMarkdown.Inline("See [Timing](timing.md) for more."));
+    }
+
+    [Fact]
+    public void AKeyCombinationSplitsIntoKeysJoinedByAPlainPlus()
+    {
+        Assert.Equal([P("Press "), K("Ctrl"), P(" + "), K("Space"), P(".")], GuideMarkdown.Inline("Press `Ctrl + Space`."));
+    }
+
+    [Fact]
+    public void ASpanStartingWithASlashIsOneCommand()
+    {
+        // The " + " split applies to keys only, so a command keeps any plus it has.
+        Assert.Equal([P("Type "), new Run("/vista a + b", RunStyle.Command)], GuideMarkdown.Inline("Type `/vista a + b`"));
+    }
+
+    [Fact]
+    public void AnIconTagBecomesAnIconRunNamedByTheTag()
+    {
+        Assert.Equal([P("Click "), new Run("ChartLine", RunStyle.Icon), P(" to open it.")], GuideMarkdown.Inline("Click {icon:ChartLine} to open it."));
+    }
+
+    [Fact]
+    public void AnIconTagWithNoNameStaysAsTyped()
+    {
+        Assert.Equal([P("a {icon:} b")], GuideMarkdown.Inline("a {icon:} b"));
+    }
+
+    [Fact]
+    public void ASectionHeadingGetsADividerAboveIt()
+    {
+        var blocks = GuideMarkdown.Parse("# Page\nIntro.\n## Section\nText.");
+
+        // Heading, paragraph, the added divider, then the section heading and its text.
+        Assert.Equal(5, blocks.Count);
+        Assert.IsType<Divider>(blocks[2]);
+        Assert.Equal(2, Assert.IsType<Heading>(blocks[3]).Level);
+    }
+
+    [Fact]
+    public void ASectionHeadingKeepsOneDividerWhenTheWriterAddedIt()
+    {
+        var blocks = GuideMarkdown.Parse("Intro.\n---\n## Section");
+
+        Assert.Equal(3, blocks.Count);
+        Assert.IsType<Divider>(blocks[1]);
+        Assert.IsType<Heading>(blocks[2]);
+    }
+
+    [Fact]
+    public void OnlySectionHeadingsAfterTheFirstBlockGetADivider()
+    {
+        // A page opening on a section heading has nothing above to divide; level 1 and 3 headings never get one.
+        var blocks = GuideMarkdown.Parse("## First\n# Title\n### Sub");
+
+        Assert.Equal([2, 1, 3], blocks.Select(b => Assert.IsType<Heading>(b).Level));
     }
 }
