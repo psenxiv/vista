@@ -34,6 +34,10 @@ public static class TrackAim
         return direction.Length() < MinTargetDistance ? null : ClampPitch(FromDirection(direction));
     }
 
+    /// <summary>The pitch-clamped aim along <paramref name="direction"/>, or null when it's too short to give one.</summary>
+    public static (float Yaw, float Pitch)? Along(Vector3 direction)
+        => direction.LengthSquared() <= DirectionEpsilon * DirectionEpsilon ? null : ClampPitch(FromDirection(direction));
+
     /// <summary>Walks an angle sequence (yaw or roll), adding or subtracting full turns so consecutive values differ by at most π.</summary>
     public static float[] UnwrapAngles(IReadOnlyList<float> yaws)
     {

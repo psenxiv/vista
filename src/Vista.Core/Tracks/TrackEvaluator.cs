@@ -9,6 +9,9 @@ public sealed class TrackEvaluator
     /// <summary>Metres a segment counts as when timing, so a leg between coincident points still takes its time.</summary>
     public const float MinTimingLength = 0.1f;
 
+    /// <summary>Yalms within which the look-ahead aim blends from the spot ahead towards the path's direction into it.</summary>
+    public const float LookAheadBlend = 1f;
+
     private readonly Track _track;
     private readonly Vector3[] _positions;
     private readonly ArcLengthTable _table;
@@ -184,14 +187,36 @@ public sealed class TrackEvaluator
     private (float Yaw, float Pitch) AimKeys(double time)
         => (_yaw!.At(time), Math.Clamp(_pitch!.At(time), -TrackAim.PitchLimit, TrackAim.PitchLimit));
 
-    /// <summary>The aim from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, or null when that's too close to give a steady direction.</summary>
+    /// <summary>The aim from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, blending towards the path's direction into that spot as it nears; null with no look-ahead or no direction.</summary>
     private (float Yaw, float Pitch)? LookAhead(double time, Vector3 from)
-        => _track.LookAhead > 0f ? TrackAim.Toward(from, PlaceAt(time + _track.LookAhead).Position) : null;
+    {
+        if (_track.LookAhead <= 0f) return null;
+
+        var ahead = _curve.PositionAt(time + _track.LookAhead);
+        var chord = PointAt(ahead) - from;
+        var length = chord.Length();
+        if (length >= LookAheadBlend) return TrackAim.Along(chord);
+
+        // chord / blend is never normalised, so a chord shrunk to rounding noise carries almost no weight.
+        var start = MathF.Max(0f, ahead - LookAheadBlend);
+        var arrival = PointAt(MathF.Min(_distances[^1], start + LookAheadBlend)) - PointAt(start);
+        if (arrival.LengthSquared() == 0f) return null;
+        return TrackAim.Along((chord / LookAheadBlend) + ((1f - (length / LookAheadBlend)) * Vector3.Normalize(arrival)));
+    }
 
     /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>
     private (Vector3 Position, int Segment, float Fraction) PlaceAt(double time)
     {
         var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
-        return (CatmullRom.Evaluate(_positions, segment, _table.ParameterAt(segment, fraction)), segment, fraction);
+        return (PointAt(segment, fraction), segment, fraction);
     }
+
+    /// <summary>The place on the path <paramref name="distance"/> along it.</summary>
+    private Vector3 PointAt(float distance)
+    {
+        var (segment, fraction) = LocateDistance(distance);
+        return PointAt(segment, fraction);
+    }
+
+    private Vector3 PointAt(int segment, float fraction) => CatmullRom.Evaluate(_positions, segment, _table.ParameterAt(segment, fraction));
 }

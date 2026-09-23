@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0.1
+
+- Fixed a small shake with Direction of travel as the camera comes to a stop at a hold or the end of a track.
+
 ## 0.7.0.1
 
 - The camera turns, rolls and zooms smoothly through each point, without a sudden change in speed.
