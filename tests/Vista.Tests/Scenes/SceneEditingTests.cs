@@ -40,7 +40,7 @@ public class SceneEditingTests
     public void AddAfterADeleteCanRepeatAName()
     {
         var scene = Three();
-        scene = SceneEditing.Delete(scene, scene.Tracks[0].Id).Scene;
+        scene = SceneEditing.Delete(scene, [scene.Tracks[0].Id], scene.Tracks[0].Id).Scene;
         scene = SceneEditing.Add(scene).Scene;
 
         Assert.Equal(new[] { "Track 2", "Track 3", "Track 3" }, scene.Tracks.Select(t => t.Name));
@@ -115,7 +115,7 @@ public class SceneEditingTests
     public void DeleteRemovesTheTrackAndNamesTheOneTakingItsPlace()
     {
         var scene = Three();
-        var (result, next) = SceneEditing.Delete(scene, scene.Tracks[1].Id);
+        var (result, next) = SceneEditing.Delete(scene, [scene.Tracks[1].Id], scene.Tracks[1].Id);
 
         Assert.Equal(2, result.Tracks.Count);
         Assert.Equal(scene.Tracks[2].Id, next);
@@ -125,7 +125,7 @@ public class SceneEditingTests
     public void DeletingTheLastInTheListNamesTheNewLast()
     {
         var scene = Three();
-        var (_, next) = SceneEditing.Delete(scene, scene.Tracks[2].Id);
+        var (_, next) = SceneEditing.Delete(scene, [scene.Tracks[2].Id], scene.Tracks[2].Id);
         Assert.Equal(scene.Tracks[1].Id, next);
     }
 
@@ -133,12 +133,12 @@ public class SceneEditingTests
     public void DeleteRefusesTheOnlyTrackAndForgetsAHiddenOne()
     {
         var only = SceneEditing.New();
-        Assert.Throws<ArgumentException>(() => SceneEditing.Delete(only, only.Tracks[0].Id));
+        Assert.Throws<ArgumentException>(() => SceneEditing.Delete(only, [only.Tracks[0].Id], only.Tracks[0].Id));
 
         var scene = Three();
         var id = scene.Tracks[1].Id;
-        scene = SceneEditing.SetHidden(scene, id, true);
-        Assert.DoesNotContain(id, SceneEditing.Delete(scene, id).Scene.Hidden);
+        scene = SceneEditing.SetHidden(scene, [id], true);
+        Assert.DoesNotContain(id, SceneEditing.Delete(scene, [id], id).Scene.Hidden);
     }
 
     [Fact]
@@ -157,12 +157,80 @@ public class SceneEditingTests
     {
         var scene = Three();
         var id = scene.Tracks[1].Id;
-        var hidden = SceneEditing.SetHidden(scene, id, true);
+        var hidden = SceneEditing.SetHidden(scene, [id], true);
 
         Assert.Contains(id, hidden.Hidden);
-        Assert.Same(hidden, SceneEditing.SetHidden(hidden, id, true));
-        Assert.DoesNotContain(id, SceneEditing.SetHidden(hidden, id, false).Hidden);
+        Assert.Same(hidden, SceneEditing.SetHidden(hidden, [id], true));
+        Assert.DoesNotContain(id, SceneEditing.SetHidden(hidden, [id], false).Hidden);
         Assert.Empty(scene.Hidden);
-        Assert.Throws<ArgumentException>(() => SceneEditing.SetHidden(scene, Guid.NewGuid(), true));
+        Assert.Throws<ArgumentException>(() => SceneEditing.SetHidden(scene, [Guid.NewGuid()], true));
+    }
+
+    [Fact]
+    public void DeletingSeveralEditsTheFirstRemainingTrackAfterTheEditedOne()
+    {
+        var scene = SceneEditing.Add(SceneEditing.Add(Three()).Scene).Scene;
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+
+        // Tracks 2 and 3 go while editing Track 2: Track 4 is the first left after it, not the last, Track 5.
+        var (result, edited) = SceneEditing.Delete(scene, [ids[1], ids[2]], ids[1]);
+
+        Assert.Equal(new[] { ids[0], ids[3], ids[4] }, result.Tracks.Select(t => t.Id));
+        Assert.Equal(ids[3], edited);
+    }
+
+    [Fact]
+    public void DeletingSeveralUpToTheEndEditsTheNewLast()
+    {
+        var scene = SceneEditing.Add(Three()).Scene;
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+
+        Assert.Equal(ids[1], SceneEditing.Delete(scene, [ids[2], ids[3]], ids[2]).Edited);
+    }
+
+    [Fact]
+    public void DeletingSeveralKeepsAnEditedTrackThatStays()
+    {
+        var scene = Three();
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+
+        Assert.Equal(ids[0], SceneEditing.Delete(scene, [ids[1], ids[2]], ids[0]).Edited);
+    }
+
+    [Fact]
+    public void DeletingSeveralRemovesTheirEntriesAndHiddenMarks()
+    {
+        var scene = Three();
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+        scene = SceneEditing.SetHidden(PlaylistEditing.Add(scene, [ids[1], ids[0], ids[2]]), [ids[1], ids[2]], true);
+
+        var result = SceneEditing.Delete(scene, [ids[1], ids[2]], ids[0]).Scene;
+
+        Assert.Equal(new[] { ids[0] }, result.Playlist.Select(e => e.TrackId));
+        Assert.Empty(result.Hidden);
+    }
+
+    [Fact]
+    public void DeletingEveryTrackOrAMissingOneIsRefused()
+    {
+        var scene = Three();
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+
+        Assert.Throws<ArgumentException>(() => SceneEditing.Delete(scene, ids, ids[0]));
+        Assert.Throws<ArgumentException>(() => SceneEditing.Delete(scene, [ids[1], Guid.NewGuid()], ids[0]));
+    }
+
+    [Fact]
+    public void SetHiddenChangesSeveralAndLeavesAnUnchangedSceneAlone()
+    {
+        var scene = Three();
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+
+        var hidden = SceneEditing.SetHidden(scene, [ids[0], ids[2]], true);
+
+        Assert.True(hidden.Hidden.SetEquals([ids[0], ids[2]]));
+        Assert.Equal(new[] { ids[2] }, SceneEditing.SetHidden(hidden, [ids[0], ids[1]], false).Hidden);
+        Assert.Same(hidden, SceneEditing.SetHidden(hidden, [ids[0]], true));
+        Assert.Throws<ArgumentException>(() => SceneEditing.SetHidden(scene, [Guid.NewGuid()], true));
     }
 }

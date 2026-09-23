@@ -32,12 +32,12 @@ public class SessionPlaylistTests
     public void PlaylistEditsAreUndoSteps()
     {
         var state = Editing();
-        Assert.Null(state.AddToPlaylist(First(state)));
-        Assert.Null(state.AddToPlaylist(Second(state), 0));
+        Assert.Null(state.AddToPlaylist([First(state)]));
+        Assert.Null(state.AddToPlaylist([Second(state)], 0));
         var entry = state.Scene.Playlist[1].Id;
         Assert.Null(state.SetEntryLoops(entry, 2));
         Assert.Null(state.MoveEntries([entry], entry, state.Scene.Playlist[0].Id));
-        Assert.Null(state.RemoveFromPlaylist(entry));
+        Assert.Null(state.RemoveFromPlaylist([entry]));
 
         Assert.Single(state.Scene.Playlist);
         state.Undo();
@@ -51,10 +51,10 @@ public class SessionPlaylistTests
     public void DeletingATrackRemovesItsEntriesInOneStep()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
 
-        state.DeleteTrack(Second(state));
+        state.DeleteTracks([Second(state)]);
         Assert.Single(state.Scene.Playlist);
 
         state.Undo();
@@ -86,9 +86,9 @@ public class SessionPlaylistTests
     {
         var state = Editing();
         state.AddTrack();
-        state.AddToPlaylist(state.EditedTrackId);
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([state.EditedTrackId]);
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
@@ -105,8 +105,8 @@ public class SessionPlaylistTests
     public void ScrubbingLiveSeeksWithinThePlayingEntry()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
         state.Cue();
         state.Play();
         state.Director.Tick(3f);
@@ -123,8 +123,8 @@ public class SessionPlaylistTests
     public void ScrubbingPastThePlayingEntrysLengthClampsAndStaysOnIt()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
         state.Cue();
         state.Play();
 
@@ -140,7 +140,7 @@ public class SessionPlaylistTests
     public void TheEndHoldsAndPlayStartsAgain()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
+        state.AddToPlaylist([Second(state)]);
         state.Cue();
         state.Play();
         state.Director.Tick(5f);
@@ -157,8 +157,8 @@ public class SessionPlaylistTests
     public void RestartInLiveGoesBackToTheFirstEntry()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
         state.Cue();
         state.Play();
         state.Director.Tick(5f);
@@ -174,8 +174,8 @@ public class SessionPlaylistTests
     {
         var state = Editing();
         state.AddTrack();
-        state.AddToPlaylist(state.EditedTrackId);
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([state.EditedTrackId]);
+        state.AddToPlaylist([First(state)]);
         state.Cue();
         state.Play();
         state.Director.Tick(3f);
@@ -190,8 +190,8 @@ public class SessionPlaylistTests
     public void EditFromLiveTakesTheShotTimeOnlyWhenTheEditedTrackIsPlaying()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
         state.Cue();
         state.Play();
         state.Director.Tick(1f);
@@ -211,7 +211,7 @@ public class SessionPlaylistTests
     public void PlayingEntryIsNullUnlessLive()
     {
         var state = Editing();
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([First(state)]);
         Assert.Null(state.PlayingEntry);
     }
 
@@ -231,7 +231,7 @@ public class SessionPlaylistTests
     public void LivePlaysALoopingPlaylistRoundAgain()
     {
         var state = Editing();
-        state.AddToPlaylist(Second(state));
+        state.AddToPlaylist([Second(state)]);
         state.SetPlaylistLoops(true);
         state.Cue();
         state.Play();
@@ -248,9 +248,9 @@ public class SessionPlaylistTests
     {
         var state = Editing();
         state.AddTrack();
-        state.AddToPlaylist(state.EditedTrackId);
-        state.AddToPlaylist(Second(state));
-        state.AddToPlaylist(First(state));
+        state.AddToPlaylist([state.EditedTrackId]);
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([First(state)]);
         state.SetPlaylistLoops(true);
         state.Cue();
         state.Play();
@@ -263,5 +263,15 @@ public class SessionPlaylistTests
         Assert.False(state.Director.IsFinished);
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
         Assert.Equal(1.0, state.ScrubHead, 4);
+    }
+
+    [Fact]
+    public void AddingSeveralTracksAddsThemInHierarchyOrder()
+    {
+        var state = Editing();
+
+        Assert.Null(state.AddToPlaylist([Second(state), First(state)]));
+
+        Assert.Equal(new[] { First(state), Second(state) }, state.Scene.Playlist.Select(e => e.TrackId));
     }
 }

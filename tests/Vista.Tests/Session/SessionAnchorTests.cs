@@ -301,7 +301,7 @@ public class SessionAnchorTests
         state.EndLiveEdit();
         var before = state.Track.Points.Select(p => p.Position).ToList();
 
-        Assert.Null(state.DeleteTrack(second));
+        Assert.Null(state.DeleteTracks([second]));
 
         Assert.True(state.Scene.AnchorPlaced);
         for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);

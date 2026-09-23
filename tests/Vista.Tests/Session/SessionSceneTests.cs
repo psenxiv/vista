@@ -138,7 +138,7 @@ public class SessionSceneTests
         var third = state.Scene.Tracks[2].Id;
         state.SwitchTrack(state.Scene.Tracks[1].Id);
 
-        Assert.Null(state.DeleteTrack(state.EditedTrackId));
+        Assert.Null(state.DeleteTracks([state.EditedTrackId]));
 
         Assert.Equal(third, state.EditedTrackId);
     }
@@ -151,9 +151,9 @@ public class SessionSceneTests
         state.AddTrack();
         var second = state.EditedTrackId;
         state.SwitchTrack(first);
-        state.SetTrackHidden(second, true);
+        state.SetTracksHidden([second], true);
 
-        Assert.Null(state.DeleteTrack(first));
+        Assert.Null(state.DeleteTracks([first]));
 
         Assert.Equal(second, state.EditedTrackId);
         Assert.DoesNotContain(second, state.Scene.Hidden);
@@ -172,7 +172,7 @@ public class SessionSceneTests
         state.SwitchTrack(First(state));
         state.Select(1);
 
-        Assert.Null(state.DeleteTrack(second));
+        Assert.Null(state.DeleteTracks([second]));
 
         Assert.Equal(First(state), state.EditedTrackId);
         Assert.Equal(1, state.Selected);
@@ -199,8 +199,8 @@ public class SessionSceneTests
         var second = state.EditedTrackId;
         var first = First(state);
 
-        Assert.NotNull(state.SetTrackHidden(second, true));
-        Assert.Null(state.SetTrackHidden(first, true));
+        Assert.NotNull(state.SetTracksHidden([second], true));
+        Assert.Null(state.SetTracksHidden([first], true));
         Assert.Contains(first, state.Scene.Hidden);
     }
 
@@ -210,7 +210,7 @@ public class SessionSceneTests
         var state = Editing();
         var first = First(state);
         state.AddTrack();
-        state.SetTrackHidden(first, true);
+        state.SetTracksHidden([first], true);
 
         Assert.Null(state.SwitchTrack(first));
 
@@ -256,7 +256,7 @@ public class SessionSceneTests
         var first = First(state);
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
-        state.AddToPlaylist(first);
+        state.AddToPlaylist([first]);
         state.Cue();
         state.Play();
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -273,9 +273,9 @@ public class SessionSceneTests
         Assert.Equal(noSwitch, state.SwitchTrack(first));
         Assert.Equal(refused, state.RenameTrack(first, "Crane"));
         Assert.Equal(refused, state.DuplicateTrack(first));
-        Assert.Equal(refused, state.DeleteTrack(first));
+        Assert.Equal(refused, state.DeleteTracks([first]));
         Assert.Equal(refused, state.MoveTracks([first], first, second));
-        Assert.Equal(refused, state.SetTrackHidden(second, true));
+        Assert.Equal(refused, state.SetTracksHidden([second], true));
 
         Assert.Equal(2, state.Scene.Tracks.Count);
         Assert.Empty(state.Scene.Hidden);
@@ -289,7 +289,7 @@ public class SessionSceneTests
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
         var first = First(state);
-        state.AddToPlaylist(first);
+        state.AddToPlaylist([first]);
         Assert.NotEqual(first, state.EditedTrackId);
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
@@ -345,5 +345,35 @@ public class SessionSceneTests
         Assert.False(state.Scene.AnchorPlaced);
         Assert.Equal(first, state.EditedTrackId);
         Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void HidingSeveralSkipsTheEditedTrack()
+    {
+        var state = Editing();
+        var first = First(state);
+        state.AddTrack();
+        var second = state.EditedTrackId;
+
+        Assert.Null(state.SetTracksHidden([first, second], true));
+
+        Assert.Equal(new[] { first }, state.Scene.Hidden);
+    }
+
+    [Fact]
+    public void DeletingSeveralIsOneUndoStep()
+    {
+        var state = Editing();
+        state.AddTrack();
+        state.AddTrack();
+        var ids = state.Scene.Tracks.Select(t => t.Id).ToArray();
+
+        Assert.Null(state.DeleteTracks([ids[1], ids[2]]));
+        Assert.Equal(new[] { ids[0] }, state.Scene.Tracks.Select(t => t.Id));
+        Assert.Equal(ids[0], state.EditedTrackId);
+
+        Assert.True(state.Undo());
+        Assert.Equal(ids, state.Scene.Tracks.Select(t => t.Id));
+        Assert.Equal(ids[2], state.EditedTrackId);
     }
 }

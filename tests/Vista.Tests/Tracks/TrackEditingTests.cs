@@ -611,4 +611,23 @@ public class TrackEditingTests
         Assert.Equal(1f, evaluator.SideSlope(1, KeySide.In), 3);
         Assert.Equal(1f, evaluator.SideSlope(1, KeySide.Out), 3);
     }
+
+    [Fact]
+    public void DeletingSeveralPointsMergesTheirLegsAsSingleDeletesWould()
+    {
+        var track = TrackEditing.Append(Build3PointTrack(), Point(30f));
+        track = TrackEditing.SetLegSpeed(track, 1, 3f);
+        track = TrackEditing.SetLegSpeed(track, 2, 5f);
+        track = TrackEditing.SetLegSpeed(track, 3, 7f);
+
+        // Point 2 goes first: the leg to point 3 takes leg 2's 5. Then point 1: that leg takes leg 1's 3.
+        var result = TrackEditing.Delete(track, [1, 2]);
+
+        Assert.Equal(new[] { 0f, 30f }, result.Points.Select(p => p.Position.X));
+        Assert.Equal(3f, TrackEditing.LegSpeed(result, 1));
+    }
+
+    [Fact]
+    public void DeletingSeveralRefusesAnIndexOutOfRange()
+        => Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(Build3PointTrack(), [0, 3]));
 }

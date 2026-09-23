@@ -28,7 +28,7 @@ public sealed class SceneLibraryTests : IDisposable
     {
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
-        state.AddToPlaylist(state.Scene.Tracks[0].Id);
+        state.AddToPlaylist([state.Scene.Tracks[0].Id]);
         state.Cue();
         state.Play();
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -336,7 +336,7 @@ public sealed class SceneLibraryTests : IDisposable
     public void LoadingCountsTheSessionsSceneAsSaved()
     {
         var scene = Named("Crane");
-        temp.Folder.SaveScene("Dawn", SceneEditing.SetHidden(scene, scene.Tracks[0].Id, true));
+        temp.Folder.SaveScene("Dawn", SceneEditing.SetHidden(scene, [scene.Tracks[0].Id], true));
         library.Open("Dawn");
         var file = Path.Combine(temp.Scenes, "Dawn.json");
         File.Delete(file);

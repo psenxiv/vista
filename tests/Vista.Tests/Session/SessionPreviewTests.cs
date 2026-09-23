@@ -202,7 +202,7 @@ public class SessionPreviewTests
     public void LeavingEditEndsThePreview()
     {
         var state = Editing();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Play();
 
         state.Cue();

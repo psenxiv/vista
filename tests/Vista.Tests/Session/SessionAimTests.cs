@@ -53,7 +53,7 @@ public class SessionAimTests
     public void LiveWatchesTheCharacterAndAScrubSnapsBackOntoThem()
     {
         var (state, characters) = Watching();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Cue();
         state.Play();
         AimsAt(A, state.Director.Tick(1f / 60f)!.Value, 3);

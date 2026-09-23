@@ -20,7 +20,7 @@ public class SessionStateTests
     private static SessionState Live()
     {
         var state = EditingWithTrack();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Cue();
         state.Play();
         return state;
@@ -79,7 +79,7 @@ public class SessionStateTests
     public void CueThenPlayFromEditingGoesLive()
     {
         var state = EditingWithTrack();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -91,7 +91,7 @@ public class SessionStateTests
     public void PlayFromViewSaysItStartedFromGame()
     {
         var state = EditingWithTrack();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Release();
         Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -142,7 +142,7 @@ public class SessionStateTests
     public void CueFromEditingGoesLivePausedAtTheStart()
     {
         var state = EditingWithTrack();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);
         Assert.True(state.Director.IsPaused);
@@ -154,7 +154,7 @@ public class SessionStateTests
     public void PlayAfterCueStartsTheShot()
     {
         var state = EditingWithTrack();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Cue();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
         state.Director.Tick(1f);
@@ -165,7 +165,7 @@ public class SessionStateTests
     public void CueFromViewSaysItCuedFromGame()
     {
         var state = EditingWithTrack();
-        state.AddToPlaylist(state.EditedTrackId);
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Release();
         Assert.Equal(PlayOutcome.CuedFromGame, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -364,7 +364,7 @@ public class SessionStateTests
         var second = scene.Tracks[1].Id;
 
         var state = new SessionState();
-        state.LoadScene(SceneEditing.SetHidden(SceneEditing.SetHidden(scene, first, true), second, true));
+        state.LoadScene(SceneEditing.SetHidden(SceneEditing.SetHidden(scene, [first], true), [second], true));
 
         Assert.Equal(new HashSet<Guid> { second }, state.Scene.Hidden);
         Assert.Same(scene.Tracks, state.Scene.Tracks);
