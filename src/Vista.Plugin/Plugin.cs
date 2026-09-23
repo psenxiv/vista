@@ -57,6 +57,7 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "/vista opens the editor"
         });
 
+        var config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
         editorLayer = new EditorLayer(Session, pointGizmo);
@@ -75,6 +76,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(guideWindow);
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);
+        windows.AddWindow(new WelcomeWindow(config));
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;
