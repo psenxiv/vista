@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0.1
+
+- A test build, the same as 0.5.0, to try out testing builds.
+
 ## 0.5.0
 
 - Scenes save as you work, and you can keep as many as you like. Vista asks for a save folder the first time you open it.
