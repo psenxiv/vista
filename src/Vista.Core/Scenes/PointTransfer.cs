@@ -6,6 +6,9 @@ namespace Vista.Core.Scenes;
 /// <summary>Moves points from one track onto the end of another.</summary>
 public static class PointTransfer
 {
+    /// <summary>True when <paramref name="destination"/> can take points from track <paramref name="source"/>: it's another track, and doesn't follow a character.</summary>
+    public static bool CanTake(Track destination, Guid source) => destination.Id != source && destination.Aim != AimMode.FollowTarget;
+
     /// <summary>Moves source points <paramref name="points"/>, at world points <paramref name="world"/>, onto the end of <paramref name="destination"/> or a new track; names the destination and the moved points' indices there.</summary>
     public static (Scene Scene, Guid Destination, IReadOnlyList<int> Moved) Move(
         Scene scene, Guid source, IReadOnlyList<int> points, IReadOnlyList<ControlPoint> world,

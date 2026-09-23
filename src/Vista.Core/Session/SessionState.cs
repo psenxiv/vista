@@ -329,7 +329,7 @@ public sealed class SessionState
         if (selection.Points.Count >= 2 || SelectedEntries.Count >= 2) return null;
         var (tracks, last) = RowPicking.Click(Scene.Tracks.Select(t => t.Id).ToArray(), SelectedTracks, lastTrack ?? EditedTrackId, id, click);
         SelectAnchorless(new Selection([], tracks.Where(t => t != EditedTrackId).ToArray(), []));
-        lastTrack = last;
+        lastTrack = tracks.Count > 1 ? last : null;
         return null;
     }
 
@@ -406,7 +406,9 @@ public sealed class SessionState
     {
         if (SelectionRefusal() is { } refusal) return refusal;
         var s = Selected!.Value;
-        return ApplyScene(scene => WithPoint(scene, point, (t, p) => TrackEditing.InsertAfter(t, s, p)), _ => [s + 1]);
+        var added = ApplyScene(scene => WithPoint(scene, point, (t, p) => TrackEditing.InsertAfter(t, s, p)), _ => [s + 1]);
+        if (added is null) lastPoint = s + 1;
+        return added;
     }
 
     /// <summary>Replaces the selected point, keeping its timing and the selection.</summary>
@@ -453,8 +455,12 @@ public sealed class SessionState
     public string? DeletePoints(IReadOnlyCollection<int> indices)
     {
         if (indices.Count == 0 || indices.Any(i => i < 0 || i >= Local.Points.Count)) return "There is no such point.";
-        var kept = selection.Points.Where(p => !indices.Contains(p)).Select(p => p - indices.Distinct().Count(d => d < p)).ToArray();
-        return Apply(t => TrackEditing.Delete(t, indices), _ => kept);
+        int? Kept(int p) => indices.Contains(p) ? null : p - indices.Distinct().Count(d => d < p);
+        var kept = selection.Points.Select(Kept).OfType<int>().ToArray();
+        var last = lastPoint is { } l ? Kept(l) : null;
+        var refusal = Apply(t => TrackEditing.Delete(t, indices), _ => kept);
+        if (refusal is null) lastPoint = last;
+        return refusal;
     }
 
     /// <summary>Moves points <paramref name="indices"/> to the end of track <paramref name="destination"/>, or a new track when null, keeping their places in the world, then edits it with them selected. Returns why it was refused, or null.</summary>
@@ -466,6 +472,10 @@ public sealed class SessionState
         var points = indices.Distinct().Order().ToArray();
         var world = Track;
         IReadOnlyList<int> moved = [];
+
+        // The undo step records these points as selected, so undoing the move selects them even when they weren't.
+        var before = selection;
+        selection = new Selection(points, [], []);
         var refusal = CommitScene(scene =>
         {
             var (result, to, landed) = PointTransfer.Move(scene, EditedTrackId, points, points.Select(i => world.Points[i]).ToArray(), destination, groundBelow);
@@ -473,6 +483,7 @@ public sealed class SessionState
             return (SceneEditing.SetHidden(result, [to], false), to);
         });
         if (refusal is null) SelectPoints(moved);
+        else selection = before;
         return refusal;
     }
 
@@ -485,7 +496,10 @@ public sealed class SessionState
         if (order is null) return null;
 
         var moved = selection.Points.Select(p => BlockMove.NewIndex(order, p)).Order().ToArray();
-        return Apply(t => TrackEditing.Reorder(t, order), _ => moved);
+        var last = lastPoint is { } l && l < order.Length ? BlockMove.NewIndex(order, l) : (int?)null;
+        var refusal = Apply(t => TrackEditing.Reorder(t, order), _ => moved);
+        if (refusal is null) lastPoint = last;
+        return refusal;
     }
 
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
@@ -900,7 +914,7 @@ public sealed class SessionState
             var selected = selectAfter(edited);
             Scene = result;
             selection = selection with { Points = selected };
-            if (selected.Count == 0) lastPoint = null;
+            if (selected.Count == 0 || lastPoint >= edited.Points.Count) lastPoint = null;
             if (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null) SelectedAnchor = null;
             return null;
         }
@@ -955,6 +969,7 @@ public sealed class SessionState
         Scene = s.Scene;
         EditedTrackId = s.Edited;
         selection = s.Selection;
+        lastPoint = null;
         if (selection.Points.Count > 0 || (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null)) SelectedAnchor = null;
         RefreshTimingSelection(pointsBefore);
         return true;

@@ -39,10 +39,10 @@ public static class TrackEditing
 
     private const int DurationSteps = 60;
 
-    /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
     public const string FollowHasOnePoint = "A Follow Target track has one point";
 
+    /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
     public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1")
         => new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
 
@@ -180,7 +180,7 @@ public static class TrackEditing
     public static Track Reorder(Track track, IReadOnlyList<int> order)
     {
         var points = BlockMove.Apply(track.Points, order);
-        if (points.SequenceEqual(track.Points)) return track;
+        if (order.Select((old, slot) => old == slot).All(same => same)) return track;
 
         var timing = order.Select((moved, slot) => track.Timing[slot] with { Hold = track.Timing[moved].Hold }).ToList();
         timing[0] = timing[0] with { LegSpeed = null };

@@ -6,6 +6,9 @@ public enum RowClick { Plain, Toggle, Range }
 /// <summary>What a click on a list row does to the rows selected in that list.</summary>
 public static class RowPicking
 {
+    /// <summary>The kind of click the held modifiers make: Shift wins over Ctrl.</summary>
+    public static RowClick FromKeys(bool shift, bool ctrl) => shift ? RowClick.Range : ctrl ? RowClick.Toggle : RowClick.Plain;
+
     /// <summary>Applies <paramref name="click"/> on <paramref name="clicked"/>; returns the selection in <paramref name="order"/>'s order and the row a later Shift-click ranges from.</summary>
     public static (IReadOnlyList<T> Selected, T? Last) Click<T>(IReadOnlyList<T> order, IReadOnlyCollection<T> selected, T? last, T clicked, RowClick click)
         where T : struct

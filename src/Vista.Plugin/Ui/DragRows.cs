@@ -57,6 +57,6 @@ internal static unsafe class DragRows
     public static RowClick Click()
     {
         var io = ImGui.GetIO();
-        return io.KeyShift ? RowClick.Range : io.KeyCtrl ? RowClick.Toggle : RowClick.Plain;
+        return RowPicking.FromKeys(io.KeyShift, io.KeyCtrl);
     }
 }

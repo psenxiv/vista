@@ -239,7 +239,7 @@ internal sealed class HierarchyPanel
 
         var rowStart = ImGui.GetCursorPosX();
         if (renaming == track.Id) DrawRename(track, nameWidth);
-        else DrawName(scene, track, index, isEdited, selected, editing, nameWidth);
+        else DrawName(scene, track, index, selected, editing, nameWidth);
         ImGui.SameLine();
         ImGui.SetCursorPosX(rowStart + nameWidth + ImGui.GetStyle().ItemSpacing.X);
 
@@ -269,7 +269,7 @@ internal sealed class HierarchyPanel
         => ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X + ((LastSlot() - IconButton.Width(icon)) * 0.5f));
 
     /// <summary>The name as a selectable spanning the row under its buttons, carrying the row's clicks, drag and drop, and context menu.</summary>
-    private void DrawName(Scene scene, Track track, int index, bool isEdited, IReadOnlyList<Guid> selected, bool editing, float nameWidth)
+    private void DrawName(Scene scene, Track track, int index, IReadOnlyList<Guid> selected, bool editing, float nameWidth)
     {
         var picked = selected.Contains(track.Id);
         var group = picked && selected.Count >= 2;
@@ -292,8 +292,7 @@ internal sealed class HierarchyPanel
                 if (tracks.Grabbed < scene.Tracks.Count) Report(session.MoveTracks(moving, scene.Tracks[tracks.Grabbed].Id, track.Id));
             }
 
-            // A track takes points from another track, unless it follows a character and so holds one.
-            if (!isEdited && track.Aim != AimMode.FollowTarget && DragRows.Accept(DragRows.Point, $"Add to {track.Name}") is { } points)
+            if (PointTransfer.CanTake(track, session.EditedTrackId) && DragRows.Accept(DragRows.Point, $"Add to {track.Name}") is { } points)
                 Report(session.MovePointsTo(DragRows.Points(session, points), track.Id));
             ImGui.EndDragDropTarget();
         }

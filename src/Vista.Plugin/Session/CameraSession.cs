@@ -294,7 +294,7 @@ internal sealed class CameraSession
     /// <summary>Applies <paramref name="change"/> to the track if the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change) => state.ChangeTrack(change);
 
-    /// <summary>The selected point's index, or null.</summary>
+    /// <summary>The selected point's index when exactly one is selected, or null.</summary>
     public int? Selected => state.Selected;
 
     /// <summary>Selects only a point while editing; null or out of range clears every selection.</summary>
@@ -444,7 +444,7 @@ internal sealed class CameraSession
     /// <summary>Replaces point <paramref name="index"/>, keeping its timing. Returns why it was refused, or null.</summary>
     public string? ReplacePoint(int index, ControlPoint point) => state.ReplacePoint(index, point);
 
-    /// <summary>Deletes the selected point. Returns why it was refused, or null.</summary>
+    /// <summary>Deletes the selected points. Returns why it was refused, or null.</summary>
     public string? DeleteSelected() => state.DeleteSelected();
 
     /// <summary>Deletes points, keeping any other selected point selected. Returns why it was refused, or null.</summary>

@@ -106,7 +106,7 @@ internal sealed class EditorLayer
     /// <summary>Selects a clicked point, anchor or Look At point, switching to its track first when it isn't the edited one; a click on empty space clears the selection. With Ctrl or Shift, only the edited track's points respond.</summary>
     private void Apply(ClickOutcome outcome, IReadOnlyList<TrackMarker> markers)
     {
-        var click = PhysicalKeys.IsDown(VirtualKey.SHIFT) ? RowClick.Range : PhysicalKeys.IsDown(VirtualKey.CONTROL) ? RowClick.Toggle : RowClick.Plain;
+        var click = RowPicking.FromKeys(PhysicalKeys.IsDown(VirtualKey.SHIFT), PhysicalKeys.IsDown(VirtualKey.CONTROL));
         if (click != RowClick.Plain)
         {
             if (outcome.Kind == ClickKind.Select && outcome.Index < markers.Count && markers[outcome.Index] is { Kind: MarkerKind.Point } point && point.Track == session.EditedTrackId)

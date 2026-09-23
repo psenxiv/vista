@@ -1,6 +1,7 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Editing;
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Session;
@@ -15,7 +16,6 @@ namespace Vista.Plugin.Ui;
 /// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
 internal sealed class TrackEditorWindow : Window
 {
-
     private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
 
     /// <summary>One entry in the aim menu.</summary>
@@ -638,8 +638,7 @@ internal sealed class TrackEditorWindow : Window
             foreach (var other in scene.Tracks.Where(t => t.Id != session.EditedTrackId))
             {
                 using var id = ImRaii.PushId(other.Id.ToString());
-                // A Follow Target track holds its one point.
-                if (ImGui.MenuItem(other.Name, string.Empty, ref ticked, other.Aim != AimMode.FollowTarget)) Report(session.MovePointsTo(points, other.Id));
+                if (ImGui.MenuItem(other.Name, string.Empty, ref ticked, PointTransfer.CanTake(other, session.EditedTrackId))) Report(session.MovePointsTo(points, other.Id));
             }
 
             ImGui.EndMenu();
@@ -656,9 +655,9 @@ internal sealed class TrackEditorWindow : Window
     private void DrawPointSpace(Track track, bool editing)
     {
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight())));
-        if (!editing || track.Points.Count == 0) return;
+        if (!editing) return;
         if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Select(null);
-        DropTarget(null, editing);
+        if (track.Points.Count > 0) DropTarget(null, editing);
     }
 
     /// <summary>Ends a scrub the scrub bar started, leaving the Timing window's alone.</summary>
