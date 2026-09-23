@@ -1,0 +1,60 @@
+{
+  "title": "Vista User Guide window",
+  "written": "2026-09-23",
+  "revision": 1,
+  "intro": [
+    "The guide's window and its Markdown pages. Every page but Hotkeys is a placeholder for now.",
+    "Answers save in this browser as you go. Hit Download results at the end and send me the file."
+  ],
+  "sections": [
+    {
+      "id": "s1",
+      "title": "User Guide",
+      "groups": [
+        {
+          "id": "1",
+          "title": "The ? icon",
+          "need": "The ? joins the eye at the right of the top row. Three layout sites count the eye's width and now count the ?, and the row's minimum width now also counts the level-roll and camera buttons from batch 4, which it had missed.",
+          "steps": [
+            { "t": "do", "id": "1.s1", "text": "Run `make build`, reload Vista, type `/vista`." },
+            { "t": "check", "id": "1.1", "action": "Look at the top row's right end", "expect": "A ? to the right of the eye, white." },
+            { "t": "check", "id": "1.2", "action": "Hover it", "expect": "Tooltip: User Guide." },
+            { "t": "check", "id": "1.3", "action": "Click it, then click it again", "expect": "The User Guide opens and the ? turns blue; the second click closes it." },
+            { "t": "check", "id": "1.4", "action": "Mode -> Edit and look at the top row", "expect": "The camera tools and fly speed still sit clear of the eye and the ?, and the slider still ends under the track row's trash." },
+            { "t": "check", "id": "1.5", "action": "Shrink the Vista window as narrow as it goes, in Edit", "expect": "Nothing on the top row overlaps." },
+            { "t": "check", "id": "1.6", "action": "Mode -> Live", "expect": "LIVE, the eye and the ? all fit at the right." }
+          ]
+        },
+        {
+          "id": "2",
+          "title": "The window",
+          "steps": [
+            { "t": "check", "id": "2.1", "action": "Look at the User Guide", "expect": "Topics on the left, the page on the right; Getting started shown and highlighted." },
+            { "t": "check", "id": "2.2", "action": "Look at the tree", "expect": "Modes, Tracks and points, Timing and Aim show their sub-topics expanded; Hotkeys is last." },
+            { "t": "check", "id": "2.3", "action": "Click a sub-topic, then a topic", "expect": "Each shows its own page and becomes the highlighted entry." },
+            { "t": "check", "id": "2.4", "action": "Click a topic's arrow", "expect": "It collapses or expands without changing the page." },
+            { "t": "check", "id": "2.5", "action": "Open Hotkeys", "expect": "A large heading, a paragraph, and a bordered two-column table. Key names are in a muted colour." },
+            { "t": "check", "id": "2.6", "action": "Look at the heading closely", "expect": "Crisp, not blurry from scaling." },
+            { "t": "check", "id": "2.7", "action": "Narrow the guide window", "expect": "The table's text wraps within its cells; no words run together or split mid-word." },
+            { "t": "check", "id": "2.8", "action": "Resize it to its minimum and back", "expect": "It stops at a sensible minimum and the page scrolls when it doesn't fit." },
+            { "t": "check", "id": "2.9", "action": "Close it with its X, reopen with ?", "expect": "It reopens on the page you left." },
+            { "t": "check", "id": "2.10", "action": "Open it, press Escape", "expect": "It closes." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "title": "Anything else",
+      "groups": [
+        {
+          "id": "9",
+          "title": "Free notes",
+          "steps": [
+            { "t": "text", "id": "9.notes", "label": "Anything no row asked about", "placeholder": "layout, colours, the outline itself", "long": true, "optional": true }
+          ]
+        }
+      ]
+    }
+  ]
+}

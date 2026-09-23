@@ -15,11 +15,6 @@ Scenes, Tracks, anchors, a Playlist, saving and presets; `BRAINSPLAT.md` holds t
 requirements and the work order, and each step is specced as it comes up. Export/import was
 dropped: sharing a Scene means sharing its file.
 
-### Manual
-A manual for Vista, opened from a `?` icon in the window.
-
-**Why deferred:** raised on 2026-09-22 during 3.e.2; to be specced on its own later.
-
 ## Under consideration
 
 Raised by the maintainer, not yet agreed as a feature.
