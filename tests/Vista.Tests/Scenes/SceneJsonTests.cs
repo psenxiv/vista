@@ -144,4 +144,22 @@ public class SceneJsonTests
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
+
+    [Fact]
+    public void APlaylistEntryForAMissingTrackIsRefused()
+    {
+        var track = TrackEditing.Empty();
+        var json = SceneJson.Write(new Scene([track], new HashSet<Guid>(), [new PlaylistEntry(Guid.NewGuid(), Guid.NewGuid())]));
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
+    }
+
+    [Fact]
+    public void TwoTracksWithOneIdAreRefused()
+    {
+        var track = TrackEditing.Empty();
+        var json = SceneJson.Write(new Scene([track, track with { Name = "Twin" }], new HashSet<Guid>(), []));
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
+    }
 }

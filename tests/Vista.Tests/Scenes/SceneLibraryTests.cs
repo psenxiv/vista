@@ -347,4 +347,37 @@ public sealed class SceneLibraryTests : IDisposable
         Assert.Null(library.SaveNow());
         Assert.False(File.Exists(file));
     }
+
+    [Fact]
+    public void NameRefusalCountsUnreadableFilesAndLetsARenameKeepItsName()
+    {
+        Save("Dawn", "Crane");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Broken.json"), "{");
+        library.Open("Dawn");
+
+        Assert.Equal("A scene with that name exists", library.NameRefusal(" broken "));
+        Assert.Equal("A scene with that name exists", library.NameRefusal("DAWN"));
+        Assert.Null(library.NameRefusal("DAWN", renaming: true));
+        Assert.Equal("A scene with that name exists", library.NameRefusal("Broken", renaming: true));
+        Assert.Null(library.NameRefusal("Dusk"));
+    }
+
+    [Fact]
+    public void RecreatingPutsTheOpenSceneBackAndKeepsUndo()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+        Assert.Null(library.SaveNow());
+        Directory.Delete(temp.Folder.Root, recursive: true);
+
+        Assert.Null(library.Recreate());
+
+        // Written even though nothing changed since the last save, since the file went with the folder.
+        Assert.True(temp.Folder.Exists);
+        Assert.Equal(["Dawn.json"], temp.SceneFiles());
+        Assert.Equal("Jib", FirstTrackIn(temp, "Dawn"));
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.True(state.CanUndo);
+    }
 }
