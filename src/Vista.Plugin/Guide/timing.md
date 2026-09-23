@@ -9,7 +9,7 @@ The track row has two fields for the whole track:
 | {icon:TachometerAlt} | **Track speed** | How fast the camera travels, in yalms per second. |
 | {icon:Stopwatch} | **Track duration** | How long the track takes, in seconds. |
 
-Change either one and the other updates to match. Type a value and click away to apply it.
+Change either one and the other updates to match. Drag a field left or right to change it, or double-click it to type a number.
 
 Every stretch between two points follows the track speed unless you give it its own. See [Legs and holds](timing-legs-and-holds.md).
 

@@ -16,7 +16,7 @@ You change the playlist in Edit. A track can be in it more than once, or not at 
 
 ## Repeats
 
-The **Repeats** cell at the end of each entry sets how many times it plays before Live moves on. Click it to type a number, or scroll over it.
+The **Repeats** cell at the end of each entry sets how many times it plays before Live moves on. Drag it left or right, double-click it to type a number, or scroll over it.
 
 | Shows | Means |
 |---|---|

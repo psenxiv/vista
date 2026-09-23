@@ -16,11 +16,11 @@ Each row's timing describes the leg arriving at that point from the one above.
 
 A leg follows **Track speed** until you pin it. A pinned leg keeps its own speed when the track speed changes.
 
-- Type a **Duration (s)** or **Speed** to pin the leg at that value.
+- Change a **Duration (s)** or **Speed** to pin the leg at that value.
 - Click {icon:Thumbtack} to pin or unpin a leg. It shows in the accent colour while pinned, and appears on hover while not.
 
 Dragging keys in [the timing graph](timing-keys.md) pins the legs it changes.
 
 ## Holds
 
-Type seconds into **Hold (s)** to make the camera wait there. Type 0 to remove it. A hold makes everything after it happen later.
+Set **Hold (s)** to make the camera wait there, and set it to 0 to remove it. A hold makes everything after it happen later.
