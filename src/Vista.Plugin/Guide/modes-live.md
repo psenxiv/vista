@@ -20,7 +20,7 @@ While Vista is in Live, the word LIVE pulses in red on the top row of the **Vist
 
 Click **Hide game UI when Live** on the top row to hide the game's UI while a shot plays. You can turn it on before you go Live or while a shot is playing. Turn it off and the UI comes back at once.
 
-To bring the game UI back, press `Escape`. This doesn't open the game's menu. The UI stays until you pause and play again, or restart, and then it hides again.
+To bring the game UI back, press `Escape`. This doesn't open the game's menu. To hide it again, press `Space` or click **Play**.
 
 ## Leaving Live
 
