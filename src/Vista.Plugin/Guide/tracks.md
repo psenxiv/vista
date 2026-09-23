@@ -1,34 +1,33 @@
 # Tracks and points
 
-A point is one camera position you want in your shot. It remembers where the camera was, which way it faced, its roll and its field of view. A track is a line of points. When you play a track, the camera flies from the first point to the last, passing through each one in order.
+A point is one camera position: where the camera is, which way it faces, its roll and its field of view. A track is a line of points, and it is one shot. When you play a track, the camera flies through its points in order.
 
-A scene can hold several tracks. You edit one track at a time, and the points table in the **Vista** window shows that track's points. You change tracks in Edit mode.
+A scene holds several tracks. You edit one at a time. The others are drawn in grey in the world, and clicking one of their points switches to that track.
 
 ## The Hierarchy
 
-The Hierarchy is the column on the left of the **Vista** window. It lists every track in the scene. Click **Hide hierarchy** on the top row to close it, and **Show hierarchy** to bring it back.
+The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} **Show hierarchy** on the top row shows or hides it.
 
-- Click **Add track** to make a new, empty track. Vista names it "Track" and a number, and you start editing it.
-- Click a track's name to edit it. The camera stays where it is.
-- Double-click a track's name to edit it and fly the camera to its first point.
-- Drag a track's name up or down to change the order of the list.
-- Click the eye beside a track to hide it, and click it again to show it. You can't hide the track you are editing. If you click a hidden track's name, it shows again.
+| | Control | Does |
+|---|---|---|
+| {icon:Plus} | **Add track** | Adds an empty track and starts editing it. |
+| | Click a name | Edits that track. |
+| | Double-click a name | Edits that track and flies the camera to its first point. |
+| | Drag a name | Changes the order. |
+| {icon:Eye} | **Hide** / **Show** | Hides or shows the track in the world. |
+| {icon:Anchor} | **Select track anchor** | See [Scenes and anchors](scenes.md). |
 
-The track you are editing is highlighted in the list. The anchor buttons beside each track are covered in Scenes and anchors.
+Right-click a name to **Rename**, **Duplicate**, **Add to playlist** or **Delete** the track.
 
-Right-click a track's name for more:
+## The track row
 
-- **Rename** turns the name into a text box. Type the new name and press `Enter`, or press `Escape` to keep the old one. A track can't have an empty name.
-- **Duplicate** makes a copy of the track, puts it below the original, and starts editing the copy. The copy has "copy" at the end of its name.
-- **Add to playlist** adds the track to the end of the playlist. The Playlist page explains the rest.
-- **Delete** removes the track, and takes it out of the playlist too. A scene always keeps at least one track, so this is greyed out when there is only one.
+The row above the points holds the track's settings:
 
-## Other tracks in the game view
-
-In Edit and View modes, every track that isn't hidden is drawn in the game world. Each point shows as a small wireframe camera with its number, and a line joins the points in order.
-
-The track you are editing is drawn in bright colours. The other tracks are drawn darker, in grey. In Edit mode, click one of their points to start editing that track, with that point selected.
-
-## Clear track
-
-The trash button at the right end of the track row is **Clear track**. It removes every point from the track you are editing, and puts its settings back to how a new track starts. The track keeps its name. If you clear a track by mistake, press `Ctrl + Z` to undo it.
+| | Button | See |
+|---|---|---|
+| {icon:Crosshairs} | **Select aim** | [Aim](aim.md) |
+| {icon:ArrowRight} | **Select direction** | [Playing a track](tracks-playing.md) |
+| {icon:Repeat} | **Loop** | [Playing a track](tracks-playing.md) |
+| {icon:TachometerAlt} {icon:Stopwatch} | **Track speed**, **Track duration** | [Timing](timing.md) |
+| {icon:Plus} | **Add point** | [Adding points](tracks-adding-points.md) |
+| {icon:Trash} | **Clear track** | Removes every point and resets the track's settings. |
