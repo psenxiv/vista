@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Xunit;
 
@@ -11,6 +12,13 @@ internal static class Fixtures
     /// <summary>A control point at the given position, aim and field of view.</summary>
     internal static ControlPoint Point(float x, float y = 0f, float z = 0f, float yaw = 0f, float pitch = 0f, float fov = 1f, float roll = 0f)
         => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
+
+    /// <summary>The demo scene the plugin ships, as the test project copies it.</summary>
+    internal static string DemoSceneJson()
+        => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Demo", "Demo - Limsa.json"));
+
+    /// <summary>The shipped demo scene, read.</summary>
+    internal static Scene DemoScene() => SceneJson.Read(DemoSceneJson());
 
     // Points at 0,10,20 at 2 yalms per second: keys at times 0, 5, 10.
     internal static Track Build3PointTrack()

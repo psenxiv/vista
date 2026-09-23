@@ -393,6 +393,33 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void LookingAheadHoldsStillThroughAHoldUntilTheSpotAheadMovesOn()
+    {
+        // Point 2 holds for 2 s with the default 0.5 s look ahead, so the spot ahead sits on it from arriving until 1.5 s later.
+        var track = TrackEditing.SetHold(Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent), 1, 2f);
+        var evaluator = new TrackEvaluator(track);
+        var arrive = evaluator.PointSeconds(1);
+
+        Along(Facing(evaluator, arrive), Facing(evaluator, arrive + 1.4), 1e-5f);
+    }
+
+    [Fact]
+    public void LookingAheadSettlesIntoTheDemosLastPointWithoutAStep()
+    {
+        // East Hawker eases into its last point turning about 1.5 deg/s, 0.025° a frame at 60 fps. Snapping to the exact
+        // tangent 0.1 yalm out stepped 0.12° in one frame; 0.05° allows the steady turn twice over and catches the step.
+        var track = DemoScene().Tracks.Single(t => t.Name == "East Hawker fly through");
+        var evaluator = new TrackEvaluator(track);
+        var end = evaluator.PointSeconds(track.Points.Count - 1);
+
+        for (var t = end - 1.5; t < end + 0.5; t += 1.0 / 60.0)
+        {
+            // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
+            Assert.InRange(Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + (1.0 / 60.0))), 0f, 0.05f * Deg);
+        }
+    }
+
+    [Fact]
     public void RecordedAimTurnsAtOneRateThroughAPointBetweenLegsOfDifferentTimes()
     {
         // Legs of 10 and 5 yalms at 5 a second take 2 s and 1 s; yaw 0, 1, 3 gives (1/2·1 + 2/1·2) / 3 = 1.5 rad/s at the middle.
