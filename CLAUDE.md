@@ -53,7 +53,8 @@ All three target .NET 10, because Dalamud 15.0.3.5 is built against net10.0.
 **Derive expected values. Never compute one by calling the code under test.**
 `Assert.Equal(PlaybackClock.ShotTime(d, 10, 5), playback.ShotTime)` asserts
 `f(x) == f(x)`. Work the number out from the maths or the documented semantics,
-write it as a literal, and put the derivation in a comment. If you cannot
+write it as a literal, and put the derivation in a comment. That comment is the "something a
+reader cannot infer" the Comments section allows, not licence to comment freely. If you cannot
 derive it, leave the assertion alone and say so.
 
 Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is a
