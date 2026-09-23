@@ -36,6 +36,8 @@ Write the way a patient friend would explain it sitting next to them, briefly.
 - **How it works inside:** class names, file names, maths, data formats.
 - **History and plans:** what it used to do, phase numbers, versions, features that don't exist
   yet.
+- **Gaps that only exist until a feature lands**, such as "Vista doesn't save scenes". Describe
+  what Vista does, not what it can't do yet.
 
 ## Lengths
 
