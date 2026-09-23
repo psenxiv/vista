@@ -185,7 +185,7 @@ public class SessionSceneTests
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
 
-        Assert.Null(state.MoveTrack(1, 0));
+        Assert.Null(state.MoveTracks([second], second, state.Scene.Tracks[0].Id));
         Assert.Equal(second, state.Scene.Tracks[0].Id);
         Assert.True(state.Undo());
         Assert.Equal(second, state.Scene.Tracks[1].Id);
@@ -274,7 +274,7 @@ public class SessionSceneTests
         Assert.Equal(refused, state.RenameTrack(first, "Crane"));
         Assert.Equal(refused, state.DuplicateTrack(first));
         Assert.Equal(refused, state.DeleteTrack(first));
-        Assert.Equal(refused, state.MoveTrack(0, 1));
+        Assert.Equal(refused, state.MoveTracks([first], first, second));
         Assert.Equal(refused, state.SetTrackHidden(second, true));
 
         Assert.Equal(2, state.Scene.Tracks.Count);

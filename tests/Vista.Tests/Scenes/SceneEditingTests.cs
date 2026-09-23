@@ -142,14 +142,14 @@ public class SceneEditingTests
     }
 
     [Fact]
-    public void MoveReordersTheTracks()
+    public void ReorderPutsTheTracksInTheOrderGiven()
     {
         var scene = Three();
-        var moved = SceneEditing.Move(scene, 0, 2);
+        var moved = SceneEditing.Reorder(scene, [1, 2, 0]);
 
         Assert.Equal(new[] { scene.Tracks[1].Id, scene.Tracks[2].Id, scene.Tracks[0].Id }, moved.Tracks.Select(t => t.Id));
-        Assert.Same(scene, SceneEditing.Move(scene, 1, 1));
-        Assert.Throws<ArgumentException>(() => SceneEditing.Move(scene, 0, 3));
+        Assert.Same(scene, SceneEditing.Reorder(scene, [0, 1, 2]));
+        Assert.Throws<ArgumentException>(() => SceneEditing.Reorder(scene, [0, 1, 3]));
     }
 
     [Fact]

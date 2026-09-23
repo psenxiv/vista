@@ -43,17 +43,17 @@ public class PlaylistEditingTests
     }
 
     [Fact]
-    public void RemoveAndMoveChangeTheEntries()
+    public void RemoveAndReorderChangeTheEntries()
     {
         var scene = TwoTracks();
         var (a, first) = PlaylistEditing.Add(scene, scene.Tracks[0].Id);
         var (b, second) = PlaylistEditing.Add(a, scene.Tracks[1].Id);
 
-        Assert.Equal(new[] { second, first }, PlaylistEditing.Move(b, 0, 1).Playlist.Select(e => e.Id));
-        Assert.Same(b, PlaylistEditing.Move(b, 1, 1));
+        Assert.Equal(new[] { second, first }, PlaylistEditing.Reorder(b, [1, 0]).Playlist.Select(e => e.Id));
+        Assert.Same(b, PlaylistEditing.Reorder(b, [0, 1]));
         Assert.Equal(new[] { second }, PlaylistEditing.Remove(b, first).Playlist.Select(e => e.Id));
         Assert.Throws<ArgumentException>(() => PlaylistEditing.Remove(b, Guid.NewGuid()));
-        Assert.Throws<ArgumentException>(() => PlaylistEditing.Move(b, 0, 2));
+        Assert.Throws<ArgumentException>(() => PlaylistEditing.Reorder(b, [0, 0]));
     }
 
     [Fact]

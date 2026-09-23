@@ -36,7 +36,7 @@ public class SessionPlaylistTests
         Assert.Null(state.AddToPlaylist(Second(state), 0));
         var entry = state.Scene.Playlist[1].Id;
         Assert.Null(state.SetEntryLoops(entry, 2));
-        Assert.Null(state.MovePlaylistEntry(1, 0));
+        Assert.Null(state.MoveEntries([entry], entry, state.Scene.Playlist[0].Id));
         Assert.Null(state.RemoveFromPlaylist(entry));
 
         Assert.Single(state.Scene.Playlist);

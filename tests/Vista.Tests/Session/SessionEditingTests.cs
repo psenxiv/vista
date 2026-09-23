@@ -201,7 +201,7 @@ public class SessionEditingTests
         state.Select(selected);
         var point = state.Track.Points[selected];
 
-        Assert.Null(state.MovePoint(from, to));
+        Assert.Null(state.MovePoints([from], from, to));
         Assert.Equal(expected, state.Selected);
         Assert.Same(point, state.Track.Points[expected]);
     }
@@ -279,7 +279,7 @@ public class SessionEditingTests
     public void AChangeThatChangesNothingRecordsNothing()
     {
         var state = Editing();
-        state.MovePoint(1, 1);
+        state.MovePoints([1], 1, 1);
 
         Assert.True(state.Undo());
         Assert.Equal(2, state.Track.Points.Count);

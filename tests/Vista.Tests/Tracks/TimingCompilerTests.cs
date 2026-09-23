@@ -283,7 +283,7 @@ public class TimingCompilerTests
     public void ReorderKeepsLegSpeedsInTheirSlotsAndCarriesHolds()
     {
         var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Three(), 1, 1f), 2, 3f);
-        track = TrackEditing.Move(track, 2, 0);
+        track = TrackEditing.Reorder(track, [2, 0, 1]);
         var evaluator = new TrackEvaluator(track);
 
         Assert.Equal(1f, TrackEditing.LegSpeed(track, 1));

@@ -451,7 +451,7 @@ public class TrackEditingTests
         track = TrackEditing.SetHold(track, 2, 1f);
         var moved = track.Points[2];
 
-        var result = TrackEditing.Move(track, 2, 0);
+        var result = TrackEditing.Reorder(track, [2, 0, 1]);
 
         Assert.Same(moved, result.Points[0]);
         Assert.Same(track.Points[0], result.Points[1]);
@@ -466,7 +466,7 @@ public class TrackEditingTests
     public void MovingAPointToWhereItIsChangesNothing()
     {
         var track = Build3PointTrack();
-        Assert.Same(track, TrackEditing.Move(track, 1, 1));
+        Assert.Same(track, TrackEditing.Reorder(track, [0, 1, 2]));
     }
 
     [Fact]
@@ -495,7 +495,6 @@ public class TrackEditingTests
         var track = Build3PointTrack();
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.InsertAfter(track, 3, Point(0f, 0f, 0f)));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(track, -1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Move(track, 0, 3));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Replace(track, 3, Point(0f, 0f, 0f)));
     }
 
@@ -562,7 +561,7 @@ public class TrackEditingTests
     {
         var track = LegEasing.Set(Build3PointTrack(), 1, Easing.EaseOut);
         track = TrackEditing.SetHold(track, 2, 3f);
-        track = TrackEditing.Move(track, 2, 0);
+        track = TrackEditing.Reorder(track, [2, 0, 1]);
 
         Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 1));
         Assert.Equal(new Vector3(20f, 0f, 0f), track.Points[0].Position);
