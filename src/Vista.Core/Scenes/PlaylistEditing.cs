@@ -1,6 +1,8 @@
+using Vista.Core.Editing;
+
 namespace Vista.Core.Scenes;
 
-/// <summary>Edits a scene's playlist: add, remove, move and loop counts, and what Live can play.</summary>
+/// <summary>Edits a scene's playlist: add, remove, reorder and loop counts, and what Live can play.</summary>
 public static class PlaylistEditing
 {
     /// <summary>The most times an entry can play its track.</summary>
@@ -25,17 +27,11 @@ public static class PlaylistEditing
         return scene with { Playlist = entries };
     }
 
-    /// <summary>Moves the entry at <paramref name="from"/> to <paramref name="to"/>.</summary>
-    public static Scene Move(Scene scene, int from, int to)
+    /// <summary>Puts the entries in <paramref name="order"/> (old indices).</summary>
+    public static Scene Reorder(Scene scene, IReadOnlyList<int> order)
     {
-        if (from < 0 || from >= scene.Playlist.Count || to < 0 || to >= scene.Playlist.Count)
-            throw new ArgumentException("There is no such playlist entry to move.");
-        if (from == to) return scene;
-        var entries = scene.Playlist.ToList();
-        var entry = entries[from];
-        entries.RemoveAt(from);
-        entries.Insert(to, entry);
-        return scene with { Playlist = entries };
+        var entries = BlockMove.Apply(scene.Playlist, order);
+        return entries.SequenceEqual(scene.Playlist) ? scene : scene with { Playlist = entries };
     }
 
     /// <summary>Sets how many times an entry plays, 1 to <see cref="MaxLoops"/>, or null to follow its track.</summary>

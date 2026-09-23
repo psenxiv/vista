@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 
 namespace Vista.Core.Tracks;
 
@@ -169,20 +170,15 @@ public static class TrackEditing
         return track with { Points = points, Timing = timing };
     }
 
-    /// <summary>Moves point <paramref name="from"/> to position <paramref name="to"/>; holds travel with their point, leg speeds and easing stay in their slots.</summary>
-    public static Track Move(Track track, int from, int to)
+    /// <summary>Puts the points in <paramref name="order"/> (old indices); holds travel with their point, leg speeds and easing stay in their slots.</summary>
+    public static Track Reorder(Track track, IReadOnlyList<int> order)
     {
-        ValidatePointIndex(track, from, "move");
-        ValidatePointIndex(track, to, "move");
-        if (from == to) return track;
-
-        var order = Enumerable.Range(0, track.Points.Count).ToList();
-        order.RemoveAt(from);
-        order.Insert(to, from);
+        var points = BlockMove.Apply(track.Points, order);
+        if (points.SequenceEqual(track.Points)) return track;
 
         var timing = order.Select((moved, slot) => track.Timing[slot] with { Hold = track.Timing[moved].Hold }).ToList();
         timing[0] = timing[0] with { LegSpeed = null };
-        return track with { Points = order.Select(i => track.Points[i]).ToList(), Timing = timing };
+        return track with { Points = points, Timing = timing };
     }
 
     /// <summary>Replaces point <paramref name="index"/>, keeping its timing.</summary>

@@ -185,8 +185,11 @@ internal sealed unsafe class PlaylistPanel
         if (!editing || !ImGui.BeginDragDropTarget()) return;
 
         var entry = ImGui.AcceptDragDropPayload(EntryPayload);
-        if (!entry.IsNull && *(int*)entry.Handle->Data is var from && from != index)
-            Report(session.MovePlaylistEntry(from, Math.Min(index, scene.Playlist.Count - 1)));
+        if (!entry.IsNull && *(int*)entry.Handle->Data is var from && from != index && from < scene.Playlist.Count)
+        {
+            var grabbed = scene.Playlist[from].Id;
+            Report(session.MoveEntries([grabbed], grabbed, index < scene.Playlist.Count ? scene.Playlist[index].Id : null));
+        }
 
         var track = ImGui.AcceptDragDropPayload(TrackPayload);
         if (!track.IsNull && *(int*)track.Handle->Data is var t && t >= 0 && t < scene.Tracks.Count)

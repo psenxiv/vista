@@ -1,8 +1,9 @@
+using Vista.Core.Editing;
 using Vista.Core.Tracks;
 
 namespace Vista.Core.Scenes;
 
-/// <summary>Edits a scene's tracks: add, rename, duplicate, delete, move and hide.</summary>
+/// <summary>Edits a scene's tracks: add, rename, duplicate, delete, reorder and hide.</summary>
 public static class SceneEditing
 {
     /// <summary>A scene holding one empty track, "Track 1".</summary>
@@ -68,17 +69,11 @@ public static class SceneEditing
         return (scene with { Tracks = tracks, Hidden = hidden, Playlist = scene.Playlist.Where(e => e.TrackId != id).ToArray() }, tracks[Math.Min(index, tracks.Count - 1)].Id);
     }
 
-    /// <summary>Moves the track at <paramref name="from"/> to <paramref name="to"/>.</summary>
-    public static Scene Move(Scene scene, int from, int to)
+    /// <summary>Puts the tracks in <paramref name="order"/> (old indices).</summary>
+    public static Scene Reorder(Scene scene, IReadOnlyList<int> order)
     {
-        if (from < 0 || from >= scene.Tracks.Count || to < 0 || to >= scene.Tracks.Count)
-            throw new ArgumentException("There is no such track to move.");
-        if (from == to) return scene;
-        var tracks = scene.Tracks.ToList();
-        var track = tracks[from];
-        tracks.RemoveAt(from);
-        tracks.Insert(to, track);
-        return scene with { Tracks = tracks };
+        var tracks = BlockMove.Apply(scene.Tracks, order);
+        return tracks.SequenceEqual(scene.Tracks) ? scene : scene with { Tracks = tracks };
     }
 
     /// <summary>Hides or shows track <paramref name="id"/>.</summary>

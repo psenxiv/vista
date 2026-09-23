@@ -285,7 +285,8 @@ internal sealed unsafe class HierarchyPanel
         if (editing && ImGui.BeginDragDropTarget())
         {
             var payload = ImGui.AcceptDragDropPayload(TrackPayload);
-            if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index) Report(session.MoveTrack(from, index));
+            if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index && from < scene.Tracks.Count)
+                Report(session.MoveTracks([scene.Tracks[from].Id], scene.Tracks[from].Id, track.Id));
             ImGui.EndDragDropTarget();
         }
 

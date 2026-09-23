@@ -616,7 +616,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         if (!editing || !ImGui.BeginDragDropTarget()) return;
         var payload = ImGui.AcceptDragDropPayload(PointPayload);
-        if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index) Report(session.MovePoint(from, index));
+        if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index) Report(session.MovePoints([from], from, index));
         ImGui.EndDragDropTarget();
     }
 

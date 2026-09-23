@@ -66,8 +66,8 @@ internal sealed class CameraSession
     /// <summary>Deletes a track. Returns why it was refused, or null.</summary>
     public string? DeleteTrack(Guid id) => state.DeleteTrack(id);
 
-    /// <summary>Moves a track in the Hierarchy order. Returns why it was refused, or null.</summary>
-    public string? MoveTrack(int from, int to) => state.MoveTrack(from, to);
+    /// <summary>Moves tracks as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
+    public string? MoveTracks(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target) => state.MoveTracks(ids, grabbed, target);
 
     /// <summary>Hides or shows a track. Returns why it was refused, or null.</summary>
     public string? SetTrackHidden(Guid id, bool hidden) => state.SetTrackHidden(id, hidden);
@@ -78,8 +78,8 @@ internal sealed class CameraSession
     /// <summary>Removes a playlist entry. Returns why it was refused, or null.</summary>
     public string? RemoveFromPlaylist(Guid entryId) => state.RemoveFromPlaylist(entryId);
 
-    /// <summary>Moves a playlist entry. Returns why it was refused, or null.</summary>
-    public string? MovePlaylistEntry(int from, int to) => state.MovePlaylistEntry(from, to);
+    /// <summary>Moves playlist entries as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
+    public string? MoveEntries(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target) => state.MoveEntries(ids, grabbed, target);
 
     /// <summary>Sets an entry's loop count, or null to follow its track. Returns why it was refused, or null.</summary>
     public string? SetEntryLoops(Guid entryId, int? loops) => state.SetEntryLoops(entryId, loops);
@@ -431,8 +431,8 @@ internal sealed class CameraSession
     /// <summary>Deletes point <paramref name="index"/>, keeping any other selection. Returns why it was refused, or null.</summary>
     public string? DeletePoint(int index) => state.DeletePoint(index);
 
-    /// <summary>Moves a point in the order. Returns why it was refused, or null.</summary>
-    public string? MovePoint(int from, int to) => state.MovePoint(from, to);
+    /// <summary>Moves points as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
+    public string? MovePoints(IReadOnlyCollection<int> points, int grabbed, int? target) => state.MovePoints(points, grabbed, target);
 
     /// <summary>Starts a live edit that previews on the track and ends as one undo step.</summary>
     public void BeginLiveEdit() => state.BeginLiveEdit();

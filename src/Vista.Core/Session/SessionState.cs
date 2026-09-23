@@ -365,11 +365,16 @@ public sealed class SessionState
         return Apply(t => TrackEditing.Delete(t, index), _ => selected is { } s && s != index ? (s > index ? s - 1 : s) : null);
     }
 
-    /// <summary>Moves a point in the order; the selection stays on the same point.</summary>
-    public string? MovePoint(int from, int to)
+    /// <summary>Moves points <paramref name="points"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null; the selection stays on the same points.</summary>
+    public string? MovePoints(IReadOnlyCollection<int> points, int grabbed, int? target)
     {
+        int[]? order;
+        try { order = BlockMove.Order(Local.Points.Count, points, grabbed, target); }
+        catch (ArgumentException ex) { return ex.Message; }
+        if (order is null) return null;
+
         var selected = Selected;
-        return Apply(t => TrackEditing.Move(t, from, to), _ => selected is { } s ? Follow(s, from, to) : null);
+        return Apply(t => TrackEditing.Reorder(t, order), _ => selected is { } s ? BlockMove.NewIndex(order, s) : null);
     }
 
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
@@ -489,8 +494,14 @@ public sealed class SessionState
             return (result, id == EditedTrackId ? next : EditedTrackId);
         });
 
-    /// <summary>Moves a track in the Hierarchy order. Returns why it was refused, or null.</summary>
-    public string? MoveTrack(int from, int to) => CommitScene(scene => (SceneEditing.Move(scene, from, to), EditedTrackId));
+    /// <summary>Moves tracks <paramref name="ids"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
+    public string? MoveTracks(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target)
+        => CommitScene(scene =>
+        {
+            var order = BlockMove.Order(scene.Tracks.Count, ids.Select(id => Require(SceneEditing.IndexOf(scene, id))).ToArray(),
+                Require(SceneEditing.IndexOf(scene, grabbed)), target is { } t ? Require(SceneEditing.IndexOf(scene, t)) : null);
+            return (order is null ? scene : SceneEditing.Reorder(scene, order), EditedTrackId);
+        });
 
     /// <summary>Hides or shows track <paramref name="id"/>; the edited track is always shown. Returns why it was refused, or null.</summary>
     public string? SetTrackHidden(Guid id, bool hidden)
@@ -505,8 +516,17 @@ public sealed class SessionState
     /// <summary>Removes a playlist entry. Returns why it was refused, or null.</summary>
     public string? RemoveFromPlaylist(Guid entryId) => CommitScene(scene => (PlaylistEditing.Remove(scene, entryId), EditedTrackId));
 
-    /// <summary>Moves a playlist entry. Returns why it was refused, or null.</summary>
-    public string? MovePlaylistEntry(int from, int to) => CommitScene(scene => (PlaylistEditing.Move(scene, from, to), EditedTrackId));
+    /// <summary>Moves playlist entries <paramref name="ids"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
+    public string? MoveEntries(IReadOnlyCollection<Guid> ids, Guid grabbed, Guid? target)
+        => CommitScene(scene =>
+        {
+            var order = BlockMove.Order(scene.Playlist.Count, ids.Select(id => Require(PlaylistEditing.IndexOf(scene, id))).ToArray(),
+                Require(PlaylistEditing.IndexOf(scene, grabbed)), target is { } t ? Require(PlaylistEditing.IndexOf(scene, t)) : null);
+            return (order is null ? scene : PlaylistEditing.Reorder(scene, order), EditedTrackId);
+        });
+
+    /// <summary>An index found by an IndexOf, refusing −1.</summary>
+    private static int Require(int index) => index >= 0 ? index : throw new ArgumentException("There is no such row.");
 
     /// <summary>Sets how many times an entry plays, or null to follow its track. Returns why it was refused, or null.</summary>
     public string? SetEntryLoops(Guid entryId, int? loops) => CommitScene(scene => (PlaylistEditing.SetLoops(scene, entryId, loops), EditedTrackId));
@@ -882,14 +902,6 @@ public sealed class SessionState
     private string? SelectionRefusal()
         => Mode != CameraMode.Editing ? "The track can only change while editing."
          : Selected is null ? "Select a point first." : null;
-
-    private static int Follow(int selected, int from, int to)
-    {
-        if (selected == from) return to;
-        if (from < selected && selected <= to) return selected - 1;
-        if (to <= selected && selected < from) return selected + 1;
-        return selected;
-    }
 
     /// <summary>The evaluator for the edited track, rebuilt when the track changes.</summary>
     public TrackEvaluator Evaluator
