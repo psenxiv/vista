@@ -1,3 +1,4 @@
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
@@ -281,6 +282,92 @@ public class SessionStateTests
         Assert.Equal(CameraMode.Off, editing.Mode);
         Assert.False(editing.LocksInput);
         Assert.Throws<ArgumentOutOfRangeException>(() => editing.Release(CameraMode.Live));
+    }
+
+    // Two tracks; the first has points at x = 0, 10, 20 at 2 yalms per second, a 10 s track.
+    private static Scene Loaded() => SceneEditing.Add(new Scene([Build3PointTrack()], new HashSet<Guid>(), [])).Scene;
+
+    [Fact]
+    public void LoadingASceneEditsItsFirstTrackAndStartsAfresh()
+    {
+        var state = EditingWithTrack();
+        state.AddTrack();
+        state.AddToEnd(Point(5f));
+        state.Select(0);
+        state.ScrubTo(1.0);
+        var loaded = Loaded();
+
+        Assert.Null(state.LoadScene(loaded));
+
+        Assert.Same(loaded, state.Scene);
+        Assert.Equal(loaded.Tracks[0].Id, state.EditedTrackId);
+        Assert.Equal(CameraMode.Editing, state.Mode);
+        Assert.Null(state.Selected);
+        Assert.Null(state.SelectedKey);
+        Assert.Equal(0.0, state.ScrubHead);
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void LoadingASceneLeavesOffInOff()
+    {
+        var state = new SessionState();
+        var loaded = Loaded();
+
+        Assert.Null(state.LoadScene(loaded));
+
+        Assert.Equal(CameraMode.Off, state.Mode);
+        Assert.Same(loaded, state.Scene);
+    }
+
+    [Fact]
+    public void LoadingASceneIsRefusedWhileLive()
+    {
+        var state = Live();
+        var before = state.Scene;
+
+        Assert.Equal("A scene can't be loaded while Live.", state.LoadScene(Loaded()));
+        Assert.Same(before, state.Scene);
+    }
+
+    [Fact]
+    public void LoadingASceneStopsAPreview()
+    {
+        var state = EditingWithTrack();
+        state.Play();
+
+        state.LoadScene(Loaded());
+
+        Assert.False(state.Previewing);
+    }
+
+    [Fact]
+    public void LoadingASceneDropsALiveEditWithoutRecordingIt()
+    {
+        var state = EditingWithTrack();
+        state.BeginLiveEdit();
+        state.PreviewPoint(1, Point(20f));
+        var loaded = Loaded();
+
+        state.LoadScene(loaded);
+        state.EndLiveEdit();
+
+        Assert.Same(loaded, state.Scene);
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void LoadingASceneShowsItsFirstTrackIfHidden()
+    {
+        var scene = Loaded();
+        var first = scene.Tracks[0].Id;
+        var second = scene.Tracks[1].Id;
+
+        var state = new SessionState();
+        state.LoadScene(SceneEditing.SetHidden(SceneEditing.SetHidden(scene, first, true), second, true));
+
+        Assert.Equal(new HashSet<Guid> { second }, state.Scene.Hidden);
+        Assert.Same(scene.Tracks, state.Scene.Tracks);
     }
 
     // IsPlaying is Previewing || (Live && !IsPaused && !IsFinished). Every expectation below is

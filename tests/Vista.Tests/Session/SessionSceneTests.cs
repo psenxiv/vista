@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -298,5 +299,51 @@ public class SessionSceneTests
         state.Release();
         Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
         Assert.Equal(first, state.PlayingEntry!.TrackId);
+    }
+
+    // "Crane": one point at local (2, 0, 0), its anchor facing yaw π/2.
+    private static Preset Crane() => new(TrackEditing.Append(TrackEditing.Empty(name: "Crane"), Point(2f)), MathF.PI / 2f);
+
+    [Fact]
+    public void AddingAPresetPutsItOnTheGroundUnderTheCameraAndEditsIt()
+    {
+        var state = new SessionState(_ => 1f);
+        state.Edit();
+
+        Assert.Null(state.AddPreset(Crane(), new Vector3(10f, 5f, 20f)));
+
+        Assert.Equal(2, state.Scene.Tracks.Count);
+        Assert.Equal(state.Scene.Tracks[1].Id, state.EditedTrackId);
+        Assert.Equal("Crane", state.Track.Name);
+        // Ground (10, 1, 20); Turn((2, 0, 0), π/2) = (0, 0, −2).
+        Near(new Vector3(10f, 1f, 18f), state.Track.Points[0].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void WithNoGroundAPresetGoesAtTheCamerasHeight()
+    {
+        var state = new SessionState();
+        state.Edit();
+
+        state.AddPreset(Crane(), new Vector3(10f, 5f, 20f));
+
+        // Anchor at the camera (10, 5, 20); Turn((2, 0, 0), π/2) = (0, 0, −2).
+        Near(new Vector3(10f, 5f, 18f), state.Track.Points[0].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void AddingAPresetIsOneUndoStep()
+    {
+        var state = new SessionState();
+        state.Edit();
+        var first = First(state);
+        state.AddPreset(Crane(), new Vector3(10f, 5f, 20f));
+
+        Assert.True(state.Undo());
+
+        Assert.Single(state.Scene.Tracks);
+        Assert.False(state.Scene.AnchorPlaced);
+        Assert.Equal(first, state.EditedTrackId);
+        Assert.False(state.CanUndo);
     }
 }
