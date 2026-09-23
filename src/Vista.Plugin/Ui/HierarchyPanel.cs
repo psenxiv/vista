@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Plugin.Session;
@@ -10,12 +11,10 @@ using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The scene selector and the scene's tracks: pick one to edit, show or hide, rename, duplicate, delete, reorder, and save or add presets.</summary>
-internal sealed unsafe class HierarchyPanel
+internal sealed class HierarchyPanel
 {
     /// <summary>The compartment's width.</summary>
     public const float Width = 200f;
-
-    private const string TrackPayload = "VISTA_TRACK";
 
     private const string NamePopup = "Name###vista-name";
     private const string DeletePopup = "Delete###vista-delete";
@@ -71,7 +70,9 @@ internal sealed unsafe class HierarchyPanel
         ImGui.BeginDisabled(!editing);
         if (ImGui.BeginChild("tracks", new Vector2(0f, 0f)))
         {
-            for (var i = 0; i < scene.Tracks.Count; i++) DrawRow(scene, scene.Tracks[i], i, edited, editing);
+            var selected = session.SelectedTracks;
+            for (var i = 0; i < scene.Tracks.Count; i++) DrawRow(scene, scene.Tracks[i], i, edited, selected, editing);
+            DrawSpace(scene, editing);
         }
 
         ImGui.EndChild();
@@ -225,7 +226,7 @@ internal sealed unsafe class HierarchyPanel
     }
 
     /// <summary>The name, then the anchor button and the eye, shown on hover (a hidden track's eye always): click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
-    private void DrawRow(Scene scene, Track track, int index, Guid edited, bool editing)
+    private void DrawRow(Scene scene, Track track, int index, Guid edited, IReadOnlyList<Guid> selected, bool editing)
     {
         using var id = ImRaii.PushId(track.Id.ToString());
         var isEdited = track.Id == edited;
@@ -238,7 +239,7 @@ internal sealed unsafe class HierarchyPanel
 
         var rowStart = ImGui.GetCursorPosX();
         if (renaming == track.Id) DrawRename(track, nameWidth);
-        else DrawName(scene, track, index, isEdited, editing, nameWidth);
+        else DrawName(scene, track, index, isEdited, selected, editing, nameWidth);
         ImGui.SameLine();
         ImGui.SetCursorPosX(rowStart + nameWidth + ImGui.GetStyle().ItemSpacing.X);
 
@@ -268,44 +269,98 @@ internal sealed unsafe class HierarchyPanel
         => ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X + ((LastSlot() - IconButton.Width(icon)) * 0.5f));
 
     /// <summary>The name as a selectable spanning the row under its buttons, carrying the row's clicks, drag and drop, and context menu.</summary>
-    private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float nameWidth)
+    private void DrawName(Scene scene, Track track, int index, bool isEdited, IReadOnlyList<Guid> selected, bool editing, float nameWidth)
     {
-        if (ImGui.Selectable("##name", isEdited, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
-            Report(session.SwitchTrack(track.Id));
+        var picked = selected.Contains(track.Id);
+        var group = picked && selected.Count >= 2;
+        if (ImGui.Selectable("##name", picked, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
+            Report(session.ClickTrack(track.Id, DragRows.Click()));
         RowText.Draw(track.Name, nameWidth);
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
         {
-            ImGui.SetDragDropPayload(TrackPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
-            ImGui.TextUnformatted(track.Name);
+            DragRows.Carry(DragRows.Track, index, group, group ? $"{selected.Count} tracks" : track.Name);
             ImGui.EndDragDropSource();
         }
 
         if (editing && ImGui.BeginDragDropTarget())
         {
-            var payload = ImGui.AcceptDragDropPayload(TrackPayload);
-            if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index && from < scene.Tracks.Count)
-                Report(session.MoveTracks([scene.Tracks[from].Id], scene.Tracks[from].Id, track.Id));
+            if (DragRows.Accept(DragRows.Track) is { } tracks)
+            {
+                var moving = DragRows.Tracks(session, scene, tracks);
+                if (tracks.Grabbed < scene.Tracks.Count) Report(session.MoveTracks(moving, scene.Tracks[tracks.Grabbed].Id, track.Id));
+            }
+
+            // A track takes points from another track, unless it follows a character and so holds one.
+            if (!isEdited && track.Aim != AimMode.FollowTarget && DragRows.Accept(DragRows.Point, $"Add to {track.Name}") is { } points)
+                Report(session.MovePointsTo(DragRows.Points(session, points), track.Id));
             ImGui.EndDragDropTarget();
         }
 
-        if (editing && ImGui.BeginPopupContextItem("track-menu"))
+        if (!editing || !ImGui.BeginPopupContextItem("track-menu")) return;
+        if (group) DrawGroupMenu(scene, selected);
+        else DrawTrackMenu(scene, track);
+        ImGui.EndPopup();
+    }
+
+    /// <summary>One track's menu: rename, duplicate, add to the playlist, save as a preset or delete it.</summary>
+    private void DrawTrackMenu(Scene scene, Track track)
+    {
+        var ticked = false;
+        if (ImGui.MenuItem("Rename", string.Empty, ref ticked)) StartRename(track);
+        if (ImGui.MenuItem("Duplicate", string.Empty, ref ticked)) Report(session.DuplicateTrack(track.Id));
+        if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist([track.Id]));
+        if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, track.Points.Count > 0))
         {
-            var ticked = false;
-            if (ImGui.MenuItem("Rename", string.Empty, ref ticked)) StartRename(track);
-            if (ImGui.MenuItem("Duplicate", string.Empty, ref ticked)) Report(session.DuplicateTrack(track.Id));
-            if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist([track.Id]));
-            if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, track.Points.Count > 0))
+            presets = files.Presets();
+            presetTrack = track.Id;
+            AskName(Naming.SavePreset, track.Name);
+        }
+
+        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1)) Report(session.DeleteTracks([track.Id]));
+    }
+
+    /// <summary>The menu for several selected tracks: add them to the playlist, show, hide or delete them.</summary>
+    private void DrawGroupMenu(Scene scene, IReadOnlyList<Guid> selected)
+    {
+        var ticked = false;
+        var edited = session.EditedTrackId;
+        if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist(selected));
+        if (ImGui.MenuItem("Show", string.Empty, ref ticked, selected.Any(scene.Hidden.Contains))) Report(session.SetTracksHidden(selected, false));
+        if (ImGui.MenuItem("Hide", string.Empty, ref ticked, selected.Any(id => id != edited && !scene.Hidden.Contains(id)))) Report(session.SetTracksHidden(selected, true));
+        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, selected.Count < scene.Tracks.Count)) Report(session.DeleteTracks(selected));
+    }
+
+    /// <summary>The space under the tracks: at least a row tall, it takes dropped tracks at the end and dropped points as a new track, and a click there clears the selection.</summary>
+    private void DrawSpace(Scene scene, bool editing)
+    {
+        var height = MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight());
+        var top = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, height));
+        if (!editing) return;
+        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Select(null);
+
+        if (DragRows.Dragging(DragRows.Point))
+        {
+            // Where a new track would go, in the row just under the last track.
+            var at = top + new Vector2(ImGui.GetStyle().FramePadding.X * 2f, (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) * 0.5f);
+            var list = ImGui.GetWindowDrawList();
+            var colour = UiColours.Muted();
+            using (ImRaii.PushFont(UiBuilder.IconFont))
             {
-                presets = files.Presets();
-                presetTrack = track.Id;
-                AskName(Naming.SavePreset, track.Name);
+                list.AddText(at, colour, FontAwesomeIcon.Plus.ToIconString());
+                at.X += ImGui.CalcTextSize(FontAwesomeIcon.Plus.ToIconString()).X + ImGui.GetStyle().ItemInnerSpacing.X;
             }
 
-            if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1)) Report(session.DeleteTracks([track.Id]));
-            ImGui.EndPopup();
+            list.AddText(at, colour, "New track");
         }
+
+        if (!ImGui.BeginDragDropTarget()) return;
+        if (DragRows.Accept(DragRows.Track) is { } tracks && tracks.Grabbed < scene.Tracks.Count)
+            Report(session.MoveTracks(DragRows.Tracks(session, scene, tracks), scene.Tracks[tracks.Grabbed].Id, null));
+        if (DragRows.Accept(DragRows.Point, "New track") is { } points) Report(session.MovePointsTo(DragRows.Points(session, points), null));
+        ImGui.EndDragDropTarget();
     }
 
     /// <summary>The name as a text field; Enter or clicking away renames, Escape cancels.</summary>

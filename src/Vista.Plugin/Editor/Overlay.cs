@@ -30,8 +30,8 @@ internal sealed class Overlay
 
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
-    /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, its glyphs facing <paramref name="aimPoint"/> when given, and returns each number's absolute screen position, null when off screen.</summary>
-    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, int? selected, bool edited, Vector3? aimPoint = null)
+    /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, its <paramref name="selected"/> points highlighted and its glyphs facing <paramref name="aimPoint"/> when given, and returns each number's absolute screen position, null when off screen.</summary>
+    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, IReadOnlyCollection<int> selected, bool edited, Vector3? aimPoint = null)
     {
         if (!caches.TryGetValue(track.Id, out var cache)) caches[track.Id] = cache = new TrackCache();
         var palette = edited ? Palette.Edited : Palette.Other;
@@ -45,7 +45,7 @@ internal sealed class Overlay
             var (forward, roll, fov) = Pose(track, cache, i, aimPoint);
             var up = CameraOrientation.UpFor(Vector3.Zero, forward, roll);
             var glyph = CameraGlyph.Build(track.Points[i].Position, forward, up, fov, aspect, GlyphDepth);
-            DrawGlyph(list, view, glyph, i == selected, palette);
+            DrawGlyph(list, view, glyph, selected.Contains(i), palette);
             labels[i] = view.ToScreen(track.Points[i].Position);
         }
 
@@ -205,15 +205,15 @@ internal sealed class Overlay
             list.AddLine(view.Origin + s.Start, view.Origin + s.End, colour, thickness);
     }
 
-    private static void DrawLabels(ImDrawListPtr list, Vector2?[] labels, int? selected, Palette palette)
+    private static void DrawLabels(ImDrawListPtr list, Vector2?[] labels, IReadOnlyCollection<int> selected, Palette palette)
     {
         for (var i = 0; i < labels.Length; i++)
         {
             if (labels[i] is not { } at) continue;
 
-            var ring = i == selected ? EditorColours.Selected : palette.MarkerRing;
+            var picked = selected.Contains(i);
             list.AddCircleFilled(at, MarkerRadius, palette.Marker);
-            list.AddCircle(at, MarkerRadius, ring, 0, i == selected ? 3f : 1.5f);
+            list.AddCircle(at, MarkerRadius, picked ? EditorColours.Selected : palette.MarkerRing, 0, picked ? 3f : 1.5f);
 
             var label = (i + 1).ToString();
             var size = ImGui.CalcTextSize(label) * LabelScale;

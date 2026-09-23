@@ -13,9 +13,8 @@ using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
-internal sealed unsafe class TrackEditorWindow : Window
+internal sealed class TrackEditorWindow : Window
 {
-    private const string PointPayload = "VISTA_POINT";
 
     private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
 
@@ -473,17 +472,20 @@ internal sealed unsafe class TrackEditorWindow : Window
                 ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
 
-                for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, evaluator, i, editing);
+                var selected = session.SelectedPoints;
+                for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, evaluator, i, selected, editing);
                 ImGui.EndTable();
             }
+
+            DrawPointSpace(track, editing);
         }
 
         ImGui.EndChild();
     }
 
-    /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click and drags to reorder; the trash icon, shown on hover, deletes it.</summary>
+    /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click, drags to reorder or onto a track, and right-clicks for its menu; the trash icon, shown on hover, deletes it.</summary>
     /// <remarks><paramref name="track"/> and <paramref name="evaluator"/> are a snapshot taken once for the whole list: an earlier row's delete or reorder must not change what a later row reads.</remarks>
-    private void DrawPointRow(Track track, TrackEvaluator evaluator, int index, bool editing)
+    private void DrawPointRow(Track track, TrackEvaluator evaluator, int index, IReadOnlyList<int> selected, bool editing)
     {
         ImGui.TableNextRow();
         ImGui.BeginDisabled(!editing);
@@ -492,18 +494,24 @@ internal sealed unsafe class TrackEditorWindow : Window
         // The row's full height, cell padding included, so neighbouring rows' hover areas meet.
         var top = ImGui.GetCursorScreenPos().Y - CellPadding.Y;
         var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
-        if (ImGui.Selectable($"##row{index}", session.Selected == index, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.Select(index);
+        var picked = selected.Contains(index);
+        var group = picked && selected.Count >= 2;
+        if (ImGui.Selectable($"##row{index}", picked, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.ClickPoint(index, DragRows.Click());
         var rowHovered = editing && IconButton.RowHovered(
             new Vector2(ImGui.GetItemRectMin().X, top), new Vector2(ImGui.GetItemRectMax().X, top + ImGui.GetFrameHeight() + (CellPadding.Y * 2f)));
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
         if (editing && ImGui.BeginDragDropSource())
         {
-            SetPayload(index);
-            ImGui.TextUnformatted($"Point {index + 1}");
+            DragRows.Carry(DragRows.Point, index, group, group ? $"{selected.Count} points" : $"Point {index + 1}");
             ImGui.EndDragDropSource();
         }
 
         DropTarget(index, editing);
+        if (editing && ImGui.BeginPopupContextItem($"point-menu{index}"))
+        {
+            DrawPointMenu(group ? selected : [index]);
+            ImGui.EndPopup();
+        }
 
         ImGui.SameLine(0f, 0f);
         ImGui.AlignTextToFramePadding();
@@ -611,13 +619,46 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
     }
 
-    /// <summary>Moves the dragged point to <paramref name="index"/> when it is dropped on this item.</summary>
-    private void DropTarget(int index, bool editing)
+    /// <summary>Moves the dragged points to <paramref name="index"/>, or the end when null, when they are dropped on this item.</summary>
+    private void DropTarget(int? index, bool editing)
     {
         if (!editing || !ImGui.BeginDragDropTarget()) return;
-        var payload = ImGui.AcceptDragDropPayload(PointPayload);
-        if (!payload.IsNull && *(int*)payload.Handle->Data is var from && from != index) Report(session.MovePoints([from], from, index));
+        if (DragRows.Accept(DragRows.Point) is { } points) Report(session.MovePoints(DragRows.Points(session, points), points.Grabbed, index));
         ImGui.EndDragDropTarget();
+    }
+
+    /// <summary>The menu for points: move them to a new track or another one, or delete them.</summary>
+    private void DrawPointMenu(IReadOnlyList<int> points)
+    {
+        var ticked = false;
+        var scene = session.Scene;
+        if (ImGui.MenuItem("Move to new track", string.Empty, ref ticked)) Report(session.MovePointsTo(points, null));
+        if (ImGui.BeginMenu("Move to", scene.Tracks.Count > 1))
+        {
+            foreach (var other in scene.Tracks.Where(t => t.Id != session.EditedTrackId))
+            {
+                using var id = ImRaii.PushId(other.Id.ToString());
+                // A Follow Target track holds its one point.
+                if (ImGui.MenuItem(other.Name, string.Empty, ref ticked, other.Aim != AimMode.FollowTarget)) Report(session.MovePointsTo(points, other.Id));
+            }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.MenuItem("Delete", string.Empty, ref ticked))
+        {
+            fields.Clear();
+            Report(session.DeletePoints(points));
+        }
+    }
+
+    /// <summary>The space under the points: it takes dropped points at the end, and a click there clears the selection.</summary>
+    private void DrawPointSpace(Track track, bool editing)
+    {
+        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight())));
+        if (!editing || track.Points.Count == 0) return;
+        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Select(null);
+        DropTarget(null, editing);
     }
 
     /// <summary>Ends a scrub the scrub bar started, leaving the Timing window's alone.</summary>
@@ -627,8 +668,6 @@ internal sealed unsafe class TrackEditorWindow : Window
         scrubbing = false;
         session.FinishScrub();
     }
-
-    private static void SetPayload(int index) => ImGui.SetDragDropPayload(PointPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
 
     /// <summary>Moves the cursor so an item of <paramref name="width"/> ends at the right edge.</summary>
     private static void RightAlign(float width)

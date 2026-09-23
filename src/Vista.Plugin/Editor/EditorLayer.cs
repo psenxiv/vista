@@ -52,7 +52,7 @@ internal sealed class EditorLayer
         {
             if (other.Id == edited || scene.Hidden.Contains(other.Id)) continue;
             var otherWorld = session.Shown(other);
-            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, null, edited: false, session.AimPoint(otherWorld)));
+            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, [], edited: false, session.AimPoint(otherWorld)));
             if (session.TargetPoint(otherWorld) is { } otherTarget) overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
             if (other is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
@@ -63,7 +63,7 @@ internal sealed class EditorLayer
         var track = editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
             ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
             : session.Track;
-        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.Selected : null, edited: true, session.AimPoint(track)));
+        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.SelectedPoints : [], edited: true, session.AimPoint(track)));
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
@@ -103,9 +103,17 @@ internal sealed class EditorLayer
         ImGui.PopStyleVar();
     }
 
-    /// <summary>Selects a clicked point, anchor or Look At point, switching to its track first when it isn't the edited one; a click on empty space clears the selection.</summary>
+    /// <summary>Selects a clicked point, anchor or Look At point, switching to its track first when it isn't the edited one; a click on empty space clears the selection. With Ctrl or Shift, only the edited track's points respond.</summary>
     private void Apply(ClickOutcome outcome, IReadOnlyList<TrackMarker> markers)
     {
+        var click = PhysicalKeys.IsDown(VirtualKey.SHIFT) ? RowClick.Range : PhysicalKeys.IsDown(VirtualKey.CONTROL) ? RowClick.Toggle : RowClick.Plain;
+        if (click != RowClick.Plain)
+        {
+            if (outcome.Kind == ClickKind.Select && outcome.Index < markers.Count && markers[outcome.Index] is { Kind: MarkerKind.Point } point && point.Track == session.EditedTrackId)
+                session.ClickPoint(point.Point, click);
+            return;
+        }
+
         switch (outcome.Kind)
         {
             case ClickKind.Select when outcome.Index < markers.Count:
