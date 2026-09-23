@@ -579,9 +579,11 @@ public sealed class SessionState
         return null;
     }
 
-    /// <summary>During a live edit, drags key <paramref name="key"/> towards <paramref name="time"/> from the track as the edit began.</summary>
-    public string? PreviewKeyMove(int key, float time)
-        => PreviewFromStart((start, evaluator) => TimingEditing.MoveKey(start, evaluator, key, time));
+    /// <summary>During a live edit, drags key <paramref name="key"/> towards <paramref name="time"/> from the track as the edit began; <paramref name="ripple"/> carries every later key with it.</summary>
+    public string? PreviewKeyMove(int key, float time, bool ripple = false)
+        => PreviewFromStart((start, evaluator) => ripple
+            ? TimingEditing.RippleKey(start, evaluator, key, time)
+            : TimingEditing.MoveKey(start, evaluator, key, time));
 
     /// <summary>During a live edit, sets a handle to a slope in distance per second, both sides unless the key is broken.</summary>
     public string? PreviewHandle(int key, KeySide side, float distancePerSecond)

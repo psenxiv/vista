@@ -348,7 +348,7 @@ internal sealed class TimingWindow : Window
     {
         if (MarkerHitTest.Nearest(keyScreens, mouse, KeyHitRadius) is not { } key) return false;
         session.SelectKey(key);
-        if (keyScreens[key] is { } at) BeginDrag(new Drag(key, null, at, graph));
+        if (keyScreens[key] is { } at) BeginDrag(new Drag(key, null, at, graph, ImGui.GetIO().KeyCtrl));
         return true;
     }
 
@@ -430,7 +430,7 @@ internal sealed class TimingWindow : Window
         var mouse = ImGui.GetMousePos();
         var refusal = d.Side is { } side
             ? session.PreviewHandle(d.Key, side, d.Graph.SlopeFromHandle(d.KeyScreen, side, mouse))
-            : session.PreviewKeyMove(d.Key, DragTime(d.Graph, mouse.X));
+            : session.PreviewKeyMove(d.Key, DragTime(d.Graph, mouse.X), d.Ripple);
         d.Refused = refusal is not null;
     }
 
@@ -525,9 +525,12 @@ internal sealed class TimingWindow : Window
     }
 
     /// <summary>A key or handle being dragged, with the graph and key position from the frame it began.</summary>
-    private sealed class Drag(int key, KeySide? side, Vector2 keyScreen, TimingGraph graph)
+    private sealed class Drag(int key, KeySide? side, Vector2 keyScreen, TimingGraph graph, bool ripple = false)
     {
         public int Key { get; } = key;
+
+        /// <summary>Whether Ctrl was held when the drag began; sampling it per frame would change the edit mid-drag.</summary>
+        public bool Ripple { get; } = ripple;
 
         public KeySide? Side { get; } = side;
 

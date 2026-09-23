@@ -361,7 +361,7 @@ internal sealed class CameraSession
     public string? SetFollowLooks(bool looks) => state.SetFollowLooks(looks);
 
     /// <summary>During a live edit, drags a key towards a time. Returns why it was refused, or null.</summary>
-    public string? PreviewKeyMove(int key, float time) => state.PreviewKeyMove(key, time);
+    public string? PreviewKeyMove(int key, float time, bool ripple = false) => state.PreviewKeyMove(key, time, ripple);
 
     /// <summary>During a live edit, sets a handle's slope in distance per second. Returns why it was refused, or null.</summary>
     public string? PreviewHandle(int key, KeySide side, float distancePerSecond) => state.PreviewHandle(key, side, distancePerSecond);

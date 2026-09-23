@@ -89,6 +89,27 @@ public static class TimingEditing
     }
 
     /// <summary>The shortest and longest a leg of <paramref name="length"/> can take within the speed and leg ranges.</summary>
+    /// <summary>Drags key <paramref name="key"/> towards <paramref name="time"/>, carrying every later key with it; <paramref name="evaluator"/> is the track's.</summary>
+    public static Track RippleKey(Track track, TrackEvaluator evaluator, int key, float time)
+    {
+        var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
+        if (key == 0 || float.IsNaN(time)) return track;
+
+        var keys = evaluator.Keys;
+        if (role == KeyRole.HoldEnd)
+            return TrackEditing.SetHold(track, point, Math.Clamp(time - keys[key - 1].Time, TrackEditing.MinKeyGap, TrackEditing.MaxSeconds));
+
+        // Only this leg is re-sped. Key times are cumulative leg durations, so everything after
+        // it shifts by the same delta on its own, and the next leg keeps the duration it had.
+        var start = keys[key - 1].Time;
+        var length = evaluator.LegLength(point);
+        var (shortest, longest) = LegRange(length);
+
+        var target = Math.Clamp(time, start + shortest, start + longest);
+        if (target == keys[key].Time) return track;
+        return TrackEditing.SetLegSpeed(track, point, length / (target - start));
+    }
+
     private static (float Shortest, float Longest) LegRange(float length)
         => (TimingCompiler.LegDuration(length, TrackEditing.MaxSpeed), TimingCompiler.LegDuration(length, TrackEditing.MinSpeed));
 
