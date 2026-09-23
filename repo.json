@@ -3,8 +3,8 @@
     "Author": "psenxiv",
     "Name": "Vista",
     "InternalName": "Vista",
-    "AssemblyVersion": "0.5.0.0",
-    "TestingAssemblyVersion": "0.5.0.1",
+    "AssemblyVersion": "0.5.1.1",
+    "TestingAssemblyVersion": "0.5.1.1",
     "IsTestingExclusive": false,
     "Punchline": "Camera tracks for cinematic shots.",
     "Description": "Create smooth, cinematic camera paths in FFXIV, organise them into scenes, and play them back live.",
@@ -15,17 +15,17 @@
       "video",
       "events"
     ],
-    "Changelog": "- Scenes save as you work, and you can keep as many as you like. Vista asks for a save folder the first time you open it.\n- Save any track as a preset and add it to any scene.\n- A User Guide: click the ? at the top right of the Vista window.\n- Zoom and pan the timing graph.\n- Clearer menus, a welcome screen for testers, a new icon, and many small fixes.",
+    "Changelog": "- Fixed the camera shaking slightly while holding at the start or end of a Direction of travel track.\n- Number fields can now be dragged left or right to change them. Double-click to type.\n- The Camera window can move the camera along your view: choose Move (local), then drag Right, Up or Forward.\n- Move (local) now moves anchors along the way they face.\n- Fly speed no longer has a feather icon.",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "AcceptsFeedback": false,
     "RepoUrl": "https://github.com/psenxiv/vista",
     "IconUrl": "https://raw.githubusercontent.com/psenxiv/vista/main/images/icon.png",
-    "DownloadLinkInstall": "https://github.com/psenxiv/vista/releases/download/v0.5.0/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/psenxiv/vista/releases/download/v0.5.0/latest.zip",
-    "DownloadLinkTesting": "https://github.com/psenxiv/vista/releases/download/test-v0.5.0.1/latest.zip",
-    "LastUpdate": 1790160839,
+    "DownloadLinkInstall": "https://github.com/psenxiv/vista/releases/download/prod-v0.5.1.1/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/psenxiv/vista/releases/download/prod-v0.5.1.1/latest.zip",
+    "DownloadLinkTesting": "https://github.com/psenxiv/vista/releases/download/prod-v0.5.1.1/latest.zip",
+    "LastUpdate": 1790167338,
     "TestingDalamudApiLevel": 15,
-    "TestingChangelog": "- A test build, the same as 0.5.0, to try out testing builds."
+    "TestingChangelog": "- Fixed the camera shaking slightly while holding at the start or end of a Direction of travel track.\n- Number fields can now be dragged left or right to change them. Double-click to type.\n- The Camera window can move the camera along your view: choose Move (local), then drag Right, Up or Forward.\n- Move (local) now moves anchors along the way they face.\n- Fly speed no longer has a feather icon."
   }
 ]
