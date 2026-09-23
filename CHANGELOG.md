@@ -2,8 +2,8 @@
 
 ## 0.7.0.1
 
-- Recorded aim turns smoothly through each point, without a sudden change in how fast it turns.
-- Direction of travel looks ahead along the path, turning into corners before it reaches them. Set how far with Look ahead in the aim menu.
+- The camera turns, rolls and zooms smoothly through each point, without a sudden change in speed.
+- Direction of travel looks ahead along the path, turning into corners before it reaches them. Set how far with Look ahead in the aim menu. Saved tracks look ahead too; set it to 0 to face straight along the path.
 - Press G in Edit or View to colour the path by how fast the camera turns.
 
 ## 0.6.0.1

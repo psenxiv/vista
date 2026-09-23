@@ -1,6 +1,6 @@
 # Hotkeys
 
-These work in Edit mode, and `Space` and `Ctrl + Space` work in Live too.
+These work in Edit mode. `Space` and `Ctrl + Space` also work in Live, and `G` in View.
 
 | Key | Does |
 |---|---|
@@ -16,7 +16,7 @@ These work in Edit mode, and `Space` and `Ctrl + Space` work in Live too.
 | `Alt + Backtick` | Add a point after the selected one |
 | `Ctrl + Backtick` | Replace the selected point with the camera |
 | `R` | Switch the gizmo between move and rotate |
-| `G` | Colour the path by how fast the camera turns, in Edit and View |
+| `G` | Colour the path by how fast the camera turns |
 | `Alt` while dragging an anchor | Move the anchor alone, leaving its points in place |
 | `Ctrl` while dragging a timing key | Move every later key with it, lengthening or shortening the track |
 | `Ctrl` + click | Add to the selection, or remove from it |
