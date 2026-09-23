@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0.1
+
+- Recorded aim turns smoothly through each point, without a sudden change in how fast it turns.
+- Direction of travel looks ahead along the path, turning into corners before it reaches them. Set how far with Look ahead in the aim menu.
+- Press G in Edit or View to colour the path by how fast the camera turns.
+
 ## 0.6.0.1
 
 - Select several tracks, points or playlist entries with Ctrl + click and Shift + click, then drag them together or right-click for a menu.
