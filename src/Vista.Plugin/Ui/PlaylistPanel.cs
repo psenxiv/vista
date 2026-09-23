@@ -104,8 +104,9 @@ internal sealed unsafe class PlaylistPanel
         var warning = lost ? IconButton.WarningWidth() + gap : 0f;
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f) - warning);
         var name = track.Name;
-        ImGui.Selectable("##entry", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(nameWidth, ImGui.GetFrameHeight()));
-        RowText.Draw($"{index + 1}  {name}");
+        var rowStart = ImGui.GetCursorPosX();
+        ImGui.Selectable("##entry", entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight()));
+        RowText.Draw($"{index + 1}  {name}", nameWidth);
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);
         var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
@@ -119,13 +120,15 @@ internal sealed unsafe class PlaylistPanel
 
         DropTarget(scene, index, editing);
 
+        // The selectable spans the row, so the row's other items go back over it.
+        ImGui.SameLine();
+        ImGui.SetCursorPosX(rowStart + nameWidth + gap);
         if (lost)
         {
-            ImGui.SameLine();
             IconButton.TargetNotFound(track.Aim == AimMode.FollowTarget ? IconButton.FollowNotFoundTooltip : IconButton.NotFoundTooltip);
+            ImGui.SameLine();
         }
 
-        ImGui.SameLine();
         DrawLoops(scene, entry, editing);
 
         ImGui.SameLine();

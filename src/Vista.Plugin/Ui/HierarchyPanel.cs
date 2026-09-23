@@ -236,9 +236,11 @@ internal sealed unsafe class HierarchyPanel
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, rowMin.Y + ImGui.GetFrameHeight());
         var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
 
+        var rowStart = ImGui.GetCursorPosX();
         if (renaming == track.Id) DrawRename(track, nameWidth);
         else DrawName(scene, track, index, isEdited, editing, nameWidth);
         ImGui.SameLine();
+        ImGui.SetCursorPosX(rowStart + nameWidth + ImGui.GetStyle().ItemSpacing.X);
 
         var follows = track.Aim == AimMode.FollowTarget;
         ImGui.BeginDisabled(!track.AnchorPlaced || follows);
@@ -265,12 +267,12 @@ internal sealed unsafe class HierarchyPanel
     private static void CentreInLastSlot(FontAwesomeIcon icon)
         => ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X + ((LastSlot() - IconButton.Width(icon)) * 0.5f));
 
-    /// <summary>The name as a selectable, carrying the row's clicks, drag and drop, and context menu.</summary>
-    private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float width)
+    /// <summary>The name as a selectable spanning the row under its buttons, carrying the row's clicks, drag and drop, and context menu.</summary>
+    private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float nameWidth)
     {
-        if (ImGui.Selectable("##name", isEdited, ImGuiSelectableFlags.None, new Vector2(width, ImGui.GetFrameHeight())))
+        if (ImGui.Selectable("##name", isEdited, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
             Report(session.SwitchTrack(track.Id));
-        RowText.Draw(track.Name);
+        RowText.Draw(track.Name, nameWidth);
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
