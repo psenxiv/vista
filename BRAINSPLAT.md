@@ -327,12 +327,9 @@ New
 Rename
 Duplicate
 Delete
-Re-anchor
-Bring scene to me
 ```
 
-**Bring scene to me** moves the Scene anchor to the editor camera, at the character's foot
-height, so a Scene loaded somewhere new can be found and positioned with the gizmo.
+A Scene is moved by dragging its scene anchor with the gizmo.
 
 A dedicated Scene Manager is not necessary unless Scene management becomes substantially more complex later.
 
@@ -364,8 +361,7 @@ The Live UI should focus on execution rather than editing.
 ## Scene position
 
 A Scene has no Territory / Map association. It is pinned to the world position it was saved
-at. Loaded on another map, it appears at those coordinates, and the user repositions it with
-**Bring scene to me** and the gizmo.
+at. Loaded on another map, it appears at those coordinates, and the user repositions it by dragging the scene anchor.
 
 ---
 
@@ -484,7 +480,7 @@ saving, so the file format is written once.
    clickable, undo across the Scene, and the main window rebuilt into compartments with the
    Hierarchy.
 2. **3.c Anchors.** Scene and Track anchors (position and yaw), points stored relative to them,
-   gizmo handles for anchors, default placement, Bring scene to me, and flying to an anchor
+   gizmo handles for anchors, default placement, and flying to an anchor
    from the Hierarchy.
 3. **3.d Edit Preview.** Play in Edit mode previews the Editing Track; editing pauses it.
 4. **3.e Playlist and Live.** Playlist entries (Track, loop count, Cut), the Playlist
