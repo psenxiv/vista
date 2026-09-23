@@ -1,5 +1,4 @@
 using System.Numerics;
-using Vista.Core.Editing;
 using Vista.Plugin.Editor;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
