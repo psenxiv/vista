@@ -36,11 +36,13 @@ public static class SceneJson
     public static Scene Read(string json)
     {
         var file = Parse<SceneFile>(json);
-        var tracks = Each(file.Tracks, t => ToTrack(t, identity: true));
+        var tracks = Each(file.Tracks, t => Checked(ToTrack(t, identity: true)));
         if (tracks.Count == 0) throw new InvalidDataException("A scene needs a track.");
         var ids = tracks.Select(t => t.Id).ToHashSet();
         if (ids.Count != tracks.Count) throw new InvalidDataException("Two tracks share an id.");
         if (file.Playlist.Any(e => e is not null && !ids.Contains(e.TrackId))) throw new InvalidDataException("A playlist entry names a missing track.");
+        if (file.Playlist.Any(e => e?.Loops is { } n && (n < 1 || n > PlaylistEditing.MaxLoops))) throw new InvalidDataException("A playlist entry's repeats are out of range.");
+        if (!Finite(file.Anchor.Position) || !float.IsFinite(file.Anchor.Yaw)) throw new InvalidDataException("The scene anchor is out of range.");
         return new Scene(
             tracks,
             file.Hidden.ToHashSet(),
@@ -58,7 +60,8 @@ public static class SceneJson
     public static Preset ReadPreset(string json)
     {
         var file = Parse<PresetFile>(json);
-        return new Preset(ToTrack(file.Track, identity: false), file.Yaw);
+        if (!float.IsFinite(file.Yaw)) throw new InvalidDataException("The preset's yaw is out of range.");
+        return new Preset(Checked(ToTrack(file.Track, identity: false)), file.Yaw);
     }
 
     private static T Parse<T>(string json)
@@ -125,6 +128,39 @@ public static class SceneJson
             throw new InvalidDataException("A scene track needs an id, name and anchor.");
         return track with { Id = id, Name = name, Anchor = ToAnchor(anchor), AnchorPlaced = placed };
     }
+
+    /// <summary>The track when every value is within the editor's limits and it can be played; throws InvalidDataException otherwise.</summary>
+    private static Track Checked(Track t)
+    {
+        // Written so NaN fails every check.
+        static bool In(float v, float low, float high) => v >= low && v <= high;
+
+        var fits = In(t.Speed, TrackEditing.MinSpeed, TrackEditing.MaxSpeed)
+            && In(t.AimHeight, 0f, TrackEditing.MaxAimHeight)
+            && In(t.Smoothing, 0f, 1f)
+            && Finite(t.LookAt) && Finite(t.Anchor.Position) && float.IsFinite(t.Anchor.Yaw)
+            // A point records the camera as it was, which the editor's pitch and FoV limits don't bound, so only the impossible is refused.
+            && t.Points.All(p => Finite(p.Position) && float.IsFinite(p.Yaw) && In(p.Pitch, -MathF.PI / 2f, MathF.PI / 2f)
+                && p.Fov > 0f && p.Fov < MathF.PI && float.IsFinite(p.Roll))
+            && t.Timing.All(k => (k.LegSpeed is not { } s || In(s, TrackEditing.MinSpeed, TrackEditing.MaxSpeed))
+                && In(k.Hold, 0f, TrackEditing.MaxSeconds) && float.IsFinite(k.InTangent) && float.IsFinite(k.OutTangent));
+        if (!fits) throw new InvalidDataException("A track has a value out of range.");
+
+        try
+        {
+            _ = new TrackEvaluator(t);
+        }
+        catch (ArgumentException e)
+        {
+            throw new InvalidDataException($"A track can't be played: {e.Message}", e);
+        }
+
+        return t;
+    }
+
+    private static bool Finite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
+
+    private static bool Finite(VectorDto v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
 
     private static VectorDto FromVector(Vector3 v) => new(v.X, v.Y, v.Z);
 
