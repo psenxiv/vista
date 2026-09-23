@@ -45,15 +45,22 @@ public sealed class SceneLibrary
     public string? New(string name)
     {
         var trimmed = name.Trim();
-        return Unusable(trimmed) ?? SaveNow() ?? Create(trimmed);
+        return NameRefusal(trimmed) ?? SaveNow() ?? Create(trimmed);
+    }
+
+    /// <summary>Why <paramref name="name"/> can't name a new scene, or with <paramref name="renaming"/> the open one; every scene file counts as taken, readable or not.</summary>
+    public string? NameRefusal(string name, bool renaming = false)
+    {
+        var trimmed = name.Trim();
+        var same = renaming && string.Equals(trimmed, CurrentName, StringComparison.OrdinalIgnoreCase);
+        return SceneNames.Refusal(trimmed) ?? (!same && SceneNames.Taken(trimmed, Folder.SceneFiles()) ? Exists : null);
     }
 
     /// <summary>Renames the open scene's file to <paramref name="name"/>, keeping undo history. Returns why it was refused, or null.</summary>
     public string? Rename(string name)
     {
         var trimmed = name.Trim();
-        var same = string.Equals(trimmed, CurrentName, StringComparison.OrdinalIgnoreCase);
-        var refusal = same ? SceneNames.Refusal(trimmed) : Unusable(trimmed);
+        var refusal = NameRefusal(trimmed, renaming: true);
         if (refusal is not null) return refusal;
         if (trimmed == CurrentName) return null;
 
@@ -74,7 +81,7 @@ public sealed class SceneLibrary
     public string? Duplicate(string name)
     {
         var trimmed = name.Trim();
-        return Unusable(trimmed) ?? SaveNow() ?? Save(trimmed, scene()) ?? Adopt(trimmed, scene());
+        return NameRefusal(trimmed) ?? SaveNow() ?? Save(trimmed, scene()) ?? Adopt(trimmed, scene());
     }
 
     /// <summary>Deletes the open scene's file and opens the first remaining scene, or a new Scene N. Returns why it was refused, or null.</summary>
@@ -95,6 +102,21 @@ public sealed class SceneLibrary
         return Open(null);
     }
 
+    /// <summary>Creates the folder again after it has gone and writes the open scene into it, keeping undo history. Returns why it was refused, or null.</summary>
+    public string? Recreate()
+    {
+        try
+        {
+            Folder.Create();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return $"Could not save {CurrentName}: {e.Message}";
+        }
+
+        return CurrentName.Length == 0 ? null : Save(CurrentName, scene());
+    }
+
     /// <summary>Saves the open scene if it has changed since it was last saved. Returns why it was refused, or null.</summary>
     public string? SaveNow()
     {
@@ -106,8 +128,6 @@ public sealed class SceneLibrary
     /// <summary>Saves the open scene once it has been unchanged for SaveDebounce.DelaySeconds after a change, at time <paramref name="now"/> in seconds. Returns why it was refused, or null.</summary>
     public string? Tick(double now) => debounce is not null && debounce.Due(scene(), now) ? SaveNow() : null;
 
-    private string? Unusable(string name)
-        => SceneNames.Refusal(name) ?? (SceneNames.Taken(name, Folder.SceneFiles()) ? Exists : null);
 
     private string? Create(string name)
     {

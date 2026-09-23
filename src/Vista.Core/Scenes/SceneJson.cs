@@ -38,6 +38,9 @@ public static class SceneJson
         var file = Parse<SceneFile>(json);
         var tracks = Each(file.Tracks, t => ToTrack(t, identity: true));
         if (tracks.Count == 0) throw new InvalidDataException("A scene needs a track.");
+        var ids = tracks.Select(t => t.Id).ToHashSet();
+        if (ids.Count != tracks.Count) throw new InvalidDataException("Two tracks share an id.");
+        if (file.Playlist.Any(e => e is not null && !ids.Contains(e.TrackId))) throw new InvalidDataException("A playlist entry names a missing track.");
         return new Scene(
             tracks,
             file.Hidden.ToHashSet(),
