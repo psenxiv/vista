@@ -251,7 +251,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Play/Pause and Restart, left of the scrub bar on the same line.</summary>
     private void DrawTransport()
     {
-        var playing = session.Previewing || (session.Mode == CameraMode.Live && !session.Director.IsPaused && !session.Director.IsFinished);
+        var playing = session.IsPlaying;
         ImGui.BeginDisabled(session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive);
         if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
         {

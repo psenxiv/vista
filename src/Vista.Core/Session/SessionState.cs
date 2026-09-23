@@ -105,6 +105,9 @@ public sealed class SessionState
     /// <summary>True in Off and View, where the game has its camera.</summary>
     public bool Released => Mode is CameraMode.Off or CameraMode.View;
 
+    /// <summary>True while a preview is running in Edit, or a live shot is running and neither paused nor finished.</summary>
+    public bool IsPlaying => Previewing || (Mode == CameraMode.Live && !Director.IsPaused && !Director.IsFinished);
+
     /// <summary>Enters editing; from live, takes the Director offline.</summary>
     public EditOutcome Edit()
     {

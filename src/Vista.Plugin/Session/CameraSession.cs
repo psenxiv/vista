@@ -173,6 +173,9 @@ internal sealed class CameraSession
     /// <summary>True while the character is locked and flight keys and zoom are blocked.</summary>
     public bool LocksInput => state.LocksInput;
 
+    /// <summary>True while a preview or a live shot is running.</summary>
+    public bool IsPlaying => state.IsPlaying;
+
     /// <summary>The free-cam's speed setting.</summary>
     public FlySpeed Speed => freeCam.Speed;
 
