@@ -65,6 +65,7 @@ public sealed class Plugin : IDalamudPlugin
         sceneFiles = new SceneFiles(config, Session);
         setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
         sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
+        if (sceneFiles.Lost) setupWindow.IsOpen = true;
         editorLayer = new EditorLayer(Session, pointGizmo);
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
         pointWindow = new PointWindow(Session, pointGizmo);

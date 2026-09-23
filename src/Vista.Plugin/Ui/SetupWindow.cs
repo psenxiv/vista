@@ -2,15 +2,20 @@ using System.Numerics;
 using Vista.Core.Scenes;
 using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>Where Vista saves: shows the vistaxiv folder, changes its parent with Dalamud's folder picker, and continues to the Vista window.</summary>
+/// <summary>Asks for the folder Vista saves in, with Dalamud's folder picker; it can only be closed without choosing once a working folder is set.</summary>
 internal sealed class SetupWindow : Window
 {
-    private const float Width = 460f;
+    private const float Width = 440f;
+    private const float OkWidth = 90f;
+    private const string FirstRun = "Vista needs a folder to save your scenes and presets. Choose one to continue.";
+    private const string Gone = "Vista can't find its save folder. Choose it again, or a new one, to continue.";
 
     private readonly SceneFiles files;
     private readonly Action continued;
@@ -18,40 +23,53 @@ internal sealed class SetupWindow : Window
     private string? parent;
 
     public SetupWindow(SceneFiles files, Action continued)
-        : base("Setup###vista-setup", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
+        : base("Vista Setup###vista-setup", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.files = files;
         this.continued = continued;
         RespectCloseHotkey = false;
     }
 
-    /// <summary>Starts from the folder in use each time it opens.</summary>
-    public override void OnOpen() => parent = files.Parent;
+    /// <summary>Starts with nothing chosen each time it opens.</summary>
+    public override void OnOpen() => parent = null;
 
-    /// <summary>Centres the window the first time it appears.</summary>
+    /// <summary>Centres the window the first time it appears, and offers a close button only while the folder in use works.</summary>
     public override void PreDraw()
-        => ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+    {
+        ShowCloseButton = files.Ready;
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+    }
+
+    /// <summary>Reopens itself while there is no working folder, so it can't be dismissed without choosing one.</summary>
+    public override void OnClose()
+    {
+        if (!files.Ready) IsOpen = true;
+    }
 
     public override void Draw()
     {
-        parent ??= files.Parent;
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + Width);
-        ImGui.TextUnformatted("Vista saves your scenes and presets in:");
-        using (Dalamud.Interface.Utility.Raii.ImRaii.PushColor(ImGuiCol.Text, UiColours.Accent))
-            ImGui.TextUnformatted(SceneFolder.RootFor(parent));
+        ImGui.TextUnformatted(files.Lost ? Gone : FirstRun);
+        ImGui.Spacing();
+
+        if (IconButton.Draw("choose-folder", FontAwesomeIcon.Folder, "Choose folder"))
+            picker.OpenFolderDialog("Choose folder", (ok, path) => { if (ok) parent = path; }, files.Chosen);
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.PushColor(ImGuiCol.Text, parent is null ? UiColours.Muted() : UiColours.Accent))
+            ImGui.TextUnformatted(parent is null ? "No folder chosen" : SceneFolder.RootFor(parent));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
 
-        var half = (Width - ImGui.GetStyle().ItemSpacing.X) / 2f;
-        if (ImGui.Button("Change…", new Vector2(half, 0f)))
-            picker.OpenFolderDialog("Choose where Vista saves", (ok, path) => { if (ok) parent = path; }, parent);
-        ImGui.SameLine();
-        if (ImGui.Button("Continue", new Vector2(half, 0f)) && files.Choose(parent) is null && files.Ready)
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Width - OkWidth);
+        ImGui.BeginDisabled(parent is null);
+        if (ImGui.Button("Ok", new Vector2(OkWidth, 0f)) && parent is not null && files.Choose(parent) is null && files.Ready)
         {
             IsOpen = false;
             continued();
         }
 
+        ImGui.EndDisabled();
         picker.Draw();
     }
 }

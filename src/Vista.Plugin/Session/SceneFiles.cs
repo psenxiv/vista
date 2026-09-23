@@ -22,8 +22,11 @@ internal sealed class SceneFiles
     /// <summary>Raised when the folder is missing and Setup should be shown.</summary>
     public event Action? SetupNeeded;
 
-    /// <summary>The parent folder shown in Setup: the chosen one, or the plugin's config folder.</summary>
-    public string Parent => config.SaveFolder ?? Plugin.PluginInterface.GetPluginConfigDirectory();
+    /// <summary>The folder chosen before, or null; where the folder picker starts.</summary>
+    public string? Chosen => config.SaveFolder;
+
+    /// <summary>True when a folder was chosen but its vistaxiv folder has gone.</summary>
+    public bool Lost => config.SaveFolder is not null && !Ready;
 
     /// <summary>True when a folder is chosen and its vistaxiv folder is there.</summary>
     public bool Ready => library is { } l && l.Folder.Exists;
