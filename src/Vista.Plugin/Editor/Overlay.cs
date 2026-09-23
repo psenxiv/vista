@@ -13,6 +13,7 @@ internal sealed class Overlay
     private const float LabelScale = 2f;
     private const float PathSpacing = 0.25f;
     private const float PathThickness = 3f;
+    private const float HeatTargetStep = 0.25f;
     private const float GlyphDepth = 1f;
     private const float GlyphThickness = 1.5f;
     private const float SelectedGlyphThickness = 2.5f;
@@ -167,7 +168,8 @@ internal sealed class Overlay
     private static void DrawHeat(ImDrawListPtr list, EditorView view, Track track, TrackCache cache, Vector3? aimPoint, Palette palette)
     {
         var evaluator = EvaluatorFor(track, cache);
-        if (!ReferenceEquals(cache.HeatTrack, track) || cache.HeatTarget != aimPoint)
+        // A watched character moves every frame, so its heat is redrawn only once it has moved a little.
+        if (!ReferenceEquals(cache.HeatTrack, track) || Moved(cache.HeatTarget, aimPoint))
         {
             cache.Heat = TurnHeat.Samples(evaluator, aimPoint);
             cache.HeatTrack = track;
@@ -182,9 +184,15 @@ internal sealed class Overlay
         }
     }
 
-    /// <summary>The path's colour at level 0, warm at 0.5 and hot at 1, blended between.</summary>
+    /// <summary>True when the aim point appeared, went, or moved more than <see cref="HeatTargetStep"/> yalms.</summary>
+    private static bool Moved(Vector3? before, Vector3? now)
+        => before is { } a && now is { } b ? Vector3.Distance(a, b) > HeatTargetStep : before.HasValue != now.HasValue;
+
+    /// <summary>The path's colour at rest, warm at <see cref="TurnHeat.Warm"/> and hot at 1, blended between.</summary>
     private static uint HeatColour(float level, uint rest)
-        => level <= 0.5f ? Blend(rest, EditorColours.HeatWarm, level * 2f) : Blend(EditorColours.HeatWarm, EditorColours.HeatHot, (level - 0.5f) * 2f);
+        => level <= TurnHeat.Warm
+            ? Blend(rest, EditorColours.HeatWarm, level / TurnHeat.Warm)
+            : Blend(EditorColours.HeatWarm, EditorColours.HeatHot, (level - TurnHeat.Warm) / (1f - TurnHeat.Warm));
 
     /// <summary>Two ImGui colours mixed channel by channel, <paramref name="t"/> of the way from <paramref name="a"/> to <paramref name="b"/>.</summary>
     private static uint Blend(uint a, uint b, float t)

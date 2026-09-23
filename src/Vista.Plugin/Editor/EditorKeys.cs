@@ -39,11 +39,13 @@ internal sealed class EditorKeys
         }
     }
 
-    /// <summary>G toggles turn heat in Edit and View; View leaves the key to the game too, since the game has the camera there.</summary>
+    /// <summary>G alone toggles turn heat in Edit, not while previewing, and in View; View leaves the key to the game too, since the game has the camera there.</summary>
     private void ToggleHeat(CameraSession session, EditorLayer layer)
     {
         var mode = session.Mode;
-        var down = mode is CameraMode.Editing or CameraMode.View && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
+        var modified = PhysicalKeys.IsDown(VirtualKey.CONTROL) || PhysicalKeys.IsDown(VirtualKey.SHIFT) || PhysicalKeys.IsDown(VirtualKey.MENU);
+        var shown = mode == CameraMode.View || (mode == CameraMode.Editing && !session.Previewing);
+        var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
         if (down && !heatHeld) layer.Heat = !layer.Heat;
         heatHeld = down;
         if (down && mode == CameraMode.Editing) PhysicalKeys.Hide(VirtualKey.G);

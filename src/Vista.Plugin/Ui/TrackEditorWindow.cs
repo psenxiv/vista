@@ -54,8 +54,10 @@ internal sealed class TrackEditorWindow : Window
     private static readonly PendingField.Range LegRange = new(0.05f, TrackEditing.MinLegSeconds, TrackEditing.MaxSeconds);
     private static readonly PendingField.Range HoldRange = new(0.05f, 0f, TrackEditing.MaxSeconds);
     private static readonly PendingField.Range LookAheadRange = new(0.01f, 0f, TrackEditing.MaxLookAhead);
+    private const string LookAheadId = "look-ahead";
 
     private readonly CameraSession session;
+    private bool aimMenuOpen;
     private readonly PendingField fields;
     private readonly TimingWindow timing;
     private readonly CameraWindow camera;
@@ -368,7 +370,14 @@ internal sealed class TrackEditorWindow : Window
         };
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour)) ImGui.OpenPopup("aim-menu");
         aimX = ImGui.GetItemRectMin().X;
-        if (!ImGui.BeginPopup("aim-menu")) return;
+        var wasOpen = aimMenuOpen;
+        aimMenuOpen = ImGui.BeginPopup("aim-menu");
+        if (!aimMenuOpen)
+        {
+            // A Look ahead value typed and then clicked away from closes the menu before the field can apply it.
+            if (wasOpen) fields.Commit(LookAheadId);
+            return;
+        }
 
         var pencil = IconButton.Width(FontAwesomeIcon.PencilAlt);
         var width = Aims.Max(c => ImGui.CalcTextSize(c.Name).X) + ImGui.GetStyle().ItemSpacing.X + pencil;
@@ -401,7 +410,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.TextUnformatted("Look ahead");
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
         ImGui.SameLine();
-        fields.Draw("look-ahead", track.LookAhead, "%.2f s", FieldWidth, LookAheadRange, v => Report(session.SetLookAhead(v)));
+        fields.Draw(LookAheadId, track.LookAhead, "%.2f s", FieldWidth, LookAheadRange, v => Report(session.SetLookAhead(v)));
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
         ImGui.Unindent();
     }

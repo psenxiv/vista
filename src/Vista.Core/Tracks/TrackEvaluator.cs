@@ -184,9 +184,9 @@ public sealed class TrackEvaluator
     private (float Yaw, float Pitch) AimKeys(double time)
         => (_yaw!.At(time), Math.Clamp(_pitch!.At(time), -TrackAim.PitchLimit, TrackAim.PitchLimit));
 
-    /// <summary>The aim from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, or null when that gives no direction.</summary>
+    /// <summary>The aim from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, or null when that's too close to give a steady direction.</summary>
     private (float Yaw, float Pitch)? LookAhead(double time, Vector3 from)
-        => _track.LookAhead > 0f ? TrackAim.Along(PlaceAt(time + _track.LookAhead).Position - from) : null;
+        => _track.LookAhead > 0f ? TrackAim.Toward(from, PlaceAt(time + _track.LookAhead).Position) : null;
 
     /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>
     private (Vector3 Position, int Segment, float Fraction) PlaceAt(double time)

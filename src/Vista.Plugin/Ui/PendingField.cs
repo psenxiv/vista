@@ -27,6 +27,12 @@ internal sealed class PendingField(Func<bool> canApply)
         if (canApply() && p.Value != p.Shown) p.Apply(p.Value);
     }
 
+    /// <summary>Applies field <paramref name="id"/>'s waiting value, for a field whose menu closed before it could lose focus.</summary>
+    public void Commit(string id)
+    {
+        if (pending is { } p && p.Id == id) Commit();
+    }
+
     /// <summary>Drops a typed value without applying it.</summary>
     public void Clear() => pending = null;
 }

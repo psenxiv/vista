@@ -49,10 +49,6 @@ public static class TrackAim
         return result;
     }
 
-    /// <summary>The pitch-clamped aim along <paramref name="direction"/>, or null when it's too short to give one.</summary>
-    public static (float Yaw, float Pitch)? Along(Vector3 direction)
-        => direction.LengthSquared() <= DirectionEpsilon * DirectionEpsilon ? null : ClampPitch(FromDirection(direction));
-
     /// <summary>The path's direction of travel, pitch-clamped, falling back to the nearest valid direction where coincident points collapse the derivative.</summary>
     public static (float Yaw, float Pitch) PathTangent(
         IReadOnlyList<Vector3> points, ArcLengthTable table, int segment, float fraction, (float Yaw, float Pitch) fallback)
