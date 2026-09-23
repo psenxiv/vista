@@ -453,7 +453,7 @@ internal sealed class TimingWindow : Window
     {
         if (!scrubbing) return;
         scrubbing = false;
-        session.EndScrub();
+        session.FinishScrub();
     }
 
     private Vector2 CurvePoint(TimingGraph graph, float time) => graph.ToScreen(time, session.Evaluator.DistanceAt(time));

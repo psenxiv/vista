@@ -94,7 +94,7 @@ internal sealed unsafe class HierarchyPanel
     private void DrawName(Scene scene, Track track, int index, bool isEdited, bool editing, float width)
     {
         if (ImGui.Selectable("##name", isEdited, ImGuiSelectableFlags.None, new Vector2(width, ImGui.GetFrameHeight())))
-            Report(session.SelectTrack(track.Id));
+            Report(session.SwitchTrack(track.Id));
         RowText.Draw(track.Name);
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 

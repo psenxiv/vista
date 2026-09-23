@@ -137,7 +137,7 @@ internal sealed class CameraSession
     public string? PreviewLookAt(Vector3 world) => state.PreviewLookAt(world);
 
     /// <summary>Makes a track the edited one, leaving the camera where it is. Returns why it was refused, or null.</summary>
-    public string? SelectTrack(Guid id) => state.SwitchTrack(id);
+    public string? SwitchTrack(Guid id) => state.SwitchTrack(id);
 
     /// <summary>Edits a track and flies the editor camera to its first point, as a point's double-click does. Returns why it was refused, or null.</summary>
     public string? FlyToFirstPoint(Guid id)
@@ -188,7 +188,7 @@ internal sealed class CameraSession
     }
 
     /// <summary>Starts free-cam: from Off or View at the game camera, from Live at the current frame. No-op while editing.</summary>
-    public void Edit()
+    public void EnterEdit()
     {
         if (state.Mode == CameraMode.Editing) return;
 
@@ -215,24 +215,24 @@ internal sealed class CameraSession
     }
 
     /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live with the playlist. Refused when nothing can play.</summary>
-    public void Play()
+    public void StartPlay()
     {
         var previewing = state.Mode == CameraMode.Editing;
         Apply(state.Play(), previewing);
     }
 
     /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start, taking the camera if in Off or View. Refused when nothing can play.</summary>
-    public void Restart()
+    public void RestartPlay()
     {
         var previewing = state.Mode == CameraMode.Editing;
         Apply(state.Restart(), previewing);
     }
 
     /// <summary>Goes live with the playlist paused at its start, leaving the UI shown. Refused when nothing can play.</summary>
-    public void Cue() => Apply(state.Cue());
+    public void CueLive() => Apply(state.Cue());
 
     /// <summary>Live, holds the current frame; in Edit, stops a preview.</summary>
-    public void Stop()
+    public void StopPlay()
     {
         var editing = state.Mode == CameraMode.Editing;
         if (state.Stop()) Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
@@ -360,7 +360,7 @@ internal sealed class CameraSession
     public void ScrubTo(double time) => state.ScrubTo(time);
 
     /// <summary>Stops dragging the scrub head; while editing the free-cam flies on from the frame shown.</summary>
-    public void EndScrub()
+    public void FinishScrub()
     {
         var fromEditing = state.Mode == CameraMode.Editing && state.Scrubbing;
         state.EndScrub();

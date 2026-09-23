@@ -255,15 +255,15 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
         {
             fields.Commit();
-            if (playing) session.Stop();
-            else session.Play();
+            if (playing) session.StopPlay();
+            else session.StartPlay();
         }
 
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Released || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
-        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.Restart(); }
+        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.RestartPlay(); }
         ImGui.EndDisabled();
         ImGui.SameLine();
     }
@@ -277,9 +277,9 @@ internal sealed unsafe class TrackEditorWindow : Window
 
         if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
         if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Release("window", CameraMode.View); }
-        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.Edit(); }
+        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.EnterEdit(); }
         ImGui.BeginDisabled(!session.CanGoLive);
-        if (ImGui.Selectable(ModeNames[3], current == 3) && current != 3) { fields.Commit(); session.Cue(); }
+        if (ImGui.Selectable(ModeNames[3], current == 3) && current != 3) { fields.Commit(); session.CueLive(); }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !session.CanGoLive) ImGui.SetTooltip("Add a track with points to the playlist");
         ImGui.EndDisabled();
         ImGui.EndCombo();
@@ -596,7 +596,7 @@ internal sealed unsafe class TrackEditorWindow : Window
     {
         if (!scrubbing) return;
         scrubbing = false;
-        session.EndScrub();
+        session.FinishScrub();
     }
 
     private static void SetPayload(int index) => ImGui.SetDragDropPayload(PointPayload, new ReadOnlySpan<byte>(&index, sizeof(int)));
