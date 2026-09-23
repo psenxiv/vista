@@ -153,4 +153,30 @@ public class TrackAimTests
         Assert.Equal(TrackAim.PitchLimit, TrackAim.Toward(Vector3.Zero, new Vector3(0f, 10f, 0f))!.Value.Pitch, 5);
         Assert.Null(TrackAim.Toward(Vector3.Zero, new Vector3(0.05f, 0f, 0f)));
     }
+
+    // The last three points of a curved track from the game, where the path slows to nothing at its end.
+    private static readonly Vector3[] CurvedEnd =
+    [
+        new(-158.79079f, 19.590088f, 25.831505f),
+        new(-166.89452f, 20.147827f, 35.720806f),
+        new(-178.6489f, 19.898912f, 41.992096f),
+    ];
+
+    [Theory]
+    [InlineData(1, 1f, 0.9999999f)]
+    [InlineData(1, 1f, 0.99999f)]
+    [InlineData(0, 0f, 0.0000001f)]
+    [InlineData(0, 0f, 0.00001f)]
+    public void PathTangentHoldsSteadyAtEitherEndOfThePath(int segment, float atEnd, float nearEnd)
+    {
+        // Where the path's speed falls to zero its direction is rounding noise: a hair from the end once read 1.7° off.
+        // A camera settling there must not flick, so the end and a hair from it agree to within 0.01°.
+        var table = new ArcLengthTable(CurvedEnd);
+
+        var (endYaw, endPitch) = TrackAim.PathTangent(CurvedEnd, table, segment, atEnd, (0f, 0f));
+        var (nearYaw, nearPitch) = TrackAim.PathTangent(CurvedEnd, table, segment, nearEnd, (0f, 0f));
+
+        Assert.Equal(endYaw, nearYaw, 0.01f * Deg);
+        Assert.Equal(endPitch, nearPitch, 0.01f * Deg);
+    }
 }
