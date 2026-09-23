@@ -34,13 +34,17 @@ internal sealed unsafe class PointGizmo
     /// <summary>The point being dragged as it would be if released now, or null.</summary>
     public (int Index, ControlPoint Point)? Preview { get; private set; }
 
-    /// <summary>Switches between Move and Rotate, except while the mouse is still held from a drag.</summary>
-    public void Toggle() => SetMode(Mode == GizmoMode.Move ? GizmoMode.Rotate : GizmoMode.Move);
+    private GizmoMode lastMove = GizmoMode.Move;
 
-    /// <summary>Sets Move or Rotate, except while the mouse is still held from a drag.</summary>
+    /// <summary>Switches operation, keeping whichever move space was last used.</summary>
+    public void Toggle() => SetMode(Mode == GizmoMode.Rotate ? lastMove : GizmoMode.Rotate);
+
+    /// <summary>Sets the gizmo mode, except while the mouse is still held from a drag.</summary>
     public void SetMode(GizmoMode mode)
     {
-        if (!Dragging && !waitForRelease) Mode = mode;
+        if (Dragging || waitForRelease) return;
+        Mode = mode;
+        if (mode != GizmoMode.Rotate) lastMove = mode;
     }
 
     /// <summary>Abandons any drag in progress without committing, for leaving editing mode.</summary>
@@ -69,7 +73,7 @@ internal sealed unsafe class PointGizmo
         ImGuizmo.SetRect(view.Origin.X, view.Origin.Y, view.Size.X, view.Size.Y);
         ImGuizmo.AllowAxisFlip(false);
 
-        var (usingNow, over, ring) = Mode == GizmoMode.Move
+        var (usingNow, over, ring) = Mode != GizmoMode.Rotate
             ? DrawMove(view, point)
             : DrawRings(view, Preview?.Point ?? point, session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget ? AllRings : RollOnly);
         Hot = usingNow || over;
@@ -113,7 +117,7 @@ internal sealed unsafe class PointGizmo
         if (!Dragging) moveMatrix = PoseMatrix.From(point.Position, point.Yaw, point.Pitch, point.Roll);
 
         ImGuizmo.SetID(MoveId);
-        Gizmo.Manipulate(view, ImGuizmoOperation.Translate, ImGuizmoMode.World, ref moveMatrix);
+        Gizmo.Manipulate(view, ImGuizmoOperation.Translate, Mode == GizmoMode.MoveLocal ? ImGuizmoMode.Local : ImGuizmoMode.World, ref moveMatrix);
         return (ImGuizmo.IsUsing(), ImGuizmo.IsOver(), null);
     }
 

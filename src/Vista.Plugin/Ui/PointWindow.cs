@@ -92,13 +92,16 @@ internal sealed class PointWindow : Window
     /// <summary>Gizmo mode, with Rotate disabled when the selection only moves, then copy, paste and delete, disabled unless a point; false once the point is deleted.</summary>
     private bool DrawHeader(int? pointIndex, bool rotates)
     {
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Gizmo");
+        // A move button lights when rotate is not the mode, or cannot be: an anchor falls back to world.
+        var moving = !rotates || gizmo.Mode != GizmoMode.Rotate;
+        var local = moving && gizmo.Mode == GizmoMode.MoveLocal;
+
+        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)")) gizmo.SetMode(GizmoMode.Move);
         ImGui.SameLine();
-        if (ImGui.RadioButton("Move", !rotates || gizmo.Mode == GizmoMode.Move)) gizmo.SetMode(GizmoMode.Move);
-        ImGui.SameLine();
+        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)")) gizmo.SetMode(GizmoMode.MoveLocal);
+        ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X * 3f);
         ImGui.BeginDisabled(!rotates);
-        if (ImGui.RadioButton("Rotate", rotates && gizmo.Mode == GizmoMode.Rotate)) gizmo.SetMode(GizmoMode.Rotate);
+        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && gizmo.Mode == GizmoMode.Rotate, "Rotate")) gizmo.SetMode(GizmoMode.Rotate);
         ImGui.EndDisabled();
 
         // Right-align to last frame's field grid, not the window: the window sizes itself to its content.
