@@ -11,7 +11,7 @@ If the track has already played to its end, **Play** starts it again from the be
 
 ## Playing in Edit mode
 
-In Edit mode, **Play** plays only the track you are editing, not the playlist. The track's points and path disappear from the game world while it plays, so you see the shot as it will look. The buttons are greyed out until the track has a point.
+In Edit mode, **Play** plays only the track you are editing, not the playlist. Vista stops drawing tracks and markers in the game world while it plays, so you see the shot as it will look. The buttons are greyed out until the track has a point.
 
 Playing stops when you do something else. Flying the camera, changing the track or dragging the scrub bar all stop it. The camera stays where the track left it, and you fly on from there. Press **Play** again to carry on from that moment.
 

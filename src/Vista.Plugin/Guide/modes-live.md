@@ -10,7 +10,7 @@ When you choose Live in the mode menu, the shot waits at the start of the playli
 
 - Press `Space` or click **Play** to play. Press `Space` again or click **Pause** to hold the current frame.
 - Press `Ctrl + Space` or click **Restart** to play the playlist again from the beginning.
-- Drag the scrub bar to jump to another moment in the playlist.
+- Drag the scrub bar to move through the track that is playing now.
 
 When the playlist reaches its end, the camera holds on the last frame. If **Loop playlist** is on, it starts again from the first entry instead.
 

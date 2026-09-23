@@ -19,7 +19,7 @@ To open the window again, click the aim button, then the pencil beside **Follow 
 ## The Follow Target window
 
 - **Turn with character**: when ticked, the camera swings round with the character as they turn, so a camera behind them stays behind them. When clear, the camera keeps its direction and only moves with them.
-- **Look at character**: when ticked, the camera aims at the character. When clear, it keeps the aim the point was recorded with.
+- **Look at character**: when ticked, the camera aims at the character. When clear, it keeps the point's own aim.
 - **Aim height**: where on the character the camera aims, in yalms above their feet, from 0 to 3.
 - **Smoothing**: how gently the camera catches up with the character. At 0 it stays locked to them. Higher values make it lag behind and ease into place, which hides sudden steps and turns.
 
