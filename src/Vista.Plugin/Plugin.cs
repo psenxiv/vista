@@ -125,7 +125,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         sceneFiles.Tick();
-        editorKeys.Update(Session, pointGizmo);
+        editorKeys.Update(Session, pointGizmo, editorLayer);
         Session.RefreshCharacters();
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.

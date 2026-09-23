@@ -377,6 +377,9 @@ internal sealed class CameraSession
     /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
     public string? SetSmoothing(float smoothing) => state.SetSmoothing(smoothing);
 
+    /// <summary>Sets how far ahead along the path Direction of travel looks. Returns why it was refused, or null.</summary>
+    public string? SetLookAhead(float seconds) => state.SetLookAhead(seconds);
+
     /// <summary>Sets whether a Follow track's offset turns with its character. Returns why it was refused, or null.</summary>
     public string? SetFollowTurns(bool turns) => state.SetFollowTurns(turns);
 

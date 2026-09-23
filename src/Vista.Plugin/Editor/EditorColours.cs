@@ -4,6 +4,8 @@ namespace Vista.Plugin.Editor;
 internal static class EditorColours
 {
     public const uint Path = 0xC8F0F0F0;
+    public const uint HeatWarm = 0xF000D8FF;
+    public const uint HeatHot = 0xF03030FF;
     public const uint AimLine = 0xC080FFFF;
     public const uint UpLine = 0xE0FFA040;
     public const uint AxisX = 0xFF5A5AFF;

@@ -27,6 +27,9 @@ internal sealed class EditorLayer
     private readonly Overlay overlay = new();
     private readonly ClickSelection clicks = new();
 
+    /// <summary>True while the edited track's path is drawn by how fast its camera turns.</summary>
+    public bool Heat { get; set; }
+
     public EditorLayer(CameraSession session, PointGizmo gizmo)
     {
         this.session = session;
@@ -63,7 +66,7 @@ internal sealed class EditorLayer
         var track = editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
             ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
             : session.Track;
-        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.SelectedPoints : [], edited: true, session.AimPoint(track)));
+        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.SelectedPoints : [], edited: true, session.AimPoint(track), Heat));
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);

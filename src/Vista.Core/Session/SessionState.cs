@@ -589,6 +589,9 @@ public sealed class SessionState
     /// <summary>The edited track's only point where it is shown, or null unless it has exactly one.</summary>
     private ControlPoint? ShownPoint => Local.Points.Count == 1 ? Track.Points[0] : null;
 
+    /// <summary>Sets how far ahead along the path Direction of travel looks, in seconds. Returns why it was refused, or null.</summary>
+    public string? SetLookAhead(float seconds) => ApplySetting(t => TrackEditing.SetLookAhead(t, seconds));
+
     /// <summary>Sets how heavily the aim eases onto the character. Returns why it was refused, or null.</summary>
     public string? SetSmoothing(float smoothing) => ApplySetting(t => TrackEditing.SetSmoothing(t, smoothing));
 

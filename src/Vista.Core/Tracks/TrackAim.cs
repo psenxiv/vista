@@ -49,23 +49,9 @@ public static class TrackAim
         return result;
     }
 
-    /// <summary>Uniform Catmull-Rom on a scalar between <paramref name="segment"/> and the next, endpoints duplicated as phantoms like the path.</summary>
-    public static float Channel(IReadOnlyList<float> values, int segment, float fraction)
-    {
-        if (segment < 0 || segment > values.Count - 2)
-            throw new ArgumentOutOfRangeException(nameof(segment),
-                values.Count < 2 ? "a channel needs at least two values" : $"segment must be 0..{values.Count - 2}");
-
-        var p0 = GetValue(values, segment - 1);
-        var p1 = GetValue(values, segment);
-        var p2 = GetValue(values, segment + 1);
-        var p3 = GetValue(values, segment + 2);
-
-        var m0 = (p2 - p0) / 2f;
-        var m1 = (p3 - p1) / 2f;
-
-        return Hermite.At(p1, p2, m0, m1, fraction);
-    }
+    /// <summary>The pitch-clamped aim along <paramref name="direction"/>, or null when it's too short to give one.</summary>
+    public static (float Yaw, float Pitch)? Along(Vector3 direction)
+        => direction.LengthSquared() <= DirectionEpsilon * DirectionEpsilon ? null : ClampPitch(FromDirection(direction));
 
     /// <summary>The path's direction of travel, pitch-clamped, falling back to the nearest valid direction where coincident points collapse the derivative.</summary>
     public static (float Yaw, float Pitch) PathTangent(
@@ -150,8 +136,4 @@ public static class TrackAim
 
     private static (float Yaw, float Pitch) ClampPitch((float Yaw, float Pitch) aim)
         => (aim.Yaw, Math.Clamp(aim.Pitch, -PitchLimit, PitchLimit));
-
-    /// <summary>Endpoints duplicate to supply the phantom values, matching <c>CatmullRom</c>.</summary>
-    private static float GetValue(IReadOnlyList<float> values, int index)
-        => values[Math.Clamp(index, 0, values.Count - 1)];
 }

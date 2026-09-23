@@ -53,6 +53,7 @@ internal sealed class TrackEditorWindow : Window
     private static readonly PendingField.Range ShotRange = new(0.1f, EditLimits.MinShotSeconds, TrackEditing.MaxShotSeconds);
     private static readonly PendingField.Range LegRange = new(0.05f, TrackEditing.MinLegSeconds, TrackEditing.MaxSeconds);
     private static readonly PendingField.Range HoldRange = new(0.05f, 0f, TrackEditing.MaxSeconds);
+    private static readonly PendingField.Range LookAheadRange = new(0.01f, 0f, TrackEditing.MaxLookAhead);
 
     private readonly CameraSession session;
     private readonly PendingField fields;
@@ -384,11 +385,25 @@ internal sealed class TrackEditorWindow : Window
                     continue;
             }
 
-            if (!ImGui.Selectable(Aims[i].Name, i == aim) || i == aim) continue;
-            Report(session.SetAim(Aims[i].Mode));
+            if (ImGui.Selectable(Aims[i].Name, i == aim) && i != aim) Report(session.SetAim(Aims[i].Mode));
+            if (i == aim && Aims[i].Mode == AimMode.PathTangent) DrawLookAhead(track);
         }
 
         ImGui.EndPopup();
+    }
+
+    /// <summary>Direction of travel's Look ahead field, indented under it in the aim menu.</summary>
+    private void DrawLookAhead(Track track)
+    {
+        const string tooltip = "How far ahead the camera looks along the path. 0 faces straight along it.";
+        ImGui.Indent();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted("Look ahead");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
+        ImGui.SameLine();
+        fields.Draw("look-ahead", track.LookAhead, "%.2f s", FieldWidth, LookAheadRange, v => Report(session.SetLookAhead(v)));
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
+        ImGui.Unindent();
     }
 
     /// <summary>The aim icon's colour and tooltip under a character mode: accent when found, red when lost or none is chosen.</summary>

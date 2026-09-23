@@ -110,7 +110,8 @@ public static class SceneJson
         identity ? t.Id : null,
         identity ? t.Name : null,
         identity ? FromAnchor(t.Anchor) : null,
-        identity ? t.AnchorPlaced : null);
+        identity ? t.AnchorPlaced : null,
+        t.LookAhead);
 
     private static Track ToTrack(TrackDto t, bool identity)
     {
@@ -121,7 +122,7 @@ public static class SceneJson
         var track = new Track(
             Guid.NewGuid(), string.Empty, points, timing, t.Speed, t.Aim, t.Direction, t.Loop,
             LookAt: ToVector(t.LookAt), LookAtPlaced: t.LookAtPlaced, TargetName: t.TargetName, TargetWorld: t.TargetWorld,
-            AimHeight: t.AimHeight, Smoothing: t.Smoothing, FollowTurns: t.FollowTurns, FollowLooks: t.FollowLooks);
+            AimHeight: t.AimHeight, Smoothing: t.Smoothing, FollowTurns: t.FollowTurns, FollowLooks: t.FollowLooks, LookAhead: t.LookAhead);
         if (!identity) return track;
 
         if (t.Id is not { } id || t.Name is not { } name || t.Anchor is not { } anchor || t.AnchorPlaced is not { } placed)
@@ -138,6 +139,7 @@ public static class SceneJson
         var fits = In(t.Speed, TrackEditing.MinSpeed, TrackEditing.MaxSpeed)
             && In(t.AimHeight, 0f, TrackEditing.MaxAimHeight)
             && In(t.Smoothing, 0f, 1f)
+            && In(t.LookAhead, 0f, TrackEditing.MaxLookAhead)
             && Finite(t.LookAt) && Finite(t.Anchor.Position) && float.IsFinite(t.Anchor.Yaw)
             // A point records the camera as it was, which the editor's pitch and FoV limits don't bound, so only the impossible is refused.
             && t.Points.All(p => Finite(p.Position) && float.IsFinite(p.Yaw) && In(p.Pitch, -MathF.PI / 2f, MathF.PI / 2f)
@@ -192,7 +194,8 @@ public static class SceneJson
         [property: JsonPropertyOrder(-1), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? Id = null,
         [property: JsonPropertyOrder(-1), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Name = null,
         [property: JsonPropertyOrder(-1), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AnchorDto? Anchor = null,
-        [property: JsonPropertyOrder(-1), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? AnchorPlaced = null);
+        [property: JsonPropertyOrder(-1), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? AnchorPlaced = null,
+        float LookAhead = TrackEditing.DefaultLookAhead);
 
     private sealed record PointDto(VectorDto Position, float Yaw, float Pitch, float Fov, float Roll);
 

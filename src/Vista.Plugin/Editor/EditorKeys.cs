@@ -11,10 +11,12 @@ internal sealed class EditorKeys
     private static readonly VirtualKey[] Watched = [VirtualKey.SPACE, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R, VirtualKey.DELETE, VirtualKey.BACK];
 
     private readonly bool[] held = new bool[Watched.Length];
+    private bool heatHeld;
 
     /// <summary>Reads the keys, acts on new presses and hides ours from the game. Call from Framework.Update.</summary>
-    public void Update(CameraSession session, PointGizmo gizmo)
+    public void Update(CameraSession session, PointGizmo gizmo, EditorLayer layer)
     {
+        ToggleHeat(session, layer);
         if (session.Released || PhysicalKeys.IsTyping()) { Array.Clear(held); return; }
 
         var editing = session.Mode == CameraMode.Editing;
@@ -35,6 +37,16 @@ internal sealed class EditorKeys
             if (ours) PhysicalKeys.Hide(key);
             if (pressed && ours) Act(session, gizmo, key, ctrl, alt);
         }
+    }
+
+    /// <summary>G toggles turn heat in Edit and View; View leaves the key to the game too, since the game has the camera there.</summary>
+    private void ToggleHeat(CameraSession session, EditorLayer layer)
+    {
+        var mode = session.Mode;
+        var down = mode is CameraMode.Editing or CameraMode.View && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
+        if (down && !heatHeld) layer.Heat = !layer.Heat;
+        heatHeld = down;
+        if (down && mode == CameraMode.Editing) PhysicalKeys.Hide(VirtualKey.G);
     }
 
     private static void Act(CameraSession session, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)

@@ -30,13 +30,14 @@ internal sealed class Overlay
 
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
-    /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, its <paramref name="selected"/> points highlighted and its glyphs facing <paramref name="aimPoint"/> when given, and returns each number's absolute screen position, null when off screen.</summary>
-    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, IReadOnlyCollection<int> selected, bool edited, Vector3? aimPoint = null)
+    /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, its path by turn rate when <paramref name="heat"/>, its <paramref name="selected"/> points highlighted and its glyphs facing <paramref name="aimPoint"/> when given, and returns each number's absolute screen position, null when off screen.</summary>
+    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, IReadOnlyCollection<int> selected, bool edited, Vector3? aimPoint = null, bool heat = false)
     {
         if (!caches.TryGetValue(track.Id, out var cache)) caches[track.Id] = cache = new TrackCache();
         var palette = edited ? Palette.Edited : Palette.Other;
         var list = ImGui.GetBackgroundDrawList();
-        DrawPath(list, view, track, cache, palette);
+        if (heat) DrawHeat(list, view, track, cache, aimPoint, palette);
+        else DrawPath(list, view, track, cache, palette);
 
         var aspect = view.Size.Y > 0f ? view.Size.X / view.Size.Y : 1f;
         var labels = new Vector2?[track.Points.Count];
@@ -162,6 +163,55 @@ internal sealed class Overlay
         }
     }
 
+    /// <summary>The path in samples over time, each stretch coloured by how fast the look turns there: the path's colour at rest, warm, then hot.</summary>
+    private static void DrawHeat(ImDrawListPtr list, EditorView view, Track track, TrackCache cache, Vector3? aimPoint, Palette palette)
+    {
+        var evaluator = EvaluatorFor(track, cache);
+        if (!ReferenceEquals(cache.HeatTrack, track) || cache.HeatTarget != aimPoint)
+        {
+            cache.Heat = TurnHeat.Samples(evaluator, aimPoint);
+            cache.HeatTrack = track;
+            cache.HeatTarget = aimPoint;
+        }
+
+        for (var i = 1; i < cache.Heat.Count; i++)
+        {
+            var (from, to) = (cache.Heat[i - 1], cache.Heat[i]);
+            if (ScreenProjection.ProjectSegment(from.Position, to.Position, view.ViewProjection, view.Size, view.Near) is { } s)
+                list.AddLine(view.Origin + s.Start, view.Origin + s.End, HeatColour(TurnHeat.Level(to.DegreesPerSecond), palette.Path), PathThickness);
+        }
+    }
+
+    /// <summary>The path's colour at level 0, warm at 0.5 and hot at 1, blended between.</summary>
+    private static uint HeatColour(float level, uint rest)
+        => level <= 0.5f ? Blend(rest, EditorColours.HeatWarm, level * 2f) : Blend(EditorColours.HeatWarm, EditorColours.HeatHot, (level - 0.5f) * 2f);
+
+    /// <summary>Two ImGui colours mixed channel by channel, <paramref name="t"/> of the way from <paramref name="a"/> to <paramref name="b"/>.</summary>
+    private static uint Blend(uint a, uint b, float t)
+    {
+        uint result = 0;
+        for (var shift = 0; shift < 32; shift += 8)
+        {
+            var from = (a >> shift) & 0xFF;
+            var to = (b >> shift) & 0xFF;
+            result |= (uint)MathF.Round(from + ((to - (float)from) * t)) << shift;
+        }
+
+        return result;
+    }
+
+    /// <summary>The cached evaluator for <paramref name="track"/>, rebuilt when the track changes.</summary>
+    private static TrackEvaluator EvaluatorFor(Track track, TrackCache cache)
+    {
+        if (!ReferenceEquals(cache.EvaluatedTrack, track))
+        {
+            cache.Evaluator = new TrackEvaluator(track);
+            cache.EvaluatedTrack = track;
+        }
+
+        return cache.Evaluator!;
+    }
+
     /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded.</summary>
     private static (Vector3 Forward, float Roll, float Fov) Pose(Track track, TrackCache cache, int index, Vector3? aimPoint)
     {
@@ -172,13 +222,8 @@ internal sealed class Overlay
         if (track.Aim != AimMode.PathTangent)
             return (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
 
-        if (!ReferenceEquals(cache.EvaluatedTrack, track))
-        {
-            cache.Evaluator = new TrackEvaluator(track);
-            cache.EvaluatedTrack = track;
-        }
-
-        return cache.Evaluator!.Evaluate(cache.Evaluator.PointSeconds(index)) is { } frame
+        var evaluator = EvaluatorFor(track, cache);
+        return evaluator.Evaluate(evaluator.PointSeconds(index)) is { } frame
             ? (frame.LookAt - frame.Position, frame.Roll, point.Fov)
             : (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
     }
@@ -228,6 +273,9 @@ internal sealed class Overlay
         public IReadOnlyList<Vector3> Samples = [];
         public Track? EvaluatedTrack;
         public TrackEvaluator? Evaluator;
+        public IReadOnlyList<TurnHeat.Sample> Heat = [];
+        public Track? HeatTrack;
+        public Vector3? HeatTarget;
     }
 
     /// <summary>The colours one track draws in.</summary>

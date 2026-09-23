@@ -19,8 +19,10 @@ public sealed class TrackEvaluator
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
-    private readonly float[] _rolls;
-    private readonly float[] _fovs;
+    private readonly TimedChannel? _yaw;
+    private readonly TimedChannel? _pitch;
+    private readonly TimedChannel? _roll;
+    private readonly TimedChannel? _fov;
     private readonly float _fovMin;
     private readonly float _fovMax;
 
@@ -33,7 +35,7 @@ public sealed class TrackEvaluator
     /// <summary>The path's length as timing measures it, each segment at least <see cref="MinTimingLength"/>.</summary>
     public float TotalDistance => _distances[^1];
 
-    /// <summary>Builds the spline, arc-length table, compiled keys, distance timing curve and unwrapped yaw once for <paramref name="track"/>.</summary>
+    /// <summary>Builds the spline, arc-length table, compiled keys, distance timing curve and timed aim channels once for <paramref name="track"/>.</summary>
     public TrackEvaluator(Track track)
     {
         _track = track;
@@ -50,10 +52,18 @@ public sealed class TrackEvaluator
         _curve = new TimingCurve(_distanceKeys);
         _yaws = TrackAim.UnwrapAngles(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
-        _rolls = TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray());
-        _fovs = track.Points.Select(p => p.Fov).ToArray();
-        _fovMin = _fovs.Length == 0 ? 0f : _fovs.Min();
-        _fovMax = _fovs.Length == 0 ? 0f : _fovs.Max();
+        var fovs = track.Points.Select(p => p.Fov).ToArray();
+        _fovMin = fovs.Length == 0 ? 0f : fovs.Min();
+        _fovMax = fovs.Length == 0 ? 0f : fovs.Max();
+        if (track.Points.Count == 0) return;
+
+        // Each point is reached at its key's time and left at its hold end's, or at once.
+        var arrive = Enumerable.Range(0, track.Points.Count).Select(PointSeconds).ToArray();
+        var depart = arrive.Select((at, i) => track.Timing[i].Hold > 0f ? _keys[TrackEditing.PointKey(track, i) + 1].Time : at).ToArray();
+        _yaw = new TimedChannel(_yaws, arrive, depart);
+        _pitch = new TimedChannel(_pitches, arrive, depart);
+        _roll = new TimedChannel(TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray()), arrive, depart);
+        _fov = new TimedChannel(fovs, arrive, depart);
     }
 
     /// <summary>Leg <paramref name="leg"/>'s length as timing measures it.</summary>
@@ -92,17 +102,15 @@ public sealed class TrackEvaluator
             return new CameraState(only.Position, FreeCamMotion.LookAtFrom(only.Position, onlyYaw, onlyPitch), only.Fov, only.Roll);
         }
 
-        var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
-        var parameter = _table.ParameterAt(segment, fraction);
-        var cameraPosition = CatmullRom.Evaluate(_positions, segment, parameter);
+        var (cameraPosition, segment, fraction) = PlaceAt(time);
 
         var (yaw, pitch) = Toward(cameraPosition, target)
             ?? (_track.Aim == AimMode.PathTangent
-                ? TrackAim.PathTangent(_positions, _table, segment, fraction, (_yaws[0], _pitches[0]))
-                : AimKeys(segment, fraction));
+                ? LookAhead(time, cameraPosition) ?? TrackAim.PathTangent(_positions, _table, segment, fraction, (_yaws[0], _pitches[0]))
+                : AimKeys(time));
 
-        var fov = Math.Clamp(TrackAim.Channel(_fovs, segment, fraction), _fovMin, _fovMax);
-        var roll = TrackAim.Channel(_rolls, segment, fraction);
+        var fov = Math.Clamp(_fov!.At(time), _fovMin, _fovMax);
+        var roll = _roll!.At(time);
 
         return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov, roll);
     }
@@ -173,10 +181,17 @@ public sealed class TrackEvaluator
         return (lo, Math.Clamp((distance - _distances[lo]) / _lengths[lo], 0f, 1f));
     }
 
-    private (float Yaw, float Pitch) AimKeys(int segment, float fraction)
+    private (float Yaw, float Pitch) AimKeys(double time)
+        => (_yaw!.At(time), Math.Clamp(_pitch!.At(time), -TrackAim.PitchLimit, TrackAim.PitchLimit));
+
+    /// <summary>The aim from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, or null when that gives no direction.</summary>
+    private (float Yaw, float Pitch)? LookAhead(double time, Vector3 from)
+        => _track.LookAhead > 0f ? TrackAim.Along(PlaceAt(time + _track.LookAhead).Position - from) : null;
+
+    /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>
+    private (Vector3 Position, int Segment, float Fraction) PlaceAt(double time)
     {
-        var yaw = TrackAim.Channel(_yaws, segment, fraction);
-        var pitch = Math.Clamp(TrackAim.Channel(_pitches, segment, fraction), -TrackAim.PitchLimit, TrackAim.PitchLimit);
-        return (yaw, pitch);
+        var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
+        return (CatmullRom.Evaluate(_positions, segment, _table.ParameterAt(segment, fraction)), segment, fraction);
     }
 }
