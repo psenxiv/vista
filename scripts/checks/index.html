@@ -191,6 +191,7 @@ function start(data) {
       g.skip = g.skip || sec.skip;
       for (const st of g.steps) st.skip = st.skip || g.skip;
     }
+  document.title = data.title;
   KEY = LS_PREFIX + (data.revision ?? 1);
   try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { state = {}; }
   if (!state.__started) state.__started = new Date().toISOString();
