@@ -18,18 +18,26 @@ The user picks a parent folder. Vista keeps its own folder inside it:
   presets/   one JSON file per preset
 ```
 
-The default parent is the plugin's config folder (`GetPluginConfigDirectory()`).
+There is no default: the user chooses the parent. (Revised 2026-09-23 after the first build; it was
+the plugin's config folder.)
 
 ### 1.1 The Setup window
 
-- The first `/vista` (or Dalamud's open button) opens the **Setup** window instead of the **Vista**
-  window, while no folder has been chosen.
-- It says where Vista saves, showing the full `vistaxiv` path, with two buttons: **Change…** opens
-  Dalamud's folder picker (`FileDialogManager.OpenFolderDialog`), starting at the current parent;
-  **Continue** creates `vistaxiv/scenes/` and `vistaxiv/presets/` if missing, saves the choice, closes
-  Setup and opens the **Vista** window.
-- It opens again in place of the **Vista** window whenever the chosen folder's `vistaxiv` folder
-  can't be found, and when a save fails because the folder has gone.
+- Titled **Vista Setup**. The first `/vista` (or Dalamud's open button) opens it instead of the
+  **Vista** window, while no folder has been chosen.
+- It says "Vista needs a folder to save your scenes and presets. Choose one to continue.", or, when a
+  chosen folder has gone, "Vista can't find its save folder. Choose it again, or a new one, to
+  continue."
+- Below, a folder icon button, **Choose folder**, opens Dalamud's folder picker
+  (`FileDialogManager.OpenFolderDialog`), next to the chosen `vistaxiv` path in the accent colour,
+  or "No folder chosen" in a muted colour. Nothing is chosen when it opens.
+- A fixed-width **Ok**, right-aligned, disabled until a folder is chosen, creates
+  `vistaxiv/scenes/` and `vistaxiv/presets/` if missing, saves the choice, closes Setup and opens the
+  **Vista** window.
+- It can't be skipped: while there is no working folder it has no close button and ignores Escape.
+  Opened from the gear with a working folder, it can be closed without choosing.
+- It opens by itself when the plugin loads and the chosen folder's `vistaxiv` folder can't be found,
+  and when a save fails because the folder has gone.
 - A gear button, **Save folder**, on the main window's top row opens it at any time. It sits left of
   the **?**. The top row's three width sites count it.
 

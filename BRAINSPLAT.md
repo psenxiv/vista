@@ -380,7 +380,7 @@ The user picks a parent folder, and Vista keeps a `vistaxiv` folder inside it:
 
 - The folder is chosen up front, with Dalamud's folder picker, before the plugin can be used.
   If it is ever unset or cannot be found, Vista returns to that choice.
-- The default is the plugin's config folder.
+- There is no default; the user chooses.
 - A Scene saves itself shortly after each change (debounced).
 - Undo history clears when a Scene is loaded or switched.
 
