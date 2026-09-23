@@ -14,6 +14,8 @@ Right-click a track in the Hierarchy and choose **Save as preset**, then name it
 
 The preset appears as a new track on the ground under the camera, facing the way it was saved. Move or turn it with its anchor. See [Scenes and anchors](scenes.md).
 
+**Open folder**, at the bottom of the list, shows your preset files, so you can share them.
+
 ## Deleting a preset
 
 In the **From preset** list, right-click a preset and choose **Delete**.

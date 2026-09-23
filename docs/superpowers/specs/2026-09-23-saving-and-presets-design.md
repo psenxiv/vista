@@ -38,7 +38,8 @@ the plugin's config folder.)
   Opened from the gear with a working folder, it can be closed without choosing.
 - It opens by itself when the plugin loads and the chosen folder's `vistaxiv` folder can't be found,
   and when a save fails because the folder has gone.
-- A gear button, **Save folder**, on the main window's top row opens it at any time. It sits left of
+- A gear button, **Save folder**, on the main window's top row opens it at any time, showing the
+  folder in use. It sits left of
   the **?**. The top row's three width sites count it.
 
 ### 1.2 Changing folder
@@ -101,9 +102,11 @@ It lists every scene by name, the open one ticked, then:
 | **Rename scene** | Asks for a name (default: the current one) and renames the file. Undo history stays. |
 | **Duplicate scene** | Asks for a name (default: **\<name\> copy**, then **\<name\> copy 2** and so on), saves a copy and loads the copy. |
 | **Delete scene** | Asks "Delete \<name\>? This can't be undone.", deletes the file, then opens the first remaining scene by name, or makes **Scene 1**. |
+| **Open folder** | Opens `scenes/` in the system's file browser, as Dalamud's installer opens folders (`Util.OpenLink`). |
 
 The name prompt is a small modal with a text field and **Ok** / **Cancel**. While the name is
-invalid, **Ok** is disabled and one line under the field says why ("A scene with that name exists",
+invalid, **Ok** is disabled and one line under the field says why, in red; the line is kept blank
+otherwise, so the buttons don't move ("A scene with that name exists",
 "That name can't be used as a file name").
 
 ## 3. Presets
@@ -122,7 +125,8 @@ it.
 ### 3.2 Adding a preset
 
 - The Hierarchy's **Add track** button opens a menu: **Empty track**, and **From preset**, a submenu
-  listing presets by name, rescanned when opened. **From preset** is disabled when there are none.
+  listing presets by name, rescanned when opened, then **Open folder**, which opens `presets/`. With
+  no presets it shows a greyed-out **No presets**.
 - Adding one makes a new track with a new id, named after the preset, at the end of the Hierarchy,
   and edits it. It is one undo step.
 - Its anchor goes on the ground under the camera, at the preset's saved yaw, and its points and Look

@@ -13,6 +13,7 @@ The drop-down at the top of the Hierarchy shows the scene you have open. Open it
 | **Rename scene** | Renames the open scene. |
 | **Duplicate scene** | Copies the open scene and opens the copy. |
 | **Delete scene** | Deletes the open scene. |
+| **Open folder** | Shows your scene files. |
 
 You can switch scenes in Edit. Undo starts fresh each time you open a scene.
 
