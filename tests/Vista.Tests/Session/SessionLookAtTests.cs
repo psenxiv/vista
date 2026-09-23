@@ -273,4 +273,19 @@ public class SessionLookAtTests
         Assert.NotNull(state.PreviewAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
         state.EndLiveEdit();
     }
+
+    [Fact]
+    public void LookAheadIsAnUndoStepAndOnlyChangesWhileEditing()
+    {
+        var state = new SessionState();
+        state.Edit();
+
+        Assert.Null(state.SetLookAhead(1.5f));
+        Assert.Equal(1.5f, state.Track.LookAhead);
+        Assert.True(state.Undo());
+        Assert.Equal(TrackEditing.DefaultLookAhead, state.Track.LookAhead);
+
+        state.Release();
+        Assert.NotNull(state.SetLookAhead(1f));
+    }
 }

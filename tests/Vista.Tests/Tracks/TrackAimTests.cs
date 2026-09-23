@@ -50,36 +50,6 @@ public class TrackAimTests
         => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
 
     [Fact]
-    public void ChannelPassesThroughItsValuesAtSegmentEndpoints()
-    {
-        var values = new[] { 1f, 4f, -2f, 6f };
-
-        for (var segment = 0; segment < values.Length - 1; segment++)
-        {
-            Assert.Equal(values[segment], TrackAim.Channel(values, segment, 0f), 5);
-            Assert.Equal(values[segment + 1], TrackAim.Channel(values, segment, 1f), 5);
-        }
-    }
-
-    [Fact]
-    public void ChannelInterpolatesBetweenItsEndpoints()
-    {
-        // Endpoints duplicate as phantoms, so both tangents are (10 - 0) / 2 = 5 and the Hermite midpoint is exactly 5.
-        var values = new[] { 0f, 10f };
-
-        Assert.Equal(5f, TrackAim.Channel(values, 0, 0.5f), 5);
-    }
-
-    [Fact]
-    public void ChannelRejectsAnOutOfRangeSegment()
-    {
-        var values = new[] { 1f, 2f, 3f };
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackAim.Channel(values, -1, 0.5f));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackAim.Channel(values, 2, 0.5f));
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackAim.Channel(new[] { 1f }, 0, 0.5f));
-    }
-
-    [Fact]
     public void PathTangentClampsPitchOnANearVerticalPath()
     {
         var points = new[]

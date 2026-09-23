@@ -185,6 +185,9 @@ public class SceneJsonTests
         // Aim height runs 0 to 3 yalms, smoothing 0 to 1.
         { "aim height 3.5", t => t with { AimHeight = 3.5f } },
         { "smoothing 1.5", t => t with { Smoothing = 1.5f } },
+        // Look ahead runs 0 to 2 seconds.
+        { "look ahead -0.1", t => t with { LookAhead = -0.1f } },
+        { "look ahead 2.5", t => t with { LookAhead = 2.5f } },
         // A camera can't look past straight up (π/2 ≈ 1.5708) or see with no field of view, or all round (π).
         { "pitch 1.6", t => WithPoint(t, Point(0f, pitch: 1.6f)) },
         { "fov 0", t => WithPoint(t, Point(0f, fov: 0f)) },
@@ -217,5 +220,17 @@ public class SceneJsonTests
     {
         // An entry repeats 1 to PlaylistEditing.MaxLoops (99) times, or follows its track with none.
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(SceneOf(Plain(), loops)));
+    }
+
+    [Fact]
+    public void LookAheadRoundTripsAndDefaultsWhenMissing()
+    {
+        var track = TrackEditing.SetLookAhead(Plain(), 1.25f);
+        Assert.Equal(1.25f, SceneJson.Read(SceneOf(track)).Tracks[0].LookAhead, 1e-6f);
+
+        // A file saved before look-ahead existed has no lookAhead line.
+        var old = System.Text.Json.Nodes.JsonNode.Parse(SceneOf(track))!;
+        old["tracks"]![0]!.AsObject().Remove("lookAhead");
+        Assert.Equal(TrackEditing.DefaultLookAhead, SceneJson.Read(old.ToJsonString()).Tracks[0].LookAhead);
     }
 }

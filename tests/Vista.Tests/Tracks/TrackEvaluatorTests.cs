@@ -322,4 +322,81 @@ public class TrackEvaluatorTests
 
         Assert.Equal(FreeCamMotion.LookAtFrom(point.Position, 0.5f, 0.1f), state.LookAt);
     }
+
+    // The direction the camera faces at time t.
+    private static Vector3 Facing(TrackEvaluator evaluator, double t)
+    {
+        var frame = evaluator.Evaluate(t)!.Value;
+        return Vector3.Normalize(frame.LookAt - frame.Position);
+    }
+
+    private static void Along(Vector3 expected, Vector3 actual)
+    {
+        Assert.Equal(expected.X, actual.X, 1e-3f);
+        Assert.Equal(expected.Y, actual.Y, 1e-3f);
+        Assert.Equal(expected.Z, actual.Z, 1e-3f);
+    }
+
+    [Fact]
+    public void LookingAheadOnAStraightPathFacesAlongIt()
+    {
+        var evaluator = new TrackEvaluator(Build([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent));
+
+        Along(Vector3.UnitX, Facing(evaluator, 1.0));
+        Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration - 0.1));
+    }
+
+    [Fact]
+    public void LookingAheadFacesWhereThePathIsThatMuchLater()
+    {
+        // The first leg takes 1 s and the look runs 1 s ahead, so at the start the camera faces point 2 exactly: (10, 0, 5).
+        var track = TrackEditing.SetLookAhead(Build([Point(0f), Point(10f, z: 5f), Point(20f, z: -20f)], AimMode.PathTangent), 1f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLegDuration(track, 1, 1f));
+
+        Along(Vector3.Normalize(new Vector3(10f, 0f, 5f)), Facing(evaluator, 0.0));
+    }
+
+    [Fact]
+    public void LookingAheadNothingFacesStraightAlongThePath()
+    {
+        // Symmetric about the middle point, the path runs parallel to x there; 0.5 s on, it's already heading down towards the last.
+        var track = Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent);
+        var middle = new TrackEvaluator(track).PointSeconds(1);
+
+        Along(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle));
+        Assert.True(Facing(new TrackEvaluator(track), middle).Z < -0.1f);
+    }
+
+    [Fact]
+    public void LookingAheadTurnsTowardsTheNextLegBeforeAHoldEnds()
+    {
+        // Point 2 holds 1 to 3 s, then a 0.3 s leg to point 3. At 2.8 s, still holding, 0.5 s on is point 3: (0, 0, 10) away.
+        var track = Build([Point(0f), Point(10f), Point(10f, z: 10f)], AimMode.PathTangent);
+        track = TrackEditing.SetHold(TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 1f), 2, 0.3f), 1, 2f);
+
+        Along(Vector3.UnitZ, Facing(new TrackEvaluator(track), 2.8));
+    }
+
+    [Fact]
+    public void RecordedAimTurnsAtOneRateThroughAPointBetweenLegsOfDifferentTimes()
+    {
+        // Legs of 10 and 5 yalms at 5 a second take 2 s and 1 s; yaw 0, 1, 3 gives (1/2·1 + 2/1·2) / 3 = 1.5 rad/s at the middle.
+        var evaluator = new TrackEvaluator(Build([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(15f, yaw: 3f)]) with { Speed = 5f });
+        float Yaw(double time) => TrackAim.FromDirection(Facing(evaluator, time)).Yaw;
+        const double h = 1e-3;
+
+        Assert.Equal(1.5f, (float)((Yaw(2.0) - Yaw(2.0 - h)) / h), 0.02f);
+        Assert.Equal(1.5f, (float)((Yaw(2.0 + h) - Yaw(2.0)) / h), 0.02f);
+    }
+
+    [Fact]
+    public void RecordedAimHoldsStillThroughAHold()
+    {
+        // Point 2 holds for 2 s: through the hold the camera keeps point 2's yaw, 1.
+        var track = TrackEditing.SetHold(Build([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(20f, yaw: 2f)]), 1, 2f);
+        var evaluator = new TrackEvaluator(track);
+        var arrive = evaluator.PointSeconds(1);
+
+        Assert.Equal(1f, TrackAim.FromDirection(Facing(evaluator, arrive + 1.9)).Yaw, 1e-4f);
+    }
 }
