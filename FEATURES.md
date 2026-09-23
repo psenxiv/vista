@@ -56,3 +56,28 @@ alongside the footage, so lining the two up afterwards is a waveform match.
   and a looping playlist give a marker no single time.
 - Depends on saving (3.f), since markers and the audio reference would be saved with the
   scene. It also claims the playlist, as the switchboard does.
+
+### Starting characters with the camera (Brio)
+When Live starts, unfreeze chosen actors through Brio, so the camera and their animation begin
+together on every take. Brio's actor speed could also give slow motion under a moving camera.
+
+**Why not specced:** raised on 2026-09-24 for GPose video makers; not explored yet. Brio publishes
+an IPC API (`BrioAPI_V2.cs` in its repo) with `Actor.Freeze`, `Actor.UnFreeze`, `Actor.SetSpeed`
+and `Actor.GetAll`. Open questions: which actors take part and how they're chosen, what happens
+without Brio installed, and whether unfreezing lines animations up exactly on every take.
+
+### Frame guides
+Toggleable overlays for framing a recorded shot: 9:16, 16:9 and 2.39:1 masks, and a rule-of-thirds
+grid, for creators filming Shorts and TikToks.
+
+**Why not specced:** raised on 2026-09-24; not explored yet. Open questions: which ratios, where the
+toggle lives, and whether the masks follow the game window or a chosen output size.
+
+### Shaping the path
+Widen or tighten the curve through a point without adding points, as with tension or handles in
+Unreal, Blender and After Effects. Today the path is a centripetal Catmull-Rom spline, shaped only
+by where the points are.
+
+**Why not specced:** raised on 2026-09-24; not explored yet. Open questions: a per-point tension
+(Kochanek-Bartels) or full handles, how it's edited in the world, and how it interacts with look-ahead
+and the timing, which measures distance along the path.
