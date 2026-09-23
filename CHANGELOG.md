@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1.1
+
+- Fixed the camera shaking slightly while holding at the start or end of a Direction of travel track.
+- Number fields can now be dragged left or right to change them. Double-click to type.
+- The Camera window can move the camera along your view: choose Move (local), then drag Right, Up or Forward.
+- Move (local) now moves anchors along the way they face.
+- Fly speed no longer has a feather icon.
+
 ## 0.5.0.1
 
 - A test build, the same as 0.5.0, to try out testing builds.
