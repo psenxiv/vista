@@ -30,7 +30,7 @@ internal sealed class EditorKeys
             held[i] = down;
             if (!down) continue;
 
-            var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.Selected is not null;
+            var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.SelectedPoints.Count > 0;
             var ours = key == VirtualKey.SPACE || (editing && (key is VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes));
             if (ours) PhysicalKeys.Hide(key);
             if (pressed && ours) Act(session, gizmo, key, ctrl, alt);
