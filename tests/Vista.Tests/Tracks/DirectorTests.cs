@@ -307,4 +307,75 @@ public class DirectorTests
         Assert.Equal(want.Y, got.Y, 4);
         Assert.Equal(want.Z, got.Z, 4);
     }
+
+    // StraightTrack's control points sit at x = 0, 5 and 10 with two legs of 5 s, so the shot runs
+    // 10 s. The points are collinear and evenly spaced, so the spline is the straight line through
+    // them and arc length along it is x. Both timing secants are 5 yalms / 5 s = 1, so PCHIP gives
+    // every key a tangent of 1 and the distance curve is d(t) = t. Position at shot time t is
+    // therefore exactly x = t, and every value below reads straight off PlaybackClock.ShotTime.
+    private static float XAfter(Director director, float dt) => director.Tick(dt)!.Value.Position.X;
+
+    [Fact]
+    public void ReverseStartsAtTheEndAndRunsBackToTheStart()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.Reverse)));
+        Assert.Equal(10.0, director.ShotLength, 5);
+
+        // Shot time is length - clock, so clocks 0, 2.5 and 5 give 10, 7.5 and 5.
+        Assert.Equal(10f, XAfter(director, 0f), 3);
+        Assert.Equal(7.5f, XAfter(director, 2.5f), 3);
+        Assert.Equal(5f, XAfter(director, 2.5f), 3);
+
+        // The clock stops at the cycle, so an overrun lands on shot time 0.
+        Assert.Equal(0f, XAfter(director, 20f), 3);
+        Assert.True(director.IsFinished);
+    }
+
+    [Fact]
+    public void PingPongRunsOutAndBackOverTwiceTheLength()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.PingPong)));
+
+        // Shot time is the clock up to the length, then 2 * length - clock. The cycle is 20 s.
+        Assert.Equal(0f, XAfter(director, 0f), 3);
+        Assert.Equal(5f, XAfter(director, 5f), 3);
+        Assert.Equal(10f, XAfter(director, 5f), 3);
+        Assert.Equal(7.5f, XAfter(director, 2.5f), 3);
+        Assert.Equal(0f, XAfter(director, 7.5f), 3);
+    }
+
+    [Fact]
+    public void PingPongIsNotFinishedAtTheTurnaround()
+    {
+        var director = new Director();
+        director.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.PingPong)));
+
+        director.Tick(10f);
+        Assert.Equal(10.0, director.ShotTime, 5);
+        Assert.False(director.IsFinished);
+
+        director.Tick(10f);
+        Assert.Equal(0.0, director.ShotTime, 5);
+        Assert.True(director.IsFinished);
+    }
+
+    [Fact]
+    public void SeekTakesAShotTimeWhicheverWayTheTrackRuns()
+    {
+        var forward = new Director();
+        forward.GoLive(new TrackShot(StraightTrack()));
+        forward.Seek(2.5);
+
+        var reverse = new Director();
+        reverse.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.Reverse)));
+        reverse.Seek(2.5);
+
+        // Both land on shot time 2.5 and so on x = 2.5, though Reverse's clock behind it is 7.5.
+        Assert.Equal(2.5, forward.ShotTime, 5);
+        Assert.Equal(2.5, reverse.ShotTime, 5);
+        Assert.Equal(2.5f, XAfter(forward, 0f), 3);
+        Assert.Equal(2.5f, XAfter(reverse, 0f), 3);
+    }
 }
