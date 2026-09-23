@@ -6,6 +6,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
+using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The scene's tracks: pick one to edit, show or hide, rename, duplicate, delete and reorder them.</summary>
@@ -150,10 +151,5 @@ internal sealed unsafe class HierarchyPanel
         renaming = track.Id;
         renameText = track.Name;
         focusRename = true;
-    }
-
-    private static void Report(string? refusal)
-    {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
     }
 }

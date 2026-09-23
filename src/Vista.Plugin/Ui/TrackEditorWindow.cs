@@ -9,6 +9,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
+using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
@@ -604,9 +605,4 @@ internal sealed unsafe class TrackEditorWindow : Window
     /// <summary>Moves the cursor so an item of <paramref name="width"/> ends at the right edge.</summary>
     private static void RightAlign(float width)
         => ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - width));
-
-    private static void Report(string? refusal)
-    {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
-    }
 }

@@ -8,6 +8,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
+using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The timing graph: distance along the path against time, with its keys, legs and playhead.</summary>
@@ -505,10 +506,6 @@ internal sealed class TimingWindow : Window
         _ => "Custom",
     };
 
-    private static void Report(string? refusal)
-    {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
-    }
 
     /// <summary>The selected key's index, or null when none is selected or it is out of range.</summary>
     private int? SelectedKeyIndex()

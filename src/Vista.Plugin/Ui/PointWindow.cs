@@ -9,6 +9,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
+using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The selected point's, anchor's or Look At point's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
@@ -246,9 +247,4 @@ internal sealed class PointWindow : Window
     private static float Degrees(float radians) => radians * 180f / MathF.PI;
 
     private static float Radians(float degrees) => degrees * MathF.PI / 180f;
-
-    private static void Report(string? refusal)
-    {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
-    }
 }

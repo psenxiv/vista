@@ -6,6 +6,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
+using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The playlist Live plays: add, reorder, remove, set loop counts, and see what's playing.</summary>
@@ -217,10 +218,5 @@ internal sealed unsafe class PlaylistPanel
             Report(session.AddToPlaylist(scene.Tracks[t].Id, index));
 
         ImGui.EndDragDropTarget();
-    }
-
-    private static void Report(string? refusal)
-    {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
     }
 }

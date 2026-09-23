@@ -6,6 +6,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
+using static Vista.Plugin.Ui.Refusal;
 namespace Vista.Plugin.Ui;
 
 /// <summary>The panel a target aim mode edits: the character to aim at, its aim height and smoothing.</summary>
@@ -111,10 +112,5 @@ internal abstract class TargetWindow : Window
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(text);
         ImGui.SameLine(ListWidth - FieldWidth + ImGui.GetStyle().WindowPadding.X);
-    }
-
-    protected static void Report(string? refusal)
-    {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
     }
 }
