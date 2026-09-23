@@ -162,4 +162,60 @@ public class SceneJsonTests
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
+
+    // Two points 10 yalms apart, every value in range.
+    private static Track Plain() => TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(10f));
+
+    private static string SceneOf(Track track, int? loops = null)
+        => SceneJson.Write(new Scene([track], new HashSet<Guid>(), [new PlaylistEntry(Guid.NewGuid(), track.Id, loops)]));
+
+    private static Track WithPoint(Track t, ControlPoint p) => t with { Points = [p, t.Points[1]] };
+
+    private static Track WithTiming(Track t, PointTiming k) => t with { Timing = [t.Timing[0], k] };
+
+    public static TheoryData<string, Func<Track, Track>> OutOfRange => new()
+    {
+        // TrackEditing's speed range is 0.01 to 100 yalms per second, for the track and a pinned leg.
+        { "track speed 0", t => t with { Speed = 0f } },
+        { "track speed 101", t => t with { Speed = 101f } },
+        { "leg speed 0", t => WithTiming(t, new PointTiming(LegSpeed: 0f)) },
+        // A hold runs 0 to 600 seconds.
+        { "hold -1", t => WithTiming(t, new PointTiming(Hold: -1f)) },
+        { "hold 601", t => WithTiming(t, new PointTiming(Hold: 601f)) },
+        // Aim height runs 0 to 3 yalms, smoothing 0 to 1.
+        { "aim height 3.5", t => t with { AimHeight = 3.5f } },
+        { "smoothing 1.5", t => t with { Smoothing = 1.5f } },
+        // A camera can't look past straight up (π/2 ≈ 1.5708) or see with no field of view, or all round (π).
+        { "pitch 1.6", t => WithPoint(t, Point(0f, pitch: 1.6f)) },
+        { "fov 0", t => WithPoint(t, Point(0f, fov: 0f)) },
+        { "fov π", t => WithPoint(t, Point(0f, fov: MathF.PI)) },
+    };
+
+    [Theory]
+    [MemberData(nameof(OutOfRange))]
+    public void AValueOutOfRangeIsRefused(string _, Func<Track, Track> spoil)
+    {
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(SceneOf(spoil(Plain()))));
+        Assert.Throws<InvalidDataException>(() => SceneJson.ReadPreset(SceneJson.WritePreset(new Preset(spoil(Plain()), 0f))));
+    }
+
+    [Fact]
+    public void ValuesAtTheEdgesOfTheirRangesLoad()
+    {
+        // The range ends themselves, and a pitch and FoV past the editor's own limits (89°, 120°) that a camera can still record.
+        var track = WithTiming(Plain() with { Speed = 100f, AimHeight = 3f, Smoothing = 1f }, new PointTiming(LegSpeed: 0.01f, Hold: 600f));
+        track = WithPoint(track, Point(0f, pitch: 1.56f, fov: 2.5f));
+
+        Assert.Single(SceneJson.Read(SceneOf(track, 99)).Tracks);
+        Assert.Single(SceneJson.Read(SceneOf(track, 1)).Tracks);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100)]
+    public void RepeatsOutOfRangeAreRefused(int loops)
+    {
+        // An entry repeats 1 to PlaylistEditing.MaxLoops (99) times, or follows its track with none.
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(SceneOf(Plain(), loops)));
+    }
 }
