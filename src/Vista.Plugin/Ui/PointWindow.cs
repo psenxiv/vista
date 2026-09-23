@@ -20,6 +20,7 @@ internal sealed class PointWindow : Window
     private float gridWidth;
     private ControlPoint? copied;
     private bool dragging;
+    private bool openedLastFrame;
 
     public PointWindow(CameraSession session, PointGizmo gizmo)
         : base("Point###vista-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
@@ -35,9 +36,19 @@ internal sealed class PointWindow : Window
     {
         var editing = session.Mode == CameraMode.Editing;
         var now = (editing ? session.Selected : null, editing ? session.SelectedAnchor : null, session.EditedTrackId);
+
+        // Only the close button clears IsOpen behind our back: open last frame, same selection, now shut.
+        if (openedLastFrame && !IsOpen && now == shown && ShowCloseButton)
+        {
+            session.Select(null);
+            now = (null, null, now.Item3);
+        }
+
         if (now != shown) session.EndLiveEdit();
         shown = now;
+        ShowCloseButton = now.Item2 is AnchorKind.Scene or AnchorKind.Track;
         IsOpen = now.Item1 is not null || now.Item2 is not null;
+        openedLastFrame = IsOpen;
         WindowName = now switch
         {
             (_, AnchorKind.Scene, _) => "Scene anchor###vista-point",
