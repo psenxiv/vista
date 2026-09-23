@@ -124,6 +124,10 @@ The commands live in `scripts/`. Never build the plugin with bare `dotnet build`
 `DALAMUD_HOME` must be set. Releases run from `.github/workflows/release.yml` when a `v*` tag is
 pushed; only the user pushes tags.
 
+Before a release, add a `## X.Y.Z` section to `CHANGELOG.md`, newest first: a few short bullets for
+players, in `GUIDES.md`'s voice, and show it to the user first. The workflow uses it for the GitHub
+release notes and `repo.json`, and `make release` refuses a version without one.
+
 In-game verification is the user's. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 

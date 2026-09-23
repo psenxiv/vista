@@ -7,6 +7,5 @@
   "ApplicableVersion": "any",
   "AcceptsFeedback": false,
   "RepoUrl": "https://github.com/psenxiv/vista",
-  "IconUrl": "https://raw.githubusercontent.com/psenxiv/vista/main/images/icon.png",
-  "Changelog": "Scenes save as you work, presets, and a User Guide."
+  "IconUrl": "https://raw.githubusercontent.com/psenxiv/vista/main/images/icon.png"
 }

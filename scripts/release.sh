@@ -9,6 +9,7 @@ cd "$ROOT"
 git fetch -q origin main
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main isn't in step with origin/main; push or pull first." >&2; exit 1; }
 tag="v$(version)"
+grep -qx "## $(version)" CHANGELOG.md || { echo "CHANGELOG.md has no '## $(version)' section." >&2; exit 1; }
 if [ "${1:-}" = "rc" ]; then tag="$tag-rc.${2:?usage: release.sh rc N}"; fi
 git rev-parse -q --verify "refs/tags/$tag" >/dev/null && { echo "Tag $tag already exists." >&2; exit 1; }
 "$ROOT/scripts/test.sh"

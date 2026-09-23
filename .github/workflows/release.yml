@@ -44,6 +44,15 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "prerelease=$($prerelease.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+      - name: Read the changelog
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $lines = Get-Content CHANGELOG.md
+          $start = [array]::IndexOf($lines, "## $version")
+          if ($start -lt 0) { throw "CHANGELOG.md has no section for $version." }
+          $body = for ($i = $start + 1; $i -lt $lines.Count -and -not $lines[$i].StartsWith('## '); $i++) { $lines[$i] }
+          ($body -join "`n").Trim() | Set-Content notes.md -Encoding utf8NoBOM
+
       - name: Test
         run: dotnet test tests/Vista.Tests/Vista.Tests.csproj -c Release
 
@@ -61,10 +70,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $manifest = Get-Content src/Vista.Plugin/Vista.json -Raw | ConvertFrom-Json
           $flags = @()
           if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { $flags += '--prerelease' }
-          gh release create '${{ github.ref_name }}' '${{ steps.package.outputs.zip }}' --title 'Vista ${{ github.ref_name }}' --notes $manifest.Changelog @flags
+          gh release create '${{ github.ref_name }}' '${{ steps.package.outputs.zip }}' --title 'Vista ${{ github.ref_name }}' --notes-file notes.md @flags
 
       - name: Update repo.json
         if: steps.version.outputs.prerelease == 'false'
@@ -82,7 +90,7 @@ jobs:
           $entry.Punchline = $manifest.Punchline
           $entry.Description = $manifest.Description
           $entry.Tags = $manifest.Tags
-          $entry.Changelog = $manifest.Changelog
+          $entry.Changelog = (Get-Content notes.md -Raw).Trim()
           $entry.DownloadLinkInstall = $link
           $entry.DownloadLinkUpdate = $link
           $entry.DownloadLinkTesting = $link

@@ -15,7 +15,7 @@
       "video",
       "events"
     ],
-    "Changelog": "Scenes save as you work, presets, and a User Guide.",
+    "Changelog": "- Scenes save as you work, and you can keep as many as you like. Vista asks for a save folder the first time you open it.\n- Save any track as a preset and add it to any scene.\n- A User Guide: click the ? at the top right of the Vista window.\n- Zoom and pan the timing graph.\n- Clearer menus, a welcome screen for testers, a new icon, and many small fixes.",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "AcceptsFeedback": false,
