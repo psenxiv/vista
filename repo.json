@@ -15,7 +15,7 @@
       "video",
       "events"
     ],
-    "Changelog": "First closed beta.",
+    "Changelog": "Scenes save as you work, presets, and a User Guide.",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "AcceptsFeedback": false,
