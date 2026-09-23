@@ -133,8 +133,18 @@ checklist that has not been run — several can be pending, and the page keeps e
 separately. Don't write a Markdown checklist. The user serves the folder themselves and sends
 back the results JSON it downloads. Delete a checklist once its results are in.
 
+## User Guide
+
+The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `GUIDES.md` before
+writing or changing any page**; it sets the voice, length and formatting.
+
+When a change adds, removes or changes something a user can see or do, update the guide pages that
+describe it in the same change. If a key changes, update `hotkeys.md` and the README's keys table
+together.
+
 ## Docs
 
+- User Guide writing rules: `GUIDES.md`
 - Design: `docs/superpowers/specs/`
 - Plans: `docs/superpowers/plans/`
 - Deferred features: `FEATURES.md`. Only features actually agreed as deferred.
