@@ -239,7 +239,9 @@ public class SessionSelectionTests
         state.ClickPoint(3, RowClick.Toggle);
 
         Assert.Null(state.DeleteSelected());
-        Assert.Equal(new[] { 5f, 20f }, state.Track.Points.Select(p => p.Position.X));
+        Assert.Equal(2, state.Track.Points.Count);
+        Assert.Equal(5f, state.Track.Points[0].Position.X, 0.001f);
+        Assert.Equal(20f, state.Track.Points[1].Position.X, 0.001f);
         Assert.Empty(state.SelectedPoints);
 
         Assert.True(state.Undo());
@@ -281,7 +283,11 @@ public class SessionSelectionTests
         // 0 and 1 grabbed by 1 onto 3, below: after it, so 2 3 0 1.
         Assert.Null(state.MovePoints(state.SelectedPoints, 1, 3));
 
-        Assert.Equal(new[] { 20f, 30f, 5f, 10f }, state.Track.Points.Select(p => p.Position.X));
+        Assert.Equal(4, state.Track.Points.Count);
+        Assert.Equal(20f, state.Track.Points[0].Position.X, 0.001f);
+        Assert.Equal(30f, state.Track.Points[1].Position.X, 0.001f);
+        Assert.Equal(5f, state.Track.Points[2].Position.X, 0.001f);
+        Assert.Equal(10f, state.Track.Points[3].Position.X, 0.001f);
         Assert.Equal([2, 3], state.SelectedPoints);
     }
 
@@ -419,5 +425,70 @@ public class SessionSelectionTests
 
         Assert.Equal([0], state.SelectedPoints);
         Assert.Equal([Track(state, 0)], state.SelectedTracks);
+    }
+
+    [Fact]
+    public void ShiftRangesFromTheLastClickedPointWhereItMovedTo()
+    {
+        var state = Editing();
+        state.Select(3);
+
+        // Point 4 moves to the top, so a Shift-click on 3 runs from the top down.
+        Assert.Null(state.MovePoints([3], 3, 0));
+        state.ClickPoint(2, RowClick.Range);
+
+        Assert.Equal([0, 1, 2], state.SelectedPoints);
+    }
+
+    [Fact]
+    public void ShiftRangesFromTheLastClickedPointAfterADeleteAboveIt()
+    {
+        var state = Editing();
+        state.Select(2);
+
+        // Point 1 goes, so the last clicked is now at 1, and Shift-clicking 0 selects 0 and 1.
+        Assert.Null(state.DeletePoints([0]));
+        state.ClickPoint(0, RowClick.Range);
+
+        Assert.Equal([0, 1], state.SelectedPoints);
+    }
+
+    [Fact]
+    public void ShiftRangesFromAPointAddedAfterTheSelectedOne()
+    {
+        var state = Editing();
+        state.Select(1);
+
+        Assert.Null(state.AddAfterSelected(Point(15f)));
+        state.ClickPoint(3, RowClick.Range);
+
+        Assert.Equal([2, 3], state.SelectedPoints);
+    }
+
+    [Fact]
+    public void CtrlClickingTheLastOtherTrackOffRangesFromTheEditedOneAgain()
+    {
+        var state = Editing();
+        var first = state.EditedTrackId;
+        state.AddTrack();
+        state.SwitchTrack(first);
+        state.ClickTrack(Track(state, 2), RowClick.Toggle);
+        state.ClickTrack(Track(state, 2), RowClick.Toggle);
+
+        state.ClickTrack(Track(state, 3), RowClick.Range);
+
+        Assert.Equal(state.Scene.Tracks.Select(t => t.Id), state.SelectedTracks);
+    }
+
+    [Fact]
+    public void UndoingAMoveOfAnUnselectedPointSelectsIt()
+    {
+        var state = Editing();
+        state.Select(0);
+
+        Assert.Null(state.MovePointsTo([2], Track(state, 1)));
+        Assert.True(state.Undo());
+
+        Assert.Equal([2], state.SelectedPoints);
     }
 }

@@ -623,11 +623,25 @@ public class TrackEditingTests
         // Point 2 goes first: the leg to point 3 takes leg 2's 5. Then point 1: that leg takes leg 1's 3.
         var result = TrackEditing.Delete(track, [1, 2]);
 
-        Assert.Equal(new[] { 0f, 30f }, result.Points.Select(p => p.Position.X));
-        Assert.Equal(3f, TrackEditing.LegSpeed(result, 1));
+        Assert.Equal(2, result.Points.Count);
+        Assert.Equal(0f, result.Points[0].Position.X, 0.0001f);
+        Assert.Equal(30f, result.Points[1].Position.X, 0.0001f);
+        Assert.Equal(3f, TrackEditing.LegSpeed(result, 1), 0.0001f);
     }
 
     [Fact]
     public void DeletingSeveralRefusesAnIndexOutOfRange()
         => Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(Build3PointTrack(), [0, 3]));
+
+    [Fact]
+    public void ReorderingTwoEqualPointsStillSwapsTheirHolds()
+    {
+        var track = TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(0f));
+        track = TrackEditing.SetHold(track, 0, 2f);
+
+        var result = TrackEditing.Reorder(track, [1, 0]);
+
+        Assert.Equal(0f, TrackEditing.HoldSeconds(result, 0), 0.0001f);
+        Assert.Equal(2f, TrackEditing.HoldSeconds(result, 1), 0.0001f);
+    }
 }

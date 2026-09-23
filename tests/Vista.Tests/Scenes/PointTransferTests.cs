@@ -194,4 +194,15 @@ public class PointTransferTests
         Assert.Throws<ArgumentException>(() => PointTransfer.Move(scene, a, [4], [W1], b, NoGround));
         Assert.Throws<ArgumentException>(() => PointTransfer.Move(scene, a, [0, 1], [W1], b, NoGround));
     }
+
+    [Fact]
+    public void OnlyAnotherTrackThatDoesNotFollowCanTakePoints()
+    {
+        var scene = TwoTracks();
+        var (source, other) = (scene.Tracks[0], scene.Tracks[1]);
+
+        Assert.True(PointTransfer.CanTake(other, source.Id));
+        Assert.False(PointTransfer.CanTake(source, source.Id));
+        Assert.False(PointTransfer.CanTake(other with { Aim = AimMode.FollowTarget }, source.Id));
+    }
 }
