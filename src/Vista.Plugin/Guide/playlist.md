@@ -9,10 +9,12 @@ You change the playlist in Edit. A track can be in it more than once, or not at 
 | | Control | Does |
 |---|---|---|
 | {icon:Plus} | **Add to playlist** | Adds a track to the end. |
-| | Drag a track from the Hierarchy | Adds it where you drop it. |
+| | Drag tracks from the Hierarchy | Adds them where you drop them. |
 | | Drag an entry | Changes the order. |
 | {icon:Times} | **Remove from playlist** | Removes the entry. Shows on hover. |
 | {icon:Repeat} | **Loop playlist** | Starts again from the top after the last entry. |
+
+Select several tracks to drag them in at once, or several entries to reorder or remove them together. See [Selecting several](tracks-selecting.md).
 
 ## Repeats
 

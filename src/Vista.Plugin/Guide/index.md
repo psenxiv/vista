@@ -5,6 +5,7 @@
 - [Tracks and points](tracks.md)
   - [Adding points](tracks-adding-points.md)
   - [The Point window](tracks-point-window.md)
+  - [Selecting several](tracks-selecting.md)
   - [Playing a track](tracks-playing.md)
 - [Timing](timing.md)
   - [Legs and holds](timing-legs-and-holds.md)

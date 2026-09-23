@@ -2,6 +2,8 @@
 
 The **Point** window opens when you select a point, and shows its numbers. Close it to clear the selection. It also opens for anchors and the Look At point.
 
+It closes while several points are selected.
+
 ## The gizmo
 
 A gizmo appears on the selected point in the world. Drag its handles to move or turn the point. The buttons at the top left choose what it does:

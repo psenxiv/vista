@@ -21,6 +21,8 @@ The buttons on a row show when you hover over it. A hidden track always shows {i
 
 Right-click a name to **Rename**, **Duplicate**, **Add to playlist**, **Save as preset** or **Delete** the track.
 
+`Ctrl` + click or `Shift` + click names to select several tracks. Drag points onto a track to move them there, or below the tracks to make a new one. See [Selecting several](tracks-selecting.md).
+
 ## The track row
 
 The row above the points holds the track's settings:
