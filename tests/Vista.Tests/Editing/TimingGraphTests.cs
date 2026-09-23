@@ -81,4 +81,20 @@ public class TimingGraphTests
         Assert.Equal(7.0711f, end.X, 1e-3f);
         Assert.Equal(-7.0711f, end.Y, 1e-3f);
     }
+
+    [Fact]
+    public void AnOpenEndedReadCarriesOnPastThePlotAtTheViewsScale()
+    {
+        // 150 px is 1.5 plot widths of a 4 s view from 2 s: 2 + 6 = 8 s. Left of the plot stops at 2 s.
+        Assert.Equal(8f, Zoomed.TimeAtOpenEnded(150f), 1e-4f);
+        Assert.Equal(2f, Zoomed.TimeAtOpenEnded(-10f), 1e-4f);
+    }
+
+    [Fact]
+    public void AnOpenEndedReadOfTheWholeShotIsTheOldDragFormula()
+    {
+        // Graph is 400 px from x = 100 over 10 s: 600 px is 1.25 widths in, 12.5 s.
+        Assert.Equal(12.5f, Graph.TimeAtOpenEnded(600f), 1e-4f);
+        Assert.Equal(5f, Graph.TimeAtOpenEnded(300f), 1e-4f);
+    }
 }
