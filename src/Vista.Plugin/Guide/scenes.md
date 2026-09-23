@@ -1,6 +1,6 @@
 # Scenes and anchors
 
-A scene is everything you are working on: your tracks and the playlist. It stays put when you change zone.
+A scene is everything you are working on: your tracks and the playlist. It stays put when you change zone, and saves itself as you work. See [Saving and scenes](scenes-saving.md).
 
 An anchor is a marker on the ground that other things hang off. Move or turn an anchor and everything attached moves with it.
 

@@ -15,6 +15,8 @@
   - [Watch Target](aim-watch-target.md)
   - [Follow Target](aim-follow-target.md)
 - [Scenes and anchors](scenes.md)
+  - [Saving and scenes](scenes-saving.md)
+  - [Presets](presets.md)
 - [Playlist](playlist.md)
 - [The Camera window](camera-window.md)
 - [Hotkeys](hotkeys.md)

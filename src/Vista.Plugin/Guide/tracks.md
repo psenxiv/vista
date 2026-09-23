@@ -10,14 +10,14 @@ The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} *
 
 | | Control | Does |
 |---|---|---|
-| {icon:Plus} | **Add track** | Adds an empty track and starts editing it. |
+| {icon:Plus} | **Add track** | Adds an empty track, or one from a [preset](presets.md). |
 | | Click a name | Edits that track. |
 | | Double-click a name | Edits that track and flies the camera to its first point. |
 | | Drag a name | Changes the order. |
 | {icon:Eye} | **Hide** / **Show** | Hides or shows the track in the world. |
 | {icon:Anchor} | **Select track anchor** | See [Scenes and anchors](scenes.md). |
 
-Right-click a name to **Rename**, **Duplicate**, **Add to playlist** or **Delete** the track.
+Right-click a name to **Rename**, **Duplicate**, **Add to playlist**, **Save as preset** or **Delete** the track.
 
 ## The track row
 
