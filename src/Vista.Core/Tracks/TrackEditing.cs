@@ -40,6 +40,9 @@ public static class TrackEditing
     private const int DurationSteps = 60;
 
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
+    /// <summary>Why a point can't join a Follow Target track that has one.</summary>
+    public const string FollowHasOnePoint = "A Follow Target track has one point";
+
     public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1")
         => new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
 

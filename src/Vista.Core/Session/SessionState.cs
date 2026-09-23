@@ -195,6 +195,7 @@ public sealed class SessionState
         Scrubbing = false;
         EndLiveEdit();
 
+        DropGroupSelection();
         Director.GoLive(new PlaylistShot(items, Scene.PlaylistLoops));
         var fromGame = Released;
         Mode = CameraMode.Live;
@@ -232,6 +233,7 @@ public sealed class SessionState
             Director.GoOffline();
         }
 
+        DropGroupSelection();
         Mode = to;
         return owned;
     }
@@ -256,8 +258,22 @@ public sealed class SessionState
     public string? AddPreset(Preset preset, Vector3 camera)
         => CommitScene(scene => Presets.Place(scene, preset, camera with { Y = groundBelow(camera) ?? camera.Y }));
 
-    /// <summary>The selected point's index, or null.</summary>
-    public int? Selected { get; private set; }
+    private Selection selection = Selection.None;
+    private int? lastPoint;
+    private Guid? lastTrack;
+    private Guid? lastEntry;
+
+    /// <summary>The selected point's index when exactly one is selected, or null.</summary>
+    public int? Selected => selection.Points.Count == 1 ? selection.Points[0] : null;
+
+    /// <summary>The edited track's selected points, in order.</summary>
+    public IReadOnlyList<int> SelectedPoints => selection.Points;
+
+    /// <summary>The edited track and any other selected tracks, in Hierarchy order.</summary>
+    public IReadOnlyList<Guid> SelectedTracks => Scene.Tracks.Select(t => t.Id).Where(id => id == EditedTrackId || selection.Tracks.Contains(id)).ToArray();
+
+    /// <summary>The selected playlist entries, in playlist order.</summary>
+    public IReadOnlyList<Guid> SelectedEntries => Scene.Playlist.Select(e => e.Id).Where(selection.Entries.Contains).ToArray();
 
     /// <summary>True while editing with a step to undo.</summary>
     public bool CanUndo => Mode == CameraMode.Editing && history.CanUndo;
@@ -271,14 +287,90 @@ public sealed class SessionState
     /// <summary>The selected leg, or null. Never set together with <see cref="SelectedKey"/>.</summary>
     public int? SelectedLeg { get; private set; }
 
-    /// <summary>Selects a point while editing; null or an index out of range clears the selection.</summary>
+    /// <summary>Selects only a point while editing, as a plain click does; null or an index out of range clears every selection.</summary>
     public void Select(int? index)
     {
         if (Mode != CameraMode.Editing) return;
+        var point = index is { } i && i >= 0 && i < Local.Points.Count ? i : (int?)null;
+        SelectAnchorless(new Selection(point is { } p ? [p] : [], [], []));
+        lastPoint = point;
+    }
+
+    /// <summary>Applies a click to point <paramref name="index"/>: plain selects only it; Ctrl and Shift add to the point selection, unless two or more of another kind are selected.</summary>
+    public void ClickPoint(int index, RowClick click)
+    {
+        if (Mode != CameraMode.Editing || index < 0 || index >= Local.Points.Count) return;
+        if (click == RowClick.Plain)
+        {
+            Select(index);
+            return;
+        }
+
+        if (SelectedTracks.Count >= 2 || SelectedEntries.Count >= 2) return;
+        var (points, last) = RowPicking.Click(Enumerable.Range(0, Local.Points.Count).ToArray(), selection.Points, lastPoint, index, click);
+        SelectAnchorless(new Selection(points, [], []));
+        if (points.Count > 0) lastPoint = last;
+    }
+
+    /// <summary>Applies a click to track <paramref name="id"/>: plain edits it and selects only it; Ctrl and Shift add to the track selection, unless two or more of another kind are selected. Returns why it was refused, or null.</summary>
+    public string? ClickTrack(Guid id, RowClick click)
+    {
+        if (Mode != CameraMode.Editing) return "Tracks can only be selected while editing.";
+        if (SceneEditing.IndexOf(Scene, id) < 0) return "There is no such track.";
+        if (click == RowClick.Plain)
+        {
+            if (SwitchTrack(id) is { } refusal) return refusal;
+            SelectAnchorless(Selection.None);
+            lastTrack = id;
+            return null;
+        }
+
+        if (id == EditedTrackId && click == RowClick.Toggle) return null;
+        if (selection.Points.Count >= 2 || SelectedEntries.Count >= 2) return null;
+        var (tracks, last) = RowPicking.Click(Scene.Tracks.Select(t => t.Id).ToArray(), SelectedTracks, lastTrack ?? EditedTrackId, id, click);
+        SelectAnchorless(new Selection([], tracks.Where(t => t != EditedTrackId).ToArray(), []));
+        lastTrack = last;
+        return null;
+    }
+
+    /// <summary>Applies a click to playlist entry <paramref name="id"/>: plain selects only it; Ctrl and Shift add to the entry selection, unless two or more of another kind are selected. Returns why it was refused, or null.</summary>
+    public string? ClickEntry(Guid id, RowClick click)
+    {
+        if (Mode != CameraMode.Editing) return "Playlist entries can only be selected while editing.";
+        if (PlaylistEditing.IndexOf(Scene, id) < 0) return "There is no such playlist entry.";
+        if (click != RowClick.Plain && (selection.Points.Count >= 2 || SelectedTracks.Count >= 2)) return null;
+
+        var (entries, last) = RowPicking.Click(Scene.Playlist.Select(e => e.Id).ToArray(), SelectedEntries, lastEntry, id, click);
+        SelectAnchorless(new Selection([], [], entries));
+        if (entries.Count > 0) lastEntry = last;
+        return null;
+    }
+
+    /// <summary>Replaces the selection and clears any selected anchor.</summary>
+    private void SelectAnchorless(Selection next)
+    {
         SelectedAnchor = null;
-        Selected = index is { } i && i >= 0 && i < Local.Points.Count ? i : null;
+        SetSelection(next);
+    }
+
+    /// <summary>Replaces the selection, forgets the last row clicked of each kind it leaves empty, and keeps the timing selection in step with its points.</summary>
+    private void SetSelection(Selection next)
+    {
+        selection = next;
+        if (next.Points.Count == 0) lastPoint = null;
+        if (next.Tracks.Count == 0) lastTrack = null;
+        if (next.Entries.Count == 0) lastEntry = null;
         SyncKeyToPoint();
     }
+
+    /// <summary>Clears the track and entry selections and any selection of two or more points, as leaving Edit does.</summary>
+    private void DropGroupSelection()
+    {
+        if (selection.Points.Count > 1 || selection.Tracks.Count > 0 || selection.Entries.Count > 0) SetSelection(Selection.None);
+    }
+
+    /// <summary>Selects points <paramref name="points"/> of the edited track, in order.</summary>
+    private void SelectPoints(IReadOnlyList<int> points) => SetSelection(new Selection(points.Distinct().Order().ToArray(), [], []));
 
     /// <summary>Selects a timing key while editing; a point's key also selects its point.</summary>
     public void SelectKey(int? key)
@@ -288,8 +380,8 @@ public sealed class SessionState
         SelectedKey = key is { } k && k >= 0 && k < TrackEditing.KeyCount(Local) ? k : null;
         if (SelectedKey is { } s && TrackEditing.RoleOf(Local, s) == KeyRole.Point)
         {
-            Selected = TrackEditing.PointOf(Local, s);
-            SelectedAnchor = null;
+            SelectAnchorless(new Selection([TrackEditing.PointOf(Local, s)], [], []));
+            SelectedKey = s;
         }
     }
 
@@ -303,18 +395,18 @@ public sealed class SessionState
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change)
-        => Apply(change, result => Selected is { } s && s < result.Points.Count ? s : null);
+        => Apply(change, result => selection.Points.Where(p => p < result.Points.Count).ToArray());
 
     /// <summary>Appends a world point, placing the anchors under a first point; the selection is unchanged.</summary>
     public string? AddToEnd(ControlPoint point)
-        => ApplyScene(scene => WithPoint(scene, point, TrackEditing.Append), _ => Selected);
+        => ApplyScene(scene => WithPoint(scene, point, TrackEditing.Append), _ => selection.Points);
 
     /// <summary>Inserts a world point after the selected one and selects it.</summary>
     public string? AddAfterSelected(ControlPoint point)
     {
         if (SelectionRefusal() is { } refusal) return refusal;
         var s = Selected!.Value;
-        return ApplyScene(scene => WithPoint(scene, point, (t, p) => TrackEditing.InsertAfter(t, s, p)), _ => s + 1);
+        return ApplyScene(scene => WithPoint(scene, point, (t, p) => TrackEditing.InsertAfter(t, s, p)), _ => [s + 1]);
     }
 
     /// <summary>Replaces the selected point, keeping its timing and the selection.</summary>
@@ -326,7 +418,7 @@ public sealed class SessionState
 
     /// <summary>Replaces point <paramref name="index"/> with a world point, keeping its timing and the selection.</summary>
     public string? ReplacePoint(int index, ControlPoint point)
-        => Apply(t => TrackEditing.Replace(t, index, ToLocal(point)), _ => Selected);
+        => Apply(t => TrackEditing.Replace(t, index, ToLocal(point)), _ => selection.Points);
 
     /// <summary>A world point as the edited track stores it: relative to its character for a Follow track, otherwise to its anchor.</summary>
     private ControlPoint ToLocal(ControlPoint world) => FollowFrame(Local) is { } frame ? frame.ToLocal(world) : SceneGeometry.WorldAnchor(Scene, Local).ToLocal(world);
@@ -337,7 +429,7 @@ public sealed class SessionState
         var local = SceneEditing.Get(scene, EditedTrackId);
         if (local.Aim == AimMode.FollowTarget)
         {
-            if (local.Points.Count >= 1) throw new ArgumentException("A Follow Target track has one point");
+            if (local.Points.Count >= 1) throw new ArgumentException(TrackEditing.FollowHasOnePoint);
             if (local.TargetName is null) throw new ArgumentException("Choose a character to follow");
             if (FollowFrame(scene, local) is null) throw new ArgumentException("Character not found");
         }
@@ -350,19 +442,38 @@ public sealed class SessionState
         return SceneEditing.Replace(placed, add(track, stored));
     }
 
-    /// <summary>Deletes the selected point and clears the selection.</summary>
+    /// <summary>Deletes the selected points.</summary>
     public string? DeleteSelected()
     {
-        if (SelectionRefusal() is { } refusal) return refusal;
-        return DeletePoint(Selected!.Value);
+        if (Mode != CameraMode.Editing) return "The track can only change while editing.";
+        return selection.Points.Count == 0 ? "Select a point first." : DeletePoints(selection.Points);
     }
 
-    /// <summary>Deletes point <paramref name="index"/>; any other selected point stays selected.</summary>
-    public string? DeletePoint(int index)
+    /// <summary>Deletes points <paramref name="indices"/>; any other selected point stays selected.</summary>
+    public string? DeletePoints(IReadOnlyCollection<int> indices)
     {
-        if (index < 0 || index >= Local.Points.Count) return "There is no such point.";
-        var selected = Selected;
-        return Apply(t => TrackEditing.Delete(t, index), _ => selected is { } s && s != index ? (s > index ? s - 1 : s) : null);
+        if (indices.Count == 0 || indices.Any(i => i < 0 || i >= Local.Points.Count)) return "There is no such point.";
+        var kept = selection.Points.Where(p => !indices.Contains(p)).Select(p => p - indices.Distinct().Count(d => d < p)).ToArray();
+        return Apply(t => TrackEditing.Delete(t, indices), _ => kept);
+    }
+
+    /// <summary>Moves points <paramref name="indices"/> to the end of track <paramref name="destination"/>, or a new track when null, keeping their places in the world, then edits it with them selected. Returns why it was refused, or null.</summary>
+    public string? MovePointsTo(IReadOnlyCollection<int> indices, Guid? destination)
+    {
+        if (Mode != CameraMode.Editing) return "The track can only change while editing.";
+        if (indices.Count == 0 || indices.Any(i => i < 0 || i >= Local.Points.Count)) return "There is no such point.";
+
+        var points = indices.Distinct().Order().ToArray();
+        var world = Track;
+        IReadOnlyList<int> moved = [];
+        var refusal = CommitScene(scene =>
+        {
+            var (result, to, landed) = PointTransfer.Move(scene, EditedTrackId, points, points.Select(i => world.Points[i]).ToArray(), destination, groundBelow);
+            moved = landed;
+            return (SceneEditing.SetHidden(result, [to], false), to);
+        });
+        if (refusal is null) SelectPoints(moved);
+        return refusal;
     }
 
     /// <summary>Moves points <paramref name="points"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null; the selection stays on the same points.</summary>
@@ -373,8 +484,8 @@ public sealed class SessionState
         catch (ArgumentException ex) { return ex.Message; }
         if (order is null) return null;
 
-        var selected = Selected;
-        return Apply(t => TrackEditing.Reorder(t, order), _ => selected is { } s ? BlockMove.NewIndex(order, s) : null);
+        var moved = selection.Points.Select(p => BlockMove.NewIndex(order, p)).Order().ToArray();
+        return Apply(t => TrackEditing.Reorder(t, order), _ => moved);
     }
 
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
@@ -474,7 +585,7 @@ public sealed class SessionState
     public string? SetFollowLooks(bool looks) => ApplySetting(t => TrackEditing.SetFollowLooks(t, looks));
 
     /// <summary>Applies a change to the edited track's settings as one undo step, keeping the selection.</summary>
-    private string? ApplySetting(Func<Track, Track> change) => CommitEdit(ChangeEdited(change), _ => Selected);
+    private string? ApplySetting(Func<Track, Track> change) => CommitEdit(ChangeEdited(change), _ => selection.Points);
 
     /// <summary>Adds an empty track at the end and edits it. Returns why it was refused, or null.</summary>
     public string? AddTrack() => CommitScene(scene => SceneEditing.Add(scene));
@@ -708,8 +819,7 @@ public sealed class SessionState
     private void SelectAnchor(AnchorKind kind)
     {
         EndLiveEdit();
-        Selected = null;
-        SyncKeyToPoint();
+        SetSelection(Selection.None);
         SelectedAnchor = kind;
     }
 
@@ -738,12 +848,12 @@ public sealed class SessionState
         return null;
     }
 
-    private EditSnapshot Current => new(Scene, EditedTrackId, Selected);
+    private EditSnapshot Current => new(Scene, EditedTrackId, selection);
 
-    private string? Apply(Func<Track, Track> change, Func<Track, int?> selectAfter) => ApplyScene(ChangeEdited(change), selectAfter);
+    private string? Apply(Func<Track, Track> change, Func<Track, IReadOnlyList<int>> selectAfter) => ApplyScene(ChangeEdited(change), selectAfter);
 
     /// <summary>Applies a scene change to the edited track's points, keeping the timing selection in step.</summary>
-    private string? ApplyScene(Func<Scene, Scene> change, Func<Track, int?> selectAfter)
+    private string? ApplyScene(Func<Scene, Scene> change, Func<Track, IReadOnlyList<int>> selectAfter)
     {
         var pointsBefore = Local.Points;
         var refusal = CommitEdit(change, selectAfter);
@@ -754,7 +864,7 @@ public sealed class SessionState
     /// <summary>Applies a timing change, keeping the point selection and any timing selection still in range.</summary>
     private string? ApplyTiming(Func<Track, Track> change)
     {
-        var refusal = CommitEdit(ChangeEdited(change), _ => Selected);
+        var refusal = CommitEdit(ChangeEdited(change), _ => selection.Points);
         if (refusal is not null) return refusal;
         if (SelectedKey is { } key && key >= TrackEditing.KeyCount(Local)) SelectedKey = null;
         if (SelectedLeg is { } leg && leg >= Local.Points.Count) SelectedLeg = null;
@@ -773,7 +883,7 @@ public sealed class SessionState
         };
 
     /// <summary>Applies a change to the scene as one undo step if the edited track can still be played. Returns why it was refused, or null.</summary>
-    private string? CommitEdit(Func<Scene, Scene> change, Func<Track, int?> selectAfter)
+    private string? CommitEdit(Func<Scene, Scene> change, Func<Track, IReadOnlyList<int>> selectAfter)
     {
         StopPreview();
         if (Mode != CameraMode.Editing) return "The track can only change while editing.";
@@ -789,7 +899,8 @@ public sealed class SessionState
             history.Record(Current);
             var selected = selectAfter(edited);
             Scene = result;
-            Selected = selected;
+            selection = selection with { Points = selected };
+            if (selected.Count == 0) lastPoint = null;
             if (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null) SelectedAnchor = null;
             return null;
         }
@@ -823,10 +934,13 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>Clears the point, key and leg selection and puts the scrub head at 0, as switching tracks does.</summary>
+    /// <summary>Clears every selection, key and leg and puts the scrub head at 0, as switching tracks does.</summary>
     private void ClearForSwitch()
     {
-        Selected = null;
+        selection = Selection.None;
+        lastPoint = null;
+        lastTrack = null;
+        lastEntry = null;
         SelectedKey = null;
         SelectedLeg = null;
         SelectedAnchor = null;
@@ -840,8 +954,8 @@ public sealed class SessionState
         if (s.Edited != EditedTrackId) ClearForSwitch();
         Scene = s.Scene;
         EditedTrackId = s.Edited;
-        Selected = s.Selected;
-        if (Selected is not null || (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null)) SelectedAnchor = null;
+        selection = s.Selection;
+        if (selection.Points.Count > 0 || (SelectedAnchor is { } kind && UnplacedRefusal(kind) is not null)) SelectedAnchor = null;
         RefreshTimingSelection(pointsBefore);
         return true;
     }
@@ -849,7 +963,12 @@ public sealed class SessionState
     /// <summary>Points the timing selection at the selected point's key, or clears a point key's selection when no point is selected.</summary>
     private void SyncKeyToPoint()
     {
-        if (Selected is { } point)
+        if (selection.Points.Count > 1)
+        {
+            SelectedKey = null;
+            SelectedLeg = null;
+        }
+        else if (Selected is { } point)
         {
             SelectedKey = TrackEditing.PointKey(Local, point);
             SelectedLeg = null;
@@ -863,6 +982,12 @@ public sealed class SessionState
     /// <summary>After a point edit: a point key follows its point, and any other timing selection clears unless it's a leg and the points are unchanged.</summary>
     private void RefreshTimingSelection(IReadOnlyList<ControlPoint> pointsBefore)
     {
+        if (selection.Points.Count > 1)
+        {
+            SyncKeyToPoint();
+            return;
+        }
+
         if (!ReferenceEquals(pointsBefore, Local.Points) && !pointsBefore.SequenceEqual(Local.Points)) SelectedLeg = null;
         if (SelectedKey is { } key && (Selected is null || key >= TrackEditing.KeyCount(Local) || TrackEditing.RoleOf(Local, key) != KeyRole.Point)) SelectedKey = null;
         if (Selected is not null && SelectedLeg is null) SelectedKey = TrackEditing.PointKey(Local, Selected.Value);
@@ -903,7 +1028,8 @@ public sealed class SessionState
 
     private string? SelectionRefusal()
         => Mode != CameraMode.Editing ? "The track can only change while editing."
-         : Selected is null ? "Select a point first." : null;
+         : selection.Points.Count == 0 ? "Select a point first."
+         : selection.Points.Count > 1 ? "Select one point first." : null;
 
     /// <summary>The evaluator for the edited track, rebuilt when the track changes.</summary>
     public TrackEvaluator Evaluator

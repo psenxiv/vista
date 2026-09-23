@@ -18,13 +18,11 @@ public static class PointTransfer
             throw new ArgumentException("There is no such point.");
         if (destination == source) throw new ArgumentException("The points are already on that track.");
         if (destination is { } named && SceneEditing.Get(scene, named).Aim == AimMode.FollowTarget)
-            throw new ArgumentException("A Follow Target track has one point");
+            throw new ArgumentException(TrackEditing.FollowHasOnePoint);
 
         var moving = points.Zip(world, (index, at) => (Index: index, World: at)).OrderBy(m => m.Index).ToArray();
 
-        var left = from;
-        for (var k = moving.Length - 1; k >= 0; k--) left = TrackEditing.Delete(left, moving[k].Index);
-        var result = SceneEditing.Replace(scene, left);
+        var result = SceneEditing.Replace(scene, TrackEditing.Delete(from, points));
 
         Guid to;
         if (destination is { } existing) to = existing;

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -296,8 +297,26 @@ internal sealed class CameraSession
     /// <summary>The selected point's index, or null.</summary>
     public int? Selected => state.Selected;
 
-    /// <summary>Selects a point while editing; null or out of range clears the selection.</summary>
+    /// <summary>Selects only a point while editing; null or out of range clears every selection.</summary>
     public void Select(int? index) => state.Select(index);
+
+    /// <summary>The edited track's selected points, in order.</summary>
+    public IReadOnlyList<int> SelectedPoints => state.SelectedPoints;
+
+    /// <summary>The edited track and any other selected tracks, in Hierarchy order.</summary>
+    public IReadOnlyList<Guid> SelectedTracks => state.SelectedTracks;
+
+    /// <summary>The selected playlist entries, in playlist order.</summary>
+    public IReadOnlyList<Guid> SelectedEntries => state.SelectedEntries;
+
+    /// <summary>Applies a plain, Ctrl or Shift click to a point.</summary>
+    public void ClickPoint(int index, RowClick click) => state.ClickPoint(index, click);
+
+    /// <summary>Applies a plain, Ctrl or Shift click to a track. Returns why it was refused, or null.</summary>
+    public string? ClickTrack(Guid id, RowClick click) => state.ClickTrack(id, click);
+
+    /// <summary>Applies a plain, Ctrl or Shift click to a playlist entry. Returns why it was refused, or null.</summary>
+    public string? ClickEntry(Guid id, RowClick click) => state.ClickEntry(id, click);
 
     /// <summary>The selected timing key's index, or null.</summary>
     public int? SelectedKey => state.SelectedKey;
@@ -428,8 +447,11 @@ internal sealed class CameraSession
     /// <summary>Deletes the selected point. Returns why it was refused, or null.</summary>
     public string? DeleteSelected() => state.DeleteSelected();
 
-    /// <summary>Deletes point <paramref name="index"/>, keeping any other selection. Returns why it was refused, or null.</summary>
-    public string? DeletePoint(int index) => state.DeletePoint(index);
+    /// <summary>Deletes points, keeping any other selected point selected. Returns why it was refused, or null.</summary>
+    public string? DeletePoints(IReadOnlyCollection<int> indices) => state.DeletePoints(indices);
+
+    /// <summary>Moves points to the end of another track, or a new one when null, and edits it. Returns why it was refused, or null.</summary>
+    public string? MovePointsTo(IReadOnlyCollection<int> indices, Guid? destination) => state.MovePointsTo(indices, destination);
 
     /// <summary>Moves points as a block onto <paramref name="target"/>, or the end when null. Returns why it was refused, or null.</summary>
     public string? MovePoints(IReadOnlyCollection<int> points, int grabbed, int? target) => state.MovePoints(points, grabbed, target);

@@ -528,7 +528,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         if (IconButton.RowAction($"delete{index}", FontAwesomeIcon.Trash, "Delete point", rowHovered, danger: true))
         {
             fields.Clear();
-            Report(session.DeletePoint(index));
+            Report(session.DeletePoints([index]));
         }
 
         ImGui.EndDisabled();
