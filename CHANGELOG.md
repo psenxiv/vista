@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0.1
+
+- Select several tracks, points or playlist entries with Ctrl + click and Shift + click, then drag them together or right-click for a menu.
+- Move points to another track: drag them onto a track in the Hierarchy, or below the tracks to make a new one.
+- Delete deletes every selected point.
+- The buttons on a Hierarchy row show when you hover over it.
+- A selected track or playlist entry is highlighted across its whole row.
+
 ## 0.5.1.1
 
 - Fixed the camera shaking slightly while holding at the start or end of a Direction of travel track.

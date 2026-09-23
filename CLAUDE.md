@@ -135,6 +135,10 @@ bullets for players, in `GUIDES.md`'s voice, and show it to the user first. The 
 the GitHub release notes and `repo.json`, and `make testing` / `make release` refuse a version
 without one.
 
+Keep that section going between releases: when a change a player would notice lands on `main`, add
+its bullet to the next version's `## X.Y.Z.N` section at the top, starting the section if there
+isn't one, in the same commit. Don't leave it for release time.
+
 In-game verification is the user's. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
