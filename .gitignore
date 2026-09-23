@@ -4,3 +4,4 @@ obj/
 .DS_Store
 analysis
 scripts/checks/
+docs/

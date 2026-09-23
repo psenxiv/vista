@@ -124,7 +124,7 @@ The commands live in `scripts/`. Never build the plugin with bare `dotnet build`
 `DALAMUD_HOME` must be set. Releases run from `.github/workflows/release.yml` when a `v*` tag is
 pushed; only the user pushes tags.
 
-In-game verification is the user's; see `docs/dev-setup.md`. Read results from
+In-game verification is the user's. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
 A checklist of in-game checks goes in `scripts/checks/`, which is gitignored, so never commit one: add a file named for the work
@@ -145,6 +145,6 @@ together.
 ## Docs
 
 - User Guide writing rules: `GUIDES.md`
-- Design: `docs/superpowers/specs/`
-- Plans: `docs/superpowers/plans/`
+- Design: `docs/superpowers/specs/` (local only; `docs/` is gitignored, so never commit to it)
+- Plans: `docs/superpowers/plans/` (local only)
 - Deferred features: `FEATURES.md`. Only features actually agreed as deferred.

@@ -5,8 +5,6 @@ Ideas deliberately cut from v1, with the reason.
 Only features actually discussed and agreed as deferred belong here. This is not
 a place to park speculative ideas.
 
-See `docs/superpowers/specs/2026-09-20-cinematic-cam-design.md` for v1 scope.
-
 ## Deferred from v1
 
 On 2026-09-21 the user set phase 3, ahead of the switchboard. 3.a, Reverse and Ping-pong
