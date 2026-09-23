@@ -41,7 +41,7 @@ These work in Edit mode, and Space and Ctrl + Space work in Live too.
 | Alt while dragging an anchor | Move the anchor alone, leaving its points in place |
 | Ctrl while dragging a timing key | Move every later key with it, lengthening or shortening the track |
 | Ctrl + click | Add to the selection, or remove from it |
-| Shift + click | Select everything between the last click and this one |
+| Shift + click | Add everything from the last click to this one |
 | Delete / Backspace | Delete the selected points |
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 

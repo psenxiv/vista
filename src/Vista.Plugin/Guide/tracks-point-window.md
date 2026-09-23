@@ -1,8 +1,6 @@
 # The Point window
 
-The **Point** window opens when you select a point, and shows its numbers. Close it to clear the selection. It also opens for anchors and the Look At point.
-
-It closes while several points are selected.
+The **Point** window opens when you select a point, and shows its numbers. It closes while several points are selected. Close it to clear the selection. It also opens for anchors and the Look At point.
 
 ## The gizmo
 

@@ -17,7 +17,7 @@ Edit is where you build your shots. You fly a free camera, add points and change
 
 ## Selecting
 
-Click a point, an anchor or a Look At point in the world to select it. Clicking a point on another track switches to that track. Click empty space to clear the selection.
+Click a point, an anchor or a Look At point in the world to select it. Clicking a point on another track switches to that track. Click empty space to clear the selection. `Ctrl` + click or `Shift` + click the points of the track you are editing to select several. See [Selecting several](tracks-selecting.md).
 
 ## The top row
 

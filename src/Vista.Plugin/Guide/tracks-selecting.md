@@ -8,9 +8,9 @@ Select several tracks, points or playlist entries to move or change them togethe
 |---|---|
 | Click | Selects only that row. |
 | `Ctrl` + click | Adds the row to the selection, or removes it. |
-| `Shift` + click | Selects every row from the last one you clicked to this one. |
+| `Shift` + click | Adds every row from the last one you clicked to this one. |
 
-These work in the Hierarchy, the points table and the Playlist, and on the edited track's points in the world. The track you are editing is always one of the selected tracks.
+These work in the Hierarchy, the points table and the Playlist, and on the points of the track you are editing in the world. That track is always one of the selected tracks.
 
 ## Right-click menus
 
@@ -22,7 +22,7 @@ Right-click a selected row to act on the whole selection.
 | Points | **Move to new track**, **Move to**, **Delete** |
 | Several playlist entries | **Remove from playlist** |
 
-Every point row has the points menu. With one point, it acts on the row you right-click. **Move to** lists the other tracks.
+Every point row has the points menu, so you can use it on one point too. **Move to** lists the other tracks.
 
 ## Dragging
 
