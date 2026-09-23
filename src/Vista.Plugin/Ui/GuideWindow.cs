@@ -23,6 +23,9 @@ internal sealed class GuideWindow : Window, IDisposable
     private const float DividerAbove = 0.6f;
     private const float DividerBelow = 0.3f;
 
+    // A table cell's padding in pixels, room enough round a keycap.
+    private static readonly Vector2 CellPadding = new(8f, 5f);
+
     // A keycap's inner padding in pixels, and its corner rounding.
     private static readonly Vector2 KeyPadding = new(4f, 1f);
     private const float KeyRounding = 3f;
@@ -151,7 +154,9 @@ internal sealed class GuideWindow : Window, IDisposable
     private void DrawTable(Table table, string id)
     {
         var columns = Math.Max(table.Header.Count, table.Rows.Count == 0 ? 0 : table.Rows.Max(row => row.Count));
-        if (columns == 0 || !ImGui.BeginTable(id, columns, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp)) return;
+        if (columns == 0) return;
+        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
+        if (!ImGui.BeginTable(id, columns, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp)) return;
 
         ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
         for (var c = 0; c < columns; c++)

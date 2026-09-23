@@ -7,6 +7,7 @@
 - Pressing Delete deletes every selected point.
 - The buttons on a Hierarchy row show when you hover over it.
 - A selected track or playlist entry is highlighted across its whole row.
+- The User Guide's tables have more room around each cell.
 
 ## 0.5.1.1
 
