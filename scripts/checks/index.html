@@ -139,6 +139,19 @@
   .loader { max-width: 620px; margin: 80px auto; text-align: center; color: var(--dim); }
   .loader h1 { font-size: 20px; margin-bottom: 12px; color: var(--ink); }
   .loader p { margin: 0 0 16px; }
+  .picker { max-width: 620px; margin: 70px auto; padding: 0 20px; }
+  .picker h1 { font-size: 20px; margin: 0 0 6px; }
+  .picker > p { color: var(--dim); margin: 0 0 22px; }
+  .pick {
+    display: block; width: 100%; text-align: left; background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+  }
+  .pick:hover { border-color: var(--accent); }
+  .pick-title { display: block; font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .pick-meta { display: block; font-size: 12px; color: var(--dim); margin-bottom: 10px; }
+  .pick .bad { color: var(--fail); font-weight: 600; }
+  .pick .track { display: block; height: 4px; background: var(--panel2); border-radius: 99px; overflow: hidden; }
+  .pick .track .fill { display: block; height: 100%; background: var(--accent); }
   .drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 34px; margin-top: 18px; }
   .drop.over { border-color: var(--accent); }
 </style>
@@ -148,51 +161,110 @@
 
 <script>
 const LS_PREFIX = 'vista-ingame-checks:';
-let DATA = null, KEY = null;
+let DATA = null, KEY = null, FILE = null;
+let ALL = [];     // [{ file, data }] — every checklist in the manifest
 let state = {};   // id -> { v, r, note }
 
 /* ---------- loading ---------- */
 
+const grab = async path => {
+  const res = await fetch(path, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.json();
+};
+
 async function boot() {
   try {
-    const res = await fetch('checks.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error(res.status);
-    start(await res.json());
+    const manifest = await grab('manifest.json');
+    const files = manifest.checklists ?? [];
+    ALL = await Promise.all(files.map(async file => ({ file, data: await grab(file) })));
   } catch (e) {
     showLoader();
+    return;
   }
+  if (ALL.length === 0) { showLoader('The manifest lists no checklists.'); return; }
+  if (ALL.length === 1) start(ALL[0].file, ALL[0].data);
+  else showPicker();
 }
 
-function showLoader() {
+/* Storage is per checklist AND per revision, so two checklists never share answers
+   and bumping a revision still starts that one fresh. */
+const keyFor = (file, data) => `${LS_PREFIX}${file}:${data.revision ?? 1}`;
+
+function progressOf(file, data) {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(keyFor(file, data)) || '{}'); } catch {}
+  let done = 0, total = 0, failed = 0;
+  for (const sec of data.sections) for (const g of sec.groups) for (const st of g.steps) {
+    const skipped = !!(st.skip || g.skip || sec.skip);
+    const e = saved[st.id];
+    if (st.t === 'check' && e?.r === 'fail') failed++;
+    if (st.t === 'note' || st.optional || skipped) continue;
+    total++;
+    if (!e) continue;
+    if (st.t === 'check' ? !!e.r
+      : st.t === 'do' ? e.v === true
+      : st.t === 'row' ? e.v && Object.values(e.v).some(x => String(x).trim() !== '')
+      : e.v !== undefined && String(e.v).trim() !== '') done++;
+  }
+  return { done, total, failed };
+}
+
+function showPicker() {
+  document.title = 'Vista checks';
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="picker">
+      <h1>Checklists</h1>
+      <p>${ALL.length} pending. Progress is kept separately for each, so you can leave one part-done.</p>
+      ${ALL.map(({ file, data }) => {
+        const { done, total, failed } = progressOf(file, data);
+        const pct = total ? Math.round(done / total * 100) : 0;
+        const status = done === 0 ? 'not started' : done >= total ? 'complete' : `${done} of ${total}`;
+        return `<button class="pick" data-file="${esc(file)}">
+          <span class="pick-title">${esc(data.title)}</span>
+          <span class="pick-meta">${esc(status)}${failed ? ` · <b class="bad">${failed} failing</b>` : ''}</span>
+          <span class="track"><span class="fill" style="width:${pct}%"></span></span>
+        </button>`;
+      }).join('')}
+    </div>`;
+  app.querySelectorAll('[data-file]').forEach(b => b.onclick = () => {
+    const hit = ALL.find(c => c.file === b.dataset.file);
+    start(hit.file, hit.data);
+  });
+}
+
+function showLoader(reason) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="loader">
-      <h1>Pick checks.json</h1>
-      <p>The browser will not let a page opened from a file read another file on its own.
+      <h1>Pick a checklist</h1>
+      <p>${reason ? esc(reason) : `The browser will not let a page opened from a file read another file on its own.
          Serve this folder and reload — VS Code's Live Server on <code>index.html</code> does it —
-         or just drop <code>checks.json</code> below.</p>
+         or just drop a checklist's <code>.json</code> below.`}</p>
       <div class="drop" id="drop">
         <input type="file" id="file" accept="application/json,.json">
         <p style="margin-top:14px">or drop the file here</p>
       </div>
     </div>`;
   const drop = document.getElementById('drop');
-  const read = f => f.text().then(t => start(JSON.parse(t)));
+  const read = f => f.text().then(t => start(f.name, JSON.parse(t)));
   document.getElementById('file').onchange = e => e.target.files[0] && read(e.target.files[0]);
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
   drop.ondragleave = () => drop.classList.remove('over');
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && read(e.dataTransfer.files[0]); };
 }
 
-function start(data) {
+function start(file, data) {
   DATA = data;
+  FILE = file;
   for (const sec of data.sections)          // a skipped section or group skips everything inside it
     for (const g of sec.groups) {
       g.skip = g.skip || sec.skip;
       for (const st of g.steps) st.skip = st.skip || g.skip;
     }
   document.title = data.title;
-  KEY = LS_PREFIX + (data.revision ?? 1);
+  KEY = keyFor(file, data);
   try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { state = {}; }
   if (!state.__started) state.__started = new Date().toISOString();
   render();
@@ -246,6 +318,7 @@ function render() {
       </div>
       <div class="spacer"></div>
       <label class="toggle"><input type="checkbox" id="showskip" ${showSkipped() ? 'checked' : ''}> show what I don't need</label>
+      ${ALL.length > 1 ? '<button id="back">All checklists</button>' : ''}
       <button id="expand">Expand all</button>
     </div></header>
     <main>
@@ -416,6 +489,9 @@ function wire() {
     }
   });
 
+  const back = document.getElementById('back');
+  if (back) back.onclick = () => showPicker();
+
   document.getElementById('expand').onclick = e => {
     const all = [...document.querySelectorAll('.group')];
     const open = all.every(d => d.open);
@@ -459,6 +535,7 @@ function build() {
   const out = {
     tool: 'vista-ingame-checks',
     checklist: DATA.title,
+    checklistFile: FILE,
     checksRevision: DATA.revision ?? 1,
     started: state.__started,
     finished: new Date().toISOString(),
@@ -514,7 +591,7 @@ function download() {
   const a = document.createElement('a');
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
   a.href = URL.createObjectURL(blob);
-  a.download = `vista-check-results-${stamp}.json`;
+  a.download = `${(FILE || 'checks').replace(/\.json$/i, '')}-results-${stamp}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }

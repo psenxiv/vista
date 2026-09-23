@@ -126,9 +126,11 @@ pushed; only the user pushes tags.
 In-game verification is the user's; see `docs/dev-setup.md`. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
-A checklist of in-game checks goes in `scripts/checks/` — rewrite `checks.json` and leave the
-page alone. Don't write a new Markdown checklist. The user serves the folder themselves and
-sends back the results JSON it downloads.
+A checklist of in-game checks goes in `scripts/checks/`: add a file named for the work
+(`phase-4.json`), list it in `manifest.json`, and leave `index.html` alone. Never overwrite a
+checklist that has not been run — several can be pending, and the page keeps each one's progress
+separately. Don't write a Markdown checklist. The user serves the folder themselves and sends
+back the results JSON it downloads. Delete a checklist once its results are in.
 
 ## Docs
 
