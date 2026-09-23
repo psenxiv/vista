@@ -231,6 +231,12 @@
               "id": "3.11",
               "action": "Mode -> Off, press Space",
               "expect": "The character jumps. Vista is not claiming it when released."
+            },
+            {
+              "t": "check",
+              "id": "3.12",
+              "action": "On a track with no points, press Space, then check dalamud.log",
+              "expect": "No error or warning line. The refusal is logged at Debug only."
             }
           ]
         }
@@ -412,6 +418,36 @@
               "id": "4b.18",
               "action": "Select a Look At point",
               "expect": "The FoV reset icon is greyed out, as are the fields it lacks."
+            },
+            {
+              "t": "check",
+              "id": "4b.19",
+              "action": "Look at the camera icon on the top row with the Camera window closed, then open it",
+              "expect": "White when closed, blue when open. It never looks disabled."
+            },
+            {
+              "t": "check",
+              "id": "4b.20",
+              "action": "Select the scene anchor, then click the X at the window's top right",
+              "expect": "The window closes and the anchor is deselected in the world."
+            },
+            {
+              "t": "check",
+              "id": "4b.21",
+              "action": "Do the same with a track anchor",
+              "expect": "Same: closes and deselects."
+            },
+            {
+              "t": "check",
+              "id": "4b.22",
+              "action": "Select a point",
+              "expect": "The Point window has no X, as before."
+            },
+            {
+              "t": "check",
+              "id": "4b.23",
+              "action": "Select the scene anchor, switch mode to View and back to Edit",
+              "expect": "The anchor is still selected; only the X deselects it."
             }
           ]
         }
