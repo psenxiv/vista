@@ -24,5 +24,17 @@ A manual for Vista, opened from a `?` icon in the window.
 
 Raised by the maintainer, not yet agreed as a feature.
 
+### Switchboard action buttons
+A row of action buttons (name TBC), each registered to either a track or a playlist,
+plus Cue and Cut. In Live, click an action button, press Cue to line it up next, then
+Cut to swap the camera to it.
+
+**Why not specced:** raised on 2026-09-23. Behaviour is to be settled after research
+into how hardware switchers work, starting with the Blackmagic Design ATEM.
+
+**Keeps `TrackShot` alive:** `Shot.cs`'s `TrackShot` has had no production caller
+since the playlist became the only route to Live. It stays for the track-registered
+action buttons. `GameCameraShot` has never had one at all.
+
 ### OBS integration
 Control the switchboard from OBS, so camera cuts can follow the stream.
