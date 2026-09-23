@@ -69,6 +69,7 @@ internal sealed class TimingWindow : Window
 
     public override void Draw()
     {
+        using var popups = PopupStyle.Push();
         DrawTopRow();
 
         var region = Vector2.Max(ImGui.GetContentRegionAvail(), Vector2.One);

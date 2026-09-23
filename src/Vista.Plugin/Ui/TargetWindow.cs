@@ -58,6 +58,7 @@ internal abstract class TargetWindow : Window
     public override void Draw()
     {
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f));
+        using var popups = PopupStyle.Push();
         using var selection = ImRaii.PushColor(ImGuiCol.Header, UiColours.AccentAt(0.45f))
             .Push(ImGuiCol.HeaderHovered, UiColours.AccentAt(0.30f))
             .Push(ImGuiCol.HeaderActive, UiColours.AccentAt(0.55f));

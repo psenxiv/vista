@@ -117,6 +117,7 @@ internal sealed unsafe class TrackEditorWindow : Window
         }
 
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Spacing);
+        using var popups = PopupStyle.Push();
         using var selection = ImRaii.PushColor(ImGuiCol.Header, UiColours.AccentAt(0.45f))
             .Push(ImGuiCol.HeaderHovered, UiColours.AccentAt(0.30f))
             .Push(ImGuiCol.HeaderActive, UiColours.AccentAt(0.55f));
