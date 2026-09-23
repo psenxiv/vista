@@ -15,7 +15,7 @@ public static class TrackAim
     /// <summary>Below this, a direction vector is treated as undefined rather than normalised.</summary>
     private const float DirectionEpsilon = 1e-6f;
 
-    /// <summary>How far to step off a segment boundary when the exact boundary derivative is degenerate, a knock-on from a neighbouring collapsed segment's phantom point rather than the segment's own shape.</summary>
+    /// <summary>How far to step off a segment boundary when the exact boundary derivative is degenerate: at either end of the path, or beside a collapsed segment's phantom point.</summary>
     private const float BoundaryNudge = 1e-3f;
 
     /// <summary>Yaw and pitch of a view direction; the exact inverse of <c>FreeCamMotion</c>'s direction convention.</summary>
@@ -83,7 +83,10 @@ public static class TrackAim
     {
         if (table.SegmentCount == 0 || table.SegmentLength(segment) <= DirectionEpsilon) return null;
 
+        // The path's speed falls to zero at its two ends, where the direction is rounding noise, so it is read a nudge inside.
         var t = table.ParameterAt(segment, fraction);
+        if (segment == 0) t = MathF.Max(t, BoundaryNudge);
+        if (segment == table.SegmentCount - 1) t = MathF.Min(t, 1f - BoundaryNudge);
         var derivative = CatmullRom.Derivative(points, segment, t);
         return derivative.LengthSquared() > DirectionEpsilon * DirectionEpsilon ? derivative : null;
     }
