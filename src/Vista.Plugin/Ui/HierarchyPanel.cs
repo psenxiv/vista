@@ -224,7 +224,7 @@ internal sealed unsafe class HierarchyPanel
         ImGui.EndPopup();
     }
 
-    /// <summary>The name, then the anchor button and the eye: click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
+    /// <summary>The name, then the anchor button and the eye, shown on hover (a hidden track's eye always): click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
     private void DrawRow(Scene scene, Track track, int index, Guid edited, bool editing)
     {
         using var id = ImRaii.PushId(track.Id.ToString());
@@ -232,6 +232,9 @@ internal sealed unsafe class HierarchyPanel
         var hidden = scene.Hidden.Contains(track.Id);
         var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + LastSlot() + (ImGui.GetStyle().ItemSpacing.X * 2f);
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons);
+        var rowMin = ImGui.GetCursorScreenPos();
+        var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, rowMin.Y + ImGui.GetFrameHeight());
+        var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
 
         if (renaming == track.Id) DrawRename(track, nameWidth);
         else DrawName(scene, track, index, isEdited, editing, nameWidth);
@@ -240,14 +243,17 @@ internal sealed unsafe class HierarchyPanel
         var follows = track.Aim == AimMode.FollowTarget;
         ImGui.BeginDisabled(!track.AnchorPlaced || follows);
         var anchorTip = follows ? "Follow Target tracks move with their character" : "Select track anchor";
-        if (IconButton.Draw("anchor", FontAwesomeIcon.Anchor, anchorTip)) Report(session.SelectTrackAnchor(track.Id));
+        if (IconButton.RowAction("anchor", FontAwesomeIcon.Anchor, anchorTip, rowHovered)) Report(session.SelectTrackAnchor(track.Id));
         ImGui.EndDisabled();
         var eye = hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye;
         CentreInLastSlot(eye);
 
+        // A hidden track keeps its eye showing, so you can see what's hidden without hovering.
         ImGui.BeginDisabled(isEdited);
-        if (IconButton.Draw("eye", hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye, hidden ? "Show" : "Hide", hidden ? UiColours.Dim() : null))
-            Report(session.SetTrackHidden(track.Id, !hidden));
+        var toggled = hidden
+            ? IconButton.Draw("eye", FontAwesomeIcon.EyeSlash, "Show", UiColours.Dim())
+            : IconButton.RowAction("eye", FontAwesomeIcon.Eye, "Hide", rowHovered);
+        if (toggled) Report(session.SetTrackHidden(track.Id, !hidden));
         ImGui.EndDisabled();
     }
 

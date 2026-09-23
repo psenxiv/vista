@@ -17,6 +17,8 @@ The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} *
 | {icon:Eye} | **Hide** / **Show** | Hides or shows the track in the world. |
 | {icon:Anchor} | **Select track anchor** | See [Scenes and anchors](scenes.md). |
 
+The buttons on a row show when you hover over it. A hidden track always shows {icon:EyeSlash}.
+
 Right-click a name to **Rename**, **Duplicate**, **Add to playlist**, **Save as preset** or **Delete** the track.
 
 ## The track row
