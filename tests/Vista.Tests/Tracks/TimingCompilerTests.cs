@@ -22,7 +22,7 @@ public class TimingCompilerTests
             Assert.True(MathF.Abs(expected[i] - actual[i]) <= 0.05f, $"key {i}: expected {expected[i]}, got {actual[i]} in [{string.Join(", ", actual)}]");
     }
 
-    private static void AssertNear(float expected, float actual, float within = 0.01f)
+    private static void AssertNear(float expected, float actual, float within)
         => Assert.True(MathF.Abs(expected - actual) <= within, $"expected {expected}, got {actual}");
 
     // Compiler and evaluator
@@ -84,7 +84,7 @@ public class TimingCompilerTests
     public void ALegIsHeldAtTheLongestLeg()
     {
         var track = TrackEditing.SetLegSpeed(TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)), 1, 0.01f);
-        AssertNear(TrackEditing.MaxSeconds, new TrackEvaluator(track).LegSeconds(1));
+        AssertNear(TrackEditing.MaxSeconds, new TrackEvaluator(track).LegSeconds(1), 0.01f);
     }
 
     [Fact]
@@ -99,8 +99,8 @@ public class TimingCompilerTests
     public void TheEvaluatorReadsLegsPointsAndTimes()
     {
         var evaluator = new TrackEvaluator(Three());
-        AssertNear(5f, evaluator.LegSeconds(2));
-        AssertNear(10f, evaluator.PointSeconds(2));
+        AssertNear(5f, evaluator.LegSeconds(2), 0.01f);
+        AssertNear(10f, evaluator.PointSeconds(2), 0.01f);
         Assert.Equal(10f, evaluator.LegLength(1), 1);
         Assert.Equal(1, evaluator.LegAt(2f));
 
@@ -127,7 +127,7 @@ public class TimingCompilerTests
     public void SetDurationSolvesForTheTrackSpeed()
     {
         var track = TrackEditing.SetDuration(Three(), 20f);
-        AssertNear(1f, track.Speed);
+        AssertNear(1f, track.Speed, 0.01f);
         AssertTimes([0f, 10f, 20f], track);
     }
 
@@ -137,7 +137,7 @@ public class TimingCompilerTests
         var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Three(), 2, 2f), 1, 1f);
         track = TrackEditing.SetDuration(track, 16f);
 
-        AssertNear(1f, track.Speed);
+        AssertNear(1f, track.Speed, 0.01f);
         AssertNear(16f, (float)new TrackEvaluator(track).Duration, 0.05f);
     }
 
@@ -162,7 +162,7 @@ public class TimingCompilerTests
     {
         var track = TrackEditing.SetDuration(Three(), 0f);
         Assert.Equal(TrackEditing.MaxSpeed, track.Speed);
-        AssertNear(0.2f, (float)new TrackEvaluator(track).Duration);
+        AssertNear(0.2f, (float)new TrackEvaluator(track).Duration, 0.01f);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class TimingCompilerTests
     {
         var track = TrackEditing.SetDuration(Three(), 99999f);
         Assert.Equal(TrackEditing.MinSpeed, track.Speed);
-        AssertNear(1200f, (float)new TrackEvaluator(track).Duration);
+        AssertNear(1200f, (float)new TrackEvaluator(track).Duration, 0.01f);
     }
 
     // Legs
@@ -189,7 +189,7 @@ public class TimingCompilerTests
     {
         var track = TrackEditing.SetLegDuration(Three(), 1, 0f);
         AssertNear(TrackEditing.MaxSpeed, TrackEditing.LegSpeed(track, 1), 0.01f);
-        AssertNear(0.1f, new TrackEvaluator(track).LegSeconds(1));
+        AssertNear(0.1f, new TrackEvaluator(track).LegSeconds(1), 0.01f);
     }
 
     [Fact]
@@ -328,8 +328,8 @@ public class TimingCompilerTests
     public void DraggingAHoldingPointsKeyTradesTimeWithItsHold()
     {
         var track = Drag(TrackEditing.SetHold(Three(), 1, 3f), 1, 6f);
-        AssertNear(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1));
-        AssertNear(2f, TrackEditing.HoldSeconds(track, 1));
+        AssertNear(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1), 0.01f);
+        AssertNear(2f, TrackEditing.HoldSeconds(track, 1), 0.01f);
         AssertTimes([0f, 6f, 8f, 13f], track);
     }
 

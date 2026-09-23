@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Xunit;
 
@@ -27,6 +28,16 @@ internal static class Fixtures
         var track = TrackEditing.SetDirection(TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop), direction);
         foreach (var x in new[] { 0f, 5f, 10f }) track = TrackEditing.Append(track, Point(x));
         return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
+    }
+
+    /// <summary>Asserts the frame looks toward <paramref name="target"/>, comparing unit directions to <paramref name="precision"/> decimal places.</summary>
+    internal static void AimsAt(Vector3 target, CameraState frame, int precision)
+    {
+        var want = Vector3.Normalize(target - frame.Position);
+        var got = Vector3.Normalize(frame.LookAt - frame.Position);
+        Assert.Equal(want.X, got.X, precision);
+        Assert.Equal(want.Y, got.Y, precision);
+        Assert.Equal(want.Z, got.Z, precision);
     }
 
     /// <summary>Asserts two vectors agree on every component within the given tolerance.</summary>

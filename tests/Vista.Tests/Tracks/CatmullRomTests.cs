@@ -31,8 +31,8 @@ public class CatmullRomTests
         var segments = CatmullRom.SegmentCount(FivePoints.Length);
         for (var segment = 0; segment < segments; segment++)
         {
-            AssertClose(FivePoints[segment], CatmullRom.Evaluate(FivePoints, segment, 0f));
-            AssertClose(FivePoints[segment + 1], CatmullRom.Evaluate(FivePoints, segment, 1f));
+            AssertClose(FivePoints[segment], CatmullRom.Evaluate(FivePoints, segment, 0f), 3);
+            AssertClose(FivePoints[segment + 1], CatmullRom.Evaluate(FivePoints, segment, 1f), 3);
         }
     }
 
@@ -52,8 +52,8 @@ public class CatmullRomTests
             Assert.True(cross.Length() < 0.001f, $"t={t}: {p} is not on the line from {a} to {b}");
         }
 
-        AssertClose(a, CatmullRom.Evaluate(points, 0, 0f));
-        AssertClose(b, CatmullRom.Evaluate(points, 0, 1f));
+        AssertClose(a, CatmullRom.Evaluate(points, 0, 0f), 3);
+        AssertClose(b, CatmullRom.Evaluate(points, 0, 1f), 3);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class CatmullRomTests
         var points = new[] { p, p };
 
         var value = CatmullRom.Evaluate(points, 0, 0.5f);
-        AssertClose(p, value);
+        AssertClose(p, value, 3);
         Assert.False(float.IsNaN(value.X) || float.IsNaN(value.Y) || float.IsNaN(value.Z));
 
         var deriv = CatmullRom.Derivative(points, 0, 0.5f);
@@ -97,7 +97,7 @@ public class CatmullRomTests
             for (var t = 0f; t <= 1f; t += 0.25f)
             {
                 var value = CatmullRom.Evaluate(points, segment, t);
-                AssertClose(p, value);
+                AssertClose(p, value, 3);
                 var deriv = CatmullRom.Derivative(points, segment, t);
                 Assert.False(float.IsNaN(deriv.X) || float.IsNaN(deriv.Y) || float.IsNaN(deriv.Z));
             }
@@ -140,10 +140,10 @@ public class CatmullRomTests
         }
     }
 
-    private static void AssertClose(Vector3 expected, Vector3 actual)
+    private static void AssertClose(Vector3 expected, Vector3 actual, int precision)
     {
-        Assert.Equal(expected.X, actual.X, 3);
-        Assert.Equal(expected.Y, actual.Y, 3);
-        Assert.Equal(expected.Z, actual.Z, 3);
+        Assert.Equal(expected.X, actual.X, precision);
+        Assert.Equal(expected.Y, actual.Y, precision);
+        Assert.Equal(expected.Z, actual.Z, precision);
     }
 }

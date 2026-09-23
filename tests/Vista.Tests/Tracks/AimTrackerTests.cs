@@ -28,19 +28,11 @@ public class AimTrackerTests
     private static CameraState Frame(AimTracker tracker, Track track, float dt = 1f / 60f)
         => tracker.Frame(new TrackEvaluator(track), track, 0.0, dt)!.Value;
 
-    private static void AimsAt(Vector3 target, CameraState frame)
-    {
-        var want = Vector3.Normalize(target - frame.Position);
-        var got = Vector3.Normalize(frame.LookAt - frame.Position);
-        Assert.Equal(want.X, got.X, 3);
-        Assert.Equal(want.Y, got.Y, 3);
-        Assert.Equal(want.Z, got.Z, 3);
-    }
 
     [Fact]
     public void WatchAimsAtTheCharacterAtItsAimHeight()
     {
-        AimsAt(new Vector3(0f, 0f, -10f), Frame(new AimTracker(GuardAt(0f)), Watching()));
+        AimsAt(new Vector3(0f, 0f, -10f), Frame(new AimTracker(GuardAt(0f)), Watching()), 3);
         Assert.Equal(new Vector3(0f, 0f, -10f), AimTracker.CharacterAim(Watching(), GuardAt(0f)));
     }
 
@@ -61,7 +53,7 @@ public class AimTrackerTests
         characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Guard", null, new Vector3(20f, -1.3f, -10f))]);
         var track = Watching() with { Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
-        AimsAt(new Vector3(20f, 0f, -10f), Frame(new AimTracker(characters), track));
+        AimsAt(new Vector3(20f, 0f, -10f), Frame(new AimTracker(characters), track), 3);
     }
 
     [Fact]
@@ -79,7 +71,7 @@ public class AimTrackerTests
     {
         var track = Single(AimMode.LookAt) with { LookAt = new Vector3(0f, 0f, -10f), LookAtPlaced = true };
 
-        AimsAt(new Vector3(0f, 0f, -10f), Frame(new AimTracker(null), track));
+        AimsAt(new Vector3(0f, 0f, -10f), Frame(new AimTracker(null), track), 3);
     }
 
     [Theory]
@@ -101,10 +93,10 @@ public class AimTrackerTests
         Frame(tracker, track);
 
         characters.Update(GuardAt(10f).All);
-        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), Frame(tracker, track, 0.5f));
+        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), Frame(tracker, track, 0.5f), 3);
 
         tracker.Reset();
-        AimsAt(new Vector3(10f, 0f, -10f), Frame(tracker, track));
+        AimsAt(new Vector3(10f, 0f, -10f), Frame(tracker, track), 3);
     }
 
     [Fact]
@@ -117,7 +109,7 @@ public class AimTrackerTests
 
         characters.Update(GuardAt(0f).All);
 
-        AimsAt(Vector3.Lerp(Recorded, new Vector3(0f, 0f, -10f), 1f - MathF.Exp(-1f)), Frame(tracker, track, 0.5f));
+        AimsAt(Vector3.Lerp(Recorded, new Vector3(0f, 0f, -10f), 1f - MathF.Exp(-1f)), Frame(tracker, track, 0.5f), 3);
     }
 
     [Fact]
@@ -128,7 +120,7 @@ public class AimTrackerTests
         var near = far with { LookAt = new Vector3(0.05f, 0f, 0f) };
         Frame(tracker, far);
 
-        AimsAt(new Vector3(0f, 0f, -10f), Frame(tracker, near));
+        AimsAt(new Vector3(0f, 0f, -10f), Frame(tracker, near), 3);
         Assert.Equal(Recorded, Frame(new AimTracker(null), near).LookAt);
     }
 
@@ -176,7 +168,7 @@ public class AimTrackerTests
         var expected = new Anchor(Vector3.Zero, quarter).ToWorld(Behind);
         Assert.Equal(expected.Position.X, frame.Position.X, 4);
         Assert.Equal(expected.Position.Z, frame.Position.Z, 4);
-        AimsAt(expected.Position + (FreeCamMotion.LookAtFrom(Vector3.Zero, expected.Yaw, 0f) - Vector3.Zero), frame);
+        AimsAt(expected.Position + (FreeCamMotion.LookAtFrom(Vector3.Zero, expected.Yaw, 0f) - Vector3.Zero), frame, 3);
     }
 
     [Fact]
@@ -198,7 +190,7 @@ public class AimTrackerTests
     {
         var frame = Frame(new AimTracker(GuardStanding(Vector3.Zero, 0f)), FollowingAt(Behind, looks: true) with { AimHeight = 1.3f });
 
-        AimsAt(new Vector3(0f, 1.3f, 0f), frame);
+        AimsAt(new Vector3(0f, 1.3f, 0f), frame, 3);
     }
 
     [Fact]

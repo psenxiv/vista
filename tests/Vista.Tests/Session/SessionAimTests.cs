@@ -28,24 +28,16 @@ public class SessionAimTests
         return (state, characters);
     }
 
-    private static void AimsAt(Vector3 target, CameraState frame)
-    {
-        var want = Vector3.Normalize(target - frame.Position);
-        var got = Vector3.Normalize(frame.LookAt - frame.Position);
-        Assert.Equal(want.X, got.X, 3);
-        Assert.Equal(want.Y, got.Y, 3);
-        Assert.Equal(want.Z, got.Z, 3);
-    }
 
     [Fact]
     public void ScrubbedFramesAimAtTheCharacterWhereTheyAreNow()
     {
         var (state, characters) = Watching();
-        AimsAt(A, state.FrameAt(0.0)!.Value);
+        AimsAt(A, state.FrameAt(0.0)!.Value, 3);
 
         GuardAt(characters, B);
 
-        AimsAt(B, state.FrameAt(0.0)!.Value);
+        AimsAt(B, state.FrameAt(0.0)!.Value, 3);
     }
 
     [Fact]
@@ -54,7 +46,7 @@ public class SessionAimTests
         var (state, _) = Watching();
         state.Play();
 
-        AimsAt(A, state.AdvancePreview(1f / 60f)!.Value);
+        AimsAt(A, state.AdvancePreview(1f / 60f)!.Value, 3);
     }
 
     [Fact]
@@ -64,14 +56,14 @@ public class SessionAimTests
         state.AddToPlaylist(state.EditedTrackId);
         state.Cue();
         state.Play();
-        AimsAt(A, state.Director.Tick(1f / 60f)!.Value);
+        AimsAt(A, state.Director.Tick(1f / 60f)!.Value, 3);
 
         GuardAt(characters, B);
         state.Director.Tick(0.5f);
 
         state.BeginScrub();
         state.ScrubTo(1.0);
-        AimsAt(B, state.Director.Tick(1f / 60f)!.Value);
+        AimsAt(B, state.Director.Tick(1f / 60f)!.Value, 3);
     }
 
     [Fact]
