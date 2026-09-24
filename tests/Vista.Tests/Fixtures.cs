@@ -156,8 +156,8 @@ internal static class Fixtures
     /// <summary>The field of view's step floor, 0.1° in radians.</summary>
     internal const float FovStepFloor = 0.1f * Deg;
 
-    /// <summary>The roll's step floor, 0.1° in radians.</summary>
-    internal const float RollStepFloor = 0.1f * Deg;
+    /// <summary>The smallest change in the picture's up, as the distance between unit ups, looked at for a step: 0.1°.</summary>
+    internal const float UpStepFloor = 0.1f * Deg;
 
     /// <summary>A sudden change in a channel: when it happens and how far it jumps.</summary>
     internal readonly record struct Step(double Time, float Size);
@@ -204,6 +204,27 @@ internal static class Fixtures
         }
 
         return steps;
+    }
+
+    /// <summary>The most the picture may turn about its own centre from one 60 fps frame to the next: 360° a second.</summary>
+    internal const float PictureSpinLimit = 6f * Deg;
+
+    /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds, in radians, leaving out frames where the facing snaps round more than a quarter turn, which the step checks judge.</summary>
+    internal static float LargestTwist(Func<double, CameraState> frame, double duration)
+    {
+        const double frameSeconds = 1.0 / 60.0;
+        var largest = 0f;
+        var last = frame(0.0);
+        for (var t = frameSeconds; t <= duration; t += frameSeconds)
+        {
+            var next = frame(t);
+            var (from, to) = (last.LookAt - last.Position, next.LookAt - next.Position);
+            if (Vector3.Dot(Vector3.Normalize(from), Vector3.Normalize(to)) > 0f)
+                largest = MathF.Max(largest, CameraRotation.Twist(from, last.Up, to, next.Up));
+            last = next;
+        }
+
+        return largest;
     }
 
     /// <summary>Asserts two vectors agree on every component within the given tolerance.</summary>

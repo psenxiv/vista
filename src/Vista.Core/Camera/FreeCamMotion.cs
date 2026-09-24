@@ -6,7 +6,7 @@ namespace Vista.Core.Camera;
 public static class FreeCamMotion
 {
     /// <summary>Matches the range the game's own look-at target sits at, roughly 1.5 to 20.</summary>
-    private const float LookAtDistance = 10f;
+    public const float LookAtDistance = 10f;
 
     /// <summary>Advances a camera position by one frame of input.</summary>
     /// <param name="input">(forward, up, right), each in [-1, 1].</param>

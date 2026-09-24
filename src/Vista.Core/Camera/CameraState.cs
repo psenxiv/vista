@@ -9,11 +9,13 @@ public readonly record struct CameraState(Vector3 Position, Vector3 LookAt, Vect
     public float Roll => CameraRotation.ToAngles(CameraRotation.FromBasis(LookAt - Position, Up)).Roll;
 
     /// <summary>A camera at <paramref name="position"/> turned by <paramref name="rotation"/>.</summary>
-    public static CameraState FromRotation(Vector3 position, Quaternion rotation, float fov)
-    {
-        var (yaw, pitch, _) = CameraRotation.ToAngles(rotation);
-        return new(position, FreeCamMotion.LookAtFrom(position, yaw, pitch), CameraRotation.Up(rotation), fov);
-    }
+    public static CameraState FromRotation(Vector3 position, Quaternion rotation, float fov) =>
+        new(
+            position,
+            position + (CameraRotation.Forward(rotation) * FreeCamMotion.LookAtDistance),
+            CameraRotation.Up(rotation),
+            fov
+        );
 
     /// <summary>A camera at <paramref name="position"/> facing <paramref name="yaw"/> and <paramref name="pitch"/>, rolled by <paramref name="roll"/>.</summary>
     public static CameraState FromAngles(Vector3 position, float yaw, float pitch, float roll, float fov) =>

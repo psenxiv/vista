@@ -74,7 +74,7 @@ public static class CameraRotation
         return MathF.Acos(dot);
     }
 
-    /// <summary>The unrolled upright up at yaw and pitch: the pitch-derivative of <see cref="Direction"/>, defined at the poles too.</summary>
+    /// <summary>The unrolled upright up at yaw and pitch: the pitch-derivative of the facing, defined at the poles too.</summary>
     private static Vector3 UprightUp(float yaw, float pitch)
     {
         var sinPitch = MathF.Sin(pitch);
@@ -107,7 +107,7 @@ public static class CameraRotation
     }
 
     /// <summary>The shortest rotation taking unit vector <paramref name="from"/> onto unit vector <paramref name="to"/>.</summary>
-    private static Quaternion MinimalRotation(Vector3 from, Vector3 to)
+    public static Quaternion MinimalRotation(Vector3 from, Vector3 to)
     {
         var a = Vector3.Normalize(from);
         var b = Vector3.Normalize(to);

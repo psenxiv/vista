@@ -63,8 +63,10 @@ public class RegressionSceneTests
                 .Select(s => $"position jumps {s.Size:0.###} yalms at {s.Time:0.####} s"),
             .. Steps(Frame, (a, b) => MathF.Abs(a.Fov - b.Fov), FovStepFloor, duration)
                 .Select(s => $"field of view pops {s.Size / Deg:0.###}° at {s.Time:0.####} s"),
-            .. Steps(Frame, (a, b) => MathF.Abs(a.Roll - b.Roll), RollStepFloor, duration)
-                .Select(s => $"roll pops {s.Size / Deg:0.###}° at {s.Time:0.####} s"),
+            .. Steps(Frame, (a, b) => Vector3.Distance(a.Up, b.Up), UpStepFloor, duration)
+                .Select(s =>
+                    $"picture turns {2f * MathF.Asin(MathF.Min(s.Size / 2f, 1f)) / Deg:0.###}° at {s.Time:0.####} s"
+                ),
         ];
     }
 
