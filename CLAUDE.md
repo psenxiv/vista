@@ -48,6 +48,8 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
 
 **Mutation-test a feature once, in its final review.** When every task of a plan is done, run `make mutate SINCE=<the plan's base commit>`. Each surviving mutant in the changed code gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach. Property tests are left out, since their random inputs would change a mutant's result from run to run.
 
+**Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) that reproduces it, with its expected number of snaps. Run `make regression-scene` and commit the rewritten file with the case.
+
 **Shared fixtures live in a fixtures file per test area**, with anything used across areas in `tests/Vista.Tests/Fixtures.cs`. A helper needed by a second file moves there rather than being copied.
 
 ## Keeping the code honest
@@ -68,6 +70,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
     make format     # Format with CSharpier (print width 120)
     make lint       # Build the plugin and tests with analyzer warnings as errors
     make mutate     # Mutation-test Core with Stryker; SINCE=<commit> for changes since it
+    make regression-scene  # Rewrite tests/scenes/Vista - Camera Regression.json from its cases
     make build      # Debug plugin build; sets DALAMUD_HOME
     make test       # Core tests
     make package    # Release build and latest.zip, as CI makes it
@@ -93,6 +96,8 @@ Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of th
 ## In-game checks
 
 In-game verification is the user's. For big work, write a JSON checklist in `tests/in-game/cases/` (gitignored, never committed), named for the work (`phase-4.json`), and list it in `cases/manifest.json`. `tests/in-game/README.md` gives the format; leave the page's own files alone. Never overwrite a checklist that has not been run: several can be pending, each with its own progress. The user sends back the results JSON; delete the checklist once its results are in.
+
+The checklist for any change to aim, timing or paths includes one pass of the camera regression scene: copy the latest `tests/scenes/Vista - Camera Regression.json` into the save folder's `vistaxiv/scenes/`, play its playlist in Live, and note any track that doesn't do what its name says. Point at the scene rather than repeating its cases.
 
 Read game logs from `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
