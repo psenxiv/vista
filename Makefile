@@ -1,4 +1,4 @@
-.PHONY: help build test format lint verify package bump testing release
+.PHONY: help build test format lint verify mutate package bump testing release
 
 help: ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-8s %s\n", $$1, $$2}'
@@ -17,6 +17,9 @@ lint: ## Build the plugin and tests with analyzer warnings as errors
 
 verify: ## Format, lint and test: run before every commit
 	@scripts/verify.sh
+
+mutate: ## Mutation-test Core with Stryker; SINCE=<commit> for changes since it
+	@scripts/mutate.sh $(SINCE)
 
 package: ## Release build and latest.zip, as CI makes it
 	@scripts/package.sh

@@ -6,3 +6,4 @@ analysis
 scripts/checks/
 docs/
 HANDOVER.md
+StrykerOutput/
