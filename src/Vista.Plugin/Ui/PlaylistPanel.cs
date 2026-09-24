@@ -107,7 +107,7 @@ internal sealed class PlaylistPanel
         var group = picked && selected.Count >= 2;
         if (ImGui.Selectable("##entry", editing ? picked : entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
             Report(session.ClickEntry(entry.Id, DragRows.Click()));
-        RowText.Draw($"{index + 1}  {name}", nameWidth);
+        RowText.Draw(entry.Id, $"{index + 1}  {name}", nameWidth);
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);
         var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);

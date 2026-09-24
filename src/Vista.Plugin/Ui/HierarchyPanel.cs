@@ -275,7 +275,7 @@ internal sealed class HierarchyPanel
         var group = picked && selected.Count >= 2;
         if (ImGui.Selectable("##name", picked, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
             Report(session.ClickTrack(track.Id, DragRows.Click()));
-        RowText.Draw(track.Name, nameWidth);
+        RowText.Draw(track.Id, track.Name, nameWidth);
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
