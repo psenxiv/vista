@@ -67,6 +67,7 @@ public class BlockMoveTests
     }
 
     [Fact]
+    [Trait("Category", "Property")]
     public void MovingRowsKeepsEveryRowAndMovesTheBlockBesideTheTarget()
     {
         var moves =

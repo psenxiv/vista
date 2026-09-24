@@ -320,6 +320,7 @@ public class SceneJsonTests
     );
 
     [Fact]
+    [Trait("Category", "Property")]
     public void AnyValidSceneSurvivesSavingAndLoading() =>
         AnyScene.Sample(
             scene =>

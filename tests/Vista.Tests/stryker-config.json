@@ -1,6 +1,7 @@
 {
   "stryker-config": {
     "project": "Vista.Core.csproj",
+    "test-case-filter": "Category!=Property",
     "reporters": ["html", "json", "progress", "cleartext"],
     "thresholds": { "high": 80, "low": 60, "break": 0 }
   }

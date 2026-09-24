@@ -665,6 +665,7 @@ public class TrackEvaluatorTests
     private static string Print(Track track) => SceneJson.Write(new Scene([track], new HashSet<Guid>(), []));
 
     [Fact]
+    [Trait("Category", "Property")]
     public void TheAimNeverSteps()
     {
         // A smooth turn shrinks with the interval it's measured over; a step doesn't. Wherever the facing turns more
@@ -705,6 +706,7 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    [Trait("Category", "Property")]
     public void AHoldIsStill()
     {
         // Through a hold the camera stays exactly where it arrived, with the same field of view and roll. Its aim does
