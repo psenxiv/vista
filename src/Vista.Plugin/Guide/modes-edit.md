@@ -4,13 +4,15 @@ Edit is where you build your shots. You fly a free camera, add points and change
 
 ## Flying
 
+The camera flies like a plane, so the movement keys follow the way you're facing.
+
 | Key | Does |
 |---|---|
 | `W` `A` `S` `D` | Fly forward, left, back and right |
 | `E` / `Q` | Fly up / down |
 | `Ctrl + Q` / `Ctrl + E` | Roll left / right |
 | `Shift` | Fly faster while held |
-| Mouse | Look around |
+| Mouse | Look around, even over the top |
 | Mouse wheel | Change fly speed |
 
 **Fly speed**, the slider on the top row, also sets the speed.

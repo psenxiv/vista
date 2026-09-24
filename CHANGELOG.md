@@ -4,7 +4,10 @@
 
 - Hide game UI when Live stays on or off between sessions.
 - Fixed a shimmer with Direction of travel while the camera holds still at a sharp turn.
-- Fixed the camera flipping round with Direction of travel as it goes straight up or down. It turns smoothly instead.
+- The camera can look straight up or down, and turn upside down.
+- The free cam flies like a plane.
+- Direction of travel rides loops like a rollercoaster.
+- Steep shots no longer flip the picture.
 
 ## 0.8.0.1
 

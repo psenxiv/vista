@@ -17,7 +17,7 @@ Press `R` to switch between moving and rotating.
 ## The fields
 
 - {icon:ArrowsAlt} **Position**: **X**, **Y** and **Z**.
-- {icon:SyncAlt} **Rotation**: **Pitch**, **Yaw** and **Roll**, in degrees.
+- {icon:SyncAlt} **Rotation**: **Pitch**, **Yaw** and **Roll**, in degrees. **Pitch** reaches straight up and down.
 - **FoV**: the field of view, in degrees. Smaller zooms in.
 
 Drag a field left or right to change it, or double-click it to type. {icon:History} **Reset to the camera's field of view** copies the camera's FoV to the point.

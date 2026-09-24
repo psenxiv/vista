@@ -2,6 +2,8 @@
 
 These work in Edit mode. `Space` and `Ctrl + Space` also work in Live, and `G` in View.
 
+The camera flies like a plane, so the movement keys follow the way you're facing.
+
 | Key | Does |
 |---|---|
 | `W` `A` `S` `D` | Fly forward, left, back, right |
@@ -11,7 +13,7 @@ These work in Edit mode. `Space` and `Ctrl + Space` also work in Live, and `G` i
 | `Space` | Play / pause |
 | `Ctrl + Space` | Restart from the beginning |
 | Mouse wheel | Change fly speed |
-| Mouse | Look around, as with the game camera |
+| Mouse | Look around, even over the top |
 | `Backtick` | Add a point at the camera, at the end of the track |
 | `Alt + Backtick` | Add a point after the selected one |
 | `Ctrl + Backtick` | Replace the selected point with the camera |
