@@ -15,7 +15,7 @@ Drag the scrub bar to move through the track that is playing. At the end of the 
 
 ## Hiding the game UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play.
+Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play. Vista remembers the setting.
 
 ## Leaving Live
 

@@ -59,7 +59,7 @@ public sealed class Plugin : IDalamudPlugin
         var config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         Movement = new MovementLock();
-        Session = new CameraSession(Movement);
+        Session = new CameraSession(config, Movement);
         sceneFiles = new SceneFiles(config, Session);
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
         editorLayer = new EditorLayer(Session, pointGizmo);

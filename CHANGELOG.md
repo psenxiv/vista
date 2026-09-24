@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1.1
+
+- Hide game UI when Live stays on or off between sessions.
+
 ## 0.8.0.1
 
 - A demo scene, Demo - Limsa, is added to your save folder once, to show what Vista can do. It's set in Limsa Lominsa. Change it or delete it as you like.

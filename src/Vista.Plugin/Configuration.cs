@@ -27,6 +27,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>The Playlist panel's width, in pixels.</summary>
     public float PlaylistWidth { get; set; } = PanelWidth.Default;
 
+    /// <summary>True to hide the game's UI while Live plays.</summary>
+    public bool HideUiInLive { get; set; }
+
     /// <summary>Writes the settings to disk.</summary>
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

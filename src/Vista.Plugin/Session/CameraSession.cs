@@ -14,15 +14,16 @@ internal sealed class CameraSession
     private readonly NearbyCharacters characters = new();
     private readonly SessionState state;
     private readonly FreeCam freeCam = new();
+    private readonly Configuration config;
     private readonly MovementLock movement;
     private bool owned;
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
     private bool previewedLastFrame;
-    private bool hideUiInLive;
 
-    public CameraSession(MovementLock movement)
+    public CameraSession(Configuration config, MovementLock movement)
     {
+        this.config = config;
         this.movement = movement;
         state = new SessionState(Ground.Below, characters);
     }
@@ -32,11 +33,12 @@ internal sealed class CameraSession
     /// <summary>Whether Live hides the game UI while it plays; toggling it while Live plays applies at once.</summary>
     public bool HideUiInLive
     {
-        get => hideUiInLive;
+        get => config.HideUiInLive;
         set
         {
-            if (hideUiInLive == value) return;
-            hideUiInLive = value;
+            if (config.HideUiInLive == value) return;
+            config.HideUiInLive = value;
+            config.Save();
             if (state.Mode != CameraMode.Live) return;
             if (value && !state.Director.IsPaused && !state.Director.IsFinished) GameUi.Hide();
             else if (!value) GameUi.Restore();
@@ -550,10 +552,10 @@ internal sealed class CameraSession
                     : "[vista] nothing to play: add a track with points to the playlist.");
                 return;
             case PlayOutcome.ReHid:
-                if (hideUiInLive) GameUi.Hide();
+                if (HideUiInLive) GameUi.Hide();
                 return;
             case PlayOutcome.Resumed:
-                if (hideUiInLive) GameUi.Hide();
+                if (HideUiInLive) GameUi.Hide();
                 Plugin.Log.Information("[vista] resumed");
                 return;
             case PlayOutcome.StartedFromGame or PlayOutcome.CuedFromGame:
@@ -569,7 +571,7 @@ internal sealed class CameraSession
             return;
         }
 
-        if (hideUiInLive) GameUi.Hide();
+        if (HideUiInLive) GameUi.Hide();
         Plugin.Log.Information("[vista] mode: live, {Count} playlist entries", state.Scene.Playlist.Count);
     }
 
