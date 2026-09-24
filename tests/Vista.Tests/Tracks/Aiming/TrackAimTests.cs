@@ -50,25 +50,25 @@ public class TrackAimTests
     public void UnwrapAnglesOfEmptySequenceIsEmpty() => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
 
     [Fact]
-    public void PathTangentClampsPitchOnANearVerticalPath()
+    public void AimAlongANearVerticalPathDirectionIsPitchClamped()
     {
         var points = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 2, 0), new Vector3(0, 3, 0) };
         var table = new ArcLengthTable(points);
 
-        var (_, pitch) = TrackAim.PathTangent(points, table, 1, 0.5f, (0f, 0f));
+        var (_, pitch) = TrackAim.Along(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
         Assert.True(pitch <= TrackAim.PitchLimit + 1e-4f, $"pitch {pitch} exceeds the clamp");
     }
 
     [Fact]
-    public void PathTangentFallsBackToTheNearestValidDirectionAcrossACollapsedSegment()
+    public void PathDirectionFallsBackToTheNearestValidDirectionAcrossACollapsedSegment()
     {
         // Segment 0 (points 0-1) collapses to a single point; segments 1 and 2 continue in a straight line
         // along +X, so the nearest valid direction is unambiguous regardless of exactly where it is sampled.
         var points = new[] { new Vector3(5, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0), new Vector3(15, 0, 0) };
         var table = new ArcLengthTable(points);
 
-        var actual = TrackAim.PathTangent(points, table, 0, 0.5f, (99f, 99f));
+        var actual = TrackAim.Along(TrackAim.PathDirection(points, table, 0, 0.5f)!.Value);
 
         var expected = TrackAim.FromDirection(new Vector3(1, 0, 0));
         Assert.Equal(expected.Yaw, actual.Yaw, 4);
@@ -76,16 +76,12 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void PathTangentReturnsFallbackWhenEveryPointCoincides()
+    public void PathDirectionIsNullWhenEveryPointCoincides()
     {
         var points = new[] { new Vector3(3, 3, 3), new Vector3(3, 3, 3), new Vector3(3, 3, 3), new Vector3(3, 3, 3) };
         var table = new ArcLengthTable(points);
-        var fallback = (Yaw: 1.1f, Pitch: -0.2f);
 
-        var actual = TrackAim.PathTangent(points, table, 1, 0.5f, fallback);
-
-        Assert.Equal(fallback.Yaw, actual.Yaw);
-        Assert.Equal(fallback.Pitch, actual.Pitch);
+        Assert.Null(TrackAim.PathDirection(points, table, 1, 0.5f));
     }
 
     [Fact]
@@ -119,14 +115,14 @@ public class TrackAimTests
     [InlineData(1, 1f, 0.99999f)]
     [InlineData(0, 0f, 0.0000001f)]
     [InlineData(0, 0f, 0.00001f)]
-    public void PathTangentHoldsSteadyAtEitherEndOfThePath(int segment, float atEnd, float nearEnd)
+    public void PathDirectionHoldsSteadyAtEitherEndOfThePath(int segment, float atEnd, float nearEnd)
     {
         // Where the path's speed falls to zero its direction is rounding noise: a hair from the end once read 1.7° off.
         // A camera settling there must not flick, so the end and a hair from it agree to within 0.01°.
         var table = new ArcLengthTable(CurvedEnd);
 
-        var (endYaw, endPitch) = TrackAim.PathTangent(CurvedEnd, table, segment, atEnd, (0f, 0f));
-        var (nearYaw, nearPitch) = TrackAim.PathTangent(CurvedEnd, table, segment, nearEnd, (0f, 0f));
+        var (endYaw, endPitch) = TrackAim.Along(TrackAim.PathDirection(CurvedEnd, table, segment, atEnd)!.Value);
+        var (nearYaw, nearPitch) = TrackAim.Along(TrackAim.PathDirection(CurvedEnd, table, segment, nearEnd)!.Value);
 
         Assert.Equal(endYaw, nearYaw, 0.01f * Deg);
         Assert.Equal(endPitch, nearPitch, 0.01f * Deg);

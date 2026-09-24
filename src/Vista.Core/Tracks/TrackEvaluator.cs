@@ -15,6 +15,12 @@ public sealed class TrackEvaluator
     /// <summary>Yalms within which the look-ahead aim blends from the spot ahead towards the path's direction into it.</summary>
     public const float LookAheadBlend = 1f;
 
+    /// <summary>Seconds between the samples that look for vertical stretches.</summary>
+    private const double StretchScanStep = 0.01;
+
+    /// <summary>Times each vertical stretch's edge is halved, to about a millionth of the scan step.</summary>
+    private const int CrossingHalvings = 20;
+
     private readonly Track _track;
     private readonly Vector3[] _positions;
     private readonly ArcLengthTable _table;
@@ -31,6 +37,10 @@ public sealed class TrackEvaluator
     private readonly TimedChannel? _fov;
     private readonly float _fovMin;
     private readonly float _fovMax;
+    private Stretch[]? _stretches;
+
+    /// <summary>A span where Direction of travel is steeper than the pitch limit, with the yaw at each edge; null where the track starts or ends inside it.</summary>
+    private readonly record struct Stretch(double From, double To, float? FromYaw, float? ToYaw);
 
     /// <summary>Total shot length: the compiled last key's time, 0 with no points.</summary>
     public double Duration => _curve.Duration;
@@ -128,12 +138,7 @@ public sealed class TrackEvaluator
 
         var (yaw, pitch) =
             Toward(cameraPosition, target)
-            ?? (
-                _track.Aim == AimMode.PathTangent
-                    ? LookAhead(time, cameraPosition)
-                        ?? TrackAim.PathTangent(_positions, _table, segment, fraction, (_yaws[0], _pitches[0]))
-                    : AimKeys(time)
-            );
+            ?? (_track.Aim == AimMode.PathTangent ? Travel(time, cameraPosition, segment, fraction) : AimKeys(time));
 
         var fov = Math.Clamp(_fov!.At(time), _fovMin, _fovMax);
         var roll = _roll!.At(time);
@@ -215,8 +220,103 @@ public sealed class TrackEvaluator
     private (float Yaw, float Pitch) AimKeys(double time) =>
         (_yaw!.At(time), Math.Clamp(_pitch!.At(time), -TrackAim.PitchLimit, TrackAim.PitchLimit));
 
-    /// <summary>The aim from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, blending towards the path's direction into that spot as it nears; null with no look-ahead or no direction.</summary>
-    private (float Yaw, float Pitch)? LookAhead(double time, Vector3 from)
+    /// <summary>The Direction of travel aim at <paramref name="time"/>, turning evenly through a vertical stretch.</summary>
+    private (float Yaw, float Pitch) Travel(double time, Vector3 from, int segment, float fraction)
+    {
+        if (TravelDirection(time, from, segment, fraction) is not { } direction)
+            return (_yaws[0], _pitches[0]);
+
+        var aim = TrackAim.Along(direction);
+        return IsSteep(direction) && YawThroughVertical(time) is { } yaw ? (yaw, aim.Pitch) : aim;
+    }
+
+    /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped: the look-ahead, else the path's own; null where the path has none.</summary>
+    private Vector3? TravelDirection(double time, Vector3 from, int segment, float fraction) =>
+        LookAhead(time, from) ?? TrackAim.PathDirection(_positions, _table, segment, fraction);
+
+    /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped; null where the path has none.</summary>
+    private Vector3? TravelDirection(double time)
+    {
+        var (position, segment, fraction) = PlaceAt(time);
+        return TravelDirection(time, position, segment, fraction);
+    }
+
+    /// <summary>Whether <paramref name="direction"/> is steeper than the pitch limit.</summary>
+    private static bool IsSteep(Vector3 direction) =>
+        MathF.Abs(TrackAim.FromDirection(direction).Pitch) > TrackAim.PitchLimit;
+
+    /// <summary>Whether Direction of travel at <paramref name="time"/> is steeper than the pitch limit.</summary>
+    private bool IsSteep(double time) => TravelDirection(time) is { } direction && IsSteep(direction);
+
+    /// <summary>The yaw at <paramref name="time"/> inside a vertical stretch, turned evenly the short way between its edges; null outside every stretch found.</summary>
+    private float? YawThroughVertical(double time)
+    {
+        _stretches ??= FindStretches();
+        foreach (var stretch in _stretches)
+        {
+            if (
+                (stretch.FromYaw is not null && time < stretch.From) || (stretch.ToYaw is not null && time > stretch.To)
+            )
+                continue;
+
+            return (stretch.FromYaw, stretch.ToYaw) switch
+            {
+                ({ } start, { } end) => start
+                    + (Angles.Delta(start, end) * (float)((time - stretch.From) / (stretch.To - stretch.From))),
+                ({ } start, null) => start,
+                (null, { } end) => end,
+                _ => _yaws[0],
+            };
+        }
+
+        return null;
+    }
+
+    /// <summary>Every vertical stretch in the track, sampled every <see cref="StretchScanStep"/> and at the end.</summary>
+    private Stretch[] FindStretches()
+    {
+        var stretches = new List<Stretch>();
+        var samples = (int)Math.Ceiling(Duration / StretchScanStep);
+        (double Time, float? Yaw)? opened = null;
+        var previous = 0.0;
+        for (var i = 0; i <= samples; i++)
+        {
+            var time = Math.Min(i * StretchScanStep, Duration);
+            var steep = IsSteep(time);
+            if (steep && opened is null)
+                opened = i == 0 ? (0.0, null) : Crossing(previous, time);
+            else if (!steep && opened is { } start)
+            {
+                var end = Crossing(time, previous);
+                stretches.Add(new Stretch(start.Time, end.Time, start.Yaw, end.Yaw));
+                opened = null;
+            }
+
+            previous = time;
+        }
+
+        if (opened is { } last)
+            stretches.Add(new Stretch(last.Time, Duration, last.Yaw, null));
+        return stretches.ToArray();
+    }
+
+    /// <summary>The time within a hair of the vertical between <paramref name="outside"/> and steep <paramref name="inside"/>, on the outside, with its yaw.</summary>
+    private (double Time, float Yaw) Crossing(double outside, double inside)
+    {
+        for (var i = 0; i < CrossingHalvings; i++)
+        {
+            var middle = (outside + inside) / 2;
+            if (IsSteep(middle))
+                inside = middle;
+            else
+                outside = middle;
+        }
+
+        return (outside, TrackAim.FromDirection(TravelDirection(outside)!.Value).Yaw);
+    }
+
+    /// <summary>The direction from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, blending towards the path's direction into that spot as it nears; null with no look-ahead or no direction.</summary>
+    private Vector3? LookAhead(double time, Vector3 from)
     {
         if (_track.LookAhead <= 0f)
             return null;
@@ -225,7 +325,7 @@ public sealed class TrackEvaluator
         var chord = PointAt(ahead) - from;
         var weight = MathF.Max(0f, ahead - _curve.PositionAt(time)) / LookAheadBlend;
         if (weight >= 1f)
-            return TrackAim.Along(chord);
+            return TrackAim.Usable(chord);
 
         // Weighed by distance along the path, a chord shrunk to rounding noise carries almost no weight, and a hairpin's short chord keeps its full weight.
         var start = MathF.Max(0f, ahead - LookAheadBlend);
@@ -233,7 +333,7 @@ public sealed class TrackEvaluator
         if (arrival.LengthSquared() == 0f)
             return null;
         var toward = chord.LengthSquared() == 0f ? Vector3.Zero : Vector3.Normalize(chord);
-        return TrackAim.Along((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
+        return TrackAim.Usable((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
     }
 
     /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>

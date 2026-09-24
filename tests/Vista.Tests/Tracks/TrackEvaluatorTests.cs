@@ -499,4 +499,110 @@ public class TrackEvaluatorTests
 
         Assert.Equal(1f, TrackAim.FromDirection(Facing(evaluator, arrive + 1.9)).Yaw, 1e-4f);
     }
+
+    // The largest turn of the facing from one millisecond to the next across the whole shot, in radians.
+    private static float LargestMillisecondTurn(TrackEvaluator evaluator)
+    {
+        var largest = 0f;
+        for (var t = 0.0; t < evaluator.Duration; t += 1e-3)
+            largest = MathF.Max(largest, Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + 1e-3)));
+        return largest;
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.5f)]
+    public void DirectionOfTravelTurnsSmoothlyAsThePathDriftsAcrossTheVertical(float lookAhead)
+    {
+        // The path climbs 10 yalms, bowing 0.2 to +x and back, so its direction passes within 1° of vertical from +x to -x.
+        // Yaw read from that tiny sideways part flipped half a turn at once: a step of 2 sin 1° ≈ 2° in one millisecond.
+        // Turned evenly over the stretch of about half a second, the half turn round the vertical moves the facing
+        // π sin 1° ≈ 3.1°, near 0.006° a millisecond, and the bow turns it no faster than 0.01°. 0.05° allows five times that.
+        var track = TrackEditing.SetLookAhead(
+            Build([Point(0f), Point(0.2f, 5f), Point(0f, 10f)], AimMode.PathTangent),
+            lookAhead
+        );
+
+        // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
+        Assert.InRange(LargestMillisecondTurn(new TrackEvaluator(track)), 0f, 0.05f * Deg);
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.5f)]
+    public void DirectionOfTravelTurnsSmoothlyThroughACraneShot(float lookAhead)
+    {
+        // Along -z, straight up, then along +x. FromDirection's yaw is atan2(-x, -z): 0 heading -z and -π/2 heading +x.
+        // The first leg lies in the plane x = 0 and the last in z = -10, so the headings are exact there.
+        var track = TrackEditing.SetLookAhead(
+            Build(
+                [Point(0f), Point(0f, 0f, -10f), Point(0f, 10f, -10f), Point(0f, 20f, -10f), Point(10f, 20f, -10f)],
+                AimMode.PathTangent
+            ),
+            lookAhead
+        );
+        var evaluator = new TrackEvaluator(track);
+
+        Assert.Equal(0f, TrackAim.FromDirection(Facing(evaluator, 2.0)).Yaw, 1e-4f);
+        Assert.Equal(-MathF.PI / 2f, TrackAim.FromDirection(Facing(evaluator, evaluator.Duration - 2.0)).Yaw, 1e-4f);
+
+        // The climb bows either side of the vertical, and yaw read from the tiny sideways part stepped up to half a turn at
+        // once there, 2 sin 1° ≈ 2°. Turned evenly, at most a half turn round the vertical, π sin 1° ≈ 3.1°, spread over a
+        // stretch of at least 0.09 s is under 0.04° a millisecond. The sharpest turns are the bends into and out of the
+        // climb, just under 0.1° a millisecond with look ahead 0; 0.2° allows them twice over.
+        Assert.InRange(LargestMillisecondTurn(evaluator), 0f, 0.2f * Deg);
+    }
+
+    // Facing at pitch 89° with yaw π/2: (-sin(π/2) cos 89°, sin 89°, -cos(π/2) cos 89°).
+    private static readonly Vector3 UpHeadingMinusX = new(-0.017452406f, 0.99984770f, 0f);
+
+    [Fact]
+    public void DirectionOfTravelThatStartsVerticalHoldsTheYawItLeavesWith()
+    {
+        // Up through (0, 10, 0) and (0, 20, 0), then level to (10, 20, 0). Segment 1's last blend extrapolates the leg to
+        // point 4 backwards, to x ≤ 0, so the path bows to -x before bending to +x: it leaves the vertical heading -x.
+        var evaluator = new TrackEvaluator(
+            Build([Point(0f), Point(0f, 10f), Point(0f, 20f), Point(10f, 20f)], AimMode.PathTangent)
+        );
+
+        Along(UpHeadingMinusX, Facing(evaluator, 0.0), 1e-4f);
+        Along(UpHeadingMinusX, Facing(evaluator, 2.0), 1e-4f);
+    }
+
+    [Fact]
+    public void DirectionOfTravelThatEndsVerticalHoldsTheYawItArrivesWith()
+    {
+        // Level from (-10, 0, 0) to the origin, then up through (0, 10, 0) to (0, 20, 0). Segment 1's first blend
+        // extrapolates the leg from point 1 onwards, to x ≥ 0, so the path bows to +x and comes back: it reaches the
+        // vertical heading -x.
+        var evaluator = new TrackEvaluator(
+            Build([Point(-10f), Point(0f), Point(0f, 10f), Point(0f, 20f)], AimMode.PathTangent)
+        );
+
+        Along(UpHeadingMinusX, Facing(evaluator, evaluator.Duration - 2.0), 1e-4f);
+        Along(UpHeadingMinusX, Facing(evaluator, evaluator.Duration), 1e-4f);
+    }
+
+    [Fact]
+    public void DirectionOfTravelThatIsVerticalThroughoutKeepsTheFirstPointsYaw()
+    {
+        // Straight up, pitch clamped to 89° at yaw 0.3: (-sin 0.3 cos 89°, sin 89°, -cos 0.3 cos 89°).
+        var evaluator = new TrackEvaluator(Build([Point(0f, yaw: 0.3f), Point(0f, 10f)], AimMode.PathTangent));
+
+        Along(new Vector3(-0.0051575388f, 0.99984770f, -0.016672921f), Facing(evaluator, 1.0), 1e-4f);
+    }
+
+    [Fact]
+    public void DirectionOfTravelWithNoDirectionKeepsTheFirstPointsAim()
+    {
+        // Every point coincides, so the path has no direction: (-sin 1.1 cos 0.2, sin -0.2, -cos 1.1 cos 0.2).
+        var evaluator = new TrackEvaluator(
+            Build(
+                [Point(3f, 3f, 3f, yaw: 1.1f, pitch: -0.2f), Point(3f, 3f, 3f), Point(3f, 3f, 3f)],
+                AimMode.PathTangent
+            )
+        );
+
+        Along(new Vector3(-0.87344255f, -0.19866933f, -0.44455440f), Facing(evaluator, 0.05), 1e-4f);
+    }
 }

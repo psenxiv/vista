@@ -32,12 +32,15 @@ public static class TrackAim
     public static (float Yaw, float Pitch)? Toward(Vector3 from, Vector3 target)
     {
         var direction = target - from;
-        return direction.Length() < MinTargetDistance ? null : ClampPitch(FromDirection(direction));
+        return direction.Length() < MinTargetDistance ? null : Along(direction);
     }
 
-    /// <summary>The pitch-clamped aim along <paramref name="direction"/>, or null when it's too short to give one.</summary>
-    public static (float Yaw, float Pitch)? Along(Vector3 direction) =>
-        direction.LengthSquared() <= DirectionEpsilon * DirectionEpsilon ? null : ClampPitch(FromDirection(direction));
+    /// <summary>The pitch-clamped aim along <paramref name="direction"/>.</summary>
+    public static (float Yaw, float Pitch) Along(Vector3 direction) => ClampPitch(FromDirection(direction));
+
+    /// <summary><paramref name="direction"/>, or null when it's too short to give an aim.</summary>
+    public static Vector3? Usable(Vector3 direction) =>
+        direction.LengthSquared() > DirectionEpsilon * DirectionEpsilon ? direction : null;
 
     /// <summary>Walks an angle sequence (yaw or roll), adding or subtracting full turns so consecutive values differ by at most π.</summary>
     public static float[] UnwrapAngles(IReadOnlyList<float> yaws)
@@ -55,22 +58,13 @@ public static class TrackAim
         return result;
     }
 
-    /// <summary>The path's direction of travel, pitch-clamped, falling back to the nearest valid direction where coincident points collapse the derivative.</summary>
-    public static (float Yaw, float Pitch) PathTangent(
+    /// <summary>The path's direction of travel, unclamped, falling back to the nearest valid direction where coincident points collapse the derivative; null when no segment has one.</summary>
+    public static Vector3? PathDirection(
         IReadOnlyList<Vector3> points,
         ArcLengthTable table,
         int segment,
-        float fraction,
-        (float Yaw, float Pitch) fallback
-    )
-    {
-        var direct = TryDirection(points, table, segment, fraction);
-        if (direct is { } direction)
-            return ClampPitch(FromDirection(direction));
-
-        var nearest = NearestValidDirection(points, table, segment, fraction);
-        return nearest is { } found ? ClampPitch(FromDirection(found)) : fallback;
-    }
+        float fraction
+    ) => TryDirection(points, table, segment, fraction) ?? NearestValidDirection(points, table, segment, fraction);
 
     /// <summary>The derivative at this exact place, or null where the segment has collapsed to zero length.</summary>
     private static Vector3? TryDirection(
@@ -89,8 +83,7 @@ public static class TrackAim
             t = MathF.Max(t, BoundaryNudge);
         if (segment == table.SegmentCount - 1)
             t = MathF.Min(t, 1f - BoundaryNudge);
-        var derivative = CatmullRom.Derivative(points, segment, t);
-        return derivative.LengthSquared() > DirectionEpsilon * DirectionEpsilon ? derivative : null;
+        return Usable(CatmullRom.Derivative(points, segment, t));
     }
 
     /// <summary>Searches every other segment by arc distance from this place and returns the closest one with a defined direction, or null if none exists.</summary>

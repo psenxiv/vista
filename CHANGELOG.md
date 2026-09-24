@@ -4,6 +4,7 @@
 
 - Hide game UI when Live stays on or off between sessions.
 - Fixed a shimmer with Direction of travel while the camera holds still at a sharp turn.
+- Fixed the camera flipping round with Direction of travel as it goes straight up or down. It turns smoothly instead.
 
 ## 0.8.0.1
 
