@@ -1,6 +1,5 @@
 using System.Numerics;
 using Vista.Core.Display;
-using Vista.Core.Editing;
 using Dalamud.Bindings.ImGui;
 
 namespace Vista.Plugin.Ui.Widgets;

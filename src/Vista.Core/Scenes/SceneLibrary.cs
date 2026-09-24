@@ -1,5 +1,3 @@
-using Vista.Core.Session;
-
 namespace Vista.Core.Scenes;
 
 /// <summary>The open scene's name and file: opening, switching, new, rename, duplicate, delete and debounced saving.</summary>

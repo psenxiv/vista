@@ -1,6 +1,5 @@
 using System.Numerics;
 using Vista.Core.Camera;
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Core.Editing;

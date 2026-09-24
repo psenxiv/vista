@@ -16,7 +16,7 @@ public sealed class SelectionState
     private const string LookAtUnused = "The Look At point is used only while the track aims at it.";
 
     private readonly SessionState session;
-    private Selection selection = Selection.None;
+    private SelectedItems selection = SelectedItems.None;
     private Guid? lastTrack;
     private Guid? lastEntry;
 
@@ -38,10 +38,10 @@ public sealed class SelectionState
     public int? Key { get; internal set; }
 
     /// <summary>The selected leg, or null. Never set together with <see cref="Key"/>.</summary>
-    public int? Leg { get; internal set; }
+    public int? Leg { get; private set; }
 
     /// <summary>The selected anchor, or null; never set together with a selected point.</summary>
-    public AnchorKind? Anchor { get; internal set; }
+    public AnchorKind? Anchor { get; private set; }
 
     /// <summary>The selected scene or track anchor in the world, or null.</summary>
     public Anchor? AnchorInWorld => Anchor switch
@@ -54,8 +54,8 @@ public sealed class SelectionState
     /// <summary>The selected Look At point in the world, or null.</summary>
     public Vector3? LookAtInWorld => Anchor == AnchorKind.LookAt ? session.Track.LookAt : null;
 
-    /// <summary>The selection as an undo step records it.</summary>
-    internal Selection Value => selection;
+    /// <summary>The selection as an undo step records it; setting it applies no other rule.</summary>
+    internal SelectedItems Value { get => selection; set => selection = value; }
 
     /// <summary>The last point clicked, the start of a Shift range, or null.</summary>
     internal int? LastPoint { get; set; }
@@ -65,7 +65,7 @@ public sealed class SelectionState
     {
         if (session.Mode != CameraMode.Editing) return;
         var point = index is { } i && i >= 0 && i < session.StoredTrack.Points.Count ? i : (int?)null;
-        SelectAnchorless(new Selection(point is { } p ? [p] : [], [], []));
+        SelectAnchorless(new SelectedItems(point is { } p ? [p] : [], [], []));
         LastPoint = point;
     }
 
@@ -82,7 +82,7 @@ public sealed class SelectionState
 
         if (Tracks.Count >= 2 || Entries.Count >= 2) return;
         var (points, last) = RowPicking.Click(Enumerable.Range(0, count).ToArray(), selection.Points, LastPoint, index, click);
-        SelectAnchorless(new Selection(points, [], []));
+        SelectAnchorless(new SelectedItems(points, [], []));
         if (points.Count > 0) LastPoint = last;
     }
 
@@ -95,7 +95,7 @@ public sealed class SelectionState
         if (click == RowClick.Plain)
         {
             if (session.SwitchTrack(id) is { } refusal) return refusal;
-            SelectAnchorless(Selection.None);
+            SelectAnchorless(SelectedItems.None);
             lastTrack = id;
             return null;
         }
@@ -104,7 +104,7 @@ public sealed class SelectionState
         if (id == edited && click == RowClick.Toggle) return null;
         if (selection.Points.Count >= 2 || Entries.Count >= 2) return null;
         var (tracks, last) = RowPicking.Click(scene.Tracks.Select(t => t.Id).ToArray(), Tracks, lastTrack ?? edited, id, click);
-        SelectAnchorless(new Selection([], tracks.Where(t => t != edited).ToArray(), []));
+        SelectAnchorless(new SelectedItems([], tracks.Where(t => t != edited).ToArray(), []));
         lastTrack = tracks.Count > 1 ? last : null;
         return null;
     }
@@ -118,7 +118,7 @@ public sealed class SelectionState
         if (click != RowClick.Plain && (selection.Points.Count >= 2 || Tracks.Count >= 2)) return null;
 
         var (entries, last) = RowPicking.Click(scene.Playlist.Select(e => e.Id).ToArray(), Entries, lastEntry, id, click);
-        SelectAnchorless(new Selection([], [], entries));
+        SelectAnchorless(new SelectedItems([], [], entries));
         if (entries.Count > 0) lastEntry = last;
         return null;
     }
@@ -132,7 +132,7 @@ public sealed class SelectionState
         Key = key is { } k && k >= 0 && k < TrackEditing.KeyCount(local) ? k : null;
         if (Key is { } s && TrackEditing.RoleOf(local, s) == KeyRole.Point)
         {
-            SelectAnchorless(new Selection([TrackEditing.PointOf(local, s)], [], []));
+            SelectAnchorless(new SelectedItems([TrackEditing.PointOf(local, s)], [], []));
             Key = s;
         }
     }
@@ -193,22 +193,11 @@ public sealed class SelectionState
     /// <summary>Clears the track and entry selections and any selection of two or more points, as leaving Edit does.</summary>
     internal void DropGroup()
     {
-        if (selection.Points.Count > 1 || selection.Tracks.Count > 0 || selection.Entries.Count > 0) Set(Selection.None);
+        if (selection.Points.Count > 1 || selection.Tracks.Count > 0 || selection.Entries.Count > 0) Set(SelectedItems.None);
     }
 
     /// <summary>Selects points <paramref name="points"/> of the edited track, in order.</summary>
-    internal void SelectPoints(IReadOnlyList<int> points) => Set(new Selection(points.Distinct().Order().ToArray(), [], []));
-
-    /// <summary>Selects exactly <paramref name="points"/> as an undo step would record them, with no other rule applied. Returns the selection it replaced.</summary>
-    internal Selection Swap(IReadOnlyList<int> points)
-    {
-        var before = selection;
-        selection = new Selection(points, [], []);
-        return before;
-    }
-
-    /// <summary>Puts back a selection <see cref="Swap"/> replaced.</summary>
-    internal void Unswap(Selection before) => selection = before;
+    internal void SelectPoints(IReadOnlyList<int> points) => Set(new SelectedItems(points.Distinct().Order().ToArray(), [], []));
 
     /// <summary>After an edit is committed: selects <paramref name="points"/> of the edited track, forgets a last point past its end, and drops an anchor it no longer has.</summary>
     internal void AfterCommit(IReadOnlyList<int> points, Track edited)
@@ -227,7 +216,7 @@ public sealed class SelectionState
     }
 
     /// <summary>After an undo or redo: puts back the recorded <paramref name="value"/> and brings the timing selection in step.</summary>
-    internal void Restore(Selection value, IReadOnlyList<ControlPoint> pointsBefore)
+    internal void Restore(SelectedItems value, IReadOnlyList<ControlPoint> pointsBefore)
     {
         selection = value;
         LastPoint = null;
@@ -238,7 +227,7 @@ public sealed class SelectionState
     /// <summary>Clears every selection, key and leg, as switching tracks does.</summary>
     internal void Clear()
     {
-        selection = Selection.None;
+        selection = SelectedItems.None;
         LastPoint = null;
         lastTrack = null;
         lastEntry = null;
@@ -263,14 +252,14 @@ public sealed class SelectionState
     }
 
     /// <summary>Replaces the selection and clears any selected anchor.</summary>
-    private void SelectAnchorless(Selection next)
+    private void SelectAnchorless(SelectedItems next)
     {
         Anchor = null;
         Set(next);
     }
 
     /// <summary>Replaces the selection, forgets the last row clicked of each kind it leaves empty, and keeps the timing selection in step with its points.</summary>
-    private void Set(Selection next)
+    private void Set(SelectedItems next)
     {
         selection = next;
         if (next.Points.Count == 0) LastPoint = null;
@@ -282,7 +271,7 @@ public sealed class SelectionState
     private void SelectAnchor(AnchorKind kind)
     {
         session.EndLiveEdit();
-        Set(Selection.None);
+        Set(SelectedItems.None);
         Anchor = kind;
     }
 

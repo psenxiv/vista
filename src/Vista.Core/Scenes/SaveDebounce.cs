@@ -1,5 +1,3 @@
-using Vista.Core.Scenes;
-
 namespace Vista.Core.Scenes;
 
 /// <summary>Decides when a changed scene has been still long enough to save.</summary>

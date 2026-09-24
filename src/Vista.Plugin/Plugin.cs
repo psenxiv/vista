@@ -2,7 +2,6 @@ using Vista.Core.Session;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
-using Vista.Plugin.Ui;
 using Vista.Plugin.Ui.Main;
 using Vista.Plugin.Ui.Widgets;
 using Vista.Plugin.Ui.Windows;

@@ -114,7 +114,7 @@ internal sealed class HierarchyPanel
     private void DrawAddMenu()
     {
         if (!ImGui.BeginPopup("add-track-menu")) return;
-        if (ImGui.IsWindowAppearing()) presets = files.Presets();
+        if (ImGui.IsWindowAppearing()) presets = files.PresetNames();
 
         var ticked = false;
         if (ImGui.MenuItem("Empty track", string.Empty, ref ticked)) Report(session.AddTrack());
@@ -314,7 +314,7 @@ internal sealed class HierarchyPanel
         if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked)) Report(session.AddToPlaylist([track.Id]));
         if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, track.Points.Count > 0))
         {
-            presets = files.Presets();
+            presets = files.PresetNames();
             presetTrack = track.Id;
             AskName(Naming.SavePreset, track.Name);
         }

@@ -1,7 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Display;
-using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Dalamud.Bindings.ImGui;

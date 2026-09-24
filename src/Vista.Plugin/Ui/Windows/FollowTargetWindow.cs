@@ -1,5 +1,4 @@
 using Vista.Core.Session;
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Ui.Widgets;

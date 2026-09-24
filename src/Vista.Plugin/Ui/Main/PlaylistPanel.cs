@@ -3,7 +3,6 @@ using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;

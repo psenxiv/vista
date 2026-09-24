@@ -1,5 +1,4 @@
 using System.Numerics;
-using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
@@ -98,8 +97,6 @@ public sealed class SessionState
 
     /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
     public Orbit? FollowOrbit => Local is { Aim: AimMode.FollowTarget, Points.Count: 1 } local ? Tracks.Aiming.FollowOrbit.Of(local.Points[0]) : null;
-
-    // Modes
 
     /// <summary>Enters editing; from live, takes the Director offline.</summary>
     public EditOutcome Edit()
@@ -205,8 +202,6 @@ public sealed class SessionState
         return PlayOutcome.Previewed;
     }
 
-    // Scenes and tracks
-
     /// <summary>Opens <paramref name="scene"/> editing its first track, shown if hidden, clearing the selection, scrub head and undo history; the mode stays. Returns why it was refused, or null.</summary>
     public string? LoadScene(Scene scene)
     {
@@ -284,8 +279,6 @@ public sealed class SessionState
         return CommitScene(scene => (SceneEditing.SetHidden(scene, change, hidden), EditedTrackId));
     }
 
-    // Playlist
-
     /// <summary>Adds an entry for each of tracks <paramref name="ids"/>, in Hierarchy order, at <paramref name="index"/>, or at the end. Returns why it was refused, or null.</summary>
     public string? AddToPlaylist(IReadOnlyCollection<Guid> ids, int? index = null)
         => CommitScene(scene => (PlaylistEditing.Add(scene, ids.OrderBy(id => SceneEditing.IndexOf(scene, id)).ToArray(), index), EditedTrackId));
@@ -310,8 +303,6 @@ public sealed class SessionState
 
     /// <summary>An index found by an IndexOf, refusing −1.</summary>
     private static int Require(int index) => index >= 0 ? index : throw new ArgumentException("There is no such row.");
-
-    // Points
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change)
@@ -372,7 +363,8 @@ public sealed class SessionState
         IReadOnlyList<int> moved = [];
 
         // The undo step records these points as selected, so undoing the move selects them even when they weren't.
-        var before = Selection.Swap(points);
+        var before = Selection.Value;
+        Selection.Value = new SelectedItems(points, [], []);
         var refusal = CommitScene(scene =>
         {
             var (result, to, landed) = PointTransfer.Move(scene, EditedTrackId, points, points.Select(i => world.Points[i]).ToArray(), destination, groundBelow);
@@ -380,7 +372,7 @@ public sealed class SessionState
             return (SceneEditing.SetHidden(result, [to], false), to);
         });
         if (refusal is null) Selection.SelectPoints(moved);
-        else Selection.Unswap(before);
+        else Selection.Value = before;
         return refusal;
     }
 
@@ -425,8 +417,6 @@ public sealed class SessionState
         => Mode != CameraMode.Editing ? "The track can only change while editing."
          : Selection.Points.Count == 0 ? "Select a point first."
          : Selection.Points.Count > 1 ? "Select one point first." : null;
-
-    // Timing
 
     /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>
     public string? SetTrackSpeed(float speed) => ApplyTiming(t => TrackEditing.SetSpeed(t, EditLimits.Speed(speed)));
@@ -477,8 +467,6 @@ public sealed class SessionState
         return TimingEditing.SetHandles(track, key, Side(KeySide.In), Side(KeySide.Out));
     }
 
-    // Aim settings
-
     /// <summary>Sets the aim mode, keeping a one-point track's point where it is shown; the first Look At places its point from the first point, or from the world <paramref name="camera"/> with no points. Returns why it was refused, or null.</summary>
     public string? SetAim(AimMode aim, ControlPoint camera)
     {
@@ -521,8 +509,6 @@ public sealed class SessionState
 
     /// <summary>Sets whether a Follow Target camera looks at the character. Returns why it was refused, or null.</summary>
     public string? SetFollowLooks(bool looks) => ApplySetting(t => TrackEditing.SetFollowLooks(t, looks));
-
-    // Live edits
 
     /// <summary>Starts a live edit: previews change the track at once and end as one undo step. Editing only.</summary>
     public void BeginLiveEdit()
@@ -632,8 +618,6 @@ public sealed class SessionState
             return ex.Message;
         }
     }
-
-    // Undo
 
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
     public bool Undo()

@@ -1,5 +1,4 @@
 using System.Numerics;
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Spline;
 
 namespace Vista.Core.Display;

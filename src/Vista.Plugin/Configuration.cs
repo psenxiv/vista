@@ -1,6 +1,5 @@
 using Dalamud.Configuration;
 using Vista.Core.Display;
-using Vista.Core.Editing;
 
 namespace Vista.Plugin;
 

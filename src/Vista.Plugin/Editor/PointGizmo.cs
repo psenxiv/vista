@@ -3,7 +3,6 @@ using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
-using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGuizmo;
 
 namespace Vista.Plugin.Editor;

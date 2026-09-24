@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
-using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Session;
 
@@ -47,7 +46,7 @@ internal sealed class SceneFiles
     public string? NameRefusal(string name, bool renaming = false) => library?.NameRefusal(name, renaming) ?? SceneNames.Refusal(name);
 
     /// <summary>The preset names in the folder, read now.</summary>
-    public IReadOnlyList<string> Presets() => library?.Folder.PresetNames() ?? [];
+    public IReadOnlyList<string> PresetNames() => library?.Folder.PresetNames() ?? [];
 
     /// <summary>Uses <paramref name="parent"/>'s vistaxiv folder, creating it, after saving the open scene where it was; a new folder opens its first scene.</summary>
     public string? Choose(string parent)
@@ -90,7 +89,7 @@ internal sealed class SceneFiles
     }
 
     /// <summary>Saves track <paramref name="trackId"/> as the preset <paramref name="name"/>, replacing one of that name.</summary>
-    public string? SavePreset(string name, Guid trackId) => Files(folder => folder.SavePreset(name.Trim(), Vista.Core.Scenes.Presets.From(session.Scene, trackId)));
+    public string? SavePreset(string name, Guid trackId) => Files(folder => folder.SavePreset(name.Trim(), Presets.From(session.Scene, trackId)));
 
     /// <summary>Adds the preset <paramref name="name"/> to the scene under the camera.</summary>
     public string? AddPreset(string name)

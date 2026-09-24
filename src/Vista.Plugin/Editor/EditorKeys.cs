@@ -1,7 +1,6 @@
 using Vista.Core.Session;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
-using Vista.Plugin.Ui.Widgets;
 using Dalamud.Game.ClientState.Keys;
 
 namespace Vista.Plugin.Editor;
