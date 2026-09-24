@@ -14,6 +14,10 @@ It's also built with heavy use of AI coding tools. I've tried to do it sensibly:
 
 Install steps are below. Once it's installed, open the User Guide with the ? at the top right of the Vista window.
 
+## Demo
+
+https://github.com/user-attachments/assets/a39c8d1c-5b92-4186-be06-30fb5b590567
+
 ## Installing
 
 1. Type `/xlsettings` in chat and open the **Experimental** tab.
