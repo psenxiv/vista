@@ -1,4 +1,5 @@
 using Dalamud.Configuration;
+using Vista.Core.Editing;
 
 namespace Vista.Plugin;
 
@@ -16,6 +17,12 @@ public sealed class Configuration : IPluginConfiguration
 
     /// <summary>The name of the scene last open, reopened on load.</summary>
     public string? LastScene { get; set; }
+
+    /// <summary>The Hierarchy panel's width, in pixels.</summary>
+    public float HierarchyWidth { get; set; } = PanelWidth.Default;
+
+    /// <summary>The Playlist panel's width, in pixels.</summary>
+    public float PlaylistWidth { get; set; } = PanelWidth.Default;
 
     /// <summary>Writes the settings to disk.</summary>
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);

@@ -57,6 +57,7 @@ internal sealed class TrackEditorWindow : Window
     private const string LookAheadId = "look-ahead";
 
     private readonly CameraSession session;
+    private readonly Configuration config;
     private bool aimMenuOpen;
     private readonly PendingField fields;
     private readonly TimingWindow timing;
@@ -72,6 +73,7 @@ internal sealed class TrackEditorWindow : Window
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
+    private float? edgeGrabbed;
 
     // Where last frame's track row put its buttons, in screen X, so the top bar can line up with them.
     private float? aimX;
@@ -79,10 +81,13 @@ internal sealed class TrackEditorWindow : Window
     private float? loopX;
     private float? trashRight;
 
-    public TrackEditorWindow(CameraSession session, PendingField fields, TimingWindow timing, CameraWindow camera, GuideWindow guide, WatchTargetWindow watchTarget, FollowTargetWindow followTarget, SceneFiles files, SetupWindow setup)
+    public TrackEditorWindow(CameraSession session, Configuration config, PendingField fields, TimingWindow timing, CameraWindow camera, GuideWindow guide, WatchTargetWindow watchTarget, FollowTargetWindow followTarget, SceneFiles files, SetupWindow setup)
         : base("Vista###vista-track-editor")
     {
         this.session = session;
+        this.config = config;
+        config.HierarchyWidth = PanelWidth.Clamp(config.HierarchyWidth);
+        config.PlaylistWidth = PanelWidth.Clamp(config.PlaylistWidth);
         this.fields = fields;
         this.timing = timing;
         this.camera = camera;
@@ -107,7 +112,7 @@ internal sealed class TrackEditorWindow : Window
 
     /// <summary>The width the open compartments beside the track editor take, with their gap.</summary>
     private float CompartmentsWidth()
-        => (showHierarchy ? HierarchyPanel.Width + Spacing.X : 0f) + (showPlaylist ? PlaylistPanel.Width + Spacing.X : 0f);
+        => (showHierarchy ? config.HierarchyWidth + Spacing.X : 0f) + (showPlaylist ? config.PlaylistWidth + Spacing.X : 0f);
 
     /// <summary>Applies an unfinished field edit and ends a scrub, since a closed window never reports either finishing.</summary>
     public override void OnClose()
@@ -134,12 +139,14 @@ internal sealed class TrackEditorWindow : Window
 
         if (showHierarchy)
         {
-            if (ImGui.BeginChild("hierarchy", new Vector2(HierarchyPanel.Width, 0f), true)) hierarchy.Draw(editing);
+            if (ImGui.BeginChild("hierarchy", new Vector2(config.HierarchyWidth, 0f), true)) hierarchy.Draw(editing);
             ImGui.EndChild();
-            ImGui.SameLine();
+            ImGui.SameLine(0f, 0f);
+            if (DrawEdge("hierarchy-edge", config.HierarchyWidth, 1f) is { } width) config.HierarchyWidth = width;
+            ImGui.SameLine(0f, 0f);
         }
 
-        var editorWidth = showPlaylist ? -(PlaylistPanel.Width + Spacing.X) : 0f;
+        var editorWidth = showPlaylist ? -(config.PlaylistWidth + Spacing.X) : 0f;
         // The same inner padding as the bordered compartments, so the rows and separators line up.
         if (ImGui.BeginChild("track-editor", new Vector2(editorWidth, 0f), false, ImGuiWindowFlags.AlwaysUseWindowPadding))
         {
@@ -160,8 +167,10 @@ internal sealed class TrackEditorWindow : Window
 
         if (showPlaylist)
         {
-            ImGui.SameLine();
-            if (ImGui.BeginChild("playlist", new Vector2(PlaylistPanel.Width, 0f), true)) playlist.Draw(editing);
+            ImGui.SameLine(0f, 0f);
+            if (DrawEdge("playlist-edge", config.PlaylistWidth, -1f) is { } width) config.PlaylistWidth = width;
+            ImGui.SameLine(0f, 0f);
+            if (ImGui.BeginChild("playlist", new Vector2(config.PlaylistWidth, 0f), true)) playlist.Draw(editing);
             ImGui.EndChild();
         }
 
@@ -173,19 +182,30 @@ internal sealed class TrackEditorWindow : Window
         }
     }
 
+    /// <summary>The gap beside a panel as a handle that drags its width, <paramref name="sign"/> 1 for a panel on the left and -1 on the right; the new width while dragged, saved when let go.</summary>
+    private float? DrawEdge(string id, float width, float sign)
+    {
+        ImGui.InvisibleButton(id, new Vector2(Spacing.X, MathF.Max(1f, ImGui.GetContentRegionAvail().Y)));
+        if (ImGui.IsItemHovered() || ImGui.IsItemActive()) ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeEw);
+        if (ImGui.IsItemActivated()) edgeGrabbed = width;
+        if (ImGui.IsItemDeactivated()) config.Save();
+        if (!ImGui.IsItemActive() || edgeGrabbed is not { } grabbed) return null;
+        return PanelWidth.Clamp(grabbed + (sign * ImGui.GetMouseDragDelta(ImGuiMouseButton.Left, 0f).X));
+    }
+
     private void DrawTopRow(bool editing)
     {
         if (IconButton.Toggle("hierarchy", FontAwesomeIcon.Sitemap, showHierarchy, showHierarchy ? "Hide hierarchy" : "Show hierarchy"))
         {
             showHierarchy = !showHierarchy;
-            pendingWidth += showHierarchy ? HierarchyPanel.Width + Spacing.X : -(HierarchyPanel.Width + Spacing.X);
+            pendingWidth += showHierarchy ? config.HierarchyWidth + Spacing.X : -(config.HierarchyWidth + Spacing.X);
         }
 
         ImGui.SameLine();
         if (IconButton.Toggle("playlist", FontAwesomeIcon.ListOl, showPlaylist, showPlaylist ? "Hide playlist" : "Show playlist"))
         {
             showPlaylist = !showPlaylist;
-            pendingWidth += showPlaylist ? PlaylistPanel.Width + Spacing.X : -(PlaylistPanel.Width + Spacing.X);
+            pendingWidth += showPlaylist ? config.PlaylistWidth + Spacing.X : -(config.PlaylistWidth + Spacing.X);
         }
 
         ImGui.SameLine();

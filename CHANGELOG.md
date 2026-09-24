@@ -2,6 +2,7 @@
 
 ## 0.8.0.1
 
+- Drag the inner edge of the Hierarchy or the Playlist to make it wider or narrower. Vista remembers the widths, and the Hierarchy starts a little wider.
 - Long track and playlist names end in … and scroll when you hover over them.
 - Fixed a small shake with Direction of travel as the camera comes to a stop at a hold or the end of a track.
 

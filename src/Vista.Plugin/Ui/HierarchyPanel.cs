@@ -13,9 +13,6 @@ namespace Vista.Plugin.Ui;
 /// <summary>The scene selector and the scene's tracks: pick one to edit, show or hide, rename, duplicate, delete, reorder, and save or add presets.</summary>
 internal sealed class HierarchyPanel
 {
-    /// <summary>The compartment's width.</summary>
-    public const float Width = 200f;
-
     private const string NamePopup = "Name###vista-name";
     private const string DeletePopup = "Delete###vista-delete";
 

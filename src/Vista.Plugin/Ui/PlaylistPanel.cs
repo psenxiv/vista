@@ -13,9 +13,6 @@ namespace Vista.Plugin.Ui;
 /// <summary>The playlist Live plays: add, reorder, remove, set loop counts, and see what's playing.</summary>
 internal sealed class PlaylistPanel
 {
-    /// <summary>The compartment's width.</summary>
-    public const float Width = 240f;
-
     private const float LoopWidth = 44f;
 
     private readonly CameraSession session;

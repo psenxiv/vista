@@ -74,7 +74,7 @@ public sealed class Plugin : IDalamudPlugin
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(Session);
         followTargetWindow = new FollowTargetWindow(Session);
-        trackEditor = new TrackEditorWindow(Session, fields, timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow, sceneFiles, setupWindow);
+        trackEditor = new TrackEditorWindow(Session, config, fields, timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow, sceneFiles, setupWindow);
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
