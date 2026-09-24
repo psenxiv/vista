@@ -92,7 +92,7 @@ Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of th
 
 ## In-game checks
 
-In-game verification is the user's. For big work, write a JSON checklist in `scripts/checks/` (gitignored, never committed), named for the work (`phase-4.json`), and list it in `manifest.json`. The folder's `README.md` gives the format; leave the page's own files alone. Never overwrite a checklist that has not been run: several can be pending, each with its own progress. The user sends back the results JSON; delete the checklist once its results are in.
+In-game verification is the user's. For big work, write a JSON checklist in `tests/in-game/cases/` (gitignored, never committed), named for the work (`phase-4.json`), and list it in `cases/manifest.json`. `tests/in-game/README.md` gives the format; leave the page's own files alone. Never overwrite a checklist that has not been run: several can be pending, each with its own progress. The user sends back the results JSON; delete the checklist once its results are in.
 
 Read game logs from `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 

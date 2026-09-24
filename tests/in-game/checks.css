@@ -1,0 +1,157 @@
+:root {
+  --bg: #14161a; --panel: #1b1e24; --panel2: #21252c; --line: #2e333c;
+  --ink: #e6e8ec; --dim: #99a0ad; --faint: #6b7280;
+  --accent: #e0973f; --pass: #4a9d5f; --fail: #c7553f; --na: #5b6472;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --panel2: #f0f2f5; --line: #dfe3e9;
+    --ink: #1a1d22; --dim: #5b6472; --faint: #8b93a1;
+    --pass: #2f7d47; --fail: #b23d28; --na: #7b8494;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em;
+  background: var(--panel2); padding: 1px 5px; border-radius: 4px;
+}
+
+/* ---------- header, footer and buttons ---------- */
+
+header {
+  position: sticky; top: 0; z-index: 10; background: var(--panel);
+  border-bottom: 1px solid var(--line); padding: 12px 20px;
+}
+footer {
+  position: fixed; bottom: 0; left: 0; right: 0; background: var(--panel);
+  border-top: 1px solid var(--line); padding: 10px 20px;
+}
+.bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; max-width: 1000px; margin: 0 auto; }
+footer .bar { justify-content: flex-end; }
+h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+.spacer { flex: 1 1 auto; }
+.saved { font-size: 12px; color: var(--faint); }
+
+.meter { flex: 1 1 200px; min-width: 160px; }
+.meter .track { height: 6px; background: var(--panel2); border-radius: 99px; overflow: hidden; }
+.meter .fill { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.meter .lbl { font-size: 12px; color: var(--dim); margin-top: 4px; display: flex; gap: 10px; }
+.meter .failing { color: var(--fail); }
+
+button {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #17181b; font-weight: 600; }
+label.toggle { font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+/* ---------- checklist ---------- */
+
+main { max-width: 1000px; margin: 0 auto; padding: 24px 20px 120px; }
+.intro p { color: var(--dim); margin: 0 0 10px; }
+
+h2 {
+  font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent);
+  margin: 38px 0 6px; font-weight: 700;
+}
+.blurb { color: var(--dim); margin: 0 0 18px; font-size: 14px; }
+
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+.group > summary {
+  list-style: none; cursor: pointer; padding: 13px 16px; display: flex; align-items: center; gap: 10px;
+  user-select: none;
+}
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::before { content: "▸"; color: var(--faint); font-size: 12px; width: 10px; }
+.group[open] > summary::before { content: "▾"; }
+.gid { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.gtitle { font-weight: 600; }
+.gtag { font-size: 11px; color: var(--faint); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; }
+.gcount { margin-left: auto; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.gcount.done { color: var(--pass); }
+.gbody { padding: 0 16px 14px; border-top: 1px solid var(--line); }
+
+.why { font-size: 13px; color: var(--dim); border-left: 2px solid var(--line); padding: 8px 0 8px 12px; margin: 14px 0; }
+.why b { color: var(--ink); font-weight: 600; }
+
+.step { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.step:last-child { border-bottom: 0; }
+.step.note { color: var(--dim); font-size: 13.5px; background: var(--panel2); margin: 10px -16px; padding: 10px 16px; border-bottom: 0; }
+.step.failed { background: color-mix(in srgb, var(--fail) 9%, transparent); margin: 0 -16px; padding: 9px 16px; }
+.step.hidden { display: none; }
+
+/* Every text and number box shares one look; the rules below only size them. */
+.field input, .field textarea, .cell input, .check .note input {
+  font: inherit; background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 9px;
+}
+.field input:focus, .field textarea:focus, .cell input:focus { outline: none; border-color: var(--accent); }
+.unit { color: var(--faint); font-size: 13px; }
+.answered .lbl { color: var(--ink); }
+
+.do { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.do input { margin: 4px 0 0; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+.do.done span { color: var(--faint); text-decoration: line-through; text-decoration-color: var(--line); }
+
+.field { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field.long { display: block; }
+.field > .lbl { min-width: 210px; color: var(--dim); font-size: 14px; }
+.field input[type=number] { width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
+.field input[type=text] { flex: 1 1 260px; min-width: 200px; }
+.field textarea { padding: 7px 9px; width: 100%; min-height: 72px; resize: vertical; }
+
+.pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill {
+  font-size: 13px; padding: 4px 12px; border-radius: 99px; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--dim); cursor: pointer;
+}
+.pill:hover { border-color: var(--accent); }
+.pill.on { background: var(--accent); border-color: var(--accent); color: #17181b; font-weight: 600; }
+.pill.on.pass { background: var(--pass); border-color: var(--pass); color: #fff; }
+.pill.on.fail { background: var(--fail); border-color: var(--fail); color: #fff; }
+.pill.on.na { background: var(--na); border-color: var(--na); color: #fff; }
+
+.rowset { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.rowset > .lbl { min-width: 160px; color: var(--dim); font-size: 14px; }
+.cell { display: flex; flex-direction: column; gap: 2px; }
+.cell span { font-size: 11px; color: var(--faint); padding-left: 2px; }
+.cell input { width: 108px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.check { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px 12px; align-items: start; }
+.check .n { color: var(--faint); font-variant-numeric: tabular-nums; font-size: 13px; padding-top: 5px; }
+.check .act { font-size: 14px; }
+.check .exp { font-size: 13px; color: var(--dim); margin-top: 2px; }
+.check .tag { font-size: 11px; color: var(--faint); margin-top: 3px; font-style: italic; }
+.check .pills { padding-top: 2px; }
+.check .note { grid-column: 2 / -1; }
+.check .note input { width: 100%; font-size: 13px; }
+.check .note input:focus { outline: none; border-color: var(--fail); }
+
+/* ---------- loader and picker ---------- */
+
+.loader { max-width: 620px; margin: 80px auto; text-align: center; color: var(--dim); }
+.loader h1 { font-size: 20px; margin-bottom: 12px; color: var(--ink); }
+.loader p { margin: 0 0 16px; }
+.drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 34px; margin-top: 18px; }
+.drop.over { border-color: var(--accent); }
+.drop p { margin-top: 14px; }
+
+.picker { max-width: 620px; margin: 70px auto; padding: 0 20px; }
+.picker h1 { font-size: 20px; margin: 0 0 6px; }
+.picker > p { color: var(--dim); margin: 0 0 22px; }
+.pick {
+  display: block; width: 100%; text-align: left; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+}
+.pick:hover { border-color: var(--accent); }
+.pick-title { display: block; font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.pick-meta { display: block; font-size: 12px; color: var(--dim); margin-bottom: 10px; }
+.pick .bad { color: var(--fail); font-weight: 600; }
+.pick .track { display: block; height: 4px; background: var(--panel2); border-radius: 99px; overflow: hidden; }
+.pick .track .fill { display: block; height: 100%; background: var(--accent); }
