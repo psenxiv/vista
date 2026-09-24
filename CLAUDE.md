@@ -44,7 +44,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
 
 **Test a behaviour where it lives.** Pin it once, at the layer that owns it. A `SessionState` test that re-checks what `SceneEditing` already proves adds a second place to edit and no cover. Before adding a test, grep the behaviour's name across the other test directories.
 
-**Mutation-test a feature once, in its final review.** When every task of a plan is done, run `make mutate SINCE=<the plan's base commit>`. Each surviving mutant in the changed code gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach.
+**Mutation-test a feature once, in its final review.** When every task of a plan is done, run `make mutate SINCE=<the plan's base commit>`. Each surviving mutant in the changed code gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach. Each run leaves about 20 MB in `tests/Vista.Tests/StrykerOutput/`; delete it once the survivors are triaged.
 
 **Shared fixtures live in a fixtures file per test area**, with anything used across areas in `tests/Vista.Tests/Fixtures.cs`. A helper needed by a second file moves there rather than being copied.
 
