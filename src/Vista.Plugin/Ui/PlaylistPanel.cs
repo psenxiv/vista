@@ -148,7 +148,7 @@ internal sealed class PlaylistPanel
     {
         if (loopsTyping is { } typing && typing.Id == entry.Id)
         {
-            DrawLoopsText(entry, typing);
+            DrawLoopsText(scene, entry, typing);
             return;
         }
 
@@ -168,6 +168,7 @@ internal sealed class PlaylistPanel
         if (editing && ImGui.IsItemHovered() && (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) || (ImGui.IsItemClicked() && ImGui.GetIO().KeyCtrl)))
         {
             loopsDrag = null;
+            if (loopsTyping is { } open) ApplyTyped(scene, open.Id, open.Text);
             loopsTyping = (entry.Id, entry.Loops?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, true);
             return;
         }
@@ -184,7 +185,7 @@ internal sealed class PlaylistPanel
     }
 
     /// <summary>The repeat count as text: Enter or clicking away applies it, blank or 0 follows the track, Escape cancels.</summary>
-    private void DrawLoopsText(PlaylistEntry entry, (Guid Id, string Text, bool Focus) typing)
+    private void DrawLoopsText(Scene scene, PlaylistEntry entry, (Guid Id, string Text, bool Focus) typing)
     {
         if (typing.Focus) ImGui.SetKeyboardFocusHere();
         var text = typing.Text;
@@ -199,7 +200,14 @@ internal sealed class PlaylistPanel
 
         if (!entered && !ImGui.IsItemDeactivated()) return;
         loopsTyping = null;
-        if (PlaylistEditing.ParseLoops(text, out var loops) && loops != entry.Loops) Report(session.SetEntryLoops(entry.Id, loops));
+        ApplyTyped(scene, entry.Id, text);
+    }
+
+    /// <summary>Sets entry <paramref name="id"/>'s repeat count from typed <paramref name="text"/>, when it reads as a count and changes it.</summary>
+    private void ApplyTyped(Scene scene, Guid id, string text)
+    {
+        var index = PlaylistEditing.IndexOf(scene, id);
+        if (index >= 0 && PlaylistEditing.ParseLoops(text, out var loops) && loops != scene.Playlist[index].Loops) Report(session.SetEntryLoops(id, loops));
     }
 
     /// <summary>Each whole notch of the mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>
