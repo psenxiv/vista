@@ -194,14 +194,15 @@ public sealed class TrackEvaluator
 
         var ahead = _curve.PositionAt(time + _track.LookAhead);
         var chord = PointAt(ahead) - from;
-        var length = chord.Length();
-        if (length >= LookAheadBlend) return TrackAim.Along(chord);
+        var weight = MathF.Max(0f, ahead - _curve.PositionAt(time)) / LookAheadBlend;
+        if (weight >= 1f) return TrackAim.Along(chord);
 
-        // chord / blend is never normalised, so a chord shrunk to rounding noise carries almost no weight.
+        // Weighed by distance along the path, a chord shrunk to rounding noise carries almost no weight, and a hairpin's short chord keeps its full weight.
         var start = MathF.Max(0f, ahead - LookAheadBlend);
         var arrival = PointAt(MathF.Min(_distances[^1], start + LookAheadBlend)) - PointAt(start);
         if (arrival.LengthSquared() == 0f) return null;
-        return TrackAim.Along((chord / LookAheadBlend) + ((1f - (length / LookAheadBlend)) * Vector3.Normalize(arrival)));
+        var toward = chord.LengthSquared() == 0f ? Vector3.Zero : Vector3.Normalize(chord);
+        return TrackAim.Along((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
     }
 
     /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>
