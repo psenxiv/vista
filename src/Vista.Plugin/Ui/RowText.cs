@@ -39,7 +39,7 @@ internal static class RowText
 
         var at = new Vector2(min.X + padding - shift, min.Y + ((max.Y - min.Y - ImGui.GetTextLineHeight()) * 0.5f));
         var list = ImGui.GetWindowDrawList();
-        list.PushClipRect(min, max with { X = right }, true);
+        list.PushClipRect(min with { X = min.X + padding }, max with { X = right }, true);
         list.AddText(at, ImGui.GetColorU32(ImGuiCol.Text), shown);
         list.PopClipRect();
     }
