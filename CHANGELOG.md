@@ -5,7 +5,7 @@
 - A demo scene, Demo - Limsa, is added to your save folder once, to show what Vista can do. It's set in Limsa Lominsa. Change it or delete it as you like.
 - Drag the inner edge of the Hierarchy or the Playlist to make it wider or narrower. Vista remembers the widths, and the Hierarchy starts a little wider.
 - Long track and playlist names end in … and scroll when you hover over them.
-- Fixed typing into a playlist entry's Repeats cell: a number now takes when the cell shows — or ∞, and clearing it makes the entry follow its track again.
+- Typing a number into a playlist entry's Repeats cell now works when it shows a dash or ∞, and clearing it makes the entry follow its track again.
 - Fixed a small shake with Direction of travel as the camera comes to a stop at a hold or the end of a track.
 
 ## 0.7.0.1
