@@ -15,8 +15,8 @@ internal static class RegressionScene
     /// <summary>The environment variable that makes the file test rewrite the file instead of checking it.</summary>
     internal const string WriteVariable = "VISTA_WRITE_REGRESSION_SCENE";
 
-    /// <summary>25 yalms above the demo scene's anchor, (-94.725105, 19.562155, -10.473951), over Limsa Lominsa Lower Decks.</summary>
-    private static readonly Vector3 SceneAnchor = new(-94.725105f, 44.562155f, -10.473951f);
+    /// <summary>30 yalms above the demo scene's anchor, (-94.725105, 19.562155, -10.473951), over Limsa Lominsa Lower Decks.</summary>
+    private static readonly Vector3 SceneAnchor = new(-94.725105f, 49.562155f, -10.473951f);
 
     /// <summary>Yalms between neighbouring track anchors in the grid.</summary>
     private const float GridSpacing = 30f;
@@ -36,15 +36,19 @@ internal static class RegressionScene
             TrackEditing.SetHold(Travel(RunIntoASharpTurn, lookAhead: 0f), 4, 2f),
             0
         ),
-        new("Crane shot, look ahead 0: turns smoothly through straight up", Travel(Crane, lookAhead: 0f), 0),
-        new("Crane shot, look ahead 0.5: turns smoothly through straight up", Travel(Crane), 0),
+        new("Crane shot, look ahead 0: looks straight up, no spin", Travel(Crane, lookAhead: 0f), 0),
+        new("Crane shot, look ahead 0.5: looks straight up, no spin", Travel(Crane), 0),
         new(
-            "Climb drifting across straight up: no flip",
+            "Climb drifting across straight up: no flip, no spin",
             Travel([P(0f, -10f, 0f), P(0.4f, 0f, 0f), P(0f, 10f, 0f)]),
             0
         ),
-        new("Sharp turn in a vertical plane: no flip", Travel([P(8f, 5f, 0f), P(-7f, 0f, 0f), P(8f, -6f, 0f)]), 0),
-        new("Hold partway up a climb: keeps facing the same way", TrackEditing.SetHold(Travel(Crane), 2, 2f), 0),
+        new(
+            "Sharp turn in a vertical plane: no flip, no spin",
+            Travel([P(8f, 5f, 0f), P(-7f, 0f, 0f), P(8f, -6f, 0f)]),
+            0
+        ),
+        new("Hold partway up a climb: still through the hold", TrackEditing.SetHold(Travel(Crane), 2, 2f), 0),
         new("Hairpin: turns smoothly", Travel([P(7f, 0f, -2.5f), P(-8f, 0f, 0f), P(7f, 0f, 2.5f)]), 0),
         new(
             "Into and out of a hold: smooth",
@@ -55,7 +59,53 @@ internal static class RegressionScene
         new("Recorded aim with field of view and roll: no pop on arrival", RecordedAim(), 0),
         new("Straight doubleback, look ahead 0.5: snaps round once", Travel(Doubleback), 1),
         new("Straight doubleback, look ahead 0: snaps round once", Travel(Doubleback, lookAhead: 0f), 1),
+        new("Vertical loop: upside down over the top, smooth", Travel(Loop), 0),
+        new("Recorded aim over the top: straight up, no swing", OverTheTop(), 0),
+        new("Look At straight overhead: turns upright, no flip", PassingUnder(), 0),
+        new("Climbing turn: horizon stays level", Travel(ClimbingTurn), 0),
     ];
+
+    /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
+    private static ControlPoint[] Loop =>
+        [
+            P(-20f, 0f, 0f),
+            P(-6f, 0f, 0f),
+            P(4f, 3f, 0f),
+            P(7f, 10f, 0f),
+            P(0f, 16f, 0f),
+            P(-7f, 10f, 0f),
+            P(-4f, 3f, 0f),
+            P(6f, 0f, 0f),
+            P(20f, 0f, 0f),
+        ];
+
+    /// <summary>A quarter turn round a 10-yalm circle at a time, rising 3 yalms each: a steady climbing turn.</summary>
+    private static ControlPoint[] ClimbingTurn =>
+        [
+            .. Enumerable
+                .Range(0, 9)
+                .Select(i => P(10f * MathF.Cos(i * MathF.PI / 2f), 3f * i, 10f * MathF.Sin(i * MathF.PI / 2f))),
+        ];
+
+    /// <summary>Recorded aim from pitch 60° to 120° over a 10-yalm leg: yaw 180°, pitch 60°, roll 180° is pitch 120°, so the shortest turn passes straight up.</summary>
+    private static Track OverTheTop()
+    {
+        var track = TrackEditing.Empty(AimMode.AimKeys);
+        track = TrackEditing.Append(track, new ControlPoint(new Vector3(-5f, 0f, 0f), 0f, MathF.PI / 3f, Fov, 0f));
+        return TrackEditing.Append(
+            track,
+            new ControlPoint(new Vector3(5f, 0f, 0f), MathF.PI, MathF.PI / 3f, Fov, MathF.PI)
+        );
+    }
+
+    /// <summary>Along x under a Look At point 10 yalms up, passing straight beneath it.</summary>
+    private static Track PassingUnder()
+    {
+        var track = TrackEditing.Empty(AimMode.LookAt);
+        foreach (var point in new[] { P(-10f, 0f, 0f), P(0f, 0f, 0f), P(20f, 0f, 0f) })
+            track = TrackEditing.Append(track, point);
+        return TrackEditing.SetLookAt(track, new Vector3(0f, 10f, 0f));
+    }
 
     /// <summary>Four 20-yalm legs along +z, starting 70 yalms out from the grid, then 15 back at 179°: reverting the hold fix, the float wobble 80 yalms along turns a look ahead 0 aim at that turn by about 0.4°.</summary>
     private static ControlPoint[] RunIntoASharpTurn =>

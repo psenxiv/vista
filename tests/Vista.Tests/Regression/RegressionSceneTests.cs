@@ -34,12 +34,18 @@ public class RegressionSceneTests
         var problems = new List<string>();
         foreach (var (track, expected) in scene.Tracks.Zip(RegressionScene.Cases))
         {
-            var steps = StepsIn(SceneGeometry.InWorld(scene, track));
+            var world = SceneGeometry.InWorld(scene, track);
+            var steps = StepsIn(world);
             if (steps.Count != expected.Snaps)
                 problems.Add(
                     $"{track.Name}: {steps.Count} steps, {expected.Snaps} expected"
                         + string.Concat(steps.Select(s => $"\n  {s}"))
                 );
+            var evaluator = new TrackEvaluator(world);
+            var target = AimTracker.AimPoint(world, null);
+            var twist = LargestTwist(t => evaluator.Evaluate(t, target)!.Value, evaluator.Duration);
+            if (world.Aim != AimMode.AimKeys && twist > PictureSpinLimit)
+                problems.Add($"{track.Name}: the picture turns {twist / Deg:0.###}° in a frame");
         }
 
         Assert.True(problems.Count == 0, string.Join("\n", problems));
