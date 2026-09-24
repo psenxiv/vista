@@ -1,6 +1,6 @@
 # Changelog
 
-## X.Y.Z.N
+## 0.9.0.1
 
 - Hide game UI when Live stays on or off between sessions.
 - Fixed a shimmer with Direction of travel while the camera holds still at a sharp turn.
