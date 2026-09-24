@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
@@ -40,25 +41,24 @@ public class CarriedUpTests
     }
 
     [Fact]
-    public void ASpiralThatLevelsOutSettlesUpright()
+    public void AClimbingTurnKeepsTheHorizonLevel()
     {
-        // Climbing at 45° while turning about the vertical tilts the carried up; five seconds of level travel settles it
-        // with a one-second time constant, to within e^-5 < 1% of the tilt: well inside 1°.
+        // Climbing at 45° while turning about the vertical, carrying alone would tilt up away from upright (the facing's
+        // path isn't a great circle); settling keeps it upright, since the drift each step is far under the rate cap.
         static Vector3 Spiral(double t)
         {
-            var yaw = t * 0.6;
-            var pitch = t < 5 ? Math.PI / 4 : 0;
+            var yaw = t * 0.8;
             return new Vector3(
-                -(float)(Math.Sin(yaw) * Math.Cos(pitch)),
-                (float)Math.Sin(pitch),
-                -(float)(Math.Cos(yaw) * Math.Cos(pitch))
+                -(float)(Math.Sin(yaw) * Math.Cos(Math.PI / 4)),
+                (float)Math.Sin(Math.PI / 4),
+                -(float)(Math.Cos(yaw) * Math.Cos(Math.PI / 4))
             );
         }
 
-        var carried = CarriedUp.Along(t => Spiral(t), Moving, 10.0, allowInverted: true, Vector3.UnitY);
-        var up = carried.At(10.0, Spiral(10.0), Moving(10.0));
+        var carried = CarriedUp.Along(t => Spiral(t), Moving, 5.0, allowInverted: true, Vector3.UnitY);
 
-        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(up, Vector3.UnitY), -1f, 1f)), 0f, 1f * Deg);
+        for (var t = 0.0; t <= 5.0; t += 0.25)
+            Near(CameraRotation.Upright(Spiral(t)), carried.At(t, Spiral(t), Moving(t)), 1e-3f);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class CarriedUpTests
     [Fact]
     public void AHoldStaysStillThoughItIsTilted()
     {
-        // A spiral climb tilts the carried up, then the camera holds, not travelling: settling waits, so up doesn't move.
+        // A climbing turn, then the camera holds, not travelling: settling waits, so up doesn't move at all.
         static Vector3 Climb(double t) =>
             new(
                 -(float)(Math.Sin(t * 0.6) * Math.Cos(0.7)),
@@ -104,12 +104,15 @@ public class CarriedUpTests
     [Fact]
     public void SettlingTowardUprightTurnsAnInvertedPictureBackRound()
     {
-        // Held level and inverted with inversion not allowed: the up turns back about the facing toward upright, halfway
-        // or more within a second (the settling is exponential in the angle, from π to under π·e^-1 ≈ 66°).
+        // Level and inverted with inversion not allowed: up turns back about the facing at the 180° a second cap, so half
+        // a second in it's a quarter turn round, and after a second it's upright.
         var up = -Vector3.UnitY;
-        for (var step = 0; step < 100; step++)
+        for (var step = 0; step < 50; step++)
             up = CarriedUp.Settle(up, Level(0), 0.01f, allowInverted: false);
+        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(up, Vector3.UnitY), -1f, 1f)), 89f * Deg, 91f * Deg);
 
-        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(up, Vector3.UnitY), -1f, 1f)), 0f, 67f * Deg);
+        for (var step = 0; step < 50; step++)
+            up = CarriedUp.Settle(up, Level(0), 0.01f, allowInverted: false);
+        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(up, Vector3.UnitY), -1f, 1f)), 0f, 1f * Deg);
     }
 }
