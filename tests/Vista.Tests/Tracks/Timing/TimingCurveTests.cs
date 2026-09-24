@@ -125,6 +125,21 @@ public class TimingCurveTests
     }
 
     [Fact]
+    public void AHoldFarAlongThePathStaysExactlyOnItsKey()
+    {
+        // Both keys sit at 119.6109, so every time inside the hold is at 119.6109. No tolerance:
+        // one float step here is ~0.0000076, and a wobble of that step shimmers a look-ahead-0 aim.
+        const float held = 119.6109f;
+        const float start = 11.5663f;
+        const float end = 12.2936f;
+        var keys = new[] { Key(0f, 0f), Key(start, held), Key(end, held), Key(14f, 130f) };
+        var curve = new TimingCurve(keys);
+
+        for (double t = start; t <= end; t += 1e-5)
+            Assert.Equal(held, curve.PositionAt(t));
+    }
+
+    [Fact]
     public void AFlatModeKeyBringsSpeedToZeroAtThatKey()
     {
         var keys = new[] { Key(0f, 0f), Key(1f, 1f, TangentMode.Flat), Key(2f, 3f) };

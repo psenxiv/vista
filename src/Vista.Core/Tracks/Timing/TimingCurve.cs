@@ -46,6 +46,9 @@ public sealed class TimingCurve
         var k = FindInterval(time);
         var k0 = _keys[k];
         var k1 = _keys[k + 1];
+        if (k0.Position == k1.Position)
+            return k0.Position;
+
         var span = k1.Time - k0.Time;
         var localT = span <= 0f ? 0f : (float)((time - k0.Time) / span);
 

@@ -3,6 +3,7 @@
 ## X.Y.Z.N
 
 - Hide game UI when Live stays on or off between sessions.
+- Fixed a shimmer with Direction of travel while the camera holds still at a sharp turn.
 
 ## 0.8.0.1
 
