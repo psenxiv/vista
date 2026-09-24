@@ -6,6 +6,8 @@ namespace Vista.Plugin.Session;
 /// <summary>The save folder and the open scene's library, kept in step with the settings; asks for Setup when the folder is gone.</summary>
 internal sealed class SceneFiles
 {
+    private const string DemoResource = "Vista.Demo.";
+
     private readonly Configuration config;
     private readonly CameraSession session;
     private readonly Stopwatch clock = Stopwatch.StartNew();
@@ -102,13 +104,40 @@ internal sealed class SceneFiles
     private string? Use(string parent, string? last)
     {
         var folder = new SceneFolder(SceneFolder.RootFor(parent), (path, e) => Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message));
+        var created = !Directory.Exists(folder.Root);
         try { folder.Create(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return Report($"Could not create {folder.Root}: {e.Message}"); }
 
         library = new SceneLibrary(folder, () => session.Scene, session.LoadScene);
         config.SaveFolder = parent;
         config.Save();
-        return Run(l => l.Open(last));
+
+        // The demo goes in after opening, so a new folder still opens a new empty scene.
+        var refusal = Run(l => l.Open(last));
+        if (created || !config.DemoAdded) AddDemo(folder);
+        return refusal;
+    }
+
+    /// <summary>Adds the demo scene the plugin carries, unless a scene has its name, and records that it has been added.</summary>
+    private void AddDemo(SceneFolder folder)
+    {
+        var assembly = typeof(SceneFiles).Assembly;
+        foreach (var resource in assembly.GetManifestResourceNames().Where(r => r.StartsWith(DemoResource, StringComparison.Ordinal)))
+        {
+            try
+            {
+                using var reader = new StreamReader(assembly.GetManifestResourceStream(resource)!);
+                folder.AddScene(Path.GetFileNameWithoutExtension(resource[DemoResource.Length..]), reader.ReadToEnd());
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                Report($"Could not add the demo scene: {e.Message}");
+                return;
+            }
+        }
+
+        config.DemoAdded = true;
+        config.Save();
     }
 
     private string? Run(Func<SceneLibrary, string?> action)

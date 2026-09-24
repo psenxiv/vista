@@ -48,6 +48,14 @@ public sealed class SceneFolder
     /// <summary>Writes <paramref name="scene"/> to file <paramref name="name"/>, replacing any there.</summary>
     public void SaveScene(string name, Scene scene) => Write(PathOf(ScenesDir, name), SceneJson.Write(scene));
 
+    /// <summary>Writes <paramref name="json"/> as scene file <paramref name="name"/> unless a scene file has that name, ignoring case; true when written.</summary>
+    public bool AddScene(string name, string json)
+    {
+        if (Vista.Core.Scenes.SceneNames.Taken(name, SceneFiles())) return false;
+        Write(PathOf(ScenesDir, name), json);
+        return true;
+    }
+
     /// <summary>Renames scene file <paramref name="from"/> to <paramref name="to"/>.</summary>
     public void RenameScene(string from, string to)
     {

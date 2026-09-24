@@ -18,6 +18,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>The name of the scene last open, reopened on load.</summary>
     public string? LastScene { get; set; }
 
+    /// <summary>True once the demo scene has been added to a save folder; after that only folders Vista creates get it.</summary>
+    public bool DemoAdded { get; set; }
+
     /// <summary>The Hierarchy panel's width, in pixels.</summary>
     public float HierarchyWidth { get; set; } = PanelWidth.Default;
 
