@@ -4,10 +4,10 @@ namespace Vista.Core.Editing;
 public static class RowFit
 {
     /// <summary>Seconds the scroll rests at each end.</summary>
-    public const double Pause = 1.0;
+    private const double Pause = 1.0;
 
     /// <summary>Pixels a second the scroll moves.</summary>
-    public const float Speed = 30f;
+    private const float Speed = 30f;
 
     private const string Mark = "…";
 
