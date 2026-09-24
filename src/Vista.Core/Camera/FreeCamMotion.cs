@@ -24,13 +24,16 @@ public static class FreeCamMotion
         return position + (move * speed * deltaSeconds);
     }
 
-    /// <summary>Turns a rotation by radians of yaw about its own up, then pitch about its own right; signs follow the game's DirH and DirV.</summary>
-    public static Quaternion Turn(Quaternion rotation, float yawDelta, float pitchDelta) =>
-        Quaternion.Normalize(
-            rotation
-                * Quaternion.CreateFromAxisAngle(Vector3.UnitY, yawDelta)
+    /// <summary>Turns a rotation by radians of yaw about the vertical, the other way while upside down so it follows the picture, then pitch about its own right, with no limit; signs follow the game's DirH and DirV.</summary>
+    public static Quaternion Turn(Quaternion rotation, float yawDelta, float pitchDelta)
+    {
+        var vertical = CameraRotation.Up(rotation).Y < 0f ? -Vector3.UnitY : Vector3.UnitY;
+        return Quaternion.Normalize(
+            Quaternion.CreateFromAxisAngle(vertical, yawDelta)
+                * rotation
                 * Quaternion.CreateFromAxisAngle(Vector3.UnitX, pitchDelta)
         );
+    }
 
     /// <summary>Rolls a rotation about its own facing by <paramref name="angle"/> radians, positive rolling right.</summary>
     public static Quaternion Roll(Quaternion rotation, float angle) =>

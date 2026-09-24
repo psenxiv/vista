@@ -123,10 +123,35 @@ public class FreeCamMotionTests
     }
 
     [Fact]
-    public void YawingUpsideDownTurnsAboutTheCamerasOwnUp()
+    public void YawingWhilePitchedKeepsTheHorizonLevel()
     {
-        // Pitched half a turn, the camera faces (0,0,1) with up (0,-1,0). Yawing 90 degrees about that up faces (-1,0,0),
-        // the picture's left as before; about world up it would face (1,0,0).
+        // Pitching 45 degrees down faces (0, -√½, -√½) with up (0, √½, -√½); yawing 90 degrees about the vertical, toward
+        // -X, turns both about it: facing (-√½, -√½, 0) and up (-√½, √½, 0), still square to the ground's level.
+        var rotation = FreeCamMotion.Turn(FreeCamMotion.Turn(Quaternion.Identity, 0f, -45f * Deg), 90f * Deg, 0f);
+
+        var half = MathF.Sqrt(0.5f);
+        Near(new Vector3(-half, -half, 0f), CameraRotation.Forward(rotation), 1e-5f);
+        Near(new Vector3(-half, half, 0f), CameraRotation.Up(rotation), 1e-5f);
+    }
+
+    [Fact]
+    public void LookingAroundInACircleComesBackLevel()
+    {
+        // Down 45, left 90, up 45, right 90: the turns about the vertical undo each other, as do the pitches between them,
+        // so the camera faces (0, 0, -1) with up (0, 1, 0) again, with no roll picked up on the way.
+        var rotation = Quaternion.Identity;
+        foreach (var (yaw, pitch) in new[] { (0f, -45f), (90f, 0f), (0f, 45f), (-90f, 0f) })
+            rotation = FreeCamMotion.Turn(rotation, yaw * Deg, pitch * Deg);
+
+        Near(new Vector3(0f, 0f, -1f), CameraRotation.Forward(rotation), 1e-5f);
+        Near(Vector3.UnitY, CameraRotation.Up(rotation), 1e-5f);
+    }
+
+    [Fact]
+    public void YawingUpsideDownFollowsThePicture()
+    {
+        // Pitched half a turn, the camera faces (0,0,1) with up (0,-1,0). Yawing 90 degrees turns about the vertical the
+        // other way, so it faces (-1,0,0), the picture's left as when upright; the plain way round it would face (1,0,0).
         var inverted = FreeCamMotion.Turn(Quaternion.Identity, 0f, MathF.PI);
         var rotation = FreeCamMotion.Turn(inverted, 90f * Deg, 0f);
 
