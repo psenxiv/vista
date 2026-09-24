@@ -13,7 +13,7 @@ public sealed class AimTracker
     private float? heldFacing;
     private float? easedYaw;
     private CameraState? lastFollow;
-    private (Vector3 Facing, Vector3 Up)? carried;
+    private (Vector3 Facing, Vector3 Up, float Way)? carried;
 
     /// <summary>A tracker finding watched or followed characters with <paramref name="targets"/>; with none, no character is ever found.</summary>
     public AimTracker(NearbyCharacters? targets) => this.targets = targets;
@@ -64,7 +64,7 @@ public sealed class AimTracker
         if (target is not { } at)
             return Carry(frame, dt, settle: false);
 
-        // A Look At track's up comes carried from the evaluator; a watched character moves live, so it's carried here.
+        // A Look At track's up comes from the evaluator; a watched character moves live, so it's carried here.
         var watching = world.Aim == AimMode.WatchTarget;
         if (TrackAim.Toward(frame.Position, at) is not null)
         {
@@ -130,12 +130,20 @@ public sealed class AimTracker
     private CameraState Carry(CameraState frame, float dt, bool settle)
     {
         var facing = Vector3.Normalize(frame.LookAt - frame.Position);
+        var way = 1f;
         if (settle && carried is { } last)
-            frame = frame with
-            {
-                Up = CarriedUp.SettleToward(CarriedUp.Carry(last.Facing, facing, last.Up), facing, frame.Up, dt),
-            };
-        carried = (facing, frame.Up);
+        {
+            (var up, way) = LiveUp.SettleToward(
+                LiveUp.Carry(last.Facing, facing, last.Up),
+                facing,
+                frame.Up,
+                dt,
+                last.Way
+            );
+            frame = frame with { Up = up };
+        }
+
+        carried = (facing, frame.Up, way);
         return frame;
     }
 

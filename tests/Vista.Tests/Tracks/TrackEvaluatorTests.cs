@@ -605,7 +605,8 @@ public class TrackEvaluatorTests
     public void DirectionOfTravelTurnsSmoothlyAsThePathDriftsAcrossTheVertical(float lookAhead)
     {
         // The path climbs 10 yalms, bowing 0.2 to +x and back, so its direction passes the vertical from +x to -x. The facing
-        // follows the bow, well under 0.05° a millisecond, and up is carried through, so the picture never spins.
+        // follows the bow, well under 0.05° a millisecond, and up turns once through the vertical passage, so the picture
+        // never whips.
         var track = TrackEditing.SetLookAhead(
             Build([Point(0f), Point(0.2f, 5f), Point(0f, 10f)], AimMode.PathTangent),
             lookAhead
@@ -644,11 +645,10 @@ public class TrackEvaluatorTests
         Assert.Equal(-MathF.PI / 2f, TrackAim.FromDirection(Facing(evaluator, evaluator.Duration - 2.0)).Yaw, 1e-4f);
         Assert.InRange(LargestTwist(evaluator), 0f, PictureSpinLimit);
 
-        // Carried up the climb, up ends pointing back along +z; turning out along +x leaves it there, a quarter roll. The
-        // last leg lies straight and level (points 3 to 5 in a line) for 5 s (10 yalms at 2 a second), settling it to at
-        // most 90°·e^-5 ≈ 0.6°: within 1° of upright by the end.
-        var end = evaluator.Evaluate(evaluator.Duration)!.Value;
-        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(end.Up, Vector3.UnitY), -1f, 1f)), 0f, 1f * Deg);
+        // The way out (+x) is a quarter turn from the way in (-z), short of 135°, so the passage turns the picture a quarter
+        // and it comes out upright. The last leg lies straight and level (points 3 to 5 in a line), facing +x, where upright
+        // is (0, 1, 0).
+        Near(Vector3.UnitY, evaluator.Evaluate(evaluator.Duration)!.Value.Up, 1e-5f);
     }
 
     [Fact]
@@ -685,7 +685,8 @@ public class TrackEvaluatorTests
     public void DirectionOfTravelHasNoStepOnATrackThatSweptThroughTheVertical()
     {
         // Found by TheAimNeverSteps as a 1.86° step at 7.63 s, when the aim was capped at 89° and its yaw read from the
-        // sideways part: the facing is now the path's own, so there's no step, and up is carried, so no spin.
+        // sideways part: the facing is now the path's own, so there's no step, and up turns once through each vertical
+        // passage, so no whip.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 4f,
@@ -712,11 +713,118 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelDoesNotFlipDivingPastStraightDownAndBack()
+    {
+        // Found by TheAimNeverSteps as a 180° flip at 1.06 s, carrying up: the path dives and doubles back, and its look
+        // ahead sweeps the facing within 10° of straight down and out again in 4 ms.
+        var track = TrackEditing.Empty(AimMode.PathTangent) with
+        {
+            Speed = 19.566769f,
+        };
+        foreach (
+            var point in new[]
+            {
+                Point(0f, 1.8947369f, 8.947952e-37f, yaw: 2.0040665f, fov: 0.2745092f, roll: -1f),
+                Point(-22.105576f, -2.72549f, 0f, yaw: 1f, pitch: -1.2068965f, roll: 0.20150566f),
+                Point(-5f, 0.42857143f, 0f, yaw: -1f, pitch: 1f, fov: 2f, roll: 2f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetHold(track, 2, 2.6231241f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 0.19565217f));
+
+        Assert.Empty(Steps(t => evaluator.Evaluate(t)!.Value.Up, Vector3.Distance, UpStepFloor, evaluator.Duration));
+    }
+
+    [Fact]
+    public void DirectionOfTravelDoesNotFlipWhereTheFacingWhipsThroughStraightUpBetweenSamples()
+    {
+        // Found by TheAimNeverSteps as a 180° flip at 2.64 s: the look ahead swings the facing through straight up at
+        // about 10,000° a second, across the whole vertical passage between two 10 ms samples. Sampling finer where the
+        // facing turns fast finds the passage, so the picture turns through it rather than flipping.
+        var track = TrackEditing.Empty(AimMode.PathTangent) with
+        {
+            Speed = 17f,
+        };
+        foreach (
+            var point in new[]
+            {
+                Point(0f, -5f, -2.718872f, yaw: 1f, pitch: 0.98134375f, fov: 0.22727273f, roll: -2.6455696f),
+                Point(0f, 1.3033708f, 16f, yaw: -1.6803432f, fov: 0.8271605f, roll: -0.10169491f),
+                Point(0f, -3.0555556f, 2f, pitch: -1f, roll: -3f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 2.1590958f), 1, 0.5309508f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.9551187f));
+
+        Assert.Empty(Steps(t => evaluator.Evaluate(t)!.Value.Up, Vector3.Distance, UpStepFloor, evaluator.Duration));
+    }
+
+    [Fact]
+    public void LookAtStartingStraightUnderItsPointDoesNotWhip()
+    {
+        // Found by ThePictureNeverWhips as a 7.6° excess in a frame: starting 0.1° from straight under the point, the
+        // picture started level for a heading that meant nothing and turned half round in the rest of the passage. With no
+        // picture before it, it now starts as it leaves the passage.
+        var track = TrackEditing.Empty(AimMode.LookAt) with
+        {
+            Speed = 16.666666f,
+        };
+        foreach (
+            var point in new[]
+            {
+                Point(0f, -0.38341713f, 0f, yaw: 0.065789476f, fov: 0.5749512f),
+                Point(3.9448682e-38f, -5.8340003e-24f, -15.807693f, pitch: -0.31578946f, fov: 2f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetLookAt(TrackEditing.SetLookAhead(track, 0f), new Vector3(0f, 15f, 0f));
+        var evaluator = new TrackEvaluator(track);
+
+        Assert.InRange(
+            Fixtures.LargestTwist(t => evaluator.Evaluate(t, track.LookAt)!.Value, evaluator.Duration),
+            0f,
+            PictureSpinLimit
+        );
+    }
+
+    [Fact]
+    public void LookAtKeepsItsUpExactlyToTheEndOfAHold()
+    {
+        // Found by AHoldIsStill as a last-bit change in up at the end of point 0's hold, where the camera travels on:
+        // settling for no time at all still squared the up again. The up is now level there, from the same facing.
+        var track = TrackEditing.Empty(AimMode.LookAt) with
+        {
+            Speed = 12.873444f,
+        };
+        foreach (
+            var point in new[]
+            {
+                Point(-28.297297f, -4f, 24.88421f, yaw: 3f, pitch: 1f),
+                Point(1f, 0f, -15.846154f, yaw: -3.005597f, pitch: -1f, fov: 0.79591835f, roll: 2f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetLegSpeed(TrackEditing.SetHold(track, 0, 0.6363636f), 1, 21.570787f);
+        track = TrackEditing.SetLookAt(TrackEditing.SetLookAhead(track, 0.7317672f), new Vector3(0f, 15f, 0f));
+        var evaluator = new TrackEvaluator(track);
+
+        Assert.Equal(
+            evaluator.Evaluate(0.0, track.LookAt)!.Value.Up,
+            evaluator.Evaluate(evaluator.Keys[1].Time, track.LookAt)!.Value.Up
+        );
+    }
+
+    [Fact]
     public void LookAtPassesStraightUnderItsPointWithoutFlipping()
     {
         // The camera runs along x from -10 to 30 under a Look At point at (0, 10, 0), reaching x = 0 at 5 s (10 yalms at 2
-        // a second). Looking up-and-ahead, the picture's top leans back along -x; carried through straight up it's exactly
-        // (-1, 0, 0) there. Past it, carried on it would be inverted, so it turns back upright at the capped rate.
+        // a second). Looking up-and-ahead, upright leans back along -x; looking up-and-back past it, along +x. Look At never
+        // inverts, so the picture turns half round about the vertical through the passage, which is symmetric about x = 0:
+        // straight under the point it has turned a quarter, leaning along ±z. The passage's ends fall on 10 ms samples, where
+        // the facing turns 0.115° (2/10 rad a second): a share of the 30° passage off by that, eased at up to 1.5 times,
+        // puts the turn up to 180° × 1.5 × 0.115 / 30 ≈ 1° out, and sin 1° ≈ 0.018.
         var track = TrackEditing.SetLookAt(
             Build([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt),
             new Vector3(0f, 10f, 0f)
@@ -726,7 +834,8 @@ public class TrackEvaluatorTests
         var under = FrameAt(evaluator.PointSeconds(1));
 
         Near(Vector3.UnitY, Vector3.Normalize(under.LookAt - under.Position), 1e-4f);
-        Near(-Vector3.UnitX, under.Up, 1e-3f);
+        Assert.Equal(0f, under.Up.X, 0.02f);
+        Assert.Equal(1f, MathF.Abs(under.Up.Z), 1e-3f);
         Assert.InRange(Fixtures.LargestTwist(FrameAt, evaluator.Duration), 0f, PictureSpinLimit);
         var end = FrameAt(evaluator.Duration);
         Near(CameraRotation.Upright(end.LookAt - end.Position), end.Up, 1e-3f);
@@ -735,8 +844,8 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookAtOrbitingItsPointStaysUpright()
     {
-        // Circling 10 yalms out at 30° below a Look At point: carrying alone would tilt the picture on this cone, but
-        // settling keeps it exactly upright, as watching always looked.
+        // Circling 10 yalms out at 30° below a Look At point, never near straight up: the picture stays exactly upright, as
+        // watching always looked.
         var ring = Enumerable
             .Range(0, 8)
             .Select(i => Point(10f * MathF.Cos(i * MathF.PI / 4f), 0f, 10f * MathF.Sin(i * MathF.PI / 4f)));
@@ -789,10 +898,46 @@ public class TrackEvaluatorTests
                     Assert.Fail(
                         $"The aim steps {steps[0].Size / Deg:0.###}° at {steps[0].Time:0.######} s of {evaluator.Duration:0.###} s"
                     );
+                var flips = Steps(
+                    t => evaluator.Evaluate(t, target)!.Value.Up,
+                    Vector3.Distance,
+                    UpStepFloor,
+                    evaluator.Duration
+                );
+                if (flips.Count > 0)
+                    Assert.Fail(
+                        $"The picture steps {flips[0].Size / Deg:0.###}° at {flips[0].Time:0.######} s of {evaluator.Duration:0.###} s"
+                    );
             },
             iter: 3000,
             print: Print
         );
+    }
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void ThePictureNeverWhips()
+    {
+        // Where the camera decides which way is up (Direction of travel and Look At), the picture turns about its centre
+        // no faster than the spin limit beyond what keeping level asks of it, however it passes straight up or down.
+        // The points' roll is taken off, and Recorded aim left out, since how fast the picture rolls there is the user's.
+        AnyPathTrack
+            .Where(track => track.Aim != AimMode.AimKeys)
+            .Select(track => track with { Points = [.. track.Points.Select(p => p with { Roll = 0f })] })
+            .Sample(
+                track =>
+                {
+                    var evaluator = new TrackEvaluator(track);
+                    var target = AimTracker.AimPoint(track, null);
+                    var twist = Fixtures.LargestTwist(t => evaluator.Evaluate(t, target)!.Value, evaluator.Duration);
+                    if (twist > PictureSpinLimit)
+                        Assert.Fail(
+                            $"The picture turns {twist / Deg:0.###}° in a frame of {evaluator.Duration:0.###} s"
+                        );
+                },
+                iter: 1000,
+                print: Print
+            );
     }
 
     [Fact]

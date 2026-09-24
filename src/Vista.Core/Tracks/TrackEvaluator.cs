@@ -30,8 +30,8 @@ public sealed class TrackEvaluator
     private readonly TimedChannel? _fov;
     private readonly float _fovMin;
     private readonly float _fovMax;
-    private CarriedUp? _carriedUp;
-    private CarriedUp? _lookAtUp;
+    private LevelUp? _travelUp;
+    private LevelUp? _lookAtUp;
 
     /// <summary>Total shot length: the compiled last key's time, 0 with no points.</summary>
     public double Duration => _curve.Duration;
@@ -131,7 +131,7 @@ public sealed class TrackEvaluator
             var toward = at - cameraPosition;
             var up =
                 _track is { Aim: AimMode.LookAt, LookAtPlaced: true } && at == _track.LookAt
-                    ? LookAtUp().At(time, toward, DistanceAt(time))
+                    ? LookAtUp().At(time, toward)
                     : CameraRotation.Upright(toward);
             return Framed(time, cameraPosition, toward, up, fov);
         }
@@ -212,20 +212,20 @@ public sealed class TrackEvaluator
         return (lo, Math.Clamp((distance - _distances[lo]) / _lengths[lo], 0f, 1f));
     }
 
-    /// <summary>The Direction of travel frame at <paramref name="time"/>: facing along the path or its look ahead, with up carried along it and the track's roll on top.</summary>
+    /// <summary>The Direction of travel frame at <paramref name="time"/>: facing along the path or its look ahead, with up level (upright, or inverted over a loop) and the track's roll on top.</summary>
     private CameraState Travel(double time, Vector3 from, int segment, float fraction, float fov)
     {
         if (TravelDirection(time, from, segment, fraction) is not { } direction)
             return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(time), fov);
 
-        _carriedUp ??= CarriedUp.Along(
+        _travelUp ??= LevelUp.Along(
             TravelDirection,
-            DistanceAt,
-            Duration,
+            _keys.Select(k => k.Time),
+            (float)Duration,
             allowInverted: true,
             CameraRotation.Up(CameraRotation.FromAngles(_yaws[0], MathF.PI / 2f, 0f))
         );
-        return Framed(time, from, direction, _carriedUp.At(time, direction, DistanceAt(time)), fov);
+        return Framed(time, from, direction, _travelUp.At(time, direction), fov);
     }
 
     /// <summary>The frame at <paramref name="from"/> facing <paramref name="direction"/> with <paramref name="up"/>, the track's roll turned on top.</summary>
@@ -238,15 +238,15 @@ public sealed class TrackEvaluator
         return new CameraState(from, from + (forward * FreeCamMotion.LookAtDistance), up, fov);
     }
 
-    /// <summary>A Look At track's up, carried along as the camera looks at its point and settled toward upright, worked out once.</summary>
-    private CarriedUp LookAtUp() =>
-        _lookAtUp ??= CarriedUp.Along(
+    /// <summary>A Look At track's up: upright, turning round as the camera passes under or over its point, worked out once.</summary>
+    private LevelUp LookAtUp() =>
+        _lookAtUp ??= LevelUp.Along(
             time =>
                 _track.LookAt - PlaceAt(time).Position is var toward && toward.Length() >= TrackAim.MinTargetDistance
                     ? toward
                     : null,
-            DistanceAt,
-            Duration,
+            _keys.Select(k => k.Time),
+            (float)Duration,
             allowInverted: false,
             CameraRotation.Up(CameraRotation.FromAngles(_yaws[0], MathF.PI / 2f, 0f))
         );

@@ -19,8 +19,8 @@ internal static class Fixtures
     /// <summary>The fewest seconds Direction of travel looks ahead in a generated track, since with none it turns at once where the path doubles back, by design.</summary>
     private const float MinGeneratedLookAhead = 0.1f;
 
-    /// <summary>Where a generated Look At track looks: off to the side of every generated point, so the camera never passes under it and its aim never goes vertical.</summary>
-    private static readonly Vector3 GeneratedLookAt = new(200f, 0f, 0f);
+    /// <summary>Where a generated Look At track looks: above the middle of the generated points, so cameras pass under it and look steeply up.</summary>
+    private static readonly Vector3 GeneratedLookAt = new(0f, 15f, 0f);
 
     /// <summary>Any place within 30 yalms across and 5 up or down.</summary>
     internal static readonly Gen<Vector3> AnyPosition = Gen.Select(
@@ -30,13 +30,13 @@ internal static class Fixtures
         (x, y, z) => new Vector3(x, y, z)
     );
 
-    /// <summary>A control point anywhere in <see cref="AnyPosition"/>, with any yaw, pitch within 1 radian either way, roll within 0.5 and any field of view the editor allows.</summary>
+    /// <summary>A control point anywhere in <see cref="AnyPosition"/>, facing any way and rolled any way, with any field of view the editor allows.</summary>
     private static readonly Gen<ControlPoint> AnyPoint = Gen.Select(
         AnyPosition,
         Gen.Float[-MathF.PI, MathF.PI],
-        Gen.Float[-1f, 1f],
+        Gen.Float[-MathF.PI / 2f, MathF.PI / 2f],
         Gen.Float[EditLimits.MinFov, EditLimits.MaxFov],
-        Gen.Float[-0.5f, 0.5f],
+        Gen.Float[-MathF.PI, MathF.PI],
         (position, yaw, pitch, fov, roll) => new ControlPoint(position, yaw, pitch, fov, roll)
     );
 
@@ -206,10 +206,13 @@ internal static class Fixtures
         return steps;
     }
 
-    /// <summary>The most the picture may turn about its own centre from one 60 fps frame to the next: 360° a second.</summary>
+    /// <summary>The most the picture may turn about its own centre from one 60 fps frame to the next beyond what keeping level asks of it (<see cref="SpinPerTurn"/>): 360° a second.</summary>
     internal const float PictureSpinLimit = 6f * Deg;
 
-    /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds, in radians, leaving out frames where the facing snaps round more than a quarter turn, which the step checks judge.</summary>
+    /// <summary>How many times as far as the view itself turns the picture may turn to keep level near straight up: 10, above the 9 of a half turn planned over a vertical passage (half a turn over 30° of view, peaking at 1.5 times that average as it eases).</summary>
+    private const float SpinPerTurn = 10f;
+
+    /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds beyond <see cref="SpinPerTurn"/> times the facing's own turn, in radians: a whip, where the picture turns though the view barely does.</summary>
     internal static float LargestTwist(Func<double, CameraState> frame, double duration)
     {
         const double frameSeconds = 1.0 / 60.0;
@@ -218,9 +221,12 @@ internal static class Fixtures
         for (var t = frameSeconds; t <= duration; t += frameSeconds)
         {
             var next = frame(t);
-            var (from, to) = (last.LookAt - last.Position, next.LookAt - next.Position);
-            if (Vector3.Dot(Vector3.Normalize(from), Vector3.Normalize(to)) > 0f)
-                largest = MathF.Max(largest, CameraRotation.Twist(from, last.Up, to, next.Up));
+            var (from, to) = (
+                Vector3.Normalize(last.LookAt - last.Position),
+                Vector3.Normalize(next.LookAt - next.Position)
+            );
+            var turn = MathF.Acos(Math.Clamp(Vector3.Dot(from, to), -1f, 1f));
+            largest = MathF.Max(largest, CameraRotation.Twist(from, last.Up, to, next.Up) - (SpinPerTurn * turn));
             last = next;
         }
 
