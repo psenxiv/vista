@@ -3,7 +3,7 @@ using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Dalamud.Bindings.ImGui;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>Dragging list rows: the payload types, what a drag carries, the drop hint shown in its label, and reading Ctrl and Shift for a row click.</summary>
 internal static unsafe class DragRows

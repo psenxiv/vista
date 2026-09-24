@@ -1,7 +1,7 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>A number field bordered in a colour and named by its tooltip, shown even while disabled.</summary>
 internal static class BorderedField

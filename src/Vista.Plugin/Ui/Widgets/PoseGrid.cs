@@ -4,7 +4,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>The layout the Point and Camera windows share: gizmo and clipboard buttons, then position, rotation and field-of-view rows, each led by its icon.</summary>
 internal static class PoseGrid

@@ -4,7 +4,7 @@ using Vista.Core.Tracks.Aiming;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>The drop-down naming the edited track's character; it opens on a search box and the characters loaded nearby, by name, once each.</summary>
 internal static class CharacterPicker

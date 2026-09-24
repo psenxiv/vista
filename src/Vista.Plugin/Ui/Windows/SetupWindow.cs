@@ -1,13 +1,14 @@
 using System.Numerics;
 using Vista.Core.Scenes;
 using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>Asks for the folder Vista saves in, with Dalamud's folder picker; closed without choosing, it comes back the next time Vista opens.</summary>
 internal sealed class SetupWindow : Window

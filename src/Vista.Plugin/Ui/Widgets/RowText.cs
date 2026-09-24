@@ -3,7 +3,7 @@ using Vista.Core.Display;
 using Vista.Core.Editing;
 using Dalamud.Bindings.ImGui;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>Text drawn inside a list row's selectable.</summary>
 internal static class RowText

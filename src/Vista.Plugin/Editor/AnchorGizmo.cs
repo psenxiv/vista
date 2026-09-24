@@ -4,6 +4,7 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Game;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Game.ClientState.Keys;
 

@@ -1,7 +1,7 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>An outline and an opaque background for the popups, menus, drop-downs and prompts a window opens, so they stand out over the game.</summary>
 internal static class PopupStyle

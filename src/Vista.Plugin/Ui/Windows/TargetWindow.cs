@@ -2,12 +2,13 @@ using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-using static Vista.Plugin.Ui.Refusal;
-namespace Vista.Plugin.Ui;
+using static Vista.Plugin.Ui.Widgets.Refusal;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>The panel a target aim mode edits: the character to aim at, its aim height and smoothing.</summary>
 internal abstract class TargetWindow : Window

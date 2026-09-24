@@ -8,13 +8,15 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
 using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Widgets;
+using Vista.Plugin.Ui.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-using static Vista.Plugin.Ui.Refusal;
-namespace Vista.Plugin.Ui;
+using static Vista.Plugin.Ui.Widgets.Refusal;
+namespace Vista.Plugin.Ui.Main;
 
 /// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
 internal sealed class TrackEditorWindow : Window

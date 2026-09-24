@@ -1,7 +1,7 @@
 using Vista.Core.Session;
 using Dalamud.Bindings.ImGui;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>Runs a drag field as a live edit: begun on grab, previewed on each change, one undo step on release.</summary>
 internal static class LiveDrag

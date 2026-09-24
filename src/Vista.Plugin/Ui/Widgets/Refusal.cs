@@ -1,4 +1,4 @@
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>Logs why the session refused an edit.</summary>
 internal static class Refusal

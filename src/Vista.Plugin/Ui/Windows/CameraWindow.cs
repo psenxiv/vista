@@ -4,11 +4,12 @@ using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>The free camera's own position, aim, roll and field of view, in the Point window's layout; shown only while editing.</summary>
 internal sealed class CameraWindow : Window

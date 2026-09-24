@@ -5,12 +5,13 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
-using static Vista.Plugin.Ui.Refusal;
-namespace Vista.Plugin.Ui;
+using static Vista.Plugin.Ui.Widgets.Refusal;
+namespace Vista.Plugin.Ui.Main;
 
 /// <summary>The scene selector and the scene's tracks: pick one to edit, show or hide, rename, duplicate, delete, reorder, and save or add presets.</summary>
 internal sealed class HierarchyPanel

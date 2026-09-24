@@ -1,6 +1,6 @@
 using Dalamud.Bindings.ImGui;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>A number field's dragged or typed value, held until the field is let go and then applied, so each change is one undo step.</summary>
 internal sealed class PendingField(Func<bool> canApply)

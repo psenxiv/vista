@@ -1,6 +1,7 @@
-using Vista.Core.Session;
 using System.Diagnostics;
 using Vista.Core.Scenes;
+using Vista.Core.Session;
+using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Session;
 

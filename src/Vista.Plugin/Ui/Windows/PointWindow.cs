@@ -5,12 +5,13 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
-using static Vista.Plugin.Ui.Refusal;
-namespace Vista.Plugin.Ui;
+using static Vista.Plugin.Ui.Widgets.Refusal;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>The selected point's, anchor's or Look At point's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
 internal sealed class PointWindow : Window

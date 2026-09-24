@@ -1,13 +1,14 @@
 using System.Numerics;
 using System.Text;
 using Vista.Core.Guide;
+using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>The User Guide: a topic tree on the left and the chosen page on the right, drawn from Markdown embedded in the plugin.</summary>
 internal sealed class GuideWindow : Window, IDisposable

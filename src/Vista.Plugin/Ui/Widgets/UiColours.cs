@@ -1,6 +1,6 @@
 using Dalamud.Bindings.ImGui;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>The Vista window's colours, as ImGui ABGR.</summary>
 internal static class UiColours

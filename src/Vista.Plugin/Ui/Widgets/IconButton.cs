@@ -4,7 +4,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Widgets;
 
 /// <summary>Frameless icon buttons with a tooltip, their toggle and row-action variants, the not-found warning, and their width for right-aligning them.</summary>
 internal static class IconButton

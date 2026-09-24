@@ -1,10 +1,11 @@
+using Vista.Plugin.Ui.Widgets;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
-namespace Vista.Plugin.Ui;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>The first-load greeting for testers; opens once per install, records itself as seen when closed, and hands on to setting up.</summary>
 internal sealed class WelcomeWindow : Window
