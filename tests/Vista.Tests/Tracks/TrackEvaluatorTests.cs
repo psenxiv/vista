@@ -90,7 +90,7 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void FovIsClampedToTheAuthoredMinAndMax()
+    public void FovIsClampedAtTheAuthoredMin()
     {
         // Fov spikes at the middle point; uniform Catmull-Rom overshoots below the
         // authored minimum on the far side, which must be clamped back to it.
@@ -110,6 +110,37 @@ public class TrackEvaluatorTests
         var state = evaluator.Evaluate(3.335);
         Assert.NotNull(state);
         Assert.Equal(1f, state!.Value.Fov, 2);
+    }
+
+    [Fact]
+    public void FovReachesAHigherPointsValueAndIsClampedAtTheAuthoredMax()
+    {
+        // Speed 10 over 10-yalm legs reaches the points at 0, 1, 2 and 3 s. Each point's slope is the time-weighted
+        // Catmull-Rom one: point 1's is ((3 - 1) + (3 - 3)) / 2 = 1 and point 2's is ((3 - 3) + (1 - 3)) / 2 = -1.
+        var points = new[]
+        {
+            Point(0f, 0f, 0f, fov: 1f),
+            Point(10f, 0f, 0f, fov: 3f),
+            Point(20f, 0f, 0f, fov: 3f),
+            Point(30f, 0f, 0f, fov: 1f),
+        };
+        var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(Build(points), 10f));
+
+        // At 1 s the camera is at point 1, with its own field of view.
+        Assert.Equal(3f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-3f);
+
+        // Halfway along leg 2, Hermite(3, 3, 1, -1, 0.5) = 0.5·3 + 0.125·1 + 0.5·3 + (-0.125)·(-1) = 3.25, past the max of 3.
+        Assert.Equal(3f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-3f);
+    }
+
+    [Fact]
+    public void LegLengthRefusesALegThatDoesntExist()
+    {
+        // Three points make legs 1 and 2.
+        var evaluator = new TrackEvaluator(Build3PointTrack());
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => evaluator.LegLength(0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => evaluator.LegLength(3));
     }
 
     [Fact]

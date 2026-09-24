@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Nodes;
 using CsCheck;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
@@ -97,6 +98,8 @@ public class SceneJsonTests
 
         Assert.DoesNotContain("Dolly in", json);
         Assert.DoesNotContain(track.Id.ToString(), json);
+        Assert.DoesNotContain("\"anchor\"", json);
+        Assert.DoesNotContain("\"anchorPlaced\"", json);
         Assert.Equal(2.5f, read.Yaw);
         Assert.NotEqual(track.Id, read.Track.Id);
         SameTrack(track with { Id = read.Track.Id, Name = "", Anchor = default, AnchorPlaced = false }, read.Track);
@@ -261,10 +264,39 @@ public class SceneJsonTests
         Assert.Equal(1.25f, SceneJson.Read(SceneOf(track)).Tracks[0].LookAhead, 1e-6f);
 
         // A file saved before look-ahead existed has no lookAhead line.
-        var old = System.Text.Json.Nodes.JsonNode.Parse(SceneOf(track))!;
+        var old = JsonNode.Parse(SceneOf(track))!;
         old["tracks"]![0]!.AsObject().Remove("lookAhead");
         Assert.Equal(TrackEditing.DefaultLookAhead, SceneJson.Read(old.ToJsonString()).Tracks[0].LookAhead);
     }
+
+    // 1e39 is past a float's largest value, about 3.4e38, so it reads as infinity: JSON has no literal for one.
+    private static string Infinite(string json, Func<JsonNode, JsonNode> parent, string key)
+    {
+        var node = JsonNode.Parse(json)!;
+        parent(node)[key] = JsonNode.Parse("1e39");
+        return node.ToJsonString();
+    }
+
+    [Fact]
+    public void ASceneAnchorThatIsntFiniteIsRefused()
+    {
+        var json = SceneOf(Plain());
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(Infinite(json, n => n["anchor"]!["position"]!, "x")));
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(Infinite(json, n => n["anchor"]!, "yaw")));
+    }
+
+    [Fact]
+    public void APresetYawThatIsntFiniteIsRefused() =>
+        Assert.Throws<InvalidDataException>(() =>
+            SceneJson.ReadPreset(Infinite(SceneJson.WritePreset(new Preset(Plain(), 0f)), n => n, "yaw"))
+        );
+
+    [Fact]
+    public void APointAtAFinitePlaceWhoseYawIsntFiniteIsRefused() =>
+        Assert.Throws<InvalidDataException>(() =>
+            SceneJson.Read(Infinite(SceneOf(Plain()), n => n["tracks"]![0]!["points"]![0]!, "yaw"))
+        );
 
     private static readonly Gen<string> AnyName = Gen.String[Gen.Char[' ', '\uD7FF'], 1, 20]
         .Where(s => !string.IsNullOrWhiteSpace(s));

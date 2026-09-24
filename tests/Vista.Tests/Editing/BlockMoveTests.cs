@@ -46,6 +46,8 @@ public class BlockMoveTests
     {
         Assert.Throws<ArgumentException>(() => BlockMove.Order(3, [], 0, 1));
         Assert.Throws<ArgumentException>(() => BlockMove.Order(3, [3], 3, 1));
+        // Row 1 of rows 1 and 3 exists; row 3 doesn't.
+        Assert.Throws<ArgumentException>(() => BlockMove.Order(3, [1, 3], 1, 0));
         Assert.Throws<ArgumentException>(() => BlockMove.Order(3, [1], 0, 2));
         Assert.Throws<ArgumentException>(() => BlockMove.Order(3, [1], 1, 3));
     }

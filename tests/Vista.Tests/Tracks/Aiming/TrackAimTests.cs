@@ -76,6 +76,27 @@ public class TrackAimTests
     }
 
     [Fact]
+    public void PathDirectionInACollapsedSegmentBetweenTwoOthersKeepsTheWayItCameIn()
+    {
+        // Segment 1 collapses at (10, 0, 0), between segment 0 along +X and segment 2 along -Z. The collapsed segment
+        // has no length, so both neighbours are 0 away along the path and the earlier one, the way in, wins: +X,
+        // whose yaw is atan2(-1, -0) = -90°.
+        var points = new[]
+        {
+            new Vector3(0, 0, 0),
+            new Vector3(10, 0, 0),
+            new Vector3(10, 0, 0),
+            new Vector3(10, 0, -10),
+        };
+        var table = new ArcLengthTable(points);
+
+        var (yaw, pitch) = TrackAim.Along(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
+
+        Assert.Equal(-90f * Deg, yaw, 1e-4f);
+        Assert.Equal(0f, pitch, 1e-4f);
+    }
+
+    [Fact]
     public void PathDirectionIsNullWhenEveryPointCoincides()
     {
         var points = new[] { new Vector3(3, 3, 3), new Vector3(3, 3, 3), new Vector3(3, 3, 3), new Vector3(3, 3, 3) };
