@@ -129,12 +129,7 @@ public sealed class TrackEvaluator
         {
             var only = _track.Points[0];
             var (onlyYaw, onlyPitch) = Toward(only.Position, target) ?? (only.Yaw, only.Pitch);
-            return new CameraState(
-                only.Position,
-                FreeCamMotion.LookAtFrom(only.Position, onlyYaw, onlyPitch),
-                only.Fov,
-                only.Roll
-            );
+            return CameraState.FromAngles(only.Position, onlyYaw, onlyPitch, only.Roll, only.Fov);
         }
 
         var (cameraPosition, segment, fraction) = PlaceAt(time);
@@ -146,7 +141,7 @@ public sealed class TrackEvaluator
         var fov = Math.Clamp(_fov!.At(time), _fovMin, _fovMax);
         var roll = _roll!.At(time);
 
-        return new CameraState(cameraPosition, FreeCamMotion.LookAtFrom(cameraPosition, yaw, pitch), fov, roll);
+        return CameraState.FromAngles(cameraPosition, yaw, pitch, roll, fov);
     }
 
     /// <summary>The aim at <paramref name="target"/> from <paramref name="from"/>, or null with no target or one on the camera.</summary>

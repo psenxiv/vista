@@ -70,10 +70,7 @@ public sealed class AimTracker
         }
 
         return lastAim is { } aim
-            ? frame with
-            {
-                LookAt = FreeCamMotion.LookAtFrom(frame.Position, aim.Yaw, aim.Pitch),
-            }
+            ? CameraState.FromAngles(frame.Position, aim.Yaw, aim.Pitch, frame.Roll, frame.Fov)
             : frame;
     }
 
@@ -96,18 +93,13 @@ public sealed class AimTracker
         {
             var fallback = world.Points[0];
             return lastFollow
-                ?? new CameraState(
-                    fallback.Position,
-                    FreeCamMotion.LookAtFrom(fallback.Position, fallback.Yaw, fallback.Pitch),
-                    offset.Fov,
-                    offset.Roll
-                );
+                ?? CameraState.FromAngles(fallback.Position, fallback.Yaw, fallback.Pitch, offset.Roll, offset.Fov);
         }
 
         var facing = world.FollowTurns ? character.Facing : heldFacing ??= character.Facing;
         var at = new Anchor(character.Position, facing).ToWorld(offset);
         var position = positionSmoother.Step(at.Position, dt, world.Smoothing);
-        var look = FreeCamMotion.LookAtFrom(position, EaseYaw(at.Yaw, dt, world.Smoothing), at.Pitch);
+        var (yaw, pitch) = (EaseYaw(at.Yaw, dt, world.Smoothing), at.Pitch);
         if (
             world.FollowLooks
             && TrackAim.Toward(
@@ -116,9 +108,9 @@ public sealed class AimTracker
             )
                 is { } aim
         )
-            look = FreeCamMotion.LookAtFrom(position, aim.Yaw, aim.Pitch);
+            (yaw, pitch) = aim;
 
-        lastFollow = new CameraState(position, look, offset.Fov, offset.Roll);
+        lastFollow = CameraState.FromAngles(position, yaw, pitch, offset.Roll, offset.Fov);
         return lastFollow.Value;
     }
 

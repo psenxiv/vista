@@ -74,7 +74,7 @@ internal sealed class FreeCam
         var speed = BaseSpeed * Speed.Multiplier * (Plugin.KeyState[VirtualKey.SHIFT] ? SprintMultiplier : 1f);
         position = FreeCamMotion.Step(position, input, yaw, pitch, speed, deltaSeconds);
 
-        return new CameraState(position, FreeCamMotion.LookAtFrom(position, yaw, pitch), fov, Roll);
+        return CameraState.FromAngles(position, yaw, pitch, Roll, fov);
     }
 
     /// <summary>Re-applies this frame's mouse-look change along the rolled screen and writes it back; unrolled, the game's angles stand.</summary>

@@ -27,7 +27,10 @@ internal static unsafe class CameraAccess
             return null;
 
         var scene = &camera->CameraBase.SceneCamera;
-        return new CameraState(scene->Object.Position, scene->LookAtVector, camera->FoV);
+        var position = scene->Object.Position;
+        var lookAt = scene->LookAtVector;
+        var up = CameraRotation.Up(CameraRotation.FromBasis(lookAt - position, scene->Vector_1));
+        return new CameraState(position, lookAt, up, camera->FoV);
     }
 
     /// <summary>The world camera's yaw and pitch in radians, as DirH and DirV.</summary>
@@ -81,7 +84,7 @@ internal static unsafe class CameraAccess
         camera->FoV = snapshot.Fov;
     }
 
-    /// <summary>Overwrites camera position and look-at.</summary>
+    /// <summary>Overwrites camera position, look-at and up; the up is written as given, so any orientation, inverted included, reaches the game.</summary>
     public static void WriteState(CameraState state)
     {
         if (!TryGetWorldCamera(out var camera))
@@ -90,7 +93,7 @@ internal static unsafe class CameraAccess
         var scene = &camera->CameraBase.SceneCamera;
         scene->Object.Position = state.Position;
         scene->LookAtVector = state.LookAt;
-        scene->Vector_1 = CameraOrientation.UpFor(state.Position, state.LookAt, state.Roll);
+        scene->Vector_1 = state.Up;
         camera->FoV = state.Fov;
 
         // Distance and InterpDistance are deliberately NOT written. They are saved

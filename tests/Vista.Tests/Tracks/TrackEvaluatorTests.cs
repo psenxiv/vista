@@ -224,15 +224,19 @@ public class TrackEvaluatorTests
         var points = rolls.Select((r, i) => Point(i * 10f, 0f, 0f, roll: r * Deg)).ToArray();
         var evaluator = new TrackEvaluator(Build(points));
 
-        var previous = float.NegativeInfinity;
-        for (var t = 0.0; t <= 20.0; t += 0.25)
+        // A frame's roll reads back wrapped to half a turn, so add up each step's turn the short way round.
+        var previous = evaluator.Evaluate(0.0)!.Value.Roll;
+        var turned = 0f;
+        for (var t = 0.25; t <= 20.0; t += 0.25)
         {
             var roll = evaluator.Evaluate(t)!.Value.Roll;
-            Assert.True(roll >= previous - 1e-4f, $"roll went backwards at t={t}: {previous} -> {roll}");
+            var step = Angles.Delta(previous, roll);
+            Assert.True(step >= -1e-4f, $"roll went backwards at t={t}: {previous} -> {roll}");
+            turned += step;
             previous = roll;
         }
 
-        Assert.Equal(2f * MathF.PI, evaluator.Evaluate(20.0)!.Value.Roll, 3);
+        Assert.Equal(2f * MathF.PI, turned, 3);
     }
 
     [Fact]
@@ -240,7 +244,8 @@ public class TrackEvaluatorTests
     {
         var track = Build(new[] { Point(1f, 2f, 3f, roll: 0.3f) });
 
-        Assert.Equal(0.3f, new TrackEvaluator(track).Evaluate(0.0)!.Value.Roll);
+        // Roll reads back through a rotation, so within float round-off.
+        Assert.Equal(0.3f, new TrackEvaluator(track).Evaluate(0.0)!.Value.Roll, 1e-6f);
     }
 
     // Points on a line at x = 0, 10, 20; Linear keys at 0, 5, 10 s.
@@ -346,7 +351,8 @@ public class TrackEvaluatorTests
         Assert.Equal(0f, yaw, 4);
         Assert.Equal(0f, pitch, 4);
         Assert.Equal(1.2f, state.Fov);
-        Assert.Equal(0.3f, state.Roll);
+        // Roll reads back through a rotation, so within float round-off.
+        Assert.Equal(0.3f, state.Roll, 1e-6f);
     }
 
     [Fact]
@@ -820,8 +826,8 @@ public class TrackEvaluatorTests
     [Trait("Category", "Property")]
     public void AHoldIsStill()
     {
-        // Through a hold the camera stays exactly where it arrived, with the same field of view and roll. Its aim does
-        // too, except that Direction of travel starts turning once the look ahead reaches past the hold's end.
+        // Through a hold the camera stays exactly where it arrived, with the same field of view. Its aim and the picture's
+        // up do too, except that Direction of travel starts turning once the look ahead reaches past the hold's end.
         const int samples = 64;
         AnyPathTrack.Sample(
             track =>
@@ -842,9 +848,10 @@ public class TrackEvaluatorTests
                         var frame = evaluator.Evaluate(time, target)!.Value;
                         Assert.Equal(arrived.Position, frame.Position);
                         Assert.Equal(arrived.Fov, frame.Fov);
-                        Assert.Equal(arrived.Roll, frame.Roll);
-                        if (time <= still)
-                            Assert.Equal(arrived.LookAt, frame.LookAt);
+                        if (time > still)
+                            continue;
+                        Assert.Equal(arrived.LookAt, frame.LookAt);
+                        Assert.Equal(arrived.Up, frame.Up);
                     }
                 }
             },
