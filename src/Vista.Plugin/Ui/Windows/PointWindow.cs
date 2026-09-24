@@ -110,7 +110,7 @@ internal sealed class PointWindow : Window
     /// <summary>The shared header, whose copy, paste and delete act only on a point; false once the point is deleted.</summary>
     private bool DrawHeader(int? pointIndex, bool rotates)
     {
-        var point = pointIndex is { } i ? session.Track.Points[i] : (ControlPoint?)null;
+        var point = pointIndex is { } i ? session.Track.Points[i] : null;
         var clip = PoseGrid.Header(
             gizmo.Mode,
             gizmo.SetMode,

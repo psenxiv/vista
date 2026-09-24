@@ -104,7 +104,6 @@ public static class TimingEditing
             : result;
     }
 
-    /// <summary>The shortest and longest a leg of <paramref name="length"/> can take within the speed and leg ranges.</summary>
     /// <summary>Drags key <paramref name="key"/> towards <paramref name="time"/>, carrying every later key with it; <paramref name="evaluator"/> is the track's.</summary>
     public static Track RippleKey(Track track, TrackEvaluator evaluator, int key, float time)
     {

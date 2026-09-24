@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Numerics;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;

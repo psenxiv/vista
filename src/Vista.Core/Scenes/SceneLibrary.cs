@@ -34,7 +34,7 @@ public sealed class SceneLibrary
         var names = Scenes();
         var name =
             names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase))
-            ?? names.FirstOrDefault();
+            ?? (names.Count > 0 ? names[0] : null);
         return name is null ? Create(SceneNames.NextFree(Stem, Folder.SceneFiles())) : Load(name);
     }
 

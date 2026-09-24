@@ -25,7 +25,7 @@ public class SceneGeometryTests
         return SceneEditing.Replace(scene, track);
     }
 
-    private static IReadOnlyList<Vector3> WorldPositions(Scene scene) =>
+    private static List<Vector3> WorldPositions(Scene scene) =>
         SceneGeometry.InWorld(scene, scene.Tracks[0]).Points.Select(p => p.Position).ToList();
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -255,14 +256,14 @@ internal sealed class TimingWindow : Window
             var y = graph.ToScreen(0f, along).Y;
             list.AddLine(new Vector2(graph.Origin.X, y), new Vector2(right, y), EditorColours.GraphGrid);
 
-            var label = (i + 1).ToString();
+            var label = (i + 1).ToString(CultureInfo.CurrentCulture);
             var size = ImGui.CalcTextSize(label);
             list.AddText(new Vector2(graph.Origin.X - 4f - size.X, y - (size.Y / 2f)), text, label);
         }
     }
 
     /// <summary>Yalm ticks up the plot's right edge at a round step over the view, at most six, leaving out zero.</summary>
-    private void DrawYalmScale(ImDrawListPtr list, TimingGraph graph, float step)
+    private static void DrawYalmScale(ImDrawListPtr list, TimingGraph graph, float step)
     {
         var text = FullAlpha(EditorColours.GraphGrid);
         var right = graph.Origin.X + graph.Size.X;
@@ -308,7 +309,7 @@ internal sealed class TimingWindow : Window
             var x = graph.ToScreen(t, 0f).X;
             list.AddLine(new Vector2(x, bottom), new Vector2(x, bottom + TickLength), EditorColours.GraphGrid);
 
-            var label = t.ToString(format);
+            var label = t.ToString(format, CultureInfo.CurrentCulture);
             var width = ImGui.CalcTextSize(label).X;
             var left = x - (width / 2f);
             if (left < lastRight + 4f || left + width > totalLeft - 4f)
@@ -373,7 +374,7 @@ internal sealed class TimingWindow : Window
             {
                 list.AddCircleFilled(at, PointKeyRadius, EditorColours.Marker);
                 list.AddCircle(at, PointKeyRadius, ring, 0, thickness);
-                var label = (TrackEditing.PointOf(track, i) + 1).ToString();
+                var label = (TrackEditing.PointOf(track, i) + 1).ToString(CultureInfo.CurrentCulture);
                 list.AddText(at - (ImGui.CalcTextSize(label) / 2f), EditorColours.MarkerText, label);
             }
             else

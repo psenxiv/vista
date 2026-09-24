@@ -1,0 +1,40 @@
+root = true
+
+[*.cs]
+# Unnecessary cast
+dotnet_diagnostic.IDE0004.severity = warning
+# Unnecessary using
+dotnet_diagnostic.IDE0005.severity = warning
+# Unreachable code
+dotnet_diagnostic.IDE0035.severity = warning
+# Unused private member
+dotnet_diagnostic.IDE0051.severity = warning
+# Private member written but never read
+dotnet_diagnostic.IDE0052.severity = warning
+# Value assigned but never used
+dotnet_diagnostic.IDE0059.severity = warning
+# Unused parameter
+dotnet_diagnostic.IDE0060.severity = warning
+
+# Methods over 100 lines; statements aren't counted
+MA0051.maximum_lines_per_method = 100
+MA0051.maximum_statements_per_method = 0
+
+# string.Equals over ==: == on strings already compares ordinally
+dotnet_diagnostic.MA0006.severity = none
+# StructLayout on structs
+dotnet_diagnostic.MA0008.severity = none
+# Regex timeouts: the only input is the embedded guide pages
+dotnet_diagnostic.MA0009.severity = none
+# IFormatProvider on ToString: CA1305 covers it
+dotnet_diagnostic.MA0011.severity = none
+# ArgumentException parameter names: refusals show the message to players, and a name appends "(Parameter 'x')"
+dotnet_diagnostic.MA0015.severity = none
+# Type named after its namespace: Dalamud's Plugin class lives in Vista.Plugin
+dotnet_diagnostic.MA0049.severity = none
+
+[tests/**.cs]
+# Comparers on string assertions
+dotnet_diagnostic.MA0002.severity = none
+# Constant array arguments in assertions
+dotnet_diagnostic.CA1861.severity = none

@@ -51,6 +51,5 @@ public static class RowPicking
         return -1;
     }
 
-    private static IReadOnlyList<T> InOrder<T>(IReadOnlyList<T> order, HashSet<T> picked) =>
-        order.Where(picked.Contains).ToArray();
+    private static T[] InOrder<T>(IReadOnlyList<T> order, HashSet<T> picked) => order.Where(picked.Contains).ToArray();
 }

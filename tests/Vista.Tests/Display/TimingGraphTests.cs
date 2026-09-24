@@ -1,6 +1,5 @@
 using System.Numerics;
 using Vista.Core.Display;
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 

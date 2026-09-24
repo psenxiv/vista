@@ -75,38 +75,8 @@ internal sealed class EditorLayer
                 overlay.Draw(view, otherWorld, [], edited: false, session.World.AimPoint(otherWorld))
             );
             if (session.World.TargetPoint(otherWorld) is { } otherTarget)
-                overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
-            if (other is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
-                markers.Add(
-                    new TrackMarker(
-                        other.Id,
-                        -1,
-                        overlay.DrawTrackAnchor(
-                            view,
-                            SceneGeometry.WorldAnchor(scene, other),
-                            FirstPosition(otherWorld),
-                            edited: false,
-                            selected: false,
-                            other.Name
-                        ),
-                        MarkerKind.TrackAnchor
-                    )
-                );
-            if (other is { Aim: AimMode.LookAt, LookAtPlaced: true })
-                markers.Add(
-                    new TrackMarker(
-                        other.Id,
-                        -1,
-                        overlay.DrawLookAt(
-                            view,
-                            otherWorld.LookAt,
-                            FirstPosition(otherWorld),
-                            edited: false,
-                            selected: false
-                        ),
-                        MarkerKind.LookAt
-                    )
-                );
+                Overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
+            DrawAnchors(view, scene, other, otherWorld, edited: false, selected: null, markers);
         }
 
         var track =
@@ -128,51 +98,25 @@ internal sealed class EditorLayer
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
-        if (editedLocal is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
-            markers.Add(
-                new TrackMarker(
-                    edited,
-                    -1,
-                    overlay.DrawTrackAnchor(
-                        view,
-                        SceneGeometry.WorldAnchor(scene, editedLocal),
-                        FirstPosition(track),
-                        edited: true,
-                        selected: selectedAnchor == AnchorKind.Track,
-                        editedLocal.Name
-                    ),
-                    MarkerKind.TrackAnchor
-                )
-            );
-        if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
-            markers.Add(
-                new TrackMarker(
-                    edited,
-                    -1,
-                    overlay.DrawLookAt(
-                        view,
-                        track.LookAt,
-                        FirstPosition(track),
-                        edited: true,
-                        selected: selectedAnchor == AnchorKind.LookAt
-                    ),
-                    MarkerKind.LookAt
-                )
-            );
+        DrawAnchors(view, scene, editedLocal, track, edited: true, selectedAnchor, markers);
         if (session.World.TargetPoint(track) is { } target)
-            overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
+            Overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
         if (scene.AnchorPlaced)
             markers.Add(
                 new TrackMarker(
                     Guid.Empty,
                     -1,
-                    overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene),
+                    Overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene),
                     MarkerKind.SceneAnchor
                 )
             );
-        if (!editing)
-            return;
+        if (editing)
+            TakeClicks(view, markers, edited);
+    }
 
+    /// <summary>Makes the markers under the mouse clickable, and runs the gizmos and marker clicks.</summary>
+    private void TakeClicks(EditorView view, List<TrackMarker> markers, Guid edited)
+    {
         var io = ImGui.GetIO();
         var hovered = TrackMarkerHitTest.Nearest(markers, edited, io.MousePos, HitRadius);
 
@@ -211,8 +155,46 @@ internal sealed class EditorLayer
         ImGui.PopStyleVar();
     }
 
+    /// <summary>Draws a track's anchor and Look At point where placed, adding their markers.</summary>
+    private static void DrawAnchors(
+        EditorView view,
+        Scene scene,
+        Track local,
+        Track world,
+        bool edited,
+        AnchorKind? selected,
+        List<TrackMarker> markers
+    )
+    {
+        if (local is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
+            markers.Add(
+                new TrackMarker(
+                    local.Id,
+                    -1,
+                    Overlay.DrawTrackAnchor(
+                        view,
+                        SceneGeometry.WorldAnchor(scene, local),
+                        FirstPosition(world),
+                        edited,
+                        selected == AnchorKind.Track,
+                        local.Name
+                    ),
+                    MarkerKind.TrackAnchor
+                )
+            );
+        if (local is { Aim: AimMode.LookAt, LookAtPlaced: true })
+            markers.Add(
+                new TrackMarker(
+                    local.Id,
+                    -1,
+                    Overlay.DrawLookAt(view, world.LookAt, FirstPosition(world), edited, selected == AnchorKind.LookAt),
+                    MarkerKind.LookAt
+                )
+            );
+    }
+
     /// <summary>Selects a clicked point, anchor or Look At point, switching to its track first when it isn't the edited one; a click on empty space clears the selection. With Ctrl or Shift, only the edited track's points respond.</summary>
-    private void Apply(ClickOutcome outcome, IReadOnlyList<TrackMarker> markers)
+    private void Apply(ClickOutcome outcome, List<TrackMarker> markers)
     {
         var click = RowPicking.FromKeys(PhysicalKeys.IsDown(VirtualKey.SHIFT), PhysicalKeys.IsDown(VirtualKey.CONTROL));
         if (click != RowClick.Plain)

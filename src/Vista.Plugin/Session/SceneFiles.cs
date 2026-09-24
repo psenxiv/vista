@@ -26,7 +26,7 @@ internal sealed class SceneFiles
     }
 
     /// <summary>Raised when the folder is missing and Setup should be shown.</summary>
-    public event Action? SetupNeeded;
+    public event EventHandler? SetupNeeded;
 
     /// <summary>The folder chosen before, or null; where the folder picker starts.</summary>
     public string? Chosen => config.SaveFolder;
@@ -216,7 +216,7 @@ internal sealed class SceneFiles
             return null;
         Plugin.Log.Warning("[scenes] {Refusal}", refusal);
         if (library is { } l && !l.Folder.Exists)
-            SetupNeeded?.Invoke();
+            SetupNeeded?.Invoke(this, EventArgs.Empty);
         return refusal;
     }
 }

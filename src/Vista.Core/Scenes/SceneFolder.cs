@@ -122,7 +122,7 @@ public sealed class SceneFolder
         }
     }
 
-    private IReadOnlyList<string> Names(string dir, Action<string> read)
+    private List<string> Names(string dir, Action<string> read)
     {
         var names = new List<string>();
         foreach (var file in Files(dir))

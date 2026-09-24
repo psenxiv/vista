@@ -74,7 +74,7 @@ internal sealed class GuideWindow : Window, IDisposable
             if (Read("index.md") is { } index)
                 topics = GuideIndex.Parse(index);
             AddFiles(topics);
-            shown = topics.FirstOrDefault()?.File;
+            shown = topics.Count > 0 ? topics[0].File : null;
         }
 
         if (ImGui.BeginChild("guide-topics", new Vector2(TreeWidth, 0f), true))

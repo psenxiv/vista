@@ -169,7 +169,7 @@ public static partial class GuideMarkdown
 
     private static bool IsTableRow(string line) => line.TrimStart().StartsWith('|');
 
-    private static IReadOnlyList<IReadOnlyList<Run>> Cells(string line)
+    private static List<IReadOnlyList<Run>> Cells(string line)
     {
         var trimmed = line.Trim();
         if (trimmed.StartsWith('|'))

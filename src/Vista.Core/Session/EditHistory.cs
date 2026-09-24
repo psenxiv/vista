@@ -1,5 +1,3 @@
-using Vista.Core.Scenes;
-
 namespace Vista.Core.Session;
 
 /// <summary>Undo and redo stacks of edit snapshots, keeping the most recent <see cref="Capacity"/> undo steps.</summary>

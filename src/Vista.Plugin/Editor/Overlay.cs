@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Vista.Core.Camera;
@@ -74,7 +75,7 @@ internal sealed class Overlay
     }
 
     /// <summary>A track anchor: a ground ring, an arrow along its yaw, a faint line to the first point and its name above. Returns its centre on screen, or null.</summary>
-    public Vector2? DrawTrackAnchor(
+    public static Vector2? DrawTrackAnchor(
         EditorView view,
         Anchor world,
         Vector3? firstPoint,
@@ -119,7 +120,7 @@ internal sealed class Overlay
     }
 
     /// <summary>The scene anchor: a ground diamond and an arrow along its yaw. Returns its centre on screen, or null.</summary>
-    public Vector2? DrawSceneAnchor(EditorView view, Anchor world, bool selected)
+    public static Vector2? DrawSceneAnchor(EditorView view, Anchor world, bool selected)
     {
         var list = ImGui.GetBackgroundDrawList();
         var colour = selected ? EditorColours.Selected : EditorColours.SceneAnchor;
@@ -143,7 +144,7 @@ internal sealed class Overlay
     }
 
     /// <summary>A Look At point: a crosshair in the anchor colour and a faint line to the first point. Returns its centre on screen, or null.</summary>
-    public Vector2? DrawLookAt(EditorView view, Vector3 world, Vector3? firstPoint, bool edited, bool selected)
+    public static Vector2? DrawLookAt(EditorView view, Vector3 world, Vector3? firstPoint, bool edited, bool selected)
     {
         var list = ImGui.GetBackgroundDrawList();
         var colour =
@@ -164,7 +165,7 @@ internal sealed class Overlay
     }
 
     /// <summary>The aim point on a watched or followed character: a small crosshair and a faint line to the first point, dimmed unless <paramref name="edited"/>.</summary>
-    public void DrawTargetMarker(EditorView view, Vector3 world, Vector3? firstPoint, bool edited)
+    public static void DrawTargetMarker(EditorView view, Vector3 world, Vector3? firstPoint, bool edited)
     {
         var list = ImGui.GetBackgroundDrawList();
         if (firstPoint is { } first)
@@ -418,7 +419,7 @@ internal sealed class Overlay
                 picked ? 3f : 1.5f
             );
 
-            var label = (i + 1).ToString();
+            var label = (i + 1).ToString(CultureInfo.CurrentCulture);
             var size = ImGui.CalcTextSize(label) * LabelScale;
             list.AddText(
                 ImGui.GetFont(),

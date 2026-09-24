@@ -549,7 +549,7 @@ internal sealed class TrackEditorWindow : Window
         {
             AimMode.WatchTarget => TargetState(track, "Watch Target", "using recorded aim"),
             AimMode.FollowTarget => TargetState(track, "Follow Target", null),
-            _ => ((uint?)null, $"Select aim ({Aims[aim].Name})"),
+            _ => (null, $"Select aim ({Aims[aim].Name})"),
         };
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour))
             ImGui.OpenPopup("aim-menu");

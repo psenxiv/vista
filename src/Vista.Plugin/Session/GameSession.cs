@@ -87,7 +87,7 @@ internal sealed class GameSession
     public float? TakeoverFov => snapshotBeforeTakeover?.Fov;
 
     /// <summary>The camera's yaw and pitch, or null when the camera cannot be read.</summary>
-    public (float Yaw, float Pitch)? CameraAngles => CameraAccess.ReadAngles();
+    public static (float Yaw, float Pitch)? CameraAngles => CameraAccess.ReadAngles();
 
     /// <summary>Turns the camera, telling the free cam not to read it as a mouse movement.</summary>
     public void TurnCamera(float yaw, float pitch)

@@ -46,7 +46,7 @@ internal sealed class CameraWindow : Window
             return;
 
         var position = game.CameraPosition;
-        var (yaw, pitch) = game.CameraAngles ?? (0f, 0f);
+        var (yaw, pitch) = GameSession.CameraAngles ?? (0f, 0f);
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
         if (mode == GizmoMode.MoveLocal)

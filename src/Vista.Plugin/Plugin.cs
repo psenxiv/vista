@@ -115,7 +115,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(new WelcomeWindow(config, OpenTrackEditor));
         windows.AddWindow(setupWindow);
 
-        sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
+        sceneFiles.SetupNeeded += (_, _) => setupWindow.IsOpen = true;
         if (sceneFiles.Lost)
             setupWindow.IsOpen = true;
 
