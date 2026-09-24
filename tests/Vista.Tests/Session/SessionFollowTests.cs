@@ -51,8 +51,8 @@ public class SessionFollowTests
     public void AFollowTracksAnchorCannotBeSelected()
     {
         var (state, _) = FollowingGuard();
-        Assert.Equal("A Follow Target track's anchor is hidden", state.SelectTrackAnchor(state.EditedTrackId));
-        Assert.Null(state.SelectedAnchor);
+        Assert.Equal("A Follow Target track's anchor is hidden", state.Selection.SelectTrackAnchor(state.EditedTrackId));
+        Assert.Null(state.Selection.Anchor);
     }
 
     [Fact]
@@ -60,12 +60,12 @@ public class SessionFollowTests
     {
         var (state, _) = EditingWith(points: 1);
         state.SetTarget("Guard", null);
-        Assert.Null(state.SelectTrackAnchor(state.EditedTrackId));
+        Assert.Null(state.Selection.SelectTrackAnchor(state.EditedTrackId));
 
         Assert.Null(state.SetAim(AimMode.FollowTarget, Camera));
 
-        Assert.Null(state.SelectedAnchor);
-        Assert.Null(state.SelectedAnchorInWorld);
+        Assert.Null(state.Selection.Anchor);
+        Assert.Null(state.Selection.AnchorInWorld);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class SessionFollowTests
         var (state, characters) = FollowingGuard();
         characters.Update([Guard(new Vector3(40f, 0f, 0f))]);
 
-        var frame = state.FrameAt(0.0)!.Value;
+        var frame = state.World.FrameAt(0.0)!.Value;
 
         Near(new Vector3(40f, 2f, 5f), frame.Position, 1e-3f);
     }

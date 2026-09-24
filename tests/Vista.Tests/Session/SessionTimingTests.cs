@@ -24,15 +24,15 @@ public class SessionTimingTests
     public void SelectingAPointSelectsItsKeyAndAPointKeySelectsItsPoint()
     {
         var state = Editing();
-        state.Select(1);
-        Assert.Equal(1, state.SelectedKey);
+        state.Selection.Select(1);
+        Assert.Equal(1, state.Selection.Key);
 
-        state.SelectKey(2);
-        Assert.Equal(2, state.Selected);
+        state.Selection.SelectKey(2);
+        Assert.Equal(2, state.Selection.Point);
 
-        state.SelectLeg(1);
-        Assert.Equal((null, 1), (state.SelectedKey, state.SelectedLeg));
-        Assert.Equal(2, state.Selected);
+        state.Selection.SelectLeg(1);
+        Assert.Equal((null, 1), (state.Selection.Key, state.Selection.Leg));
+        Assert.Equal(2, state.Selection.Point);
     }
 
     [Fact]
@@ -40,23 +40,23 @@ public class SessionTimingTests
     {
         var state = Editing();
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
-        state.Select(2);
-        state.SelectKey(2);
-        Assert.Equal(2, state.SelectedKey);
-        Assert.Equal(2, state.Selected);
+        state.Selection.Select(2);
+        state.Selection.SelectKey(2);
+        Assert.Equal(2, state.Selection.Key);
+        Assert.Equal(2, state.Selection.Point);
     }
 
     [Fact]
     public void DeselectingAPointClearsItsKeyButNotALeg()
     {
         var state = Editing();
-        state.Select(1);
-        state.Select(null);
-        Assert.Null(state.SelectedKey);
+        state.Selection.Select(1);
+        state.Selection.Select(null);
+        Assert.Null(state.Selection.Key);
 
-        state.SelectLeg(2);
-        state.Select(null);
-        Assert.Equal(2, state.SelectedLeg);
+        state.Selection.SelectLeg(2);
+        state.Selection.Select(null);
+        Assert.Equal(2, state.Selection.Leg);
     }
 
     [Fact]
@@ -64,21 +64,21 @@ public class SessionTimingTests
     {
         var state = Editing();
         state.AddToEnd(Point(30f));
-        state.SelectLeg(2);
+        state.Selection.SelectLeg(2);
 
         Assert.Null(state.DeletePoints([1]));
-        Assert.Null(state.SelectedLeg);
+        Assert.Null(state.Selection.Leg);
     }
 
     [Fact]
     public void LegAndHoldFieldEditsKeepTheSelectedLeg()
     {
         var state = Editing();
-        state.SelectLeg(2);
+        state.Selection.SelectLeg(2);
 
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 8f)));
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
-        Assert.Equal(2, state.SelectedLeg);
+        Assert.Equal(2, state.Selection.Leg);
     }
 
     [Fact]
@@ -96,9 +96,9 @@ public class SessionTimingTests
     {
         var state = Editing();
         state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f));
-        state.SelectKey(2);
+        state.Selection.SelectKey(2);
         Assert.Null(state.RemoveHold(2));
-        Assert.Null(state.SelectedKey);
+        Assert.Null(state.Selection.Key);
         Assert.Equal(3, TrackEditing.KeyCount(state.Track));
     }
 
@@ -120,10 +120,10 @@ public class SessionTimingTests
         Assert.Null(state.PreviewKeyMove(1, 4f));
         state.EndLiveEdit();
 
-        Assert.Equal(4f, state.Evaluator.Keys[1].Time, 3);
+        Assert.Equal(4f, state.World.Evaluator.Keys[1].Time, 3);
         Assert.Equal(10f, state.Duration, 3);
         Assert.True(state.Undo());
-        Assert.Equal(5f, state.Evaluator.Keys[1].Time, 3);
+        Assert.Equal(5f, state.World.Evaluator.Keys[1].Time, 3);
         Assert.False(TrackEditing.IsPinned(state.Track, 1));
     }
 
@@ -132,7 +132,7 @@ public class SessionTimingTests
     {
         var state = Editing();
         var before = state.Track;
-        var start = state.Evaluator.Keys[1].Time;
+        var start = state.World.Evaluator.Keys[1].Time;
         state.BeginLiveEdit();
         Assert.Null(state.PreviewKeyMove(1, 3f));
         Assert.Null(state.PreviewKeyMove(1, start));
@@ -151,8 +151,8 @@ public class SessionTimingTests
         Assert.Null(state.PreviewHandle(1, KeySide.Out, 3f));
         state.EndLiveEdit();
 
-        Assert.Equal(3f, state.Evaluator.SideSlope(1, KeySide.In), 1);
-        Assert.Equal(3f, state.Evaluator.SideSlope(1, KeySide.Out), 1);
+        Assert.Equal(3f, state.World.Evaluator.SideSlope(1, KeySide.In), 1);
+        Assert.Equal(3f, state.World.Evaluator.SideSlope(1, KeySide.Out), 1);
         Assert.Equal(Easing.Custom, LegEasing.Read(state.Track, 1));
         Assert.Equal(Easing.Custom, LegEasing.Read(state.Track, 2));
     }
@@ -166,7 +166,7 @@ public class SessionTimingTests
         state.EndLiveEdit();
 
         Assert.Null(state.SetTrackSpeed(4f));
-        Assert.Equal(6f, state.Evaluator.SideSlope(1, KeySide.Out), 1);
+        Assert.Equal(6f, state.World.Evaluator.SideSlope(1, KeySide.Out), 1);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class SessionTimingTests
 
         Assert.Null(state.UnifyHandles(1, KeySide.Out));
         Assert.False(state.Track.Timing[1].Broken);
-        Assert.Equal(3f, state.Evaluator.SideSlope(1, KeySide.In), 1);
+        Assert.Equal(3f, state.World.Evaluator.SideSlope(1, KeySide.In), 1);
     }
 
     [Fact]
@@ -201,9 +201,9 @@ public class SessionTimingTests
     {
         var state = Editing();
         state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f));
-        state.SelectKey(2);
+        state.Selection.SelectKey(2);
         state.AddToEnd(new ControlPoint(new Vector3(30f, 0f, 0f), 0f, 0f, 1f));
-        Assert.Null(state.SelectedKey);
+        Assert.Null(state.Selection.Key);
     }
 
     [Fact]
@@ -230,11 +230,11 @@ public class SessionTimingTests
         var state = Editing();
         Assert.Null(state.SetLegDuration(1, 2f));
         Assert.True(TrackEditing.IsPinned(state.Track, 1));
-        Assert.Equal(2f, state.Evaluator.LegSeconds(1), 3);
+        Assert.Equal(2f, state.World.Evaluator.LegSeconds(1), 3);
 
         Assert.Null(state.ResetLeg(1));
         Assert.False(TrackEditing.IsPinned(state.Track, 1));
-        Assert.Equal(5f, state.Evaluator.LegSeconds(1), 3);
+        Assert.Equal(5f, state.World.Evaluator.LegSeconds(1), 3);
     }
 
     [Fact]
@@ -242,15 +242,15 @@ public class SessionTimingTests
     {
         var state = Editing();
         Assert.Null(state.SetLegSpeed(2, 10f));
-        Assert.Equal(1f, state.Evaluator.LegSeconds(2), 3);
+        Assert.Equal(1f, state.World.Evaluator.LegSeconds(2), 3);
     }
 
     [Fact]
     public void SetLegDurationKeepsTheSelectedLeg()
     {
         var state = Editing();
-        state.SelectLeg(2);
+        state.Selection.SelectLeg(2);
         Assert.Null(state.SetLegDuration(2, 3f));
-        Assert.Equal(2, state.SelectedLeg);
+        Assert.Equal(2, state.Selection.Leg);
     }
 }

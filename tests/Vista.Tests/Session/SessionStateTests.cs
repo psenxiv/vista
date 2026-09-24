@@ -247,7 +247,7 @@ public class SessionStateTests
     {
         var state = EditingWithTrack();
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 1, 8f)));
-        Assert.Equal(8f, state.Evaluator.LegSeconds(1), 3);
+        Assert.Equal(8f, state.World.Evaluator.LegSeconds(1), 3);
     }
 
     [Fact]
@@ -293,8 +293,8 @@ public class SessionStateTests
         var state = EditingWithTrack();
         state.AddTrack();
         state.AddToEnd(Point(5f));
-        state.Select(0);
-        state.ScrubTo(1.0);
+        state.Selection.Select(0);
+        state.Transport.ScrubTo(1.0);
         var loaded = Loaded();
 
         Assert.Null(state.LoadScene(loaded));
@@ -302,9 +302,9 @@ public class SessionStateTests
         Assert.Same(loaded, state.Scene);
         Assert.Equal(loaded.Tracks[0].Id, state.EditedTrackId);
         Assert.Equal(CameraMode.Editing, state.Mode);
-        Assert.Null(state.Selected);
-        Assert.Null(state.SelectedKey);
-        Assert.Equal(0.0, state.ScrubHead);
+        Assert.Null(state.Selection.Point);
+        Assert.Null(state.Selection.Key);
+        Assert.Equal(0.0, state.Transport.ScrubHead);
         Assert.False(state.CanUndo);
     }
 
@@ -338,7 +338,7 @@ public class SessionStateTests
 
         state.LoadScene(Loaded());
 
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
     }
 
     [Fact]

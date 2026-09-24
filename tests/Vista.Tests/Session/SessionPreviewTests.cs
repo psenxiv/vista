@@ -24,15 +24,15 @@ public class SessionPreviewTests
     public void PlayInEditPreviewsFromTheScrubHeadAndStaysInEdit()
     {
         var state = Editing();
-        state.ScrubTo(4.0);
+        state.Transport.ScrubTo(4.0);
 
         Assert.Equal(PlayOutcome.Previewed, state.Play());
 
         Assert.Equal(CameraMode.Editing, state.Mode);
-        Assert.True(state.Previewing);
-        Assert.Equal(4.0, state.ScrubHead, 5);
-        state.AdvancePreview(1f);
-        Assert.Equal(5.0, state.ScrubHead, 5);
+        Assert.True(state.Transport.Previewing);
+        Assert.Equal(4.0, state.Transport.ScrubHead, 5);
+        state.Transport.AdvancePreview(1f);
+        Assert.Equal(5.0, state.Transport.ScrubHead, 5);
         Assert.False(state.Director.IsLive);
     }
 
@@ -44,23 +44,23 @@ public class SessionPreviewTests
     {
         var state = Editing();
         state.ChangeTrack(t => TrackEditing.SetDirection(t, direction));
-        state.ScrubTo(finish);
+        state.Transport.ScrubTo(finish);
 
         state.Play();
 
-        Assert.Equal(start, state.ScrubHead, 5);
+        Assert.Equal(start, state.Transport.ScrubHead, 5);
     }
 
     [Fact]
     public void RestartInEditPreviewsFromTheBeginning()
     {
         var state = Editing();
-        state.ScrubTo(6.0);
+        state.Transport.ScrubTo(6.0);
 
         Assert.Equal(PlayOutcome.Previewed, state.Restart());
 
-        Assert.Equal(0.0, state.ScrubHead, 5);
-        Assert.True(state.Previewing);
+        Assert.Equal(0.0, state.Transport.ScrubHead, 5);
+        Assert.True(state.Transport.Previewing);
     }
 
     [Fact]
@@ -68,12 +68,12 @@ public class SessionPreviewTests
     {
         var state = Editing();
         state.Play();
-        state.AdvancePreview(3f);
+        state.Transport.AdvancePreview(3f);
 
         Assert.True(state.Stop());
 
-        Assert.False(state.Previewing);
-        Assert.Equal(3.0, state.ScrubHead, 5);
+        Assert.False(state.Transport.Previewing);
+        Assert.Equal(3.0, state.Transport.ScrubHead, 5);
         Assert.Equal(CameraMode.Editing, state.Mode);
     }
 
@@ -82,15 +82,15 @@ public class SessionPreviewTests
     {
         var state = Editing();
         state.Play();
-        Assert.NotNull(state.AdvancePreview(15f));
-        Assert.False(state.Previewing);
-        Assert.Equal(10.0, state.ScrubHead, 5);
+        Assert.NotNull(state.Transport.AdvancePreview(15f));
+        Assert.False(state.Transport.Previewing);
+        Assert.Equal(10.0, state.Transport.ScrubHead, 5);
 
         state.ChangeTrack(t => TrackEditing.SetLoop(t, true));
         state.Restart();
-        state.AdvancePreview(15f);
-        Assert.True(state.Previewing);
-        Assert.Equal(5.0, state.ScrubHead, 3);
+        state.Transport.AdvancePreview(15f);
+        Assert.True(state.Transport.Previewing);
+        Assert.Equal(5.0, state.Transport.ScrubHead, 3);
     }
 
     [Fact]
@@ -100,28 +100,28 @@ public class SessionPreviewTests
 
         state.Play();
         state.AddToEnd(Point(30f));
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
 
         state.Play();
         state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 1f));
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
 
         state.Play();
         state.Undo();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
 
         state.Play();
         state.Redo();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
 
         state.Play();
         state.BeginLiveEdit();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
         state.EndLiveEdit();
 
         state.Play();
         state.AddTrack();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
     }
 
     [Fact]
@@ -134,17 +134,17 @@ public class SessionPreviewTests
 
         state.Play();
         state.SwitchTrack(state.Scene.Tracks[1].Id);
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
 
         state.SwitchTrack(first);
         state.Play();
-        state.BeginScrub();
-        Assert.False(state.Previewing);
-        state.EndScrub();
+        state.Transport.BeginScrub();
+        Assert.False(state.Transport.Previewing);
+        state.Transport.EndScrub();
 
         state.Play();
-        state.ScrubTo(2.0);
-        Assert.False(state.Previewing);
+        state.Transport.ScrubTo(2.0);
+        Assert.False(state.Transport.Previewing);
     }
 
     [Fact]
@@ -156,14 +156,14 @@ public class SessionPreviewTests
         state.SwitchTrack(first);
 
         state.Play();
-        Assert.Null(state.SelectTrackAnchor(first));
-        Assert.True(state.Previewing);
+        Assert.Null(state.Selection.SelectTrackAnchor(first));
+        Assert.True(state.Transport.Previewing);
 
         Assert.Null(state.SwitchTrack(first));
-        Assert.True(state.Previewing);
+        Assert.True(state.Transport.Previewing);
 
         Assert.Null(state.SwitchTrack(state.Scene.Tracks[1].Id));
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
     }
 
     [Fact]
@@ -172,19 +172,19 @@ public class SessionPreviewTests
         var state = Editing();
 
         state.Play();
-        Assert.Null(state.SelectSceneAnchor());
-        Assert.True(state.Previewing);
+        Assert.Null(state.Selection.SelectSceneAnchor());
+        Assert.True(state.Transport.Previewing);
         state.BeginLiveEdit();
         Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(1f, 0f, 0f), 0f), carry: false));
         state.EndLiveEdit();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
 
         state.Play();
-        Assert.True(state.Previewing);
+        Assert.True(state.Transport.Previewing);
         state.BeginLiveEdit();
         Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(2f, 0f, 0f), 0f), carry: true));
         state.EndLiveEdit();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
     }
 
     [Fact]
@@ -192,7 +192,7 @@ public class SessionPreviewTests
     {
         var state = Editing();
         state.Play();
-        state.AdvancePreview(15f);
+        state.Transport.AdvancePreview(15f);
 
         Assert.True(state.Undo());
         Assert.Equal(2, state.Track.Points.Count);
@@ -206,12 +206,12 @@ public class SessionPreviewTests
         state.Play();
 
         state.Cue();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
         Assert.Equal(CameraMode.Live, state.Mode);
 
         state.Edit();
         state.Play();
         state.Release();
-        Assert.False(state.Previewing);
+        Assert.False(state.Transport.Previewing);
     }
 }

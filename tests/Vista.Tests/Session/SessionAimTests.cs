@@ -33,11 +33,11 @@ public class SessionAimTests
     public void ScrubbedFramesAimAtTheCharacterWhereTheyAreNow()
     {
         var (state, characters) = Watching();
-        AimsAt(A, state.FrameAt(0.0)!.Value, 3);
+        AimsAt(A, state.World.FrameAt(0.0)!.Value, 3);
 
         GuardAt(characters, B);
 
-        AimsAt(B, state.FrameAt(0.0)!.Value, 3);
+        AimsAt(B, state.World.FrameAt(0.0)!.Value, 3);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class SessionAimTests
         var (state, _) = Watching();
         state.Play();
 
-        AimsAt(A, state.AdvancePreview(1f / 60f)!.Value, 3);
+        AimsAt(A, state.Transport.AdvancePreview(1f / 60f)!.Value, 3);
     }
 
     [Fact]
@@ -61,8 +61,8 @@ public class SessionAimTests
         GuardAt(characters, B);
         state.Director.Tick(0.5f);
 
-        state.BeginScrub();
-        state.ScrubTo(1.0);
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(1.0);
         AimsAt(B, state.Director.Tick(1f / 60f)!.Value, 3);
     }
 
@@ -70,12 +70,12 @@ public class SessionAimTests
     public void TheSessionSaysWhenTheCharacterIsLost()
     {
         var (state, characters) = Watching();
-        Assert.False(state.TargetLost(state.Track));
-        Assert.Equal(A, state.TargetPoint(state.Track));
+        Assert.False(state.World.TargetLost(state.Track));
+        Assert.Equal(A, state.World.TargetPoint(state.Track));
 
         characters.Update([]);
 
-        Assert.True(state.TargetLost(state.Track));
-        Assert.Null(state.TargetPoint(state.Track));
+        Assert.True(state.World.TargetLost(state.Track));
+        Assert.Null(state.World.TargetPoint(state.Track));
     }
 }

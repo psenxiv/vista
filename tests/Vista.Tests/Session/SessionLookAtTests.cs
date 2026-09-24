@@ -112,23 +112,23 @@ public class SessionLookAtTests
     public void UndoingLookAtDropsItsSelectionAndRedoLeavesItDropped()
     {
         var state = Looking();
-        state.SelectLookAt(state.EditedTrackId);
+        state.Selection.SelectLookAt(state.EditedTrackId);
 
         Assert.True(state.Undo());
-        Assert.Null(state.SelectedAnchor);
-        Assert.Null(state.SelectedLookAtInWorld);
+        Assert.Null(state.Selection.Anchor);
+        Assert.Null(state.Selection.LookAtInWorld);
 
         Assert.True(state.Redo());
         Assert.Equal(AimMode.LookAt, state.Track.Aim);
-        Assert.Null(state.SelectedAnchor);
+        Assert.Null(state.Selection.Anchor);
     }
 
     [Fact]
     public void ALookAtDragBackToItsStartIsNoUndoStep()
     {
         var state = Looking();
-        state.SelectLookAt(state.EditedTrackId);
-        var start = state.SelectedLookAtInWorld!.Value;
+        state.Selection.SelectLookAt(state.EditedTrackId);
+        var start = state.Selection.LookAtInWorld!.Value;
         var couldUndo = state.CanUndo;
 
         state.BeginLiveEdit();
@@ -145,7 +145,7 @@ public class SessionLookAtTests
     public void UndoDuringALookAtDragPutsThePointBack()
     {
         var state = Looking();
-        state.SelectLookAt(state.EditedTrackId);
+        state.Selection.SelectLookAt(state.EditedTrackId);
         var start = state.Track.LookAt;
 
         state.BeginLiveEdit();
@@ -161,16 +161,16 @@ public class SessionLookAtTests
     public void TheLookAtPointCanBeSelectedOnlyUnderLookAt()
     {
         var state = Editing();
-        state.Select(1);
-        Assert.NotNull(state.SelectLookAt(state.EditedTrackId));
+        state.Selection.Select(1);
+        Assert.NotNull(state.Selection.SelectLookAt(state.EditedTrackId));
 
         state.SetAim(AimMode.LookAt, Camera);
 
-        Assert.Null(state.SelectLookAt(state.EditedTrackId));
-        Assert.Equal(AnchorKind.LookAt, state.SelectedAnchor);
-        Assert.Null(state.Selected);
-        Assert.Null(state.SelectedAnchorInWorld);
-        Near(new Vector3(10f, 5f, -10f), state.SelectedLookAtInWorld!.Value, 1e-4f);
+        Assert.Null(state.Selection.SelectLookAt(state.EditedTrackId));
+        Assert.Equal(AnchorKind.LookAt, state.Selection.Anchor);
+        Assert.Null(state.Selection.Point);
+        Assert.Null(state.Selection.AnchorInWorld);
+        Near(new Vector3(10f, 5f, -10f), state.Selection.LookAtInWorld!.Value, 1e-4f);
     }
 
     [Fact]
@@ -181,33 +181,33 @@ public class SessionLookAtTests
         state.AddTrack();
         state.AddToEnd(Point(40f));
 
-        Assert.Null(state.SelectLookAt(first));
+        Assert.Null(state.Selection.SelectLookAt(first));
 
         Assert.Equal(first, state.EditedTrackId);
-        Assert.Equal(AnchorKind.LookAt, state.SelectedAnchor);
+        Assert.Equal(AnchorKind.LookAt, state.Selection.Anchor);
     }
 
     [Fact]
     public void MovingTheLookAtLandsWhereItWasPutUnderTurnedAnchorsAsOneUndoStep()
     {
         var state = Looking();
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
         state.EndLiveEdit();
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
         state.EndLiveEdit();
-        state.SelectLookAt(state.EditedTrackId);
-        var before = state.SelectedLookAtInWorld!.Value;
+        state.Selection.SelectLookAt(state.EditedTrackId);
+        var before = state.Selection.LookAtInWorld!.Value;
         var target = new Vector3(12f, 6f, 8f);
 
         state.BeginLiveEdit();
         Assert.Null(state.PreviewLookAt(target));
         state.EndLiveEdit();
 
-        Near(target, state.SelectedLookAtInWorld!.Value, 1e-4f);
+        Near(target, state.Selection.LookAtInWorld!.Value, 1e-4f);
         Assert.True(state.Undo());
         Near(before, state.Track.LookAt, 1e-4f);
     }
@@ -216,7 +216,7 @@ public class SessionLookAtTests
     public void ALookAtDragIsOneUndoStep()
     {
         var state = Looking();
-        state.SelectLookAt(state.EditedTrackId);
+        state.Selection.SelectLookAt(state.EditedTrackId);
         var start = state.Track.LookAt;
 
         state.BeginLiveEdit();
@@ -234,7 +234,7 @@ public class SessionLookAtTests
     {
         var state = Looking();
         var before = state.Track.LookAt;
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
 
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false);
@@ -251,12 +251,12 @@ public class SessionLookAtTests
     public void LeavingLookAtDropsItsSelection()
     {
         var state = Looking();
-        state.SelectLookAt(state.EditedTrackId);
+        state.Selection.SelectLookAt(state.EditedTrackId);
 
         state.SetAim(AimMode.AimKeys, Camera);
 
-        Assert.Null(state.SelectedAnchor);
-        Assert.Null(state.SelectedLookAtInWorld);
+        Assert.Null(state.Selection.Anchor);
+        Assert.Null(state.Selection.LookAtInWorld);
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class SessionLookAtTests
         Assert.NotNull(state.PreviewLookAt(Vector3.Zero));
         state.EndLiveEdit();
 
-        state.SelectLookAt(state.EditedTrackId);
+        state.Selection.SelectLookAt(state.EditedTrackId);
 
         state.BeginLiveEdit();
         Assert.NotNull(state.PreviewAnchor(new Anchor(Vector3.Zero, 0f), carry: true));

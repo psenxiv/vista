@@ -53,26 +53,26 @@ public class SessionAnchorTests
     {
         var state = Editing();
         Assert.Same(state.Track, state.Track);
-        Assert.Same(state.WorldOf(state.Scene.Tracks[0]), state.Track);
+        Assert.Same(state.World.WorldOf(state.Scene.Tracks[0]), state.Track);
     }
 
     [Fact]
     public void SelectingAnAnchorClearsThePointAndSelectingAPointClearsTheAnchor()
     {
         var state = Editing();
-        state.Select(1);
+        state.Selection.Select(1);
 
-        Assert.Null(state.SelectSceneAnchor());
-        Assert.Equal(AnchorKind.Scene, state.SelectedAnchor);
-        Assert.Null(state.Selected);
+        Assert.Null(state.Selection.SelectSceneAnchor());
+        Assert.Equal(AnchorKind.Scene, state.Selection.Anchor);
+        Assert.Null(state.Selection.Point);
 
-        state.Select(2);
-        Assert.Null(state.SelectedAnchor);
+        state.Selection.Select(2);
+        Assert.Null(state.Selection.Anchor);
 
-        state.SelectTrackAnchor(state.EditedTrackId);
-        state.Select(null);
-        Assert.Null(state.SelectedAnchor);
-        Assert.Null(state.Selected);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.Select(null);
+        Assert.Null(state.Selection.Anchor);
+        Assert.Null(state.Selection.Point);
     }
 
     [Fact]
@@ -83,9 +83,9 @@ public class SessionAnchorTests
         state.AddTrack();
         state.AddToEnd(Point(40f));
 
-        Assert.Null(state.SelectTrackAnchor(first));
+        Assert.Null(state.Selection.SelectTrackAnchor(first));
         Assert.Equal(first, state.EditedTrackId);
-        Assert.Equal(AnchorKind.Track, state.SelectedAnchor);
+        Assert.Equal(AnchorKind.Track, state.Selection.Anchor);
     }
 
     [Fact]
@@ -93,16 +93,16 @@ public class SessionAnchorTests
     {
         var state = new SessionState();
         state.Edit();
-        Assert.NotNull(state.SelectSceneAnchor());
-        Assert.NotNull(state.SelectTrackAnchor(state.EditedTrackId));
-        Assert.Null(state.SelectedAnchor);
+        Assert.NotNull(state.Selection.SelectSceneAnchor());
+        Assert.NotNull(state.Selection.SelectTrackAnchor(state.EditedTrackId));
+        Assert.Null(state.Selection.Anchor);
     }
 
     [Fact]
     public void MovingTheSceneAnchorCarriesThePointsAsOneUndoStep()
     {
         var state = Editing();
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
         var before = state.Track.Points[2].Position;
 
         state.BeginLiveEdit();
@@ -118,7 +118,7 @@ public class SessionAnchorTests
     public void MovingAnAnchorAloneLeavesThePointsInTheWorld()
     {
         var state = Editing();
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
         var before = state.Track.Points.Select(p => p.Position).ToList();
 
         state.BeginLiveEdit();
@@ -126,14 +126,14 @@ public class SessionAnchorTests
         state.EndLiveEdit();
 
         for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);
-        Near(new Vector3(-4f, 0f, 9f), state.SelectedAnchorInWorld!.Value.Position, 1e-4f);
+        Near(new Vector3(-4f, 0f, 9f), state.Selection.AnchorInWorld!.Value.Position, 1e-4f);
     }
 
     [Fact]
     public void APointReplacedInTheWorldLandsWhereItWasPut()
     {
         var state = Editing();
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(3f, 0f, -2f), 0.9f), carry: true);
         state.EndLiveEdit();
@@ -149,7 +149,7 @@ public class SessionAnchorTests
     public void AnAnchorDragIsOneUndoStepAndADragBackIsNone()
     {
         var state = Editing();
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
         var start = state.Scene.Anchor;
 
         state.BeginLiveEdit();
@@ -207,7 +207,7 @@ public class SessionAnchorTests
         Assert.Equal(1, reads);
 
         state.AddToEnd(Point(20f));
-        state.Select(0);
+        state.Selection.Select(0);
         state.AddAfterSelected(Point(15f));
 
         Assert.Equal(1, reads);
@@ -218,7 +218,7 @@ public class SessionAnchorTests
     public void ClearKeepsTheAnchorSoTheNextPointIsNotReplaced()
     {
         var state = Editing();
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(0f, 0f, 0f), 0f), carry: false);
         state.EndLiveEdit();
@@ -238,7 +238,7 @@ public class SessionAnchorTests
         state.DuplicateTrack(state.EditedTrackId);
 
         for (var i = 0; i < 3; i++)
-            Near(state.WorldOf(state.Scene.Tracks[0]).Points[i].Position, state.Track.Points[i].Position, 1e-4f);
+            Near(state.World.WorldOf(state.Scene.Tracks[0]).Points[i].Position, state.Track.Points[i].Position, 1e-4f);
     }
 
     [Fact]
@@ -247,12 +247,12 @@ public class SessionAnchorTests
         var state = new SessionState(_ => 1f);
         state.Edit();
         state.AddToEnd(Point(10f));
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
 
         Assert.True(state.Undo());
 
         Assert.False(state.Scene.AnchorPlaced);
-        Assert.Null(state.SelectedAnchor);
+        Assert.Null(state.Selection.Anchor);
         state.BeginLiveEdit();
         Assert.NotNull(state.PreviewAnchor(new Anchor(Vector3.Zero, 0f), carry: true));
         state.EndLiveEdit();
@@ -264,22 +264,22 @@ public class SessionAnchorTests
         var state = Editing();
         state.AddTrack();
         state.AddToEnd(Point(40f));
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
 
         Assert.True(state.Undo());
 
         Assert.False(state.Scene.Tracks[1].AnchorPlaced);
-        Assert.Null(state.SelectedAnchor);
+        Assert.Null(state.Selection.Anchor);
     }
 
     [Fact]
     public void MovingAnAnchorToWhereItIsRecordsNoStep()
     {
         var state = Editing();
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
 
         state.BeginLiveEdit();
-        Assert.Null(state.PreviewAnchor(state.SelectedAnchorInWorld!.Value, carry: true));
+        Assert.Null(state.PreviewAnchor(state.Selection.AnchorInWorld!.Value, carry: true));
         state.EndLiveEdit();
 
         Assert.True(state.Undo());
@@ -295,7 +295,7 @@ public class SessionAnchorTests
         state.AddToEnd(Point(40f));
         var second = state.EditedTrackId;
         state.SwitchTrack(first);
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(-7f, 2f, 11f), 0.8f), carry: true);
         state.EndLiveEdit();
@@ -311,11 +311,11 @@ public class SessionAnchorTests
     private static SessionState EditingWithTurnedAnchors()
     {
         var state = Editing();
-        state.SelectSceneAnchor();
+        state.Selection.SelectSceneAnchor();
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);
         state.EndLiveEdit();
-        state.SelectTrackAnchor(state.EditedTrackId);
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(80f, 1f, 30f), -1.1f), carry: true);
         state.EndLiveEdit();
@@ -338,7 +338,7 @@ public class SessionAnchorTests
     public void AddingAfterSelectedLandsWhereItWasPutUnderTurnedAnchors()
     {
         var state = EditingWithTurnedAnchors();
-        state.Select(1);
+        state.Selection.Select(1);
         var target = new ControlPoint(new Vector3(-30f, 2f, 77f), -0.4f, 0f, 1f);
 
         Assert.Null(state.AddAfterSelected(target));

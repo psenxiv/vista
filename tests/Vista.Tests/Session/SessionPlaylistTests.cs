@@ -92,13 +92,13 @@ public class SessionPlaylistTests
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(2.0, state.ScrubLength, 4);
+        Assert.Equal(2.0, state.Transport.ScrubLength, 4);
 
         state.Play();
         state.Director.Tick(3f);
         Assert.Equal(state.Scene.Playlist[2].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.ScrubHead, 4);
-        Assert.Equal(10.0, state.ScrubLength, 4);
+        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
+        Assert.Equal(10.0, state.Transport.ScrubLength, 4);
     }
 
     [Fact]
@@ -111,12 +111,12 @@ public class SessionPlaylistTests
         state.Play();
         state.Director.Tick(3f);
 
-        state.BeginScrub();
-        state.ScrubTo(7.0);
-        state.EndScrub();
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(7.0);
+        state.Transport.EndScrub();
 
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(7.0, state.ScrubHead, 4);
+        Assert.Equal(7.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -128,12 +128,12 @@ public class SessionPlaylistTests
         state.Cue();
         state.Play();
 
-        state.BeginScrub();
-        state.ScrubTo(99.0);
-        state.EndScrub();
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(99.0);
+        state.Transport.EndScrub();
 
         Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(2.0, state.ScrubHead, 4);
+        Assert.Equal(2.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -147,10 +147,10 @@ public class SessionPlaylistTests
 
         Assert.True(state.Director.IsFinished);
         Assert.Equal(CameraMode.Live, state.Mode);
-        Assert.Equal(2.0, state.ScrubHead, 4);
+        Assert.Equal(2.0, state.Transport.ScrubHead, 4);
 
         Assert.Equal(PlayOutcome.Started, state.Play());
-        Assert.Equal(0.0, state.ScrubHead, 4);
+        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class SessionPlaylistTests
         state.Restart();
 
         Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(0.0, state.ScrubHead, 4);
+        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class SessionPlaylistTests
         state.Restart();
 
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(0.0, state.ScrubHead, 4);
+        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -197,14 +197,14 @@ public class SessionPlaylistTests
         state.Director.Tick(1f);
 
         state.Edit();
-        Assert.Equal(1.0, state.ScrubHead, 4);
+        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
 
         state.SwitchTrack(First(state));
         state.Cue();
         state.Play();
         state.Director.Tick(1f);
         state.Edit();
-        Assert.Equal(0.0, state.ScrubHead, 4);
+        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class SessionPlaylistTests
 
         Assert.False(state.Director.IsFinished);
         Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.ScrubHead, 4);
+        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class SessionPlaylistTests
 
         Assert.False(state.Director.IsFinished);
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.ScrubHead, 4);
+        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
     }
 
     [Fact]

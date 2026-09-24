@@ -41,22 +41,22 @@ public class SessionSceneTests
 
         Assert.Equal(3, state.Scene.Tracks[0].Points.Count);
         Assert.Single(state.Scene.Tracks[1].Points);
-        Assert.Same(state.WorldOf(state.Scene.Tracks[1]), state.Track);
+        Assert.Same(state.World.WorldOf(state.Scene.Tracks[1]), state.Track);
     }
 
     [Fact]
     public void AddTrackSwitchesToItAndClearsTheSelectionAndScrubHead()
     {
         var state = Editing();
-        state.Select(1);
-        state.ScrubTo(3.0);
+        state.Selection.Select(1);
+        state.Transport.ScrubTo(3.0);
 
         state.AddTrack();
 
         Assert.Equal(state.Scene.Tracks[1].Id, state.EditedTrackId);
-        Assert.Null(state.Selected);
-        Assert.Null(state.SelectedKey);
-        Assert.Equal(0.0, state.ScrubHead);
+        Assert.Null(state.Selection.Point);
+        Assert.Null(state.Selection.Key);
+        Assert.Equal(0.0, state.Transport.ScrubHead);
     }
 
     [Fact]
@@ -67,14 +67,14 @@ public class SessionSceneTests
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(First(state));
-        state.Select(2);
-        state.ScrubTo(4.0);
+        state.Selection.Select(2);
+        state.Transport.ScrubTo(4.0);
 
         Assert.Null(state.SwitchTrack(second));
 
         Assert.Equal(second, state.EditedTrackId);
-        Assert.Null(state.Selected);
-        Assert.Equal(0.0, state.ScrubHead);
+        Assert.Null(state.Selection.Point);
+        Assert.Equal(0.0, state.Transport.ScrubHead);
         Assert.True(state.Undo());
         Assert.Equal(2, state.Scene.Tracks.Count);
     }
@@ -87,7 +87,7 @@ public class SessionSceneTests
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
-        state.Select(1);
+        state.Selection.Select(1);
         state.AddToEnd(Point(30f));
         state.SwitchTrack(second);
 
@@ -95,13 +95,13 @@ public class SessionSceneTests
 
         Assert.Equal(first, state.EditedTrackId);
         Assert.Equal(3, state.Track.Points.Count);
-        Assert.Equal(1, state.Selected);
+        Assert.Equal(1, state.Selection.Point);
 
         Assert.True(state.Redo());
 
         Assert.Equal(second, state.EditedTrackId);
         Assert.Equal(4, state.Scene.Tracks[0].Points.Count);
-        Assert.Null(state.Selected);
+        Assert.Null(state.Selection.Point);
     }
 
     [Fact]
@@ -170,12 +170,12 @@ public class SessionSceneTests
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(First(state));
-        state.Select(1);
+        state.Selection.Select(1);
 
         Assert.Null(state.DeleteTracks([second]));
 
         Assert.Equal(First(state), state.EditedTrackId);
-        Assert.Equal(1, state.Selected);
+        Assert.Equal(1, state.Selection.Point);
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public class SessionSceneTests
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(first, state.PlayingEntry!.TrackId);
-        Assert.Equal(10.0, state.ScrubLength, 3);
+        Assert.Equal(10.0, state.Transport.ScrubLength, 3);
 
         state.Release();
         Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
