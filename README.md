@@ -2,15 +2,17 @@
 
 # Vista
 
-Create smooth, cinematic camera paths in FFXIV, organise them into scenes, and play them back live.
+Create smooth, cinematic camera tracks in FFXIV, organise them into scenes, and play them back live.
 
 Vista is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin. Open it with `/vista`.
 
 ## About this project
 
-Vista is a personal project. I had a specific camera tool in mind for myself and a few friends, and I wanted to use it now rather than in a few months. It's open to the community, but it isn't built for the community. If you find it useful, awesome. Just know that there is no long-term roadmap or vision beyond the features I have planned and that friends ask for.
+Vista is a hobby project built for my own use and a small group of friends. It's available to the community, but it isn't built for the community. What gets worked on comes from my own needs and feedback from people I know. There's no roadmap and no promise of support.
 
-It's also built with heavy use of AI coding tools. I'm a software engineer, so I've tried to do it sensibly: I design it, review it and test it in game, and every change goes through a written spec and automated tests. If that's not your thing, fair enough, no hard feelings.
+It's also built with heavy use of AI coding tools. I've tried to do it sensibly: I design it, review it and test it in game, and changes go through a written spec and automated tests.
+
+Install steps are below. Once it's installed, open the User Guide with the ? at the top right of the Vista window.
 
 ## Installing
 
@@ -25,17 +27,11 @@ https://raw.githubusercontent.com/psenxiv/vista/main/repo.json
 
 ## What it does
 
-- **Tracks.** Fly a free camera and drop points to lay out a path. Set each leg's timing, holds and
-  easing, and play the path forwards, in reverse or ping-pong, once or on a loop.
-- **Aim.** A track looks along the aim you recorded, along its path, at a fixed point (Look At), or
-  keeps a character in frame (Watch Target). A one-point track can ride along with a character
-  (Follow Target).
-- **Scenes.** Tracks sit on anchors you can move and turn, so a whole setup can be picked up and
-  placed somewhere else.
-- **Playlist and Live.** Line tracks up in a playlist with repeat counts, then play it live, with the
-  game UI hidden if you want.
-- **Modes.** Off leaves the game alone, View shows your scene over the normal game camera, Edit is
-  where you build it, and Live plays it. Your scene stays put when you change zone.
+- **Tracks.** Fly a free camera and drop points to lay out a path. Set each leg's timing, holds and easing, and play the path forwards, in reverse or ping-pong, once or on a loop.
+- **Aim.** A track looks along the aim you recorded, along its path, at a fixed point (Look At), or keeps a character in frame (Watch Target). A one-point track can ride along with a character (Follow Target).
+- **Scenes.** Tracks sit on anchors you can move and turn, so a whole setup can be picked up and placed somewhere else.
+- **Playlist and Live.** Line tracks up in a playlist with repeat counts, then play it live, with the game UI hidden if you want.
+- **Modes.** Off leaves the game alone, View shows your scene over the normal game camera, Edit is where you build it, and Live plays it. Your scene stays put when you change zone.
 
 ## Keys
 
