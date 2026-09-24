@@ -12,7 +12,7 @@ internal static unsafe class GameUi
 
     /// <summary>Hides the game UI if it is showing, and remembers that we did.</summary>
     public static void Hide() =>
-        Plugin.Framework.RunOnFrameworkThread(() =>
+        OnGameThread(() =>
         {
             var module = RaptureAtkModule.Instance();
             if (module == null || !module->IsUiVisible)
@@ -24,7 +24,7 @@ internal static unsafe class GameUi
 
     /// <summary>Shows the game UI again, only if we were the ones who hid it.</summary>
     public static void Restore() =>
-        Plugin.Framework.RunOnFrameworkThread(() =>
+        OnGameThread(() =>
         {
             var module = RaptureAtkModule.Instance();
             var visible = module != null && module->IsUiVisible;
@@ -39,4 +39,15 @@ internal static unsafe class GameUi
                 module != null && module->IsUiVisible
             );
         });
+
+    /// <summary>Runs <paramref name="action"/> on the game's thread, logging it if it throws.</summary>
+    private static void OnGameThread(Action action) =>
+        _ = Plugin
+            .Framework.RunOnFrameworkThread(action)
+            .ContinueWith(
+                t => Plugin.Log.Error(t.Exception!.InnerException ?? t.Exception, "[ui] toggling the game UI failed"),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default
+            );
 }
