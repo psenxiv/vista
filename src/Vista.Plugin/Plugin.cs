@@ -1,10 +1,3 @@
-using Vista.Core.Session;
-using Vista.Plugin.Editor;
-using Vista.Plugin.Game;
-using Vista.Plugin.Session;
-using Vista.Plugin.Ui.Main;
-using Vista.Plugin.Ui.Widgets;
-using Vista.Plugin.Ui.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
@@ -13,6 +6,13 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using Vista.Core.Session;
+using Vista.Plugin.Editor;
+using Vista.Plugin.Game;
+using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Main;
+using Vista.Plugin.Ui.Widgets;
+using Vista.Plugin.Ui.Windows;
 
 namespace Vista.Plugin;
 
@@ -20,16 +20,35 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/vista";
 
-    [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-    [PluginService] internal static IPluginLog Log { get; private set; } = null!;
-    [PluginService] internal static IFramework Framework { get; private set; } = null!;
-    [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
-    [PluginService] internal static IGameInteropProvider Hooks { get; private set; } = null!;
-    [PluginService] internal static IClientState ClientState { get; private set; } = null!;
-    [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
-    [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
-    [PluginService] internal static ICondition Condition { get; private set; } = null!;
-    [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService]
+    internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+
+    [PluginService]
+    internal static IPluginLog Log { get; private set; } = null!;
+
+    [PluginService]
+    internal static IFramework Framework { get; private set; } = null!;
+
+    [PluginService]
+    internal static ICommandManager CommandManager { get; private set; } = null!;
+
+    [PluginService]
+    internal static IGameInteropProvider Hooks { get; private set; } = null!;
+
+    [PluginService]
+    internal static IClientState ClientState { get; private set; } = null!;
+
+    [PluginService]
+    internal static IObjectTable ObjectTable { get; private set; } = null!;
+
+    [PluginService]
+    internal static IKeyState KeyState { get; private set; } = null!;
+
+    [PluginService]
+    internal static ICondition Condition { get; private set; } = null!;
+
+    [PluginService]
+    internal static ISigScanner SigScanner { get; private set; } = null!;
 
     internal static CameraController Camera { get; private set; } = null!;
     internal static InputBlocker Input { get; private set; } = null!;
@@ -74,9 +93,17 @@ public sealed class Plugin : IDalamudPlugin
         watchTargetWindow = new WatchTargetWindow(game.State, game.Characters);
         followTargetWindow = new FollowTargetWindow(game.State, game.Characters);
         trackEditor = new TrackEditorWindow(
-            game, config, fields,
-            timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow,
-            sceneFiles, setupWindow);
+            game,
+            config,
+            fields,
+            timingWindow,
+            cameraWindow,
+            guideWindow,
+            watchTargetWindow,
+            followTargetWindow,
+            sceneFiles,
+            setupWindow
+        );
 
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
@@ -89,7 +116,8 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(setupWindow);
 
         sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
-        if (sceneFiles.Lost) setupWindow.IsOpen = true;
+        if (sceneFiles.Lost)
+            setupWindow.IsOpen = true;
 
         Camera = new CameraController(() => game.Frame((float)Framework.UpdateDelta.TotalSeconds));
         Input = new InputBlocker(() => game.State.LocksInput, () => blockEscape);
@@ -99,12 +127,12 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;
         Framework.Update += OnFrameworkUpdate;
         ClientState.Logout += OnLogout;
-        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
-        {
-            HelpMessage = "/vista opens the editor"
-        });
+        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) { HelpMessage = "/vista opens the editor" });
 
-        Log.Information("Vista loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown");
+        Log.Information(
+            "Vista loaded. Build {Build}.",
+            typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown"
+        );
     }
 
     private void OnCommand(string command, string args)
@@ -143,11 +171,13 @@ public sealed class Plugin : IDalamudPlugin
         // The game's own Escape handling is held off while we hide its UI, and until that
         // Escape is released, so it does not also open the system menu.
         var escape = KeyState[VirtualKey.ESCAPE];
-        if (escape && !escapeWasDown && game.State.Mode == CameraMode.Live) GameUi.Restore();
+        if (escape && !escapeWasDown && game.State.Mode == CameraMode.Live)
+            GameUi.Restore();
         escapeWasDown = escape;
         blockEscape = GameUi.HiddenByUs || (blockEscape && escape);
 
-        if (!game.OwnsCamera) return;
+        if (!game.OwnsCamera)
+            return;
 
         // Covers every transition: a teleport, an aethernet hop, a cutscene, a duty starting.
         if (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51])
@@ -158,14 +188,17 @@ public sealed class Plugin : IDalamudPlugin
 
         // Someone else reset the shared counter. Stop tracking our hold so we never
         // decrement theirs, but keep flying: dropping a shot mid-take is worse.
-        if (Movement.Held && Movement.Count == 0) Movement.Forget();
+        if (Movement.Held && Movement.Count == 0)
+            Movement.Forget();
     }
 
     /// <summary>Opens the Vista window, or Setup in its place while there is no save folder.</summary>
     private void OpenTrackEditor()
     {
-        if (sceneFiles.Ready) trackEditor.IsOpen = true;
-        else setupWindow.IsOpen = true;
+        if (sceneFiles.Ready)
+            trackEditor.IsOpen = true;
+        else
+            setupWindow.IsOpen = true;
     }
 
     /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
@@ -192,8 +225,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.Draw();
     }
 
-    private void OnLogout(int type, int code)
-        => game.Release("logout");
+    private void OnLogout(int type, int code) => game.Release("logout");
 
     public void Dispose()
     {

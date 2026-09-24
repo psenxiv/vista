@@ -13,14 +13,23 @@ public static class ScreenProjection
     }
 
     /// <summary>Pixel end points of a segment cut to the part at least <paramref name="nearW"/> in front of the camera, or null when none of it is.</summary>
-    public static (Vector2 Start, Vector2 End)? ProjectSegment(Vector3 start, Vector3 end, Matrix4x4 viewProjection, Vector2 viewport, float nearW)
+    public static (Vector2 Start, Vector2 End)? ProjectSegment(
+        Vector3 start,
+        Vector3 end,
+        Matrix4x4 viewProjection,
+        Vector2 viewport,
+        float nearW
+    )
     {
         var a = Vector4.Transform(new Vector4(start, 1f), viewProjection);
         var b = Vector4.Transform(new Vector4(end, 1f), viewProjection);
-        if (a.W < nearW && b.W < nearW) return null;
+        if (a.W < nearW && b.W < nearW)
+            return null;
 
-        if (a.W < nearW) a = Vector4.Lerp(a, b, (nearW - a.W) / (b.W - a.W));
-        else if (b.W < nearW) b = Vector4.Lerp(b, a, (nearW - b.W) / (a.W - b.W));
+        if (a.W < nearW)
+            a = Vector4.Lerp(a, b, (nearW - a.W) / (b.W - a.W));
+        else if (b.W < nearW)
+            b = Vector4.Lerp(b, a, (nearW - b.W) / (a.W - b.W));
 
         return (ToPixels(a, viewport), ToPixels(b, viewport));
     }

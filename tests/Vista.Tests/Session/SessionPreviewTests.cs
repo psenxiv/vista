@@ -41,7 +41,11 @@ public class SessionPreviewTests
     [InlineData(PlaybackDirection.Forward, 10.0, 0.0)]
     [InlineData(PlaybackDirection.Reverse, 0.0, 10.0)]
     [InlineData(PlaybackDirection.PingPong, 0.0, 0.0)]
-    public void PlayFromWhereTheShotFinishesStartsFromTheBeginning(PlaybackDirection direction, double finish, double start)
+    public void PlayFromWhereTheShotFinishesStartsFromTheBeginning(
+        PlaybackDirection direction,
+        double finish,
+        double start
+    )
     {
         var state = Editing();
         state.ChangeTrack(t => TrackEditing.SetDirection(t, direction));

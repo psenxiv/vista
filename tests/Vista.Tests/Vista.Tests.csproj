@@ -11,7 +11,11 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="../../src/Vista.Plugin/Demo/*.json" Link="Demo/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None
+      Include="../../src/Vista.Plugin/Demo/*.json"
+      Link="Demo/%(Filename)%(Extension)"
+      CopyToOutputDirectory="PreserveNewest"
+    />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Vista.Core/Vista.Core.csproj" />

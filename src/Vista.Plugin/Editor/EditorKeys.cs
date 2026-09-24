@@ -1,14 +1,23 @@
+using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Session;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
-using Dalamud.Game.ClientState.Keys;
 
 namespace Vista.Plugin.Editor;
 
 /// <summary>The key bindings for the modes Vista owns the camera in, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys
 {
-    private static readonly VirtualKey[] Watched = [VirtualKey.SPACE, VirtualKey.OEM_3, VirtualKey.Z, VirtualKey.Y, VirtualKey.R, VirtualKey.DELETE, VirtualKey.BACK];
+    private static readonly VirtualKey[] Watched =
+    [
+        VirtualKey.SPACE,
+        VirtualKey.OEM_3,
+        VirtualKey.Z,
+        VirtualKey.Y,
+        VirtualKey.R,
+        VirtualKey.DELETE,
+        VirtualKey.BACK,
+    ];
 
     private readonly bool[] held = new bool[Watched.Length];
     private bool heatHeld;
@@ -18,7 +27,11 @@ internal sealed class EditorKeys
     {
         var session = game.State;
         ToggleHeat(session, layer);
-        if (session.Released || PhysicalKeys.IsTyping()) { Array.Clear(held); return; }
+        if (session.Released || PhysicalKeys.IsTyping())
+        {
+            Array.Clear(held);
+            return;
+        }
 
         var editing = session.Mode == CameraMode.Editing;
 
@@ -31,12 +44,16 @@ internal sealed class EditorKeys
             var down = PhysicalKeys.IsDown(key);
             var pressed = down && !held[i];
             held[i] = down;
-            if (!down) continue;
+            if (!down)
+                continue;
 
             var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.Selection.Points.Count > 0;
-            var ours = key == VirtualKey.SPACE || (editing && (key is VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes));
-            if (ours) PhysicalKeys.Hide(key);
-            if (pressed && ours) Act(game, gizmo, key, ctrl, alt);
+            var ours =
+                key == VirtualKey.SPACE || (editing && (key is VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes));
+            if (ours)
+                PhysicalKeys.Hide(key);
+            if (pressed && ours)
+                Act(game, gizmo, key, ctrl, alt);
         }
     }
 
@@ -44,12 +61,17 @@ internal sealed class EditorKeys
     private void ToggleHeat(SessionState session, EditorLayer layer)
     {
         var mode = session.Mode;
-        var modified = PhysicalKeys.IsDown(VirtualKey.CONTROL) || PhysicalKeys.IsDown(VirtualKey.SHIFT) || PhysicalKeys.IsDown(VirtualKey.MENU);
+        var modified =
+            PhysicalKeys.IsDown(VirtualKey.CONTROL)
+            || PhysicalKeys.IsDown(VirtualKey.SHIFT)
+            || PhysicalKeys.IsDown(VirtualKey.MENU);
         var shown = mode == CameraMode.View || (mode == CameraMode.Editing && !session.Transport.Previewing);
         var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
-        if (down && !heatHeld) layer.Heat = !layer.Heat;
+        if (down && !heatHeld)
+            layer.Heat = !layer.Heat;
         heatHeld = down;
-        if (down && mode == CameraMode.Editing) PhysicalKeys.Hide(VirtualKey.G);
+        if (down && mode == CameraMode.Editing)
+            PhysicalKeys.Hide(VirtualKey.G);
     }
 
     private static void Act(GameSession game, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
@@ -65,19 +87,24 @@ internal sealed class EditorKeys
             VirtualKey.OEM_3 => game.AddToEnd(),
             VirtualKey.Z => session.Undo() ? null : "Nothing to undo.",
             VirtualKey.Y => session.Redo() ? null : "Nothing to redo.",
-            VirtualKey.R when session.Selection.Point is not null || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
+            VirtualKey.R
+                when session.Selection.Point is not null
+                    || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
             VirtualKey.DELETE or VirtualKey.BACK => session.DeleteSelected(),
             _ => null,
         };
 
-        if (refusal is not null) Plugin.Log.Debug("[editor] {Key}: {Refusal}", key.ToString(), refusal);
+        if (refusal is not null)
+            Plugin.Log.Debug("[editor] {Key}: {Refusal}", key.ToString(), refusal);
     }
 
     /// <summary>Space does what the Play button would: pauses a running shot, starts one otherwise.</summary>
     private static string? Transport(GameSession game)
     {
-        if (game.State.IsPlaying) game.StopPlay();
-        else game.StartPlay();
+        if (game.State.IsPlaying)
+            game.StopPlay();
+        else
+            game.StartPlay();
         return null;
     }
 

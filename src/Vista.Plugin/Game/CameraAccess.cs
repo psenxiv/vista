@@ -1,7 +1,7 @@
 using System.Numerics;
-using Vista.Core.Camera;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using Vista.Core.Camera;
 
 namespace Vista.Plugin.Game;
 
@@ -13,7 +13,8 @@ internal static unsafe class CameraAccess
     {
         camera = null;
         var manager = CameraManager.Instance();
-        if (manager == null) return false;
+        if (manager == null)
+            return false;
 
         camera = manager->Camera;
         return camera != null;
@@ -22,7 +23,8 @@ internal static unsafe class CameraAccess
     /// <summary>Reads the camera's current position, look-at and field of view.</summary>
     public static CameraState? ReadState()
     {
-        if (!TryGetWorldCamera(out var camera)) return null;
+        if (!TryGetWorldCamera(out var camera))
+            return null;
 
         var scene = &camera->CameraBase.SceneCamera;
         return new CameraState(scene->Object.Position, scene->LookAtVector, camera->FoV);
@@ -31,14 +33,16 @@ internal static unsafe class CameraAccess
     /// <summary>The world camera's yaw and pitch in radians, as DirH and DirV.</summary>
     public static (float Yaw, float Pitch)? ReadAngles()
     {
-        if (!TryGetWorldCamera(out var camera)) return null;
+        if (!TryGetWorldCamera(out var camera))
+            return null;
         return (camera->DirH, camera->DirV);
     }
 
     /// <summary>Sets the world camera's yaw and pitch in radians, as DirH and DirV; probe 2 showed both are runtime state, not saved settings.</summary>
     public static void WriteAngles(float yaw, float pitch)
     {
-        if (!TryGetWorldCamera(out var camera)) return;
+        if (!TryGetWorldCamera(out var camera))
+            return;
         camera->DirH = yaw;
         camera->DirV = pitch;
     }
@@ -46,7 +50,8 @@ internal static unsafe class CameraAccess
     /// <summary>The lowest and highest pitch the game allows, in radians.</summary>
     public static (float Min, float Max)? ReadPitchLimits()
     {
-        if (!TryGetWorldCamera(out var camera)) return null;
+        if (!TryGetWorldCamera(out var camera))
+            return null;
         return (camera->DirVMin, camera->DirVMax);
     }
 
@@ -56,7 +61,8 @@ internal static unsafe class CameraAccess
     /// <summary>Captures the game's camera state before we start overwriting it.</summary>
     public static Snapshot? Capture()
     {
-        if (!TryGetWorldCamera(out var camera)) return null;
+        if (!TryGetWorldCamera(out var camera))
+            return null;
 
         var scene = &camera->CameraBase.SceneCamera;
         return new Snapshot(scene->Object.Position, scene->LookAtVector, scene->Vector_1, camera->FoV);
@@ -65,7 +71,8 @@ internal static unsafe class CameraAccess
     /// <summary>Puts back everything WriteState changed.</summary>
     public static void Restore(Snapshot snapshot)
     {
-        if (!TryGetWorldCamera(out var camera)) return;
+        if (!TryGetWorldCamera(out var camera))
+            return;
 
         var scene = &camera->CameraBase.SceneCamera;
         scene->Object.Position = snapshot.Position;
@@ -77,7 +84,8 @@ internal static unsafe class CameraAccess
     /// <summary>Overwrites camera position and look-at.</summary>
     public static void WriteState(CameraState state)
     {
-        if (!TryGetWorldCamera(out var camera)) return;
+        if (!TryGetWorldCamera(out var camera))
+            return;
 
         var scene = &camera->CameraBase.SceneCamera;
         scene->Object.Position = state.Position;

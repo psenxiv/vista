@@ -4,7 +4,15 @@ using System.Text.RegularExpressions;
 namespace Vista.Core.Guide;
 
 /// <summary>How a run of text is shown.</summary>
-public enum RunStyle { Plain, Bold, Command, Key, Icon, Link }
+public enum RunStyle
+{
+    Plain,
+    Bold,
+    Command,
+    Key,
+    Icon,
+    Link,
+}
 
 /// <summary>A stretch of text in one style: an icon's name for Icon, and a page file in <paramref name="Target"/> for Link.</summary>
 public readonly record struct Run(string Text, RunStyle Style, string? Target = null);
@@ -20,7 +28,10 @@ public sealed record BulletList(IReadOnlyList<IReadOnlyList<Run>> Items) : Block
 
 public sealed record NumberedList(IReadOnlyList<IReadOnlyList<Run>> Items) : Block;
 
-public sealed record Table(IReadOnlyList<IReadOnlyList<Run>> Header, IReadOnlyList<IReadOnlyList<IReadOnlyList<Run>>> Rows) : Block;
+public sealed record Table(
+    IReadOnlyList<IReadOnlyList<Run>> Header,
+    IReadOnlyList<IReadOnlyList<IReadOnlyList<Run>>> Rows
+) : Block;
 
 public sealed record Divider : Block;
 
@@ -35,7 +46,8 @@ public static partial class GuideMarkdown
 
         void EndParagraph()
         {
-            if (paragraph.Count == 0) return;
+            if (paragraph.Count == 0)
+                return;
             blocks.Add(new Paragraph(Inline(string.Join(' ', paragraph))));
             paragraph.Clear();
         }
@@ -43,14 +55,19 @@ public static partial class GuideMarkdown
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
-            if (string.IsNullOrWhiteSpace(line)) { EndParagraph(); continue; }
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                EndParagraph();
+                continue;
+            }
 
             if (HeadingLine().Match(line) is { Success: true } heading)
             {
                 EndParagraph();
                 var level = heading.Groups["marks"].Length;
                 // Each section heading sits under a faint line, unless the page starts with it or one is already there.
-                if (level == 2 && blocks.Count > 0 && blocks[^1] is not Divider) blocks.Add(new Divider());
+                if (level == 2 && blocks.Count > 0 && blocks[^1] is not Divider)
+                    blocks.Add(new Divider());
                 blocks.Add(new Heading(level, Inline(heading.Groups["text"].Value.Trim())));
                 continue;
             }
@@ -61,13 +78,19 @@ public static partial class GuideMarkdown
                 var header = Cells(line);
                 var rows = new List<IReadOnlyList<IReadOnlyList<Run>>>();
                 i += 2;
-                while (i < lines.Length && IsTableRow(lines[i])) rows.Add(Cells(lines[i++]));
+                while (i < lines.Length && IsTableRow(lines[i]))
+                    rows.Add(Cells(lines[i++]));
                 i--;
                 blocks.Add(new Table(header, rows));
                 continue;
             }
 
-            if (DividerLine().IsMatch(line)) { EndParagraph(); blocks.Add(new Divider()); continue; }
+            if (DividerLine().IsMatch(line))
+            {
+                EndParagraph();
+                blocks.Add(new Divider());
+                continue;
+            }
 
             if (BulletItem().IsMatch(line) || NumberedItem().IsMatch(line))
             {
@@ -81,14 +104,16 @@ public static partial class GuideMarkdown
                     var next = lines[i];
                     if (marker.Match(next) is { Success: true } start)
                     {
-                        if (item.Length > 0) items.Add(Inline(item.ToString()));
+                        if (item.Length > 0)
+                            items.Add(Inline(item.ToString()));
                         item.Clear().Append(start.Groups["text"].Value.Trim());
                     }
                     else if (!string.IsNullOrWhiteSpace(next) && char.IsWhiteSpace(next[0]))
                     {
                         item.Append(' ').Append(next.Trim());
                     }
-                    else break;
+                    else
+                        break;
                 }
 
                 items.Add(Inline(item.ToString()));
@@ -112,29 +137,43 @@ public static partial class GuideMarkdown
 
         void Add(string value, RunStyle style, string? target = null)
         {
-            if (plain.Length > 0) { runs.Add(new Run(plain.ToString(), RunStyle.Plain)); plain.Clear(); }
+            if (plain.Length > 0)
+            {
+                runs.Add(new Run(plain.ToString(), RunStyle.Plain));
+                plain.Clear();
+            }
             runs.Add(new Run(value, style, target));
         }
 
         void AddSpan(string span)
         {
-            if (span.StartsWith('/')) { Add(span, RunStyle.Command); return; }
+            if (span.StartsWith('/'))
+            {
+                Add(span, RunStyle.Command);
+                return;
+            }
             var keys = span.Split(" + ");
             for (var k = 0; k < keys.Length; k++)
             {
-                if (k > 0) plain.Append(" + ");
+                if (k > 0)
+                    plain.Append(" + ");
                 Add(keys[k], RunStyle.Key);
             }
         }
 
-        for (var i = 0; i < text.Length;)
+        for (var i = 0; i < text.Length; )
         {
             if (text[i] == '`' && text.IndexOf('`', i + 1) is var tick and > 0)
             {
                 AddSpan(text[(i + 1)..tick]);
                 i = tick + 1;
             }
-            else if (i + 1 < text.Length && text[i] == '*' && text[i + 1] == '*' && text.IndexOf("**", i + 2, StringComparison.Ordinal) is var close and > 0)
+            else if (
+                i + 1 < text.Length
+                && text[i] == '*'
+                && text[i + 1] == '*'
+                && text.IndexOf("**", i + 2, StringComparison.Ordinal) is var close and > 0
+            )
             {
                 Add(text[(i + 2)..close], RunStyle.Bold);
                 i = close + 2;
@@ -155,7 +194,8 @@ public static partial class GuideMarkdown
             }
         }
 
-        if (plain.Length > 0) runs.Add(new Run(plain.ToString(), RunStyle.Plain));
+        if (plain.Length > 0)
+            runs.Add(new Run(plain.ToString(), RunStyle.Plain));
         return runs;
     }
 
@@ -164,8 +204,10 @@ public static partial class GuideMarkdown
     private static IReadOnlyList<IReadOnlyList<Run>> Cells(string line)
     {
         var trimmed = line.Trim();
-        if (trimmed.StartsWith('|')) trimmed = trimmed[1..];
-        if (trimmed.EndsWith('|')) trimmed = trimmed[..^1];
+        if (trimmed.StartsWith('|'))
+            trimmed = trimmed[1..];
+        if (trimmed.EndsWith('|'))
+            trimmed = trimmed[..^1];
         return trimmed.Split('|').Select(cell => Inline(cell.Trim())).ToList();
     }
 

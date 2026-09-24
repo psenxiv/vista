@@ -11,7 +11,10 @@ public class PlaylistEditingTests
     private static Scene TwoTracks()
     {
         var scene = SceneEditing.New();
-        scene = SceneEditing.Replace(scene, TrackEditing.Append(TrackEditing.Append(scene.Tracks[0], Point(0f)), Point(10f)));
+        scene = SceneEditing.Replace(
+            scene,
+            TrackEditing.Append(TrackEditing.Append(scene.Tracks[0], Point(0f)), Point(10f))
+        );
         return SceneEditing.Add(scene).Scene;
     }
 
@@ -158,7 +161,10 @@ public class PlaylistEditingTests
 
         var result = PlaylistEditing.Add(one, [scene.Tracks[1].Id, scene.Tracks[0].Id], 0);
 
-        Assert.Equal(new[] { scene.Tracks[1].Id, scene.Tracks[0].Id, scene.Tracks[0].Id }, result.Playlist.Select(e => e.TrackId));
+        Assert.Equal(
+            new[] { scene.Tracks[1].Id, scene.Tracks[0].Id, scene.Tracks[0].Id },
+            result.Playlist.Select(e => e.TrackId)
+        );
         Assert.Equal(existing, result.Playlist[2].Id);
         Assert.Same(one, PlaylistEditing.Add(one, []));
     }

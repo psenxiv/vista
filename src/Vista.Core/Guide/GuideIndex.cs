@@ -17,14 +17,18 @@ public static partial class GuideIndex
         foreach (var line in markdown.Replace("\r\n", "\n").Split('\n'))
         {
             var match = Entry().Match(line);
-            if (!match.Success) continue;
+            if (!match.Success)
+                continue;
 
             var indent = match.Groups["indent"].Value.Replace("\t", "    ").Length;
             var node = new Node(match.Groups["title"].Value.Trim(), match.Groups["file"].Value.Trim());
-            while (open.Count > 0 && open[^1].Indent >= indent) open.RemoveAt(open.Count - 1);
+            while (open.Count > 0 && open[^1].Indent >= indent)
+                open.RemoveAt(open.Count - 1);
 
-            if (open.Count == 0) roots.Add(node);
-            else open[^1].Node.Children.Add(node);
+            if (open.Count == 0)
+                roots.Add(node);
+            else
+                open[^1].Node.Children.Add(node);
             open.Add((indent, node));
         }
 

@@ -68,7 +68,14 @@ public class TrackEditingTests
     public void ClearKeepsTheAnchor()
     {
         var anchor = new Anchor(new Vector3(1f, 2f, 3f), 0.5f);
-        var track = TrackEditing.Append(TrackEditing.Empty() with { Anchor = anchor, AnchorPlaced = true }, Point(1f, 2f, 3f));
+        var track = TrackEditing.Append(
+            TrackEditing.Empty() with
+            {
+                Anchor = anchor,
+                AnchorPlaced = true,
+            },
+            Point(1f, 2f, 3f)
+        );
         var cleared = TrackEditing.Clear(track);
 
         Assert.Equal(anchor, cleared.Anchor);
@@ -177,8 +184,14 @@ public class TrackEditingTests
     public void RejectionMessagesAreOnlyThePlainMessage()
     {
         var track = Build3PointTrack();
-        Assert.Equal("leg index must be 1..2 for a 3-point track", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 3, 1f)).Message);
-        Assert.Equal("hold index must be 0..2 for a 3-point track", Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 3, 1f)).Message);
+        Assert.Equal(
+            "leg index must be 1..2 for a 3-point track",
+            Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 3, 1f)).Message
+        );
+        Assert.Equal(
+            "hold index must be 0..2 for a 3-point track",
+            Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 3, 1f)).Message
+        );
     }
 
     [Fact]
@@ -194,7 +207,11 @@ public class TrackEditingTests
     {
         var track = Build3PointTrack();
         Assert.Same(track, TrackEditing.SetLegDuration(track, 1, float.NaN));
-        Assert.Equal(TrackEditing.MaxSeconds, LegSeconds(TrackEditing.SetLegDuration(track, 1, float.PositiveInfinity), 1), 1);
+        Assert.Equal(
+            TrackEditing.MaxSeconds,
+            LegSeconds(TrackEditing.SetLegDuration(track, 1, float.PositiveInfinity), 1),
+            1
+        );
     }
 
     [Fact]
@@ -252,7 +269,10 @@ public class TrackEditingTests
     {
         var track = Build3PointTrack();
         Assert.Same(track, TrackEditing.SetHold(track, 1, float.NaN));
-        Assert.Equal(TrackEditing.MaxSeconds, TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, float.PositiveInfinity), 1));
+        Assert.Equal(
+            TrackEditing.MaxSeconds,
+            TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, float.PositiveInfinity), 1)
+        );
     }
 
     [Fact]
@@ -433,7 +453,10 @@ public class TrackEditingTests
     public void DeletingTheOnlyPointEmptiesTheTrackButKeepsItsModesAndSpeed()
     {
         var track = TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f, 0f, 0f));
-        track = TrackEditing.SetSpeed(TrackEditing.SetLoop(TrackEditing.SetDirection(track, PlaybackDirection.Reverse), true), 7f);
+        track = TrackEditing.SetSpeed(
+            TrackEditing.SetLoop(TrackEditing.SetDirection(track, PlaybackDirection.Reverse), true),
+            7f
+        );
         var result = TrackEditing.Delete(track, 0);
 
         Assert.Empty(result.Points);
@@ -575,20 +598,19 @@ public class TrackEditingTests
     private static Track HalfSpeedHandles() => TimingEditing.SetHandles(Build3PointTrack(), 1, 0.5f, 0.5f);
 
     [Fact]
-    public void AHandleIsHalfItsSpansAverageSpeed()
-        => Assert.Equal(1f, OutSlope(HalfSpeedHandles(), 1), 3);
+    public void AHandleIsHalfItsSpansAverageSpeed() => Assert.Equal(1f, OutSlope(HalfSpeedHandles(), 1), 3);
 
     [Fact]
-    public void AHandleKeepsItsShapeThroughTheTrackSpeed()
-        => Assert.Equal(2f, OutSlope(TrackEditing.SetSpeed(HalfSpeedHandles(), 4f), 1), 3);
+    public void AHandleKeepsItsShapeThroughTheTrackSpeed() =>
+        Assert.Equal(2f, OutSlope(TrackEditing.SetSpeed(HalfSpeedHandles(), 4f), 1), 3);
 
     [Fact]
-    public void AHandleKeepsItsShapeThroughALegDuration()
-        => Assert.Equal(2.5f, OutSlope(TrackEditing.SetLegDuration(HalfSpeedHandles(), 2, 2f), 1), 3);
+    public void AHandleKeepsItsShapeThroughALegDuration() =>
+        Assert.Equal(2.5f, OutSlope(TrackEditing.SetLegDuration(HalfSpeedHandles(), 2, 2f), 1), 3);
 
     [Fact]
-    public void AHandleKeepsItsShapeThroughAPointEdit()
-        => Assert.Equal(1f, OutSlope(TrackEditing.Replace(HalfSpeedHandles(), 2, Point(40f, 0f, 0f)), 1), 3);
+    public void AHandleKeepsItsShapeThroughAPointEdit() =>
+        Assert.Equal(1f, OutSlope(TrackEditing.Replace(HalfSpeedHandles(), 2, Point(40f, 0f, 0f)), 1), 3);
 
     [Fact]
     public void InsertingOnANeighbouringLegKeepsTheRatio()
@@ -632,8 +654,8 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void DeletingSeveralRefusesAnIndexOutOfRange()
-        => Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(Build3PointTrack(), [0, 3]));
+    public void DeletingSeveralRefusesAnIndexOutOfRange() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(Build3PointTrack(), [0, 3]));
 
     [Fact]
     public void ReorderingTwoEqualPointsStillSwapsTheirHolds()

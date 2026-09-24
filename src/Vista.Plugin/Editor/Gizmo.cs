@@ -7,7 +7,12 @@ namespace Vista.Plugin.Editor;
 internal static unsafe class Gizmo
 {
     /// <summary>Runs one manipulation against <paramref name="matrix"/>, which it edits in place.</summary>
-    public static void Manipulate(EditorView view, ImGuizmoOperation operation, ImGuizmoMode space, ref Matrix4x4 matrix)
+    public static void Manipulate(
+        EditorView view,
+        ImGuizmoOperation operation,
+        ImGuizmoMode space,
+        ref Matrix4x4 matrix
+    )
     {
         var gizmoView = view.GizmoView;
         var gizmoProjection = view.GizmoProjection;

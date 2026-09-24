@@ -14,7 +14,8 @@ public class CameraGlyphTests
         var glyph = CameraGlyph.Build(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, MathF.PI / 2f, 2f, 1f);
 
         Assert.Equal(Vector3.Zero, glyph.Apex);
-        foreach (var corner in glyph.Corners) Assert.Equal(1f, corner.Z, 4);
+        foreach (var corner in glyph.Corners)
+            Assert.Equal(1f, corner.Z, 4);
         Assert.Equal(new[] { 1f, 1f, -1f, -1f }, glyph.Corners.Select(c => MathF.Round(c.Y, 4)));
         Assert.All(glyph.Corners, c => Assert.Equal(2f, MathF.Abs(c.X), 4));
     }

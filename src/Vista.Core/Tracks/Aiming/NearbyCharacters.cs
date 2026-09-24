@@ -23,10 +23,13 @@ public sealed class NearbyCharacters
         var bestDistance = float.PositiveInfinity;
         foreach (var character in characters)
         {
-            if (!string.Equals(character.Name, name, StringComparison.Ordinal)) continue;
-            if (world is not null && !string.Equals(character.World, world, StringComparison.Ordinal)) continue;
+            if (!string.Equals(character.Name, name, StringComparison.Ordinal))
+                continue;
+            if (world is not null && !string.Equals(character.World, world, StringComparison.Ordinal))
+                continue;
             var distance = Vector3.DistanceSquared(character.Position, near);
-            if (distance >= bestDistance) continue;
+            if (distance >= bestDistance)
+                continue;
             best = character;
             bestDistance = distance;
         }

@@ -1,4 +1,8 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGuizmo;
+using Dalamud.Game.ClientState.Keys;
+using Dalamud.Interface.Utility;
 using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
@@ -6,10 +10,6 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Game;
-using Dalamud.Bindings.ImGui;
-using Dalamud.Bindings.ImGuizmo;
-using Dalamud.Game.ClientState.Keys;
-using Dalamud.Interface.Utility;
 
 namespace Vista.Plugin.Editor;
 
@@ -18,9 +18,14 @@ internal sealed class EditorLayer
 {
     private const float HitRadius = Overlay.MarkerRadius + 4f;
 
-    private const ImGuiWindowFlags BaseFlags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration
-        | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoBringToFrontOnFocus
-        | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoSavedSettings;
+    private const ImGuiWindowFlags BaseFlags =
+        ImGuiWindowFlags.NoBackground
+        | ImGuiWindowFlags.NoDecoration
+        | ImGuiWindowFlags.NoNav
+        | ImGuiWindowFlags.NoMove
+        | ImGuiWindowFlags.NoBringToFrontOnFocus
+        | ImGuiWindowFlags.NoFocusOnAppearing
+        | ImGuiWindowFlags.NoSavedSettings;
 
     private readonly SessionState session;
     private readonly PointGizmo gizmo;
@@ -42,9 +47,16 @@ internal sealed class EditorLayer
     public void Draw()
     {
         var editing = session.Mode == CameraMode.Editing && !session.Transport.Previewing;
-        if (!editing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); }
-        if (!editing && session.Mode != CameraMode.View) return;
-        if (EditorView.Read() is not { } view) return;
+        if (!editing)
+        {
+            clicks.Reset();
+            gizmo.Cancel();
+            anchorGizmo.Cancel(session);
+        }
+        if (!editing && session.Mode != CameraMode.View)
+            return;
+        if (EditorView.Read() is not { } view)
+            return;
         var selectedAnchor = editing ? session.Selection.Anchor : null;
 
         var scene = session.Scene;
@@ -54,38 +66,120 @@ internal sealed class EditorLayer
         // Other tracks first, so the edited track draws on top.
         foreach (var other in scene.Tracks)
         {
-            if (other.Id == edited || scene.Hidden.Contains(other.Id)) continue;
+            if (other.Id == edited || scene.Hidden.Contains(other.Id))
+                continue;
             var otherWorld = session.World.Shown(other);
-            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, [], edited: false, session.World.AimPoint(otherWorld)));
-            if (session.World.TargetPoint(otherWorld) is { } otherTarget) overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
+            AddMarkers(
+                markers,
+                other.Id,
+                overlay.Draw(view, otherWorld, [], edited: false, session.World.AimPoint(otherWorld))
+            );
+            if (session.World.TargetPoint(otherWorld) is { } otherTarget)
+                overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
             if (other is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
-                markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
+                markers.Add(
+                    new TrackMarker(
+                        other.Id,
+                        -1,
+                        overlay.DrawTrackAnchor(
+                            view,
+                            SceneGeometry.WorldAnchor(scene, other),
+                            FirstPosition(otherWorld),
+                            edited: false,
+                            selected: false,
+                            other.Name
+                        ),
+                        MarkerKind.TrackAnchor
+                    )
+                );
             if (other is { Aim: AimMode.LookAt, LookAtPlaced: true })
-                markers.Add(new TrackMarker(other.Id, -1, overlay.DrawLookAt(view, otherWorld.LookAt, FirstPosition(otherWorld), edited: false, selected: false), MarkerKind.LookAt));
+                markers.Add(
+                    new TrackMarker(
+                        other.Id,
+                        -1,
+                        overlay.DrawLookAt(
+                            view,
+                            otherWorld.LookAt,
+                            FirstPosition(otherWorld),
+                            edited: false,
+                            selected: false
+                        ),
+                        MarkerKind.LookAt
+                    )
+                );
         }
 
-        var track = editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
-            ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
-            : session.Track;
-        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.Selection.Points : [], edited: true, session.World.AimPoint(track), Heat));
+        var track =
+            editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
+                ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
+                : session.Track;
+        AddMarkers(
+            markers,
+            edited,
+            overlay.Draw(
+                view,
+                track,
+                editing ? session.Selection.Points : [],
+                edited: true,
+                session.World.AimPoint(track),
+                Heat
+            )
+        );
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
         if (editedLocal is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
-            markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
+            markers.Add(
+                new TrackMarker(
+                    edited,
+                    -1,
+                    overlay.DrawTrackAnchor(
+                        view,
+                        SceneGeometry.WorldAnchor(scene, editedLocal),
+                        FirstPosition(track),
+                        edited: true,
+                        selected: selectedAnchor == AnchorKind.Track,
+                        editedLocal.Name
+                    ),
+                    MarkerKind.TrackAnchor
+                )
+            );
         if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
-            markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
-        if (session.World.TargetPoint(track) is { } target) overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
+            markers.Add(
+                new TrackMarker(
+                    edited,
+                    -1,
+                    overlay.DrawLookAt(
+                        view,
+                        track.LookAt,
+                        FirstPosition(track),
+                        edited: true,
+                        selected: selectedAnchor == AnchorKind.LookAt
+                    ),
+                    MarkerKind.LookAt
+                )
+            );
+        if (session.World.TargetPoint(track) is { } target)
+            overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
         if (scene.AnchorPlaced)
-            markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
-        if (!editing) return;
+            markers.Add(
+                new TrackMarker(
+                    Guid.Empty,
+                    -1,
+                    overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene),
+                    MarkerKind.SceneAnchor
+                )
+            );
+        if (!editing)
+            return;
 
         var io = ImGui.GetIO();
         var hovered = TrackMarkerHitTest.Nearest(markers, edited, io.MousePos, HitRadius);
 
         // The window takes the mouse only over a marker, so those clicks never reach the game.
         var flags = BaseFlags;
-        if (hovered is null && !clicks.HoldingMarker && !(gizmo.Hot || anchorGizmo.Hot)) flags |= ImGuiWindowFlags.NoInputs;
+        if (hovered is null && !clicks.HoldingMarker && !(gizmo.Hot || anchorGizmo.Hot))
+            flags |= ImGuiWindowFlags.NoInputs;
 
         ImGuiHelpers.ForceNextWindowMainViewport();
         ImGui.SetNextWindowPos(view.Origin);
@@ -100,7 +194,17 @@ internal sealed class EditorLayer
             // Dalamud hides presses from ImGui unless it wants the mouse, so read the button itself.
             var overUi = io.WantCaptureMouse && !ImGui.IsWindowHovered();
             var look = CameraAccess.ReadAngles() ?? (0f, 0f);
-            Apply(clicks.Update(PhysicalKeys.IsDown(VirtualKey.LBUTTON), io.MousePos, look, overUi, gizmo.Hot || anchorGizmo.Hot, hovered), markers);
+            Apply(
+                clicks.Update(
+                    PhysicalKeys.IsDown(VirtualKey.LBUTTON),
+                    io.MousePos,
+                    look,
+                    overUi,
+                    gizmo.Hot || anchorGizmo.Hot,
+                    hovered
+                ),
+                markers
+            );
         }
 
         ImGui.End();
@@ -113,7 +217,12 @@ internal sealed class EditorLayer
         var click = RowPicking.FromKeys(PhysicalKeys.IsDown(VirtualKey.SHIFT), PhysicalKeys.IsDown(VirtualKey.CONTROL));
         if (click != RowClick.Plain)
         {
-            if (outcome.Kind == ClickKind.Select && outcome.Index < markers.Count && markers[outcome.Index] is { Kind: MarkerKind.Point } point && point.Track == session.EditedTrackId)
+            if (
+                outcome.Kind == ClickKind.Select
+                && outcome.Index < markers.Count
+                && markers[outcome.Index] is { Kind: MarkerKind.Point } point
+                && point.Track == session.EditedTrackId
+            )
                 session.Selection.ClickPoint(point.Point, click);
             return;
         }
@@ -148,11 +257,13 @@ internal sealed class EditorLayer
 
     private static void AddMarkers(List<TrackMarker> markers, Guid track, IReadOnlyList<Vector2?> screens)
     {
-        for (var i = 0; i < screens.Count; i++) markers.Add(new TrackMarker(track, i, screens[i]));
+        for (var i = 0; i < screens.Count; i++)
+            markers.Add(new TrackMarker(track, i, screens[i]));
     }
 
     private static void Report(string? refusal)
     {
-        if (refusal is not null) Plugin.Log.Warning("[editor] {Refusal}", refusal);
+        if (refusal is not null)
+            Plugin.Log.Warning("[editor] {Refusal}", refusal);
     }
 }

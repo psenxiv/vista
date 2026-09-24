@@ -22,8 +22,11 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
     private float DistanceRange => MathF.Max(DistanceTo - DistanceFrom, 1e-3f);
 
     /// <summary>The pixel for a time and a distance.</summary>
-    public Vector2 ToScreen(float time, float distance)
-        => new(Origin.X + ((time - TimeFrom) / TimeRange * Size.X), Origin.Y + Size.Y - ((distance - DistanceFrom) / DistanceRange * Size.Y));
+    public Vector2 ToScreen(float time, float distance) =>
+        new(
+            Origin.X + ((time - TimeFrom) / TimeRange * Size.X),
+            Origin.Y + Size.Y - ((distance - DistanceFrom) / DistanceRange * Size.Y)
+        );
 
     /// <summary>The time under pixel column <paramref name="x"/>, clamped to the view.</summary>
     public float TimeAt(float x) => TimeFrom + (Math.Clamp((x - Origin.X) / Size.X, 0f, 1f) * (TimeTo - TimeFrom));
@@ -32,7 +35,8 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
     public float TimeAtOpenEnded(float x) => TimeFrom + (MathF.Max((x - Origin.X) / Size.X, 0f) * (TimeTo - TimeFrom));
 
     /// <summary>The distance under pixel row <paramref name="y"/>, clamped to the view.</summary>
-    public float DistanceAt(float y) => DistanceFrom + (Math.Clamp((Origin.Y + Size.Y - y) / Size.Y, 0f, 1f) * (DistanceTo - DistanceFrom));
+    public float DistanceAt(float y) =>
+        DistanceFrom + (Math.Clamp((Origin.Y + Size.Y - y) / Size.Y, 0f, 1f) * (DistanceTo - DistanceFrom));
 
     /// <summary>The end of a handle <paramref name="length"/> pixels long leaving <paramref name="key"/> at <paramref name="slope"/> distance per second.</summary>
     public Vector2 HandleEnd(Vector2 key, KeySide side, float slope, float length)

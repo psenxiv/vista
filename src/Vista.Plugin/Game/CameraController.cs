@@ -1,6 +1,6 @@
-using Vista.Core.Camera;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using Vista.Core.Camera;
 
 namespace Vista.Plugin.Game;
 
@@ -31,8 +31,10 @@ internal sealed unsafe class CameraController : IDisposable
     /// <summary>Installs the hook if a camera exists yet. Safe to call repeatedly.</summary>
     public void TryInstallHook()
     {
-        if (updateHook != null) return;
-        if (!CameraAccess.TryGetWorldCamera(out var camera)) return;
+        if (updateHook != null)
+            return;
+        if (!CameraAccess.TryGetWorldCamera(out var camera))
+            return;
 
         var vtable = *(nint**)camera;
         var updateAddress = vtable[UpdateVFuncIndex];
@@ -46,12 +48,14 @@ internal sealed unsafe class CameraController : IDisposable
     {
         updateHook!.Original(camera);
         UpdateCount++;
-        if (Faulted) return;
+        if (Faulted)
+            return;
 
         try
         {
             var desired = stateSource();
-            if (desired is null) return;
+            if (desired is null)
+                return;
 
             CameraAccess.WriteState(desired.Value);
         }

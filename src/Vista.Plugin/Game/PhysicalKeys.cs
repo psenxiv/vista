@@ -13,7 +13,8 @@ internal static unsafe class PhysicalKeys
     public static bool IsDown(VirtualKey key)
     {
         var framework = GameFramework.Instance();
-        if (framework == null || framework->WindowInactive) return false;
+        if (framework == null || framework->WindowInactive)
+            return false;
         return (GetAsyncKeyState((int)key) & 0x8000) != 0;
     }
 

@@ -11,7 +11,8 @@ internal static class Ground
     /// <summary>The ground's height under <paramref name="point"/>, the character's foot height when nothing is hit, or null.</summary>
     public static float? Below(Vector3 point)
     {
-        if (BGCollisionModule.RaycastMaterialFilter(point, -Vector3.UnitY, out var hit, MaxDrop)) return hit.Point.Y;
+        if (BGCollisionModule.RaycastMaterialFilter(point, -Vector3.UnitY, out var hit, MaxDrop))
+            return hit.Point.Y;
         return Plugin.ObjectTable.LocalPlayer?.Position.Y;
     }
 }

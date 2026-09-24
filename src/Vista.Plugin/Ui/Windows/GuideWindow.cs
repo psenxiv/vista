@@ -1,12 +1,12 @@
 using System.Numerics;
 using System.Text;
-using Vista.Core.Guide;
-using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Vista.Core.Guide;
+using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Ui.Windows;
 
@@ -45,14 +45,25 @@ internal sealed class GuideWindow : Window, IDisposable
     {
         Size = new Vector2(760f, 520f);
         SizeCondition = ImGuiCond.FirstUseEver;
-        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(480f, 300f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) };
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(480f, 300f),
+            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
+        };
         // The same font as the body, built larger, so headings stay crisp rather than scaled.
-        headings = HeadingScales.Select(scale => atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudDefaultFont(UiBuilder.DefaultFontSizePx * scale)))).ToArray();
+        headings = HeadingScales
+            .Select(scale =>
+                atlas.NewDelegateFontHandle(e =>
+                    e.OnPreBuild(tk => tk.AddDalamudDefaultFont(UiBuilder.DefaultFontSizePx * scale))
+                )
+            )
+            .ToArray();
     }
 
     public void Dispose()
     {
-        foreach (var font in headings) font.Dispose();
+        foreach (var font in headings)
+            font.Dispose();
     }
 
     public override void Draw()
@@ -60,25 +71,32 @@ internal sealed class GuideWindow : Window, IDisposable
         if (!indexRead)
         {
             indexRead = true;
-            if (Read("index.md") is { } index) topics = GuideIndex.Parse(index);
+            if (Read("index.md") is { } index)
+                topics = GuideIndex.Parse(index);
             AddFiles(topics);
             shown = topics.FirstOrDefault()?.File;
         }
 
-        if (ImGui.BeginChild("guide-topics", new Vector2(TreeWidth, 0f), true)) DrawTopics(topics);
+        if (ImGui.BeginChild("guide-topics", new Vector2(TreeWidth, 0f), true))
+            DrawTopics(topics);
         ImGui.EndChild();
 
         ImGui.SameLine();
         if (ImGui.BeginChild("guide-page", Vector2.Zero, true) && shown is not null)
         {
-            if (scrolledFor != shown) { ImGui.SetScrollY(0f); scrolledFor = shown; }
+            if (scrolledFor != shown)
+            {
+                ImGui.SetScrollY(0f);
+                scrolledFor = shown;
+            }
             DrawPage(Page(shown));
         }
 
         ImGui.EndChild();
 
         // A link clicked this frame shows its page from the next, so this frame's page finishes drawing.
-        if (followed is { } target && files.Contains(target)) shown = target;
+        if (followed is { } target && files.Contains(target))
+            shown = target;
         followed = null;
     }
 
@@ -97,12 +115,16 @@ internal sealed class GuideWindow : Window, IDisposable
         foreach (var topic in list)
         {
             var leaf = topic.Children.Count == 0;
-            var flags = ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.DefaultOpen;
-            if (topic.File == shown) flags |= ImGuiTreeNodeFlags.Selected;
-            if (leaf) flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
+            var flags =
+                ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.DefaultOpen;
+            if (topic.File == shown)
+                flags |= ImGuiTreeNodeFlags.Selected;
+            if (leaf)
+                flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
 
             var open = ImGui.TreeNodeEx($"{topic.Title}###{topic.File}", flags);
-            if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen()) shown = topic.File;
+            if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen())
+                shown = topic.File;
             if (open && !leaf)
             {
                 DrawTopics(topic.Children);
@@ -119,17 +141,29 @@ internal sealed class GuideWindow : Window, IDisposable
             switch (blocks[i])
             {
                 case Heading heading:
-                    if (i > 0 && blocks[i - 1] is not Divider) ImGui.Dummy(new Vector2(0f, line * HeadingGap));
-                    using (headings[Math.Clamp(heading.Level, 1, headings.Length) - 1].Push()) Flow(heading.Runs);
+                    if (i > 0 && blocks[i - 1] is not Divider)
+                        ImGui.Dummy(new Vector2(0f, line * HeadingGap));
+                    using (headings[Math.Clamp(heading.Level, 1, headings.Length) - 1].Push())
+                        Flow(heading.Runs);
                     break;
                 case Paragraph paragraph:
                     Flow(paragraph.Runs);
                     break;
                 case BulletList list:
-                    foreach (var item in list.Items) { ImGui.Bullet(); ImGui.SameLine(); Flow(item); }
+                    foreach (var item in list.Items)
+                    {
+                        ImGui.Bullet();
+                        ImGui.SameLine();
+                        Flow(item);
+                    }
                     break;
                 case NumberedList list:
-                    for (var n = 0; n < list.Items.Count; n++) { ImGui.TextUnformatted($"{n + 1}."); ImGui.SameLine(); Flow(list.Items[n]); }
+                    for (var n = 0; n < list.Items.Count; n++)
+                    {
+                        ImGui.TextUnformatted($"{n + 1}.");
+                        ImGui.SameLine();
+                        Flow(list.Items[n]);
+                    }
                     break;
                 case Table table:
                     DrawTable(table, $"table{i}");
@@ -155,15 +189,24 @@ internal sealed class GuideWindow : Window, IDisposable
     private void DrawTable(Table table, string id)
     {
         var columns = Math.Max(table.Header.Count, table.Rows.Count == 0 ? 0 : table.Rows.Max(row => row.Count));
-        if (columns == 0) return;
+        if (columns == 0)
+            return;
         using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
-        if (!ImGui.BeginTable(id, columns, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp)) return;
+        if (
+            !ImGui.BeginTable(
+                id,
+                columns,
+                ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp
+            )
+        )
+            return;
 
         ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
         for (var c = 0; c < columns; c++)
         {
             ImGui.TableNextColumn();
-            if (c < table.Header.Count) Flow(table.Header[c]);
+            if (c < table.Header.Count)
+                Flow(table.Header[c]);
         }
 
         foreach (var row in table.Rows)
@@ -172,7 +215,8 @@ internal sealed class GuideWindow : Window, IDisposable
             for (var c = 0; c < columns; c++)
             {
                 ImGui.TableNextColumn();
-                if (c < row.Count) Flow(row[c]);
+                if (c < row.Count)
+                    Flow(row[c]);
             }
         }
 
@@ -191,7 +235,8 @@ internal sealed class GuideWindow : Window, IDisposable
 
         void Place(Run run)
         {
-            if (word.Length == 0) return;
+            if (word.Length == 0)
+                return;
             var text = word.ToString();
             word.Clear();
 
@@ -199,8 +244,10 @@ internal sealed class GuideWindow : Window, IDisposable
             spaceBefore = false;
             if (lineEnd is { } end)
             {
-                if (end + gap + Width(run.Style, text) <= right) ImGui.SameLine(0f, gap);
-                else ImGui.SetCursorScreenPos(new Vector2(left, ImGui.GetCursorScreenPos().Y));
+                if (end + gap + Width(run.Style, text) <= right)
+                    ImGui.SameLine(0f, gap);
+                else
+                    ImGui.SetCursorScreenPos(new Vector2(left, ImGui.GetCursorScreenPos().Y));
             }
 
             DrawItem(run, text);
@@ -218,7 +265,11 @@ internal sealed class GuideWindow : Window, IDisposable
 
             foreach (var ch in run.Text)
             {
-                if (!char.IsWhiteSpace(ch)) { word.Append(ch); continue; }
+                if (!char.IsWhiteSpace(ch))
+                {
+                    word.Append(ch);
+                    continue;
+                }
                 Place(run);
                 spaceBefore = true;
             }
@@ -227,17 +278,19 @@ internal sealed class GuideWindow : Window, IDisposable
             Place(run);
         }
 
-        if (lineEnd is null) ImGui.NewLine();
+        if (lineEnd is null)
+            ImGui.NewLine();
     }
 
     /// <summary>How wide <paramref name="text"/> draws in <paramref name="style"/>.</summary>
-    private static float Width(RunStyle style, string text) => style switch
-    {
-        RunStyle.Key => ImGui.CalcTextSize(text).X + (KeyPadding.X * 2f),
-        RunStyle.Icon when Icon(text) is { } icon => IconWidth(icon),
-        RunStyle.Icon => ImGui.CalcTextSize(IconTag(text)).X,
-        _ => ImGui.CalcTextSize(text).X,
-    };
+    private static float Width(RunStyle style, string text) =>
+        style switch
+        {
+            RunStyle.Key => ImGui.CalcTextSize(text).X + (KeyPadding.X * 2f),
+            RunStyle.Icon when Icon(text) is { } icon => IconWidth(icon),
+            RunStyle.Icon => ImGui.CalcTextSize(IconTag(text)).X,
+            _ => ImGui.CalcTextSize(text).X,
+        };
 
     /// <summary>One word, key or icon at the cursor; a clicked link word queues its page.</summary>
     private void DrawItem(Run run, string text)
@@ -248,18 +301,22 @@ internal sealed class GuideWindow : Window, IDisposable
                 DrawKey(text);
                 return;
             case RunStyle.Icon when Icon(text) is { } icon:
-                using (ImRaii.PushFont(UiBuilder.IconFont)) ImGui.TextUnformatted(icon.ToIconString());
+                using (ImRaii.PushFont(UiBuilder.IconFont))
+                    ImGui.TextUnformatted(icon.ToIconString());
                 return;
             case RunStyle.Icon:
                 ImGui.TextUnformatted(IconTag(text));
                 return;
             case RunStyle.Link:
-                using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Accent)) ImGui.TextUnformatted(text);
+                using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Accent))
+                    ImGui.TextUnformatted(text);
                 var min = ImGui.GetItemRectMin();
                 var max = ImGui.GetItemRectMax();
                 ImGui.GetWindowDrawList().AddLine(new Vector2(min.X, max.Y), max, UiColours.Accent);
-                if (ImGui.IsItemHovered()) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsItemClicked()) followed = run.Target;
+                if (ImGui.IsItemHovered())
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsItemClicked())
+                    followed = run.Target;
                 return;
         }
 
@@ -287,7 +344,8 @@ internal sealed class GuideWindow : Window, IDisposable
         list.AddText(at + new Vector2(KeyPadding.X, 0f), ImGui.GetColorU32(ImGuiCol.Text), text);
     }
 
-    private static FontAwesomeIcon? Icon(string name) => char.IsLetter(name[0]) && Enum.TryParse<FontAwesomeIcon>(name, out var icon) ? icon : null;
+    private static FontAwesomeIcon? Icon(string name) =>
+        char.IsLetter(name[0]) && Enum.TryParse<FontAwesomeIcon>(name, out var icon) ? icon : null;
 
     private static string IconTag(string name) => $"{{icon:{name}}}";
 
@@ -300,7 +358,8 @@ internal sealed class GuideWindow : Window, IDisposable
     /// <summary>A page's blocks, read once; a page that is missing says so in the pane.</summary>
     private IReadOnlyList<Block> Page(string file)
     {
-        if (pages.TryGetValue(file, out var blocks)) return blocks;
+        if (pages.TryGetValue(file, out var blocks))
+            return blocks;
         blocks = Read(file) is { } text
             ? GuideMarkdown.Parse(text)
             : [new Paragraph([new Run($"This page could not be loaded: {file}", RunStyle.Plain)])];

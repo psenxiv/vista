@@ -12,7 +12,8 @@ internal static class PopupStyle
         var background = ImGui.GetStyle().Colors[(int)ImGuiCol.PopupBg] with { W = 1f };
         return new Both(
             ImRaii.PushStyle(ImGuiStyleVar.PopupBorderSize, 1f),
-            ImRaii.PushColor(ImGuiCol.PopupBg, ImGui.ColorConvertFloat4ToU32(background)));
+            ImRaii.PushColor(ImGuiCol.PopupBg, ImGui.ColorConvertFloat4ToU32(background))
+        );
     }
 
     private sealed class Both(IDisposable first, IDisposable second) : IDisposable

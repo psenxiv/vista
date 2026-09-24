@@ -11,7 +11,11 @@ public class PresetsTests
     // "Crane": one point at local (2, 0, 0) yaw 0.25, Look At at local (0, 1, 3); its anchor faced yaw π/2.
     private static Preset Crane()
     {
-        var track = TrackEditing.Append(TrackEditing.Empty(name: "Crane"), Point(2f, yaw: 0.25f)) with { LookAt = new Vector3(0f, 1f, 3f), LookAtPlaced = true };
+        var track = TrackEditing.Append(TrackEditing.Empty(name: "Crane"), Point(2f, yaw: 0.25f)) with
+        {
+            LookAt = new Vector3(0f, 1f, 3f),
+            LookAtPlaced = true,
+        };
         return new Preset(track, MathF.PI / 2f);
     }
 
@@ -22,8 +26,19 @@ public class PresetsTests
     [Fact]
     public void FromKeepsTheTrackLocalAndTakesItsAnchorsWorldYaw()
     {
-        var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f), AnchorPlaced = true };
-        var track = TrackEditing.Append(scene.Tracks[0] with { Anchor = new Anchor(new Vector3(5f, 0f, 0f), 0.5f), AnchorPlaced = true }, Point(3f));
+        var scene = SceneEditing.New() with
+        {
+            Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f),
+            AnchorPlaced = true,
+        };
+        var track = TrackEditing.Append(
+            scene.Tracks[0] with
+            {
+                Anchor = new Anchor(new Vector3(5f, 0f, 0f), 0.5f),
+                AnchorPlaced = true,
+            },
+            Point(3f)
+        );
         scene = SceneEditing.Replace(scene, track);
 
         var preset = Presets.From(scene, track.Id);
@@ -54,7 +69,15 @@ public class PresetsTests
     public void PlacingInAPlacedSceneLeavesItsAnchorAndPutsThePointsInTheSamePlace()
     {
         var anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f);
-        var (scene, id) = Presets.Place(SceneEditing.New() with { Anchor = anchor, AnchorPlaced = true }, Crane(), Ground);
+        var (scene, id) = Presets.Place(
+            SceneEditing.New() with
+            {
+                Anchor = anchor,
+                AnchorPlaced = true,
+            },
+            Crane(),
+            Ground
+        );
 
         Assert.Equal(anchor, scene.Anchor);
         // The track's anchor is (10, 5, 20) yaw π/2 in the world whatever the scene anchor, so as above.
@@ -85,7 +108,14 @@ public class PresetsTests
     public void PlacingTheSceneAnchorLeavesAnotherTracksLookAtInTheWorld()
     {
         var scene = SceneEditing.New();
-        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(5f, 6f, 7f), LookAtPlaced = true });
+        scene = SceneEditing.Replace(
+            scene,
+            scene.Tracks[0] with
+            {
+                LookAt = new Vector3(5f, 6f, 7f),
+                LookAtPlaced = true,
+            }
+        );
 
         var (placed, _) = Presets.Place(scene, Crane(), Ground);
 

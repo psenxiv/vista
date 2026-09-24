@@ -1,7 +1,7 @@
-using Vista.Core.Session;
-using Vista.Core.Tracks.Aiming;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
+using Vista.Core.Session;
+using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Plugin.Ui.Widgets;
 
@@ -14,7 +14,8 @@ internal static class CharacterPicker
         var track = session.Track;
         var chosen = track.TargetName is { } name ? $"{name} · {track.TargetWorld ?? "NPC"}" : "Choose a character";
         ImGui.SetNextItemWidth(width);
-        if (!ImGui.BeginCombo("##character", chosen, ImGuiComboFlags.HeightLarge)) return null;
+        if (!ImGui.BeginCombo("##character", chosen, ImGuiComboFlags.HeightLarge))
+            return null;
 
         if (ImGui.IsWindowAppearing())
         {
@@ -26,8 +27,8 @@ internal static class CharacterPicker
         ImGui.InputTextWithHint("##search", "Search", ref search, 64);
 
         var filter = search.Trim();
-        var listed = characters.All
-            .Where(c => filter.Length == 0 || c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+        var listed = characters
+            .All.Where(c => filter.Length == 0 || c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
             .DistinctBy(c => (c.Name, c.World))
             .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(c => c.World ?? string.Empty, StringComparer.OrdinalIgnoreCase)

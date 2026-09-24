@@ -1,9 +1,9 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGuizmo;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
-using Dalamud.Bindings.ImGuizmo;
 
 namespace Vista.Plugin.Editor;
 
@@ -43,9 +43,11 @@ internal sealed class PointGizmo
     /// <summary>Sets the gizmo mode, except while the mouse is still held from a drag.</summary>
     public void SetMode(GizmoMode mode)
     {
-        if (Dragging || waitForRelease) return;
+        if (Dragging || waitForRelease)
+            return;
         Mode = mode;
-        if (mode != GizmoMode.Rotate) lastMove = mode;
+        if (mode != GizmoMode.Rotate)
+            lastMove = mode;
     }
 
     /// <summary>Abandons any drag in progress without committing, for leaving editing mode.</summary>
@@ -58,7 +60,8 @@ internal sealed class PointGizmo
     /// <summary>Draws the gizmo on the selected point into the current window. Call inside the editor window.</summary>
     public void Draw(EditorView view, SessionState session)
     {
-        if (Dragging && (!ReferenceEquals(session.StoredTrack, dragTrack) || session.Selection.Point != dragIndex)) Abandon();
+        if (Dragging && (!ReferenceEquals(session.StoredTrack, dragTrack) || session.Selection.Point != dragIndex))
+            Abandon();
 
         if (session.Selection.Point is not { } index || index >= session.Track.Points.Count)
         {
@@ -74,14 +77,22 @@ internal sealed class PointGizmo
         ImGuizmo.SetRect(view.Origin.X, view.Origin.Y, view.Size.X, view.Size.Y);
         ImGuizmo.AllowAxisFlip(false);
 
-        var (usingNow, over, ring) = Mode != GizmoMode.Rotate
-            ? DrawMove(view, point)
-            : DrawRings(view, Preview?.Point ?? point, session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget ? AllRings : RollOnly);
+        var (usingNow, over, ring) =
+            Mode != GizmoMode.Rotate
+                ? DrawMove(view, point)
+                : DrawRings(
+                    view,
+                    Preview?.Point ?? point,
+                    session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget
+                        ? AllRings
+                        : RollOnly
+                );
         Hot = usingNow || over;
 
         if (waitForRelease)
         {
-            if (!usingNow) waitForRelease = false;
+            if (!usingNow)
+                waitForRelease = false;
             return;
         }
 
@@ -90,7 +101,12 @@ internal sealed class PointGizmo
             if (dragStart is null)
             {
                 // A ring drag already under way when we saw it has no known ring; wait it out.
-                if (Mode == GizmoMode.Rotate && ring is null) { waitForRelease = true; Gizmo.Reset(); return; }
+                if (Mode == GizmoMode.Rotate && ring is null)
+                {
+                    waitForRelease = true;
+                    Gizmo.Reset();
+                    return;
+                }
                 dragStart = point;
                 dragIndex = index;
                 dragTrack = session.StoredTrack;
@@ -115,10 +131,16 @@ internal sealed class PointGizmo
 
     private (bool Using, bool Over, GimbalRing? Ring) DrawMove(EditorView view, ControlPoint point)
     {
-        if (!Dragging) moveMatrix = PoseMatrix.From(point.Position, point.Yaw, point.Pitch, point.Roll);
+        if (!Dragging)
+            moveMatrix = PoseMatrix.From(point.Position, point.Yaw, point.Pitch, point.Roll);
 
         ImGuizmo.SetID(MoveId);
-        Gizmo.Manipulate(view, ImGuizmoOperation.Translate, Mode == GizmoMode.MoveLocal ? ImGuizmoMode.Local : ImGuizmoMode.World, ref moveMatrix);
+        Gizmo.Manipulate(
+            view,
+            ImGuizmoOperation.Translate,
+            Mode == GizmoMode.MoveLocal ? ImGuizmoMode.Local : ImGuizmoMode.World,
+            ref moveMatrix
+        );
         return (ImGuizmo.IsUsing(), ImGuizmo.IsOver(), null);
     }
 
@@ -133,12 +155,14 @@ internal sealed class PointGizmo
         foreach (var ring in rings)
         {
             var slot = (int)ring;
-            if (!(Dragging && dragRing == ring)) ringFrames[slot] = GizmoEdit.RingFrame(shown, ring);
+            if (!(Dragging && dragRing == ring))
+                ringFrames[slot] = GizmoEdit.RingFrame(shown, ring);
 
             ImGuizmo.SetID(FirstRingId + slot);
             Gizmo.Manipulate(view, Operation(ring), ImGuizmoMode.Local, ref ringFrames[slot]);
             over |= ImGuizmo.IsOver();
-            if (usingNow || !ImGuizmo.IsUsing()) continue;
+            if (usingNow || !ImGuizmo.IsUsing())
+                continue;
             usingNow = true;
             started = ring;
         }
@@ -146,21 +170,23 @@ internal sealed class PointGizmo
         return (usingNow, over, started);
     }
 
-    private static ImGuizmoOperation Operation(GimbalRing ring) => ring switch
-    {
-        GimbalRing.Yaw => ImGuizmoOperation.RotateY,
-        GimbalRing.Pitch => ImGuizmoOperation.RotateX,
-        _ => ImGuizmoOperation.RotateZ,
-    };
+    private static ImGuizmoOperation Operation(GimbalRing ring) =>
+        ring switch
+        {
+            GimbalRing.Yaw => ImGuizmoOperation.RotateY,
+            GimbalRing.Pitch => ImGuizmoOperation.RotateX,
+            _ => ImGuizmoOperation.RotateZ,
+        };
 
     /// <summary>The drag's start point with this frame's gizmo applied.</summary>
-    private ControlPoint Edited(ControlPoint start)
-        => dragRing is { } ring ? GizmoEdit.Rotate(start, ring, ringFrames[(int)ring]) : GizmoEdit.Move(start, moveMatrix);
+    private ControlPoint Edited(ControlPoint start) =>
+        dragRing is { } ring ? GizmoEdit.Rotate(start, ring, ringFrames[(int)ring]) : GizmoEdit.Move(start, moveMatrix);
 
     /// <summary>Drops the drag without committing, and clears ImGuizmo's own drag, which otherwise ends only inside the owning Manipulate.</summary>
     private void Abandon()
     {
-        if (!Dragging) return;
+        if (!Dragging)
+            return;
         waitForRelease = true;
         dragStart = null;
         dragRing = null;

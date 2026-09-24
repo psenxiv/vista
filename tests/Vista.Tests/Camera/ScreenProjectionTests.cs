@@ -9,9 +9,9 @@ public class ScreenProjectionTests
     private static readonly Vector2 Viewport = new(1920f, 1080f);
 
     // Camera at z = 10 looking at the origin.
-    private static Matrix4x4 ViewProjection()
-        => Matrix4x4.CreateLookAt(new Vector3(0f, 0f, 10f), Vector3.Zero, Vector3.UnitY)
-         * Matrix4x4.CreatePerspectiveFieldOfView(1f, 16f / 9f, 0.1f, 1000f);
+    private static Matrix4x4 ViewProjection() =>
+        Matrix4x4.CreateLookAt(new Vector3(0f, 0f, 10f), Vector3.Zero, Vector3.UnitY)
+        * Matrix4x4.CreatePerspectiveFieldOfView(1f, 16f / 9f, 0.1f, 1000f);
 
     [Fact]
     public void APointStraightAheadLandsInTheCentre()
@@ -32,8 +32,8 @@ public class ScreenProjectionTests
     }
 
     [Fact]
-    public void APointBehindTheCameraIsNull()
-        => Assert.Null(ScreenProjection.Project(new Vector3(0f, 0f, 20f), ViewProjection(), Viewport));
+    public void APointBehindTheCameraIsNull() =>
+        Assert.Null(ScreenProjection.Project(new Vector3(0f, 0f, 20f), ViewProjection(), Viewport));
 
     [Fact]
     public void APointInFrontButNearerThanTheNearWIsNull()
@@ -56,8 +56,16 @@ public class ScreenProjectionTests
     }
 
     [Fact]
-    public void ASegmentBehindTheCameraIsSkipped()
-        => Assert.Null(ScreenProjection.ProjectSegment(new Vector3(0f, 0f, 20f), new Vector3(1f, 0f, 30f), ViewProjection(), Viewport, 0.1f));
+    public void ASegmentBehindTheCameraIsSkipped() =>
+        Assert.Null(
+            ScreenProjection.ProjectSegment(
+                new Vector3(0f, 0f, 20f),
+                new Vector3(1f, 0f, 30f),
+                ViewProjection(),
+                Viewport,
+                0.1f
+            )
+        );
 
     [Fact]
     public void ASegmentCrossingTheNearPlaneIsCutWhereItCrosses()

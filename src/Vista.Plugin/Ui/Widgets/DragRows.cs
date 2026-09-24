@@ -1,7 +1,7 @@
+using Dalamud.Bindings.ImGui;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
-using Dalamud.Bindings.ImGui;
 
 namespace Vista.Plugin.Ui.Widgets;
 
@@ -30,21 +30,28 @@ internal static unsafe class DragRows
     public static Payload? Accept(string type, string? hintText = null)
     {
         var payload = ImGui.AcceptDragDropPayload(type, ImGuiDragDropFlags.AcceptBeforeDelivery);
-        if (payload.IsNull) return null;
-        if (hintText is not null) hint = (hintText, ImGui.GetFrameCount());
+        if (payload.IsNull)
+            return null;
+        if (hintText is not null)
+            hint = (hintText, ImGui.GetFrameCount());
         return payload.Handle->IsDelivery() ? *(Payload*)payload.Data : null;
     }
 
     /// <summary>The tracks a dropped track payload carries: the selection, or the grabbed track alone.</summary>
-    public static IReadOnlyList<Guid> Tracks(SessionState session, Scene scene, Payload payload)
-        => payload.Group ? session.Selection.Tracks : payload.Grabbed < scene.Tracks.Count ? [scene.Tracks[payload.Grabbed].Id] : [];
+    public static IReadOnlyList<Guid> Tracks(SessionState session, Scene scene, Payload payload) =>
+        payload.Group ? session.Selection.Tracks
+        : payload.Grabbed < scene.Tracks.Count ? [scene.Tracks[payload.Grabbed].Id]
+        : [];
 
     /// <summary>The points a dropped point payload carries: the selection, or the grabbed point alone.</summary>
-    public static IReadOnlyList<int> Points(SessionState session, Payload payload) => payload.Group ? session.Selection.Points : [payload.Grabbed];
+    public static IReadOnlyList<int> Points(SessionState session, Payload payload) =>
+        payload.Group ? session.Selection.Points : [payload.Grabbed];
 
     /// <summary>The entries a dropped entry payload carries: the selection, or the grabbed entry alone.</summary>
-    public static IReadOnlyList<Guid> Entries(SessionState session, Scene scene, Payload payload)
-        => payload.Group ? session.Selection.Entries : payload.Grabbed < scene.Playlist.Count ? [scene.Playlist[payload.Grabbed].Id] : [];
+    public static IReadOnlyList<Guid> Entries(SessionState session, Scene scene, Payload payload) =>
+        payload.Group ? session.Selection.Entries
+        : payload.Grabbed < scene.Playlist.Count ? [scene.Playlist[payload.Grabbed].Id]
+        : [];
 
     /// <summary>True while a row of <paramref name="type"/> is being dragged.</summary>
     public static bool Dragging(string type)

@@ -6,7 +6,8 @@ namespace Vista.Tests.Session;
 
 public class EditHistoryTests
 {
-    private static EditSnapshot Snap(int? selected) => new(SceneEditing.New(), Guid.Empty, selected is { } s ? new SelectedItems([s], [], []) : SelectedItems.None);
+    private static EditSnapshot Snap(int? selected) =>
+        new(SceneEditing.New(), Guid.Empty, selected is { } s ? new SelectedItems([s], [], []) : SelectedItems.None);
 
     [Fact]
     public void UndoReturnsTheRecordedStateAndRedoReturnsTheCurrentOne()
@@ -34,10 +35,12 @@ public class EditHistoryTests
     public void OnlyTheLastHundredStepsAreKept()
     {
         var history = new EditHistory();
-        for (var i = 0; i < EditHistory.Capacity + 5; i++) history.Record(Snap(i));
+        for (var i = 0; i < EditHistory.Capacity + 5; i++)
+            history.Record(Snap(i));
 
         var undone = 0;
-        while (history.Undo(Snap(null)) is not null) undone++;
+        while (history.Undo(Snap(null)) is not null)
+            undone++;
 
         Assert.Equal(EditHistory.Capacity, undone);
     }

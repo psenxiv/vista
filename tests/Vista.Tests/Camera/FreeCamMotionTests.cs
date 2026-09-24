@@ -23,8 +23,10 @@ public class FreeCamMotionTests
         for (var i = 0; i < 10; i++)
             accumulated = FreeCamMotion.Step(accumulated, input, 0f, 0f, 5f, 0.01f);
 
-        Assert.True(Vector3.Distance(oneBigStep, accumulated) < 0.0001f,
-            $"expected {oneBigStep}, accumulated {accumulated}");
+        Assert.True(
+            Vector3.Distance(oneBigStep, accumulated) < 0.0001f,
+            $"expected {oneBigStep}, accumulated {accumulated}"
+        );
     }
 
     [Fact]
@@ -61,9 +63,23 @@ public class FreeCamMotionTests
     [InlineData(0f, 0f, -1f, -0.7071068f, 0f, 0.7071068f)]
     [InlineData(0f, 1f, 0f, 0f, 1f, 0f)]
     [InlineData(0f, -1f, 0f, 0f, -1f, 0f)]
-    public void OneSecondOfInputMovesAlongTheHandComputedAxes(float forward, float up, float right, float x, float y, float z)
+    public void OneSecondOfInputMovesAlongTheHandComputedAxes(
+        float forward,
+        float up,
+        float right,
+        float x,
+        float y,
+        float z
+    )
     {
-        var moved = FreeCamMotion.Step(Vector3.Zero, new Vector3(forward, up, right), MathF.PI / 4f, MathF.PI / 6f, 1f, 1f);
+        var moved = FreeCamMotion.Step(
+            Vector3.Zero,
+            new Vector3(forward, up, right),
+            MathF.PI / 4f,
+            MathF.PI / 6f,
+            1f,
+            1f
+        );
 
         Assert.Equal(x, moved.X, 5);
         Assert.Equal(y, moved.Y, 5);

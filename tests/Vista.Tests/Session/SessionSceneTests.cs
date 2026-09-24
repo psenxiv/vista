@@ -302,7 +302,8 @@ public class SessionSceneTests
     }
 
     // "Crane": one point at local (2, 0, 0), its anchor facing yaw π/2.
-    private static Preset Crane() => new(TrackEditing.Append(TrackEditing.Empty(name: "Crane"), Point(2f)), MathF.PI / 2f);
+    private static Preset Crane() =>
+        new(TrackEditing.Append(TrackEditing.Empty(name: "Crane"), Point(2f)), MathF.PI / 2f);
 
     [Fact]
     public void AddingAPresetPutsItOnTheGroundUnderTheCameraAndEditsIt()

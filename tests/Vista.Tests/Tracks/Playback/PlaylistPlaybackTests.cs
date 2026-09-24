@@ -10,8 +10,8 @@ namespace Vista.Tests.Tracks.Playback;
 public class PlaylistPlaybackTests
 {
     // A single point at x held for the given seconds.
-    private static Track Snap(float x, float hold, bool loop = false)
-        => TrackEditing.SetHold(TrackEditing.SetLoop(TrackEditing.Append(TrackEditing.Empty(), Point(x)), loop), 0, hold);
+    private static Track Snap(float x, float hold, bool loop = false) =>
+        TrackEditing.SetHold(TrackEditing.SetLoop(TrackEditing.Append(TrackEditing.Empty(), Point(x)), loop), 0, hold);
 
     private static PlaylistItem Item(Track track, int? loops = null) => new(Guid.NewGuid(), track, loops);
 
@@ -70,7 +70,10 @@ public class PlaylistPlaybackTests
     [Fact]
     public void APingPongLoopIsOneRoundTrip()
     {
-        var playback = new PlaylistPlayback([Item(StraightTrack(direction: PlaybackDirection.PingPong), 1), Item(StraightTrack())]);
+        var playback = new PlaylistPlayback([
+            Item(StraightTrack(direction: PlaybackDirection.PingPong), 1),
+            Item(StraightTrack()),
+        ]);
         playback.Advance(15f);
         Assert.Equal(0, playback.Index);
         Assert.Equal(5.0, playback.ShotTime, 4);
@@ -277,11 +280,15 @@ public class PlaylistPlaybackTests
     }
 
     // A single point at the origin, held 1 s, watching Guard with heavy smoothing.
-    private static Track Watch() => TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)), 0, 1f) with { TargetName = "Guard", Smoothing = 1f };
+    private static Track Watch() =>
+        TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)), 0, 1f) with
+        {
+            TargetName = "Guard",
+            Smoothing = 1f,
+        };
 
-    private static void GuardAt(NearbyCharacters characters, float x)
-        => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
-
+    private static void GuardAt(NearbyCharacters characters, float x) =>
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
 
     [Fact]
     public void ACutOrASeekStartsTheSmoothingAfresh()
@@ -324,7 +331,11 @@ public class PlaylistPlaybackTests
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
-        var zero = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var zero = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)) with
+        {
+            TargetName = "Guard",
+            Smoothing = 1f,
+        };
         var playback = new PlaylistPlayback([Item(Watch()), Item(zero), Item(Watch())], targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value, 3);
 

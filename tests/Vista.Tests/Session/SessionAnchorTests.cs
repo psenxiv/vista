@@ -125,7 +125,8 @@ public class SessionAnchorTests
         Assert.Null(state.PreviewAnchor(new Anchor(new Vector3(-4f, 0f, 9f), 1.3f), carry: false));
         state.EndLiveEdit();
 
-        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);
+        for (var i = 0; i < before.Count; i++)
+            Near(before[i], state.Track.Points[i].Position, 1e-4f);
         Near(new Vector3(-4f, 0f, 9f), state.Selection.AnchorInWorld!.Value.Position, 1e-4f);
     }
 
@@ -176,7 +177,11 @@ public class SessionAnchorTests
     public void TheGroundIsReadUnderTheFirstPoint()
     {
         Vector3? asked = null;
-        var state = new SessionState(p => { asked = p; return 2f; });
+        var state = new SessionState(p =>
+        {
+            asked = p;
+            return 2f;
+        });
         state.Edit();
 
         state.AddToEnd(Point(10f));
@@ -201,7 +206,11 @@ public class SessionAnchorTests
     public void TheGroundIsNotReadOnceBothAnchorsArePlaced()
     {
         var reads = 0;
-        var state = new SessionState(_ => { reads++; return 1f; });
+        var state = new SessionState(_ =>
+        {
+            reads++;
+            return 1f;
+        });
         state.Edit();
         state.AddToEnd(Point(10f));
         Assert.Equal(1, reads);
@@ -304,7 +313,8 @@ public class SessionAnchorTests
         Assert.Null(state.DeleteTracks([second]));
 
         Assert.True(state.Scene.AnchorPlaced);
-        for (var i = 0; i < before.Count; i++) Near(before[i], state.Track.Points[i].Position, 1e-4f);
+        for (var i = 0; i < before.Count; i++)
+            Near(before[i], state.Track.Points[i].Position, 1e-4f);
     }
 
     // Editing() with both anchors moved and turned by different, non-zero yaws.

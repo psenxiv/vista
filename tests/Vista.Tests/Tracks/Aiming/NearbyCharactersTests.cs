@@ -16,7 +16,10 @@ public class NearbyCharactersTests
     [Fact]
     public void FindCharacterGivesTheNamedCharactersFeet()
     {
-        var characters = With(new LoadedCharacter("Guard", null, new Vector3(3f, 0f, 4f)), new LoadedCharacter("Merchant", null, new Vector3(9f, 0f, 9f)));
+        var characters = With(
+            new LoadedCharacter("Guard", null, new Vector3(3f, 0f, 4f)),
+            new LoadedCharacter("Merchant", null, new Vector3(9f, 0f, 9f))
+        );
 
         Assert.Equal(new Vector3(3f, 0f, 4f), characters.FindCharacter("Guard", null, Vector3.Zero)?.Position);
     }
@@ -34,10 +37,19 @@ public class NearbyCharactersTests
     [Fact]
     public void ADuplicateNameResolvesToTheOneNearestThePlaceGiven()
     {
-        var characters = With(new LoadedCharacter("Guard", null, new Vector3(-20f, 0f, 0f)), new LoadedCharacter("Guard", null, new Vector3(20f, 0f, 0f)));
+        var characters = With(
+            new LoadedCharacter("Guard", null, new Vector3(-20f, 0f, 0f)),
+            new LoadedCharacter("Guard", null, new Vector3(20f, 0f, 0f))
+        );
 
-        Assert.Equal(new Vector3(20f, 0f, 0f), characters.FindCharacter("Guard", null, new Vector3(15f, 0f, 0f))?.Position);
-        Assert.Equal(new Vector3(-20f, 0f, 0f), characters.FindCharacter("Guard", null, new Vector3(-1f, 0f, 0f))?.Position);
+        Assert.Equal(
+            new Vector3(20f, 0f, 0f),
+            characters.FindCharacter("Guard", null, new Vector3(15f, 0f, 0f))?.Position
+        );
+        Assert.Equal(
+            new Vector3(-20f, 0f, 0f),
+            characters.FindCharacter("Guard", null, new Vector3(-1f, 0f, 0f))?.Position
+        );
     }
 
     [Fact]
@@ -56,10 +68,16 @@ public class NearbyCharactersTests
     [Fact]
     public void AWorldMatchesOnlyThePlayerFromThatWorld()
     {
-        var characters = With(new LoadedCharacter("Aya", "Gilgamesh", new Vector3(1f, 0f, 0f)), new LoadedCharacter("Aya", "Cactuar", new Vector3(30f, 0f, 0f)));
+        var characters = With(
+            new LoadedCharacter("Aya", "Gilgamesh", new Vector3(1f, 0f, 0f)),
+            new LoadedCharacter("Aya", "Cactuar", new Vector3(30f, 0f, 0f))
+        );
 
         Assert.Equal(new Vector3(30f, 0f, 0f), characters.FindCharacter("Aya", "Cactuar", Vector3.Zero)?.Position);
-        Assert.Equal(new Vector3(1f, 0f, 0f), characters.FindCharacter("Aya", "Gilgamesh", new Vector3(30f, 0f, 0f))?.Position);
+        Assert.Equal(
+            new Vector3(1f, 0f, 0f),
+            characters.FindCharacter("Aya", "Gilgamesh", new Vector3(30f, 0f, 0f))?.Position
+        );
         Assert.Null(characters.FindCharacter("Aya", "Sargatanas", Vector3.Zero));
     }
 
@@ -74,9 +92,18 @@ public class NearbyCharactersTests
     [Fact]
     public void WithNoWorldTheNearestOfTheNameIsFoundWhateverItsWorld()
     {
-        var characters = With(new LoadedCharacter("Aya", "Gilgamesh", new Vector3(20f, 0f, 0f)), new LoadedCharacter("Aya", null, new Vector3(-20f, 0f, 0f)));
+        var characters = With(
+            new LoadedCharacter("Aya", "Gilgamesh", new Vector3(20f, 0f, 0f)),
+            new LoadedCharacter("Aya", null, new Vector3(-20f, 0f, 0f))
+        );
 
-        Assert.Equal(new Vector3(20f, 0f, 0f), characters.FindCharacter("Aya", null, new Vector3(15f, 0f, 0f))?.Position);
-        Assert.Equal(new Vector3(-20f, 0f, 0f), characters.FindCharacter("Aya", null, new Vector3(-15f, 0f, 0f))?.Position);
+        Assert.Equal(
+            new Vector3(20f, 0f, 0f),
+            characters.FindCharacter("Aya", null, new Vector3(15f, 0f, 0f))?.Position
+        );
+        Assert.Equal(
+            new Vector3(-20f, 0f, 0f),
+            characters.FindCharacter("Aya", null, new Vector3(-15f, 0f, 0f))?.Position
+        );
     }
 }

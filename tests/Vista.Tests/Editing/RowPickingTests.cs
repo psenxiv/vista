@@ -71,13 +71,14 @@ public class RowPickingTests
     }
 
     [Fact]
-    public void ClickingARowNotInTheListIsRefused()
-        => Assert.Throws<ArgumentException>(() => RowPicking.Click(Rows, [], null, 99, RowClick.Plain));
+    public void ClickingARowNotInTheListIsRefused() =>
+        Assert.Throws<ArgumentException>(() => RowPicking.Click(Rows, [], null, 99, RowClick.Plain));
 
     [Theory]
     [InlineData(false, false, RowClick.Plain)]
     [InlineData(false, true, RowClick.Toggle)]
     [InlineData(true, false, RowClick.Range)]
     [InlineData(true, true, RowClick.Range)]
-    public void ShiftWinsOverCtrl(bool shift, bool ctrl, RowClick expected) => Assert.Equal(expected, RowPicking.FromKeys(shift, ctrl));
+    public void ShiftWinsOverCtrl(bool shift, bool ctrl, RowClick expected) =>
+        Assert.Equal(expected, RowPicking.FromKeys(shift, ctrl));
 }

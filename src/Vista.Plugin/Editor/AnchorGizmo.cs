@@ -1,11 +1,11 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGuizmo;
+using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Game;
-using Dalamud.Bindings.ImGuizmo;
-using Dalamud.Game.ClientState.Keys;
 
 namespace Vista.Plugin.Editor;
 
@@ -32,7 +32,8 @@ internal sealed class AnchorGizmo
     /// <summary>Ends a drag in progress, keeping what it moved, for leaving editing mode.</summary>
     public void Cancel(SessionState session)
     {
-        if (dragStart is not null) session.EndLiveEdit();
+        if (dragStart is not null)
+            session.EndLiveEdit();
         dragStart = null;
         Hot = false;
     }
@@ -61,18 +62,26 @@ internal sealed class AnchorGizmo
         ImGuizmo.AllowAxisFlip(false);
 
         var shown = dragStart ?? anchor;
-        if (dragStart is null) matrix = PoseMatrix.From(shown.Position, shown.Yaw, 0f, 0f);
-        var rotate = kind != AnchorKind.LookAt && (dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate);
+        if (dragStart is null)
+            matrix = PoseMatrix.From(shown.Position, shown.Yaw, 0f, 0f);
+        var rotate =
+            kind != AnchorKind.LookAt && (dragStart is not null ? dragRotate : points.Mode == GizmoMode.Rotate);
         // The Look At point has no heading, so its local axes are the world's anyway.
         var local = dragStart is not null ? dragLocal : points.Mode == GizmoMode.MoveLocal;
         ImGuizmo.SetID(rotate ? YawId : MoveId);
-        Gizmo.Manipulate(view, rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate, rotate || local ? ImGuizmoMode.Local : ImGuizmoMode.World, ref matrix);
+        Gizmo.Manipulate(
+            view,
+            rotate ? ImGuizmoOperation.RotateY : ImGuizmoOperation.Translate,
+            rotate || local ? ImGuizmoMode.Local : ImGuizmoMode.World,
+            ref matrix
+        );
         var usingNow = ImGuizmo.IsUsing();
         Hot = usingNow || ImGuizmo.IsOver();
 
         if (waitForRelease)
         {
-            if (!usingNow) waitForRelease = false;
+            if (!usingNow)
+                waitForRelease = false;
             return;
         }
 
@@ -89,11 +98,18 @@ internal sealed class AnchorGizmo
             }
 
             var edited = rotate
-                ? dragStart.Value with { Yaw = TrackAim.FromDirection(-new Vector3(matrix.M31, matrix.M32, matrix.M33)).Yaw }
-                : dragStart.Value with { Position = matrix.Translation };
-            var refusal = kind == AnchorKind.LookAt
-                ? session.PreviewLookAt(edited.Position)
-                : session.PreviewAnchor(edited, carry: !PhysicalKeys.IsDown(VirtualKey.MENU));
+                ? dragStart.Value with
+                {
+                    Yaw = TrackAim.FromDirection(-new Vector3(matrix.M31, matrix.M32, matrix.M33)).Yaw,
+                }
+                : dragStart.Value with
+                {
+                    Position = matrix.Translation,
+                };
+            var refusal =
+                kind == AnchorKind.LookAt
+                    ? session.PreviewLookAt(edited.Position)
+                    : session.PreviewAnchor(edited, carry: !PhysicalKeys.IsDown(VirtualKey.MENU));
             if (refusal is not null)
             {
                 Plugin.Log.Warning("[editor] anchor drag abandoned: {Refusal}", refusal);
@@ -115,7 +131,8 @@ internal sealed class AnchorGizmo
     /// <summary>The selected anchor in the world, or the Look At point as an anchor with no yaw.</summary>
     private static Anchor? Shown(SessionState session, AnchorKind kind)
     {
-        if (kind != AnchorKind.LookAt) return session.Selection.AnchorInWorld;
+        if (kind != AnchorKind.LookAt)
+            return session.Selection.AnchorInWorld;
         return session.Selection.LookAtInWorld is { } point ? new Anchor(point, 0f) : null;
     }
 }

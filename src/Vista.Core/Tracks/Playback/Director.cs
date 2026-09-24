@@ -48,13 +48,15 @@ public sealed class Director
     /// <summary>Holds the current frame. No effect unless live.</summary>
     public void Pause()
     {
-        if (IsLive) IsPaused = true;
+        if (IsLive)
+            IsPaused = true;
     }
 
     /// <summary>Continues from the paused frame. No effect unless live.</summary>
     public void Resume()
     {
-        if (IsLive) IsPaused = false;
+        if (IsLive)
+            IsPaused = false;
     }
 
     /// <summary>Takes live mode off and clears pause. <see cref="Tick"/> returns null until the next <see cref="GoLive"/>.</summary>
@@ -68,13 +70,15 @@ public sealed class Director
     /// <summary>Jumps the live track or playlist to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
     public void Seek(double time)
     {
-        if (IsLive) _playback?.Seek(time);
+        if (IsLive)
+            _playback?.Seek(time);
     }
 
     /// <summary>Where the camera should be this frame, or null to leave the game camera alone.</summary>
     public CameraState? Tick(float dt)
     {
-        if (!IsLive) return null;
+        if (!IsLive)
+            return null;
 
         return _shot switch
         {

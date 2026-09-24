@@ -33,8 +33,8 @@ public class GizmoEditTests
     [InlineData(GimbalRing.Yaw)]
     [InlineData(GimbalRing.Pitch)]
     [InlineData(GimbalRing.Roll)]
-    public void AnUnturnedRingReturnsTheOriginal(GimbalRing ring)
-        => Assert.Same(Original, GizmoEdit.Rotate(Original, ring, GizmoEdit.RingFrame(Original, ring)));
+    public void AnUnturnedRingReturnsTheOriginal(GimbalRing ring) =>
+        Assert.Same(Original, GizmoEdit.Rotate(Original, ring, GizmoEdit.RingFrame(Original, ring)));
 
     [Fact]
     public void TheYawRingLiesFlatAroundWorldUp()

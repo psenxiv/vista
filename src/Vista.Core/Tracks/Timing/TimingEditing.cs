@@ -7,11 +7,14 @@ public static class TimingEditing
     public static Track SetKeyMode(Track track, int key, TangentMode mode)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
-        if (mode == TangentMode.Manual) throw new ArgumentException("a key's mode can't be set to Manual directly");
+        if (mode == TangentMode.Manual)
+            throw new ArgumentException("a key's mode can't be set to Manual directly");
 
         var timing = track.Timing[point];
-        if (role == KeyRole.Point) timing = timing with { InMode = mode, InTangent = 0f };
-        if (HasDeparture(track, point, role)) timing = timing with { OutMode = mode, OutTangent = 0f };
+        if (role == KeyRole.Point)
+            timing = timing with { InMode = mode, InTangent = 0f };
+        if (HasDeparture(track, point, role))
+            timing = timing with { OutMode = mode, OutTangent = 0f };
         return TrackEditing.WithTiming(track, point, timing);
     }
 
@@ -20,8 +23,10 @@ public static class TimingEditing
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
         var timing = track.Timing[point];
-        if (role == KeyRole.Point && inSlope is { } i) timing = timing with { InMode = TangentMode.Manual, InTangent = Slope(i) };
-        if (HasDeparture(track, point, role) && outSlope is { } o) timing = timing with { OutMode = TangentMode.Manual, OutTangent = Slope(o) };
+        if (role == KeyRole.Point && inSlope is { } i)
+            timing = timing with { InMode = TangentMode.Manual, InTangent = Slope(i) };
+        if (HasDeparture(track, point, role) && outSlope is { } o)
+            timing = timing with { OutMode = TangentMode.Manual, OutTangent = Slope(o) };
         return TrackEditing.WithTiming(track, point, timing);
     }
 
@@ -44,7 +49,8 @@ public static class TimingEditing
     /// <summary>Removes the hold a hold end closes. A point's key has no hold to remove.</summary>
     public static Track RemoveHold(Track track, int key)
     {
-        if (TrackEditing.RoleOf(track, key) != KeyRole.HoldEnd) throw new ArgumentException("only a hold end can remove its hold");
+        if (TrackEditing.RoleOf(track, key) != KeyRole.HoldEnd)
+            throw new ArgumentException("only a hold end can remove its hold");
         return TrackEditing.SetHold(track, TrackEditing.PointOf(track, key), 0f);
     }
 
@@ -52,11 +58,16 @@ public static class TimingEditing
     public static Track MoveKey(Track track, TrackEvaluator evaluator, int key, float time)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
-        if (key == 0 || float.IsNaN(time)) return track;
+        if (key == 0 || float.IsNaN(time))
+            return track;
 
         var keys = evaluator.Keys;
         if (role == KeyRole.HoldEnd)
-            return TrackEditing.SetHold(track, point, Math.Clamp(time - keys[key - 1].Time, TrackEditing.MinKeyGap, TrackEditing.MaxSeconds));
+            return TrackEditing.SetHold(
+                track,
+                point,
+                Math.Clamp(time - keys[key - 1].Time, TrackEditing.MinKeyGap, TrackEditing.MaxSeconds)
+            );
 
         var start = keys[key - 1].Time;
         var length = evaluator.LegLength(point);
@@ -79,13 +90,18 @@ public static class TimingEditing
             upper = MathF.Min(upper, next - nextShortest);
         }
 
-        if (lower > upper) return track;
+        if (lower > upper)
+            return track;
         var target = Math.Clamp(time, lower, upper);
-        if (target == keys[key].Time) return track;
+        if (target == keys[key].Time)
+            return track;
 
         var result = TrackEditing.SetLegSpeed(track, point, length / (target - start));
-        if (holds) return TrackEditing.SetHold(result, point, next - target);
-        return hasNext ? TrackEditing.SetLegSpeed(result, point + 1, evaluator.LegLength(point + 1) / (next - target)) : result;
+        if (holds)
+            return TrackEditing.SetHold(result, point, next - target);
+        return hasNext
+            ? TrackEditing.SetLegSpeed(result, point + 1, evaluator.LegLength(point + 1) / (next - target))
+            : result;
     }
 
     /// <summary>The shortest and longest a leg of <paramref name="length"/> can take within the speed and leg ranges.</summary>
@@ -93,11 +109,16 @@ public static class TimingEditing
     public static Track RippleKey(Track track, TrackEvaluator evaluator, int key, float time)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
-        if (key == 0 || float.IsNaN(time)) return track;
+        if (key == 0 || float.IsNaN(time))
+            return track;
 
         var keys = evaluator.Keys;
         if (role == KeyRole.HoldEnd)
-            return TrackEditing.SetHold(track, point, Math.Clamp(time - keys[key - 1].Time, TrackEditing.MinKeyGap, TrackEditing.MaxSeconds));
+            return TrackEditing.SetHold(
+                track,
+                point,
+                Math.Clamp(time - keys[key - 1].Time, TrackEditing.MinKeyGap, TrackEditing.MaxSeconds)
+            );
 
         // Only this leg is re-sped. Key times are cumulative leg durations, so everything after
         // it shifts by the same delta on its own, and the next leg keeps the duration it had.
@@ -106,15 +127,20 @@ public static class TimingEditing
         var (shortest, longest) = LegRange(length);
 
         var target = Math.Clamp(time, start + shortest, start + longest);
-        if (target == keys[key].Time) return track;
+        if (target == keys[key].Time)
+            return track;
         return TrackEditing.SetLegSpeed(track, point, length / (target - start));
     }
 
-    private static (float Shortest, float Longest) LegRange(float length)
-        => (TimingCompiler.LegDuration(length, TrackEditing.MaxSpeed), TimingCompiler.LegDuration(length, TrackEditing.MinSpeed));
+    private static (float Shortest, float Longest) LegRange(float length) =>
+        (
+            TimingCompiler.LegDuration(length, TrackEditing.MaxSpeed),
+            TimingCompiler.LegDuration(length, TrackEditing.MinSpeed)
+        );
 
     /// <summary>True when the key sets its point's departure side: a hold end, or a point key without a hold.</summary>
-    private static bool HasDeparture(Track track, int point, KeyRole role) => role == KeyRole.HoldEnd || track.Timing[point].Hold <= 0f;
+    private static bool HasDeparture(Track track, int point, KeyRole role) =>
+        role == KeyRole.HoldEnd || track.Timing[point].Hold <= 0f;
 
     private static float Slope(float value) => float.IsFinite(value) ? MathF.Max(value, 0f) : 0f;
 }

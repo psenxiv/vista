@@ -5,11 +5,22 @@ namespace Vista.Tests.Tracks.Timing;
 
 public class TimingCurveTests
 {
-    private static TimingKey Key(float time, float position, TangentMode mode = TangentMode.Auto, float inTangent = 0f, float outTangent = 0f)
-        => new(time, position, mode, mode, inTangent, outTangent);
+    private static TimingKey Key(
+        float time,
+        float position,
+        TangentMode mode = TangentMode.Auto,
+        float inTangent = 0f,
+        float outTangent = 0f
+    ) => new(time, position, mode, mode, inTangent, outTangent);
 
-    private static TimingKey Sided(float time, float position, TangentMode inMode, TangentMode outMode, float inTangent = 0f, float outTangent = 0f)
-        => new(time, position, inMode, outMode, inTangent, outTangent);
+    private static TimingKey Sided(
+        float time,
+        float position,
+        TangentMode inMode,
+        TangentMode outMode,
+        float inTangent = 0f,
+        float outTangent = 0f
+    ) => new(time, position, inMode, outMode, inTangent, outTangent);
 
     [Fact]
     public void ZeroKeysGiveZeroDurationAndZeroPosition()
@@ -55,13 +66,7 @@ public class TimingCurveTests
     {
         // Keys 0.0625 s apart, one float step at a million seconds. A time cast to float
         // rounds 1_000_000.04 up to the next key and evaluates the wrong interval.
-        var keys = new[]
-        {
-            Key(0f, 0f),
-            Key(1_000_000f, 1f),
-            Key(1_000_000.0625f, 1f),
-            Key(1_000_000.125f, 2f),
-        };
+        var keys = new[] { Key(0f, 0f), Key(1_000_000f, 1f), Key(1_000_000.0625f, 1f), Key(1_000_000.125f, 2f) };
         var curve = new TimingCurve(keys);
 
         Assert.Equal(1f, curve.PositionAt(1_000_000.04), 4);
@@ -213,12 +218,14 @@ public class TimingCurveTests
     [Fact]
     public void LinearSidesMakeEachSpanStraight()
     {
-        var curve = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Linear, TangentMode.Linear),
-            Sided(2f, 4f, TangentMode.Linear, TangentMode.Linear),
-            Sided(4f, 5f, TangentMode.Linear, TangentMode.Linear),
-        });
+        var curve = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Linear, TangentMode.Linear),
+                Sided(2f, 4f, TangentMode.Linear, TangentMode.Linear),
+                Sided(4f, 5f, TangentMode.Linear, TangentMode.Linear),
+            }
+        );
 
         Assert.Equal(2f, curve.PositionAt(1.0), 4);
         Assert.Equal(2f, curve.SlopeAt(1.0), 4);
@@ -229,11 +236,13 @@ public class TimingCurveTests
     [Fact]
     public void AFlatInSideArrivesAtRestAndAFlatOutSideLeavesFromRest()
     {
-        var curve = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Auto, TangentMode.Flat),
-            Sided(2f, 4f, TangentMode.Flat, TangentMode.Auto),
-        });
+        var curve = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Auto, TangentMode.Flat),
+                Sided(2f, 4f, TangentMode.Flat, TangentMode.Auto),
+            }
+        );
 
         Assert.Equal(0f, curve.SideSlope(0, KeySide.Out));
         Assert.Equal(0f, curve.SideSlope(1, KeySide.In));
@@ -245,12 +254,14 @@ public class TimingCurveTests
     [Fact]
     public void EachSideOfAKeyFollowsItsOwnMode()
     {
-        var curve = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Auto, TangentMode.Auto),
-            Sided(2f, 4f, TangentMode.Flat, TangentMode.Linear),
-            Sided(4f, 5f, TangentMode.Auto, TangentMode.Auto),
-        });
+        var curve = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Auto, TangentMode.Auto),
+                Sided(2f, 4f, TangentMode.Flat, TangentMode.Linear),
+                Sided(4f, 5f, TangentMode.Auto, TangentMode.Auto),
+            }
+        );
 
         Assert.Equal(0f, curve.SideSlope(1, KeySide.In));
         Assert.Equal(0.5f, curve.SideSlope(1, KeySide.Out), 4);
@@ -259,36 +270,44 @@ public class TimingCurveTests
     [Fact]
     public void AManualSideIsARatioToItsSpansSecant()
     {
-        var curve = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 0f, 0.5f),
-            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
-        });
+        var curve = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 0f, 0.5f),
+                Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+            }
+        );
         Assert.Equal(1f, curve.SideSlope(0, KeySide.Out), 4);
 
-        var steep = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 0f, 100f),
-            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
-        });
+        var steep = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 0f, 100f),
+                Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+            }
+        );
         Assert.Equal(6f, steep.SideSlope(0, KeySide.Out), 4);
     }
 
     [Fact]
     public void AManualSideUsesItsTangentWithinTheMonotoneLimit()
     {
-        var gentle = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 1f, 1f),
-            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
-        });
+        var gentle = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 1f, 1f),
+                Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+            }
+        );
         Assert.Equal(2f, gentle.SideSlope(0, KeySide.Out), 4);
 
-        var steep = new TimingCurve(new[]
-        {
-            Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 100f, 100f),
-            Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
-        });
+        var steep = new TimingCurve(
+            new[]
+            {
+                Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, 100f, 100f),
+                Sided(2f, 4f, TangentMode.Auto, TangentMode.Auto),
+            }
+        );
         Assert.Equal(6f, steep.SideSlope(0, KeySide.Out), 4);
     }
 

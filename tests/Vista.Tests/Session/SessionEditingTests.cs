@@ -80,7 +80,8 @@ public class SessionEditingTests
         state.OverwriteSelected(state.Track.Points[1] with { });
 
         var steps = 0;
-        while (state.Undo()) steps++;
+        while (state.Undo())
+            steps++;
         Assert.Equal(4, steps); // the speed and three points
     }
 

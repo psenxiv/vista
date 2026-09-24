@@ -47,19 +47,12 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void UnwrapAnglesOfEmptySequenceIsEmpty()
-        => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
+    public void UnwrapAnglesOfEmptySequenceIsEmpty() => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
 
     [Fact]
     public void PathTangentClampsPitchOnANearVerticalPath()
     {
-        var points = new[]
-        {
-            new Vector3(0, 0, 0),
-            new Vector3(0, 1, 0),
-            new Vector3(0, 2, 0),
-            new Vector3(0, 3, 0),
-        };
+        var points = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 2, 0), new Vector3(0, 3, 0) };
         var table = new ArcLengthTable(points);
 
         var (_, pitch) = TrackAim.PathTangent(points, table, 1, 0.5f, (0f, 0f));
@@ -72,13 +65,7 @@ public class TrackAimTests
     {
         // Segment 0 (points 0-1) collapses to a single point; segments 1 and 2 continue in a straight line
         // along +X, so the nearest valid direction is unambiguous regardless of exactly where it is sampled.
-        var points = new[]
-        {
-            new Vector3(5, 0, 0),
-            new Vector3(5, 0, 0),
-            new Vector3(10, 0, 0),
-            new Vector3(15, 0, 0),
-        };
+        var points = new[] { new Vector3(5, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0), new Vector3(15, 0, 0) };
         var table = new ArcLengthTable(points);
 
         var actual = TrackAim.PathTangent(points, table, 0, 0.5f, (99f, 99f));
@@ -91,13 +78,7 @@ public class TrackAimTests
     [Fact]
     public void PathTangentReturnsFallbackWhenEveryPointCoincides()
     {
-        var points = new[]
-        {
-            new Vector3(3, 3, 3),
-            new Vector3(3, 3, 3),
-            new Vector3(3, 3, 3),
-            new Vector3(3, 3, 3),
-        };
+        var points = new[] { new Vector3(3, 3, 3), new Vector3(3, 3, 3), new Vector3(3, 3, 3), new Vector3(3, 3, 3) };
         var table = new ArcLengthTable(points);
         var fallback = (Yaw: 1.1f, Pitch: -0.2f);
 

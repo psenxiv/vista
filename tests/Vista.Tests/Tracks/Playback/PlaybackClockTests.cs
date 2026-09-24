@@ -11,8 +11,8 @@ public class PlaybackClockTests
     [InlineData(PlaybackDirection.Forward, 10.0)]
     [InlineData(PlaybackDirection.Reverse, 10.0)]
     [InlineData(PlaybackDirection.PingPong, 20.0)]
-    public void ACycleIsTheShotOrTwiceItForPingPong(PlaybackDirection direction, double expected)
-        => Assert.Equal(expected, PlaybackClock.CycleLength(direction, L));
+    public void ACycleIsTheShotOrTwiceItForPingPong(PlaybackDirection direction, double expected) =>
+        Assert.Equal(expected, PlaybackClock.CycleLength(direction, L));
 
     [Theory]
     [InlineData(PlaybackDirection.Forward)]
@@ -36,16 +36,16 @@ public class PlaybackClockTests
     [InlineData(PlaybackDirection.PingPong, 10.0, 10.0)]
     [InlineData(PlaybackDirection.PingPong, 14.0, 6.0)]
     [InlineData(PlaybackDirection.PingPong, 20.0, 0.0)]
-    public void ShotTimeFollowsTheDirection(PlaybackDirection direction, double clock, double expected)
-        => Assert.Equal(expected, PlaybackClock.ShotTime(direction, L, clock), 9);
+    public void ShotTimeFollowsTheDirection(PlaybackDirection direction, double clock, double expected) =>
+        Assert.Equal(expected, PlaybackClock.ShotTime(direction, L, clock), 9);
 
     [Theory]
     [InlineData(PlaybackDirection.Forward, -1.0, 0.0)]
     [InlineData(PlaybackDirection.Forward, 12.0, 10.0)]
     [InlineData(PlaybackDirection.Reverse, 12.0, 0.0)]
     [InlineData(PlaybackDirection.PingPong, 25.0, 0.0)]
-    public void ShotTimeClampsTheClockToTheCycle(PlaybackDirection direction, double clock, double expected)
-        => Assert.Equal(expected, PlaybackClock.ShotTime(direction, L, clock), 9);
+    public void ShotTimeClampsTheClockToTheCycle(PlaybackDirection direction, double clock, double expected) =>
+        Assert.Equal(expected, PlaybackClock.ShotTime(direction, L, clock), 9);
 
     [Theory]
     [InlineData(PlaybackDirection.Forward, 4.0, false, 4.0)]
@@ -55,8 +55,12 @@ public class PlaybackClockTests
     [InlineData(PlaybackDirection.PingPong, 4.0, true, 16.0)]
     [InlineData(PlaybackDirection.Forward, 12.0, false, 10.0)]
     [InlineData(PlaybackDirection.Reverse, -1.0, false, 10.0)]
-    public void ClockForFindsTheClockGivingAShotTime(PlaybackDirection direction, double shotTime, bool onReturn, double expected)
-        => Assert.Equal(expected, PlaybackClock.ClockFor(direction, L, shotTime, onReturn), 9);
+    public void ClockForFindsTheClockGivingAShotTime(
+        PlaybackDirection direction,
+        double shotTime,
+        bool onReturn,
+        double expected
+    ) => Assert.Equal(expected, PlaybackClock.ClockFor(direction, L, shotTime, onReturn), 9);
 
     [Theory]
     [InlineData(PlaybackDirection.PingPong, 9.0, false)]
@@ -65,8 +69,8 @@ public class PlaybackClockTests
     [InlineData(PlaybackDirection.PingPong, 20.0, true)]
     [InlineData(PlaybackDirection.Reverse, 15.0, false)]
     [InlineData(PlaybackDirection.Forward, 15.0, false)]
-    public void OnlyPingPongPastTheShotIsOnItsReturnPass(PlaybackDirection direction, double clock, bool expected)
-        => Assert.Equal(expected, PlaybackClock.OnReturnPass(direction, L, clock));
+    public void OnlyPingPongPastTheShotIsOnItsReturnPass(PlaybackDirection direction, double clock, bool expected) =>
+        Assert.Equal(expected, PlaybackClock.OnReturnPass(direction, L, clock));
 
     [Theory]
     [InlineData(PlaybackDirection.Forward)]

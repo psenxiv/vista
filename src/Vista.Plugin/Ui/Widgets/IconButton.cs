@@ -13,35 +13,49 @@ internal static class IconButton
     private static (uint Id, int Frame)? dangerHovered;
 
     /// <summary>A frameless icon button with a tooltip, shown even while disabled; <paramref name="danger"/> turns the icon red on hover.</summary>
-    public static bool Draw(string id, FontAwesomeIcon icon, string tooltip, uint? iconColour = null, bool danger = false)
+    public static bool Draw(
+        string id,
+        FontAwesomeIcon icon,
+        string tooltip,
+        uint? iconColour = null,
+        bool danger = false
+    )
     {
-        var red = danger && dangerHovered is { } last && last.Id == ImGui.GetID(id) && last.Frame == ImGui.GetFrameCount() - 1;
+        var red =
+            danger
+            && dangerHovered is { } last
+            && last.Id == ImGui.GetID(id)
+            && last.Frame == ImGui.GetFrameCount() - 1;
         var colour = red ? UiColours.Red : iconColour;
         bool pressed;
         using (Frameless())
         using (ImRaii.PushColor(ImGuiCol.Text, colour ?? 0u, colour is not null))
             pressed = ImGuiComponents.IconButton(id, icon);
-        if (danger && ImGui.IsItemHovered()) dangerHovered = (ImGui.GetID(id), ImGui.GetFrameCount());
+        if (danger && ImGui.IsItemHovered())
+            dangerHovered = (ImGui.GetID(id), ImGui.GetFrameCount());
 
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip(tooltip);
         return pressed;
     }
 
     /// <summary>A toggle: the icon in the accent colour when on, dimmed when off.</summary>
-    public static bool Toggle(string id, FontAwesomeIcon icon, bool on, string tooltip)
-        => Draw(id, icon, tooltip, on ? UiColours.Accent : UiColours.Dim());
+    public static bool Toggle(string id, FontAwesomeIcon icon, bool on, string tooltip) =>
+        Draw(id, icon, tooltip, on ? UiColours.Accent : UiColours.Dim());
 
     /// <summary>A row's action, drawn only while the row is hovered; otherwise its space stays empty.</summary>
     public static bool RowAction(string id, FontAwesomeIcon icon, string tooltip, bool rowHovered, bool danger = false)
     {
-        if (rowHovered) return Draw(id, icon, tooltip, danger: danger);
+        if (rowHovered)
+            return Draw(id, icon, tooltip, danger: danger);
         ImGui.Dummy(new Vector2(Width(icon), ImGui.GetFrameHeight()));
         return false;
     }
 
     /// <summary>True when the mouse is over the rectangle and the window or one of its children is hovered.</summary>
-    public static bool RowHovered(Vector2 min, Vector2 max)
-        => ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows | ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) && ImGui.IsMouseHoveringRect(min, max, false);
+    public static bool RowHovered(Vector2 min, Vector2 max) =>
+        ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows | ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
+        && ImGui.IsMouseHoveringRect(min, max, false);
 
     /// <summary>The tooltip on a warning that a watched character can't be found.</summary>
     public const string NotFoundTooltip = "Not found nearby: using recorded aim";
@@ -56,7 +70,8 @@ internal static class IconButton
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
             ImGui.TextUnformatted(FontAwesomeIcon.ExclamationTriangle.ToIconString());
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(tooltip);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip(tooltip);
     }
 
     /// <summary>The warning icon's width.</summary>
@@ -78,7 +93,10 @@ internal static class IconButton
     {
         var hovered = ImGui.GetColorU32(ImGuiCol.ButtonHovered, 0.35f);
         var active = ImGui.GetColorU32(ImGuiCol.ButtonActive, 0.5f);
-        var colours = ImRaii.PushColor(ImGuiCol.Button, 0u).Push(ImGuiCol.ButtonHovered, hovered).Push(ImGuiCol.ButtonActive, active);
+        var colours = ImRaii
+            .PushColor(ImGuiCol.Button, 0u)
+            .Push(ImGuiCol.ButtonHovered, hovered)
+            .Push(ImGuiCol.ButtonActive, active);
         return new FramelessScope(colours, ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 4f));
     }
 

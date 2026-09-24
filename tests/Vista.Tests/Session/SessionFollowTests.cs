@@ -20,7 +20,8 @@ public class SessionFollowTests
         characters.Update([Guard(new Vector3(10f, 0f, 0f))]);
         var state = new SessionState(null, characters);
         state.Edit();
-        for (var i = 0; i < points; i++) state.AddToEnd(new ControlPoint(new Vector3(3f + (5f * i), 1f, -4f), 0.3f, 0.1f, 1f));
+        for (var i = 0; i < points; i++)
+            state.AddToEnd(new ControlPoint(new Vector3(3f + (5f * i), 1f, -4f), 0.3f, 0.1f, 1f));
         return (state, characters);
     }
 
@@ -52,7 +53,10 @@ public class SessionFollowTests
     public void AFollowTracksAnchorCannotBeSelected()
     {
         var (state, _) = FollowingGuard();
-        Assert.Equal("A Follow Target track's anchor is hidden", state.Selection.SelectTrackAnchor(state.EditedTrackId));
+        Assert.Equal(
+            "A Follow Target track's anchor is hidden",
+            state.Selection.SelectTrackAnchor(state.EditedTrackId)
+        );
         Assert.Null(state.Selection.Anchor);
     }
 
@@ -112,7 +116,10 @@ public class SessionFollowTests
     public void ChoosingANewCharacterKeepsTheOrbit()
     {
         var (state, characters) = FollowingGuard();
-        characters.Update([Guard(new Vector3(10f, 0f, 0f)), new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 0f)]);
+        characters.Update([
+            Guard(new Vector3(10f, 0f, 0f)),
+            new LoadedCharacter("Scout", null, new Vector3(-5f, 0f, 8f), 0f),
+        ]);
         var stored = state.StoredTrack.Points[0];
 
         state.SetTarget("Scout", null);

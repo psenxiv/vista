@@ -1,9 +1,9 @@
-using Vista.Plugin.Ui.Widgets;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Ui.Windows;
 
@@ -34,13 +34,14 @@ internal sealed class WelcomeWindow : Window
     }
 
     /// <summary>Centres the window the first time it appears.</summary>
-    public override void PreDraw()
-        => ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+    public override void PreDraw() =>
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
     /// <summary>Ok and the close button both land here, so either one dismisses it for good and moves on to Setup, or the Vista window once a folder is set.</summary>
     public override void OnClose()
     {
-        if (config.WelcomeSeen) return;
+        if (config.WelcomeSeen)
+            return;
         config.WelcomeSeen = true;
         config.Save();
         continued();
@@ -58,7 +59,8 @@ internal sealed class WelcomeWindow : Window
         DrawFeedback();
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
-        if (ImGui.Button("Ok", new Vector2(Width, 0f))) IsOpen = false;
+        if (ImGui.Button("Ok", new Vector2(Width, 0f)))
+            IsOpen = false;
     }
 
     /// <summary>The feedback line with a red heart after it, on the same line when it fits; the game font has no emoji.</summary>
@@ -66,10 +68,12 @@ internal sealed class WelcomeWindow : Window
     {
         var heart = FontAwesomeIcon.Heart.ToIconString();
         float heartWidth;
-        using (ImRaii.PushFont(UiBuilder.IconFont)) heartWidth = ImGui.CalcTextSize(heart).X;
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            heartWidth = ImGui.CalcTextSize(heart).X;
 
         ImGui.TextUnformatted(Feedback);
-        if (ImGui.CalcTextSize(Feedback).X + ImGui.GetStyle().ItemSpacing.X + heartWidth <= Width) ImGui.SameLine();
+        if (ImGui.CalcTextSize(Feedback).X + ImGui.GetStyle().ItemSpacing.X + heartWidth <= Width)
+            ImGui.SameLine();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
             ImGui.TextUnformatted(heart);

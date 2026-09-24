@@ -13,10 +13,14 @@ internal static class CharacterTable
         var found = new List<LoadedCharacter>();
         foreach (var obj in Plugin.ObjectTable)
         {
-            if (obj.ObjectKind is not (ObjectKind.Pc or ObjectKind.BattleNpc or ObjectKind.EventNpc)) continue;
+            if (obj.ObjectKind is not (ObjectKind.Pc or ObjectKind.BattleNpc or ObjectKind.EventNpc))
+                continue;
             var name = obj.Name.TextValue;
-            if (string.IsNullOrEmpty(name)) continue;
-            found.Add(new LoadedCharacter(name, WorldOf(obj as IPlayerCharacter), obj.Position, obj.Rotation + MathF.PI));
+            if (string.IsNullOrEmpty(name))
+                continue;
+            found.Add(
+                new LoadedCharacter(name, WorldOf(obj as IPlayerCharacter), obj.Position, obj.Rotation + MathF.PI)
+            );
         }
 
         return found;
@@ -24,7 +28,8 @@ internal static class CharacterTable
 
     private static string? WorldOf(IPlayerCharacter? player)
     {
-        if (player?.HomeWorld.ValueNullable is not { } world) return null;
+        if (player?.HomeWorld.ValueNullable is not { } world)
+            return null;
         var name = world.Name.ExtractText();
         return string.IsNullOrEmpty(name) ? null : name;
     }

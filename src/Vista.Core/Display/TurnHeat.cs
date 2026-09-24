@@ -21,7 +21,8 @@ public static class TurnHeat
     public static IReadOnlyList<Sample> Samples(TrackEvaluator evaluator, Vector3? target = null)
     {
         var count = (int)Math.Ceiling(evaluator.Duration * SamplesPerSecond) + 1;
-        if (evaluator.Duration <= 0.0 || evaluator.Evaluate(0.0, target) is null) return [];
+        if (evaluator.Duration <= 0.0 || evaluator.Evaluate(0.0, target) is null)
+            return [];
 
         var samples = new Sample[count];
         Vector3? before = null;
@@ -31,7 +32,10 @@ public static class TurnHeat
             var frame = evaluator.Evaluate(time, target)!.Value;
             var look = Vector3.Normalize(frame.LookAt - frame.Position);
             var span = i == 0 ? 0.0 : time - Math.Min((i - 1) / (double)SamplesPerSecond, evaluator.Duration);
-            var rate = before is { } b && span > 0.0 ? (float)(MathF.Acos(Math.Clamp(Vector3.Dot(b, look), -1f, 1f)) * 180f / MathF.PI / span) : 0f;
+            var rate =
+                before is { } b && span > 0.0
+                    ? (float)(MathF.Acos(Math.Clamp(Vector3.Dot(b, look), -1f, 1f)) * 180f / MathF.PI / span)
+                    : 0f;
             samples[i] = new Sample(frame.Position, rate);
             before = look;
         }

@@ -33,11 +33,15 @@ public sealed class TimingCurve
     public float PositionAt(double time)
     {
         var n = _keys.Count;
-        if (n == 0) return 0f;
-        if (n == 1) return _keys[0].Position;
+        if (n == 0)
+            return 0f;
+        if (n == 1)
+            return _keys[0].Position;
 
-        if (time <= _keys[0].Time) return _keys[0].Position;
-        if (time >= Duration) return _keys[^1].Position;
+        if (time <= _keys[0].Time)
+            return _keys[0].Position;
+        if (time >= Duration)
+            return _keys[^1].Position;
 
         var k = FindInterval(time);
         var k0 = _keys[k];
@@ -69,7 +73,8 @@ public sealed class TimingCurve
         for (var k = 0; k < n; k++)
         {
             var key = keys[k];
-            var auto = k == 0 ? delta[0]
+            var auto =
+                k == 0 ? delta[0]
                 : k == n - 1 ? delta[n - 2]
                 : InteriorRaw(delta[k - 1], delta[k], h[k - 1], h[k]);
             rawIn[k] = SideRaw(key.InMode, key.InTangent, auto, k > 0 ? delta[k - 1] : 0f);
@@ -89,19 +94,21 @@ public sealed class TimingCurve
     }
 
     /// <summary>One side's slope before the monotone clamp; a Manual tangent is a ratio to <paramref name="secant"/>.</summary>
-    private static float SideRaw(TangentMode mode, float manual, float auto, float secant) => mode switch
-    {
-        TangentMode.Auto => auto,
-        TangentMode.Linear => secant,
-        TangentMode.Flat => 0f,
-        TangentMode.Manual => manual * secant,
-        _ => throw new ArgumentOutOfRangeException(nameof(mode), $"unknown tangent mode {mode}"),
-    };
+    private static float SideRaw(TangentMode mode, float manual, float auto, float secant) =>
+        mode switch
+        {
+            TangentMode.Auto => auto,
+            TangentMode.Linear => secant,
+            TangentMode.Flat => 0f,
+            TangentMode.Manual => manual * secant,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), $"unknown tangent mode {mode}"),
+        };
 
     /// <summary>PCHIP weighted harmonic mean of the two neighbouring secants; 0 if either is a hold.</summary>
     private static float InteriorRaw(float deltaPrev, float deltaNext, float hPrev, float hNext)
     {
-        if (deltaPrev <= SecantEpsilon || deltaNext <= SecantEpsilon) return 0f;
+        if (deltaPrev <= SecantEpsilon || deltaNext <= SecantEpsilon)
+            return 0f;
 
         var w1 = (2f * hNext) + hPrev;
         var w2 = hNext + (2f * hPrev);
@@ -111,7 +118,8 @@ public sealed class TimingCurve
     /// <summary>Clamps an interval's tangent pair to the [0,3] square per ratio so its cubic stays monotone; a zero secant zeroes both.</summary>
     private static (float M0, float M1) ClampPair(float m0, float m1, float delta)
     {
-        if (delta <= SecantEpsilon) return (0f, 0f);
+        if (delta <= SecantEpsilon)
+            return (0f, 0f);
 
         var a = Math.Clamp(m0 / delta, 0f, MonotoneBound);
         var b = Math.Clamp(m1 / delta, 0f, MonotoneBound);
@@ -126,7 +134,8 @@ public sealed class TimingCurve
                 throw new ArgumentException($"timing key {i} has an unknown tangent mode");
             if (!float.IsFinite(keys[i].InTangent) || !float.IsFinite(keys[i].OutTangent))
                 throw new ArgumentException($"timing key {i} has a non-finite tangent");
-            if (i == 0) continue;
+            if (i == 0)
+                continue;
             if (keys[i].Time <= keys[i - 1].Time)
                 throw new ArgumentException("timing keys must have strictly increasing times");
             if (keys[i].Position < keys[i - 1].Position)
@@ -137,14 +146,16 @@ public sealed class TimingCurve
     /// <summary>The resolved slope on one side of key <paramref name="index"/>, in position per second; 0 on a side with no span.</summary>
     public float SideSlope(int index, KeySide side)
     {
-        if (_keys.Count < 2) return 0f;
+        if (_keys.Count < 2)
+            return 0f;
         return side == KeySide.In ? _inTangent[index] : _outTangent[index];
     }
 
     /// <summary>The curve's slope at <paramref name="time"/>, in position per second; 0 outside the keys.</summary>
     public float SlopeAt(double time)
     {
-        if (_keys.Count < 2 || time <= _keys[0].Time || time >= Duration) return 0f;
+        if (_keys.Count < 2 || time <= _keys[0].Time || time >= Duration)
+            return 0f;
 
         var k = FindInterval(time);
         var span = _keys[k + 1].Time - _keys[k].Time;
@@ -152,10 +163,11 @@ public sealed class TimingCurve
         var t2 = t * t;
         var m0 = _outTangent[k] * span;
         var m1 = _inTangent[k + 1] * span;
-        var d = (((6f * t2) - (6f * t)) * _keys[k].Position)
-              + (((3f * t2) - (4f * t) + 1f) * m0)
-              + (((-6f * t2) + (6f * t)) * _keys[k + 1].Position)
-              + (((3f * t2) - (2f * t)) * m1);
+        var d =
+            (((6f * t2) - (6f * t)) * _keys[k].Position)
+            + (((3f * t2) - (4f * t) + 1f) * m0)
+            + (((-6f * t2) + (6f * t)) * _keys[k + 1].Position)
+            + (((3f * t2) - (2f * t)) * m1);
         return d / span;
     }
 }

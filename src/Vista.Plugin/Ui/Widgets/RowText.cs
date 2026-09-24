@@ -1,6 +1,6 @@
 using System.Numerics;
-using Vista.Core.Display;
 using Dalamud.Bindings.ImGui;
+using Vista.Core.Display;
 
 namespace Vista.Plugin.Ui.Widgets;
 
@@ -27,7 +27,8 @@ internal static class RowText
         if (overflow > 0f && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             var frame = ImGui.GetFrameCount();
-            if (hovered != row || hoveredFrame < frame - 1) hoveredSince = ImGui.GetTime();
+            if (hovered != row || hoveredFrame < frame - 1)
+                hoveredSince = ImGui.GetTime();
             hovered = row;
             hoveredFrame = frame;
             shift = RowFit.Scroll(overflow, ImGui.GetTime() - hoveredSince);

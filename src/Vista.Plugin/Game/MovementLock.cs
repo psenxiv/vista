@@ -42,7 +42,8 @@ internal sealed unsafe class MovementLock : IDisposable
 
     public void Hold()
     {
-        if (Held || counter == null) return;
+        if (Held || counter == null)
+            return;
 
         (*counter)++;
         Held = true;
@@ -51,10 +52,12 @@ internal sealed unsafe class MovementLock : IDisposable
 
     public void Release()
     {
-        if (!Held || counter == null) return;
+        if (!Held || counter == null)
+            return;
 
         // Decrement rather than zero it: other plugins share this counter.
-        if (*counter > 0) (*counter)--;
+        if (*counter > 0)
+            (*counter)--;
         Held = false;
         Plugin.Log.Debug("[movement] enabled, counter now {Count}", *counter);
     }
@@ -62,7 +65,8 @@ internal sealed unsafe class MovementLock : IDisposable
     /// <summary>Drops our hold without decrementing, for when something else cleared the counter.</summary>
     public void Forget()
     {
-        if (!Held) return;
+        if (!Held)
+            return;
         Held = false;
         Plugin.Log.Warning("[movement] counter cleared elsewhere; dropped our hold without decrementing.");
     }

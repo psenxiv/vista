@@ -51,7 +51,8 @@ public sealed class SceneFolder
     /// <summary>Writes <paramref name="json"/> as scene file <paramref name="name"/> unless a scene file has that name, ignoring case; true when written.</summary>
     public bool AddScene(string name, string json)
     {
-        if (Vista.Core.Scenes.SceneNames.Taken(name, SceneFiles())) return false;
+        if (Vista.Core.Scenes.SceneNames.Taken(name, SceneFiles()))
+            return false;
         Write(PathOf(ScenesDir, name), json);
         return true;
     }
@@ -61,7 +62,8 @@ public sealed class SceneFolder
     {
         var source = PathOf(ScenesDir, from);
         var target = PathOf(ScenesDir, to);
-        if (from == to) return;
+        if (from == to)
+            return;
         if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
         {
             // A case-insensitive file system sees a case-only rename as a move onto itself.
@@ -87,13 +89,15 @@ public sealed class SceneFolder
     }
 
     /// <summary>Writes <paramref name="preset"/> to file <paramref name="name"/>, replacing any there.</summary>
-    public void SavePreset(string name, Preset preset) => Write(PathOf(PresetsDir, name), SceneJson.WritePreset(preset));
+    public void SavePreset(string name, Preset preset) =>
+        Write(PathOf(PresetsDir, name), SceneJson.WritePreset(preset));
 
     /// <summary>Deletes preset file <paramref name="name"/>.</summary>
     public void DeletePreset(string name) => File.Delete(PathOf(PresetsDir, name));
 
     /// <summary>The names of all scene files, readable or not.</summary>
-    internal IReadOnlyList<string> SceneFiles() => Files(ScenesDir).Select(f => Path.GetFileNameWithoutExtension(f)).ToList();
+    internal IReadOnlyList<string> SceneFiles() =>
+        Files(ScenesDir).Select(f => Path.GetFileNameWithoutExtension(f)).ToList();
 
     private static string PathOf(string dir, string name) => Path.Combine(dir, name + Extension);
 

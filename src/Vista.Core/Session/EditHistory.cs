@@ -34,7 +34,8 @@ public sealed class EditHistory
     /// <summary>The state to return to, keeping <paramref name="current"/> for redo; null when there is nothing to undo.</summary>
     public EditSnapshot? Undo(EditSnapshot current)
     {
-        if (undo.Last is not { } last) return null;
+        if (undo.Last is not { } last)
+            return null;
         undo.RemoveLast();
         redo.Push(current);
         return last.Value;
@@ -43,7 +44,8 @@ public sealed class EditHistory
     /// <summary>The state to go forward to, keeping <paramref name="current"/> for undo; null when there is nothing to redo.</summary>
     public EditSnapshot? Redo(EditSnapshot current)
     {
-        if (!redo.TryPop(out var next)) return null;
+        if (!redo.TryPop(out var next))
+            return null;
         Push(current);
         return next;
     }
@@ -51,6 +53,7 @@ public sealed class EditHistory
     private void Push(EditSnapshot snapshot)
     {
         undo.AddLast(snapshot);
-        if (undo.Count > Capacity) undo.RemoveFirst();
+        if (undo.Count > Capacity)
+            undo.RemoveFirst();
     }
 }

@@ -1,9 +1,9 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Vista.Core.Camera;
 using Vista.Core.Display;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
-using Dalamud.Bindings.ImGui;
 
 namespace Vista.Plugin.Editor;
 
@@ -33,13 +33,23 @@ internal sealed class Overlay
     private readonly Dictionary<Guid, TrackCache> caches = new();
 
     /// <summary>Draws <paramref name="track"/>, in grey unless <paramref name="edited"/>, its path by turn rate when <paramref name="heat"/>, its <paramref name="selected"/> points highlighted and its glyphs facing <paramref name="aimPoint"/> when given, and returns each number's absolute screen position, null when off screen.</summary>
-    public IReadOnlyList<Vector2?> Draw(EditorView view, Track track, IReadOnlyCollection<int> selected, bool edited, Vector3? aimPoint = null, bool heat = false)
+    public IReadOnlyList<Vector2?> Draw(
+        EditorView view,
+        Track track,
+        IReadOnlyCollection<int> selected,
+        bool edited,
+        Vector3? aimPoint = null,
+        bool heat = false
+    )
     {
-        if (!caches.TryGetValue(track.Id, out var cache)) caches[track.Id] = cache = new TrackCache();
+        if (!caches.TryGetValue(track.Id, out var cache))
+            caches[track.Id] = cache = new TrackCache();
         var palette = edited ? Palette.Edited : Palette.Other;
         var list = ImGui.GetBackgroundDrawList();
-        if (heat) DrawHeat(list, view, track, cache, aimPoint, palette);
-        else DrawPath(list, view, track, cache, palette);
+        if (heat)
+            DrawHeat(list, view, track, cache, aimPoint, palette);
+        else
+            DrawPath(list, view, track, cache, palette);
 
         var aspect = view.Size.Y > 0f ? view.Size.X / view.Size.Y : 1f;
         var labels = new Vector2?[track.Points.Count];
@@ -59,25 +69,52 @@ internal sealed class Overlay
     /// <summary>Forgets cached paths of tracks not in <paramref name="ids"/>.</summary>
     public void Prune(IReadOnlySet<Guid> ids)
     {
-        foreach (var id in caches.Keys.Where(id => !ids.Contains(id)).ToList()) caches.Remove(id);
+        foreach (var id in caches.Keys.Where(id => !ids.Contains(id)).ToList())
+            caches.Remove(id);
     }
 
     /// <summary>A track anchor: a ground ring, an arrow along its yaw, a faint line to the first point and its name above. Returns its centre on screen, or null.</summary>
-    public Vector2? DrawTrackAnchor(EditorView view, Anchor world, Vector3? firstPoint, bool edited, bool selected, string? name)
+    public Vector2? DrawTrackAnchor(
+        EditorView view,
+        Anchor world,
+        Vector3? firstPoint,
+        bool edited,
+        bool selected,
+        string? name
+    )
     {
         var list = ImGui.GetBackgroundDrawList();
-        var colour = selected ? EditorColours.Selected : edited ? EditorColours.Anchor : EditorColours.OtherAnchor;
-        if (firstPoint is { } first) DrawEdge(list, view, world.Position, first, edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink, GlyphThickness);
+        var colour =
+            selected ? EditorColours.Selected
+            : edited ? EditorColours.Anchor
+            : EditorColours.OtherAnchor;
+        if (firstPoint is { } first)
+            DrawEdge(
+                list,
+                view,
+                world.Position,
+                first,
+                edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink,
+                GlyphThickness
+            );
 
         for (var i = 0; i < AnchorSegments; i++)
         {
             var a = MathF.Tau * i / AnchorSegments;
             var b = MathF.Tau * (i + 1) / AnchorSegments;
-            DrawEdge(list, view, world.Position + Ring(a, AnchorRadius), world.Position + Ring(b, AnchorRadius), colour, selected ? SelectedGlyphThickness : GlyphThickness);
+            DrawEdge(
+                list,
+                view,
+                world.Position + Ring(a, AnchorRadius),
+                world.Position + Ring(b, AnchorRadius),
+                colour,
+                selected ? SelectedGlyphThickness : GlyphThickness
+            );
         }
 
         DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedGlyphThickness : GlyphThickness);
-        if (name is not null) DrawName(list, view, world.Position, name);
+        if (name is not null)
+            DrawName(list, view, world.Position, name);
         return view.ToScreen(world.Position);
     }
 
@@ -91,7 +128,14 @@ internal sealed class Overlay
         {
             var a = world.Yaw + (MathF.PI / 2f * i);
             var b = world.Yaw + (MathF.PI / 2f * (i + 1));
-            DrawEdge(list, view, world.Position + Ring(a, SceneAnchorRadius), world.Position + Ring(b, SceneAnchorRadius), colour, thickness);
+            DrawEdge(
+                list,
+                view,
+                world.Position + Ring(a, SceneAnchorRadius),
+                world.Position + Ring(b, SceneAnchorRadius),
+                colour,
+                thickness
+            );
         }
 
         DrawArrow(list, view, world, SceneAnchorArrow, colour, thickness);
@@ -102,8 +146,19 @@ internal sealed class Overlay
     public Vector2? DrawLookAt(EditorView view, Vector3 world, Vector3? firstPoint, bool edited, bool selected)
     {
         var list = ImGui.GetBackgroundDrawList();
-        var colour = selected ? EditorColours.Selected : edited ? EditorColours.Anchor : EditorColours.OtherAnchor;
-        if (firstPoint is { } first) DrawEdge(list, view, world, first, edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink, GlyphThickness);
+        var colour =
+            selected ? EditorColours.Selected
+            : edited ? EditorColours.Anchor
+            : EditorColours.OtherAnchor;
+        if (firstPoint is { } first)
+            DrawEdge(
+                list,
+                view,
+                world,
+                first,
+                edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink,
+                GlyphThickness
+            );
         DrawCross(list, view, world, LookAtCross, colour, selected ? SelectedGlyphThickness : GlyphThickness);
         return view.ToScreen(world);
     }
@@ -112,11 +167,33 @@ internal sealed class Overlay
     public void DrawTargetMarker(EditorView view, Vector3 world, Vector3? firstPoint, bool edited)
     {
         var list = ImGui.GetBackgroundDrawList();
-        if (firstPoint is { } first) DrawEdge(list, view, world, first, edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink, GlyphThickness);
-        DrawCross(list, view, world, TargetCross, edited ? EditorColours.Anchor : EditorColours.OtherAnchor, GlyphThickness);
+        if (firstPoint is { } first)
+            DrawEdge(
+                list,
+                view,
+                world,
+                first,
+                edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink,
+                GlyphThickness
+            );
+        DrawCross(
+            list,
+            view,
+            world,
+            TargetCross,
+            edited ? EditorColours.Anchor : EditorColours.OtherAnchor,
+            GlyphThickness
+        );
     }
 
-    private static void DrawCross(ImDrawListPtr list, EditorView view, Vector3 centre, float size, uint colour, float thickness)
+    private static void DrawCross(
+        ImDrawListPtr list,
+        EditorView view,
+        Vector3 centre,
+        float size,
+        uint colour,
+        float thickness
+    )
     {
         DrawEdge(list, view, centre - (Vector3.UnitX * size), centre + (Vector3.UnitX * size), colour, thickness);
         DrawEdge(list, view, centre - (Vector3.UnitY * size), centre + (Vector3.UnitY * size), colour, thickness);
@@ -129,11 +206,13 @@ internal sealed class Overlay
     /// <summary>Draws <paramref name="name"/> on a plate centred above the ring round <paramref name="centre"/>, unless the centre is behind the camera.</summary>
     private static void DrawName(ImDrawListPtr list, EditorView view, Vector3 centre, string name)
     {
-        if (view.ToScreenBeyondNear(centre) is not { } at) return;
+        if (view.ToScreenBeyondNear(centre) is not { } at)
+            return;
         var top = at.Y;
         for (var i = 0; i < AnchorSegments; i++)
         {
-            if (view.ToScreenBeyondNear(centre + Ring(MathF.Tau * i / AnchorSegments, AnchorRadius)) is { } p) top = MathF.Min(top, p.Y);
+            if (view.ToScreenBeyondNear(centre + Ring(MathF.Tau * i / AnchorSegments, AnchorRadius)) is { } p)
+                top = MathF.Min(top, p.Y);
         }
 
         var size = ImGui.CalcTextSize(name) * NameScale;
@@ -142,7 +221,14 @@ internal sealed class Overlay
         list.AddText(ImGui.GetFont(), ImGui.GetFontSize() * NameScale, origin, EditorColours.NameText, name);
     }
 
-    private static void DrawArrow(ImDrawListPtr list, EditorView view, Anchor world, float length, uint colour, float thickness)
+    private static void DrawArrow(
+        ImDrawListPtr list,
+        EditorView view,
+        Anchor world,
+        float length,
+        uint colour,
+        float thickness
+    )
     {
         var tip = world.Position + Ring(world.Yaw, length);
         DrawEdge(list, view, world.Position, tip, colour, thickness);
@@ -160,13 +246,29 @@ internal sealed class Overlay
 
         for (var i = 1; i < cache.Samples.Count; i++)
         {
-            if (ScreenProjection.ProjectSegment(cache.Samples[i - 1], cache.Samples[i], view.ViewProjection, view.Size, view.Near) is { } s)
+            if (
+                ScreenProjection.ProjectSegment(
+                    cache.Samples[i - 1],
+                    cache.Samples[i],
+                    view.ViewProjection,
+                    view.Size,
+                    view.Near
+                ) is
+                { } s
+            )
                 list.AddLine(view.Origin + s.Start, view.Origin + s.End, palette.Path, PathThickness);
         }
     }
 
     /// <summary>The path in samples over time, each stretch coloured by how fast the look turns there: the path's colour at rest, warm, then hot.</summary>
-    private static void DrawHeat(ImDrawListPtr list, EditorView view, Track track, TrackCache cache, Vector3? aimPoint, Palette palette)
+    private static void DrawHeat(
+        ImDrawListPtr list,
+        EditorView view,
+        Track track,
+        TrackCache cache,
+        Vector3? aimPoint,
+        Palette palette
+    )
     {
         var evaluator = EvaluatorFor(track, cache);
         // A watched character moves every frame, so its heat is redrawn only once it has moved a little.
@@ -180,18 +282,32 @@ internal sealed class Overlay
         for (var i = 1; i < cache.Heat.Count; i++)
         {
             var (from, to) = (cache.Heat[i - 1], cache.Heat[i]);
-            if (ScreenProjection.ProjectSegment(from.Position, to.Position, view.ViewProjection, view.Size, view.Near) is { } s)
-                list.AddLine(view.Origin + s.Start, view.Origin + s.End, HeatColour(TurnHeat.Level(to.DegreesPerSecond), palette.Path), PathThickness);
+            if (
+                ScreenProjection.ProjectSegment(
+                    from.Position,
+                    to.Position,
+                    view.ViewProjection,
+                    view.Size,
+                    view.Near
+                ) is
+                { } s
+            )
+                list.AddLine(
+                    view.Origin + s.Start,
+                    view.Origin + s.End,
+                    HeatColour(TurnHeat.Level(to.DegreesPerSecond), palette.Path),
+                    PathThickness
+                );
         }
     }
 
     /// <summary>True when the aim point appeared, went, or moved more than <see cref="HeatTargetStep"/> yalms.</summary>
-    private static bool Moved(Vector3? before, Vector3? now)
-        => before is { } a && now is { } b ? Vector3.Distance(a, b) > HeatTargetStep : before.HasValue != now.HasValue;
+    private static bool Moved(Vector3? before, Vector3? now) =>
+        before is { } a && now is { } b ? Vector3.Distance(a, b) > HeatTargetStep : before.HasValue != now.HasValue;
 
     /// <summary>The path's colour at rest, warm at <see cref="TurnHeat.Warm"/> and hot at 1, blended between.</summary>
-    private static uint HeatColour(float level, uint rest)
-        => level <= TurnHeat.Warm
+    private static uint HeatColour(float level, uint rest) =>
+        level <= TurnHeat.Warm
             ? Blend(rest, EditorColours.HeatWarm, level / TurnHeat.Warm)
             : Blend(EditorColours.HeatWarm, EditorColours.HeatHot, (level - TurnHeat.Warm) / (1f - TurnHeat.Warm));
 
@@ -222,7 +338,12 @@ internal sealed class Overlay
     }
 
     /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded.</summary>
-    private static (Vector3 Forward, float Roll, float Fov) Pose(Track track, TrackCache cache, int index, Vector3? aimPoint)
+    private static (Vector3 Forward, float Roll, float Fov) Pose(
+        Track track,
+        TrackCache cache,
+        int index,
+        Vector3? aimPoint
+    )
     {
         var point = track.Points[index];
         if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is { } toward)
@@ -237,7 +358,13 @@ internal sealed class Overlay
             : (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
     }
 
-    private static void DrawGlyph(ImDrawListPtr list, EditorView view, CameraGlyph glyph, bool selected, Palette palette)
+    private static void DrawGlyph(
+        ImDrawListPtr list,
+        EditorView view,
+        CameraGlyph glyph,
+        bool selected,
+        Palette palette
+    )
     {
         var colour = selected ? EditorColours.Selected : palette.Glyph;
         var thickness = selected ? SelectedGlyphThickness : GlyphThickness;
@@ -248,30 +375,58 @@ internal sealed class Overlay
             DrawEdge(list, view, corners[i], corners[(i + 1) % corners.Length], colour, thickness);
         }
 
-        if (view.ToScreenBeyondNear(glyph.TabLeft) is { } left && view.ToScreenBeyondNear(glyph.TabTip) is { } tip
-            && view.ToScreenBeyondNear(glyph.TabRight) is { } right)
+        if (
+            view.ToScreenBeyondNear(glyph.TabLeft) is { } left
+            && view.ToScreenBeyondNear(glyph.TabTip) is { } tip
+            && view.ToScreenBeyondNear(glyph.TabRight) is { } right
+        )
             list.AddTriangleFilled(left, tip, right, palette.UpLine);
     }
 
-    private static void DrawEdge(ImDrawListPtr list, EditorView view, Vector3 from, Vector3 to, uint colour, float thickness)
+    private static void DrawEdge(
+        ImDrawListPtr list,
+        EditorView view,
+        Vector3 from,
+        Vector3 to,
+        uint colour,
+        float thickness
+    )
     {
         if (ScreenProjection.ProjectSegment(from, to, view.ViewProjection, view.Size, view.Near) is { } s)
             list.AddLine(view.Origin + s.Start, view.Origin + s.End, colour, thickness);
     }
 
-    private static void DrawLabels(ImDrawListPtr list, Vector2?[] labels, IReadOnlyCollection<int> selected, Palette palette)
+    private static void DrawLabels(
+        ImDrawListPtr list,
+        Vector2?[] labels,
+        IReadOnlyCollection<int> selected,
+        Palette palette
+    )
     {
         for (var i = 0; i < labels.Length; i++)
         {
-            if (labels[i] is not { } at) continue;
+            if (labels[i] is not { } at)
+                continue;
 
             var picked = selected.Contains(i);
             list.AddCircleFilled(at, MarkerRadius, palette.Marker);
-            list.AddCircle(at, MarkerRadius, picked ? EditorColours.Selected : palette.MarkerRing, 0, picked ? 3f : 1.5f);
+            list.AddCircle(
+                at,
+                MarkerRadius,
+                picked ? EditorColours.Selected : palette.MarkerRing,
+                0,
+                picked ? 3f : 1.5f
+            );
 
             var label = (i + 1).ToString();
             var size = ImGui.CalcTextSize(label) * LabelScale;
-            list.AddText(ImGui.GetFont(), ImGui.GetFontSize() * LabelScale, at - (size / 2f), palette.MarkerText, label);
+            list.AddText(
+                ImGui.GetFont(),
+                ImGui.GetFontSize() * LabelScale,
+                at - (size / 2f),
+                palette.MarkerText,
+                label
+            );
         }
     }
 
@@ -288,9 +443,30 @@ internal sealed class Overlay
     }
 
     /// <summary>The colours one track draws in.</summary>
-    private readonly record struct Palette(uint Path, uint Glyph, uint UpLine, uint Marker, uint MarkerRing, uint MarkerText)
+    private readonly record struct Palette(
+        uint Path,
+        uint Glyph,
+        uint UpLine,
+        uint Marker,
+        uint MarkerRing,
+        uint MarkerText
+    )
     {
-        public static readonly Palette Edited = new(EditorColours.Path, EditorColours.AimLine, EditorColours.UpLine, EditorColours.Marker, EditorColours.MarkerRing, EditorColours.MarkerText);
-        public static readonly Palette Other = new(EditorColours.OtherPath, EditorColours.OtherGlyph, EditorColours.OtherUpLine, EditorColours.OtherMarker, EditorColours.OtherMarkerRing, EditorColours.OtherMarkerText);
+        public static readonly Palette Edited = new(
+            EditorColours.Path,
+            EditorColours.AimLine,
+            EditorColours.UpLine,
+            EditorColours.Marker,
+            EditorColours.MarkerRing,
+            EditorColours.MarkerText
+        );
+        public static readonly Palette Other = new(
+            EditorColours.OtherPath,
+            EditorColours.OtherGlyph,
+            EditorColours.OtherUpLine,
+            EditorColours.OtherMarker,
+            EditorColours.OtherMarkerRing,
+            EditorColours.OtherMarkerText
+        );
     }
 }

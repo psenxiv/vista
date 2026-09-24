@@ -17,10 +17,15 @@ internal sealed unsafe class InputBlocker : IDisposable
     // queries, so blocking them stops stray actions, not walking; MovementLock does that.
     private static readonly FrozenSet<InputId> Blocked = new[]
     {
-        InputId.MOVE_FORE, InputId.MOVE_BACK,
-        InputId.MOVE_LEFT, InputId.MOVE_RIGHT,
-        InputId.MOVE_STRIFE_L, InputId.MOVE_STRIFE_R,
-        InputId.JUMP, InputId.MOVE_DESCENT, InputId.MOVE_RETENTION,
+        InputId.MOVE_FORE,
+        InputId.MOVE_BACK,
+        InputId.MOVE_LEFT,
+        InputId.MOVE_RIGHT,
+        InputId.MOVE_STRIFE_L,
+        InputId.MOVE_STRIFE_R,
+        InputId.JUMP,
+        InputId.MOVE_DESCENT,
+        InputId.MOVE_RETENTION,
     }.ToFrozenSet();
 
     private readonly Hook<IsInputIdDelegate>? longPressHook;
@@ -42,11 +47,16 @@ internal sealed unsafe class InputBlocker : IDisposable
         downHook = Hook(InputData.MemberFunctionPointers.IsInputIdDown, DownDetour, "IsInputIdDown");
         releasedHook = Hook(InputData.MemberFunctionPointers.IsInputIdReleased, ReleasedDetour, "IsInputIdReleased");
 
-        mouseWheelHook = HookBySignature<GetMouseWheelDelegate>(MouseWheelSignature, MouseWheelDetour, "getMouseWheelStatus");
+        mouseWheelHook = HookBySignature<GetMouseWheelDelegate>(
+            MouseWheelSignature,
+            MouseWheelDetour,
+            "getMouseWheelStatus"
+        );
     }
 
     /// <summary>Scans for a function and hooks it. ScanText already follows a call or jmp match.</summary>
-    private static Hook<T>? HookBySignature<T>(string signature, T detour, string name) where T : Delegate
+    private static Hook<T>? HookBySignature<T>(string signature, T detour, string name)
+        where T : Delegate
     {
         nint address;
         try
@@ -77,8 +87,11 @@ internal sealed unsafe class InputBlocker : IDisposable
     }
 
     private byte LongPressDetour(InputData* self, InputId id) => Filter(longPressHook!, self, id);
+
     private byte PressedDetour(InputData* self, InputId id) => Filter(pressedHook!, self, id);
+
     private byte DownDetour(InputData* self, InputId id) => Filter(downHook!, self, id);
+
     private byte ReleasedDetour(InputData* self, InputId id) => Filter(releasedHook!, self, id);
 
     /// <summary>Zoom. Suppressed while flying so the camera distance is left alone.</summary>
@@ -90,8 +103,8 @@ internal sealed unsafe class InputBlocker : IDisposable
         return shouldBlock() ? (sbyte)0 : value;
     }
 
-    private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
-        => shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()))
+    private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id) =>
+        shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()))
             ? (byte)0
             : hook.Original(self, id);
 
@@ -102,14 +115,20 @@ internal sealed unsafe class InputBlocker : IDisposable
 
         foreach (var hook in Hooks)
         {
-            if (hook is null) continue;
-            if (wanted && !hook.IsEnabled) hook.Enable();
-            else if (!wanted && hook.IsEnabled) hook.Disable();
+            if (hook is null)
+                continue;
+            if (wanted && !hook.IsEnabled)
+                hook.Enable();
+            else if (!wanted && hook.IsEnabled)
+                hook.Disable();
         }
 
-        if (mouseWheelHook is null) return;
-        if (wanted && !mouseWheelHook.IsEnabled) mouseWheelHook.Enable();
-        else if (!wanted && mouseWheelHook.IsEnabled) mouseWheelHook.Disable();
+        if (mouseWheelHook is null)
+            return;
+        if (wanted && !mouseWheelHook.IsEnabled)
+            mouseWheelHook.Enable();
+        else if (!wanted && mouseWheelHook.IsEnabled)
+            mouseWheelHook.Disable();
     }
 
     private IEnumerable<Hook<IsInputIdDelegate>?> Hooks

@@ -44,13 +44,19 @@ public class LegEasingTests
     [Fact]
     public void SettingEasingZeroesTheSidesTangents()
     {
-        var track = TimingEditing.SetHandles(TimingEditing.SetHandles(Build3PointTrack(), 0, null, 0.3f), 1, 0.2f, null);
+        var track = TimingEditing.SetHandles(
+            TimingEditing.SetHandles(Build3PointTrack(), 0, null, 0.3f),
+            1,
+            0.2f,
+            null
+        );
         track = LegEasing.Set(track, 1, Easing.Linear);
         Assert.Equal((0f, 0f), (track.Timing[0].OutTangent, track.Timing[1].InTangent));
     }
 
     [Fact]
-    public void CustomCannotBeSet() => Assert.Throws<ArgumentOutOfRangeException>(() => LegEasing.Set(Build3PointTrack(), 1, Easing.Custom));
+    public void CustomCannotBeSet() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => LegEasing.Set(Build3PointTrack(), 1, Easing.Custom));
 
     [Fact]
     public void EasingNeverChangesTimes()

@@ -18,39 +18,50 @@ public sealed class AimTracker
     public AimTracker(NearbyCharacters? targets) => this.targets = targets;
 
     /// <summary>The character a Watch or Follow track in the world names, found nearest its anchor; null unless named and found.</summary>
-    public static LoadedCharacter? Character(Track world, NearbyCharacters? targets)
-        => world is { Aim: AimMode.WatchTarget or AimMode.FollowTarget, TargetName: { } name } ? targets?.FindCharacter(name, world.TargetWorld, world.Anchor.Position) : null;
+    public static LoadedCharacter? Character(Track world, NearbyCharacters? targets) =>
+        world is { Aim: AimMode.WatchTarget or AimMode.FollowTarget, TargetName: { } name }
+            ? targets?.FindCharacter(name, world.TargetWorld, world.Anchor.Position)
+            : null;
 
     /// <summary>The aim point on the character a Watch track in the world watches, unsmoothed; null unless one is named and found.</summary>
-    public static Vector3? CharacterAim(Track world, NearbyCharacters? targets)
-        => world.Aim == AimMode.WatchTarget ? TargetPoint(world, targets) : null;
+    public static Vector3? CharacterAim(Track world, NearbyCharacters? targets) =>
+        world.Aim == AimMode.WatchTarget ? TargetPoint(world, targets) : null;
 
     /// <summary>The aim point on the character a Watch or Follow track in the world names: their feet plus the aim height; null unless found.</summary>
-    public static Vector3? TargetPoint(Track world, NearbyCharacters? targets)
-        => Character(world, targets) is { } character ? character.Position + (Vector3.UnitY * world.AimHeight) : null;
+    public static Vector3? TargetPoint(Track world, NearbyCharacters? targets) =>
+        Character(world, targets) is { } character ? character.Position + (Vector3.UnitY * world.AimHeight) : null;
 
     /// <summary>Where a track in the world points its camera: its Look At point, or its character's aim point when it watches them or follows looking at them; null for a recorded or path aim.</summary>
-    public static Vector3? AimPoint(Track world, NearbyCharacters? targets) => world switch
-    {
-        { Aim: AimMode.LookAt, LookAtPlaced: true } => world.LookAt,
-        { Aim: AimMode.WatchTarget } or { Aim: AimMode.FollowTarget, FollowLooks: true } => TargetPoint(world, targets),
-        _ => null,
-    };
+    public static Vector3? AimPoint(Track world, NearbyCharacters? targets) =>
+        world switch
+        {
+            { Aim: AimMode.LookAt, LookAtPlaced: true } => world.LookAt,
+            { Aim: AimMode.WatchTarget } or { Aim: AimMode.FollowTarget, FollowLooks: true } => TargetPoint(
+                world,
+                targets
+            ),
+            _ => null,
+        };
 
     /// <summary>True when a Watch or Follow track in the world names a character who isn't found.</summary>
-    public static bool TargetLost(Track world, NearbyCharacters? targets)
-        => world is { Aim: AimMode.WatchTarget or AimMode.FollowTarget, TargetName: not null } && Character(world, targets) is null;
+    public static bool TargetLost(Track world, NearbyCharacters? targets) =>
+        world is { Aim: AimMode.WatchTarget or AimMode.FollowTarget, TargetName: not null }
+        && Character(world, targets) is null;
 
     /// <summary>The frame of <paramref name="world"/> at <paramref name="time"/>, <paramref name="dt"/> seconds after the last.</summary>
     public CameraState? Frame(TrackEvaluator evaluator, Track world, double time, float dt)
     {
-        if (world.Aim == AimMode.FollowTarget && world.Points.Count == 1) return Follow(world, dt);
+        if (world.Aim == AimMode.FollowTarget && world.Points.Count == 1)
+            return Follow(world, dt);
         var target = Target(world, dt);
-        if (evaluator.Evaluate(time, target) is not { } frame) return null;
+        if (evaluator.Evaluate(time, target) is not { } frame)
+            return null;
 
         // Lost, the smoother waits on the recorded aim, so finding the character again eases from it.
-        if (world.Aim == AimMode.WatchTarget && target is null) smoother.Seed(frame.LookAt);
-        if (target is not { } at) return frame;
+        if (world.Aim == AimMode.WatchTarget && target is null)
+            smoother.Seed(frame.LookAt);
+        if (target is not { } at)
+            return frame;
 
         if (TrackAim.Toward(frame.Position, at) is not null)
         {
@@ -58,7 +69,12 @@ public sealed class AimTracker
             return frame;
         }
 
-        return lastAim is { } aim ? frame with { LookAt = FreeCamMotion.LookAtFrom(frame.Position, aim.Yaw, aim.Pitch) } : frame;
+        return lastAim is { } aim
+            ? frame with
+            {
+                LookAt = FreeCamMotion.LookAtFrom(frame.Position, aim.Yaw, aim.Pitch),
+            }
+            : frame;
     }
 
     /// <summary>Starts the smoothing afresh and forgets the last good aim, so the next frame lands on the character.</summary>
@@ -79,14 +95,27 @@ public sealed class AimTracker
         if (Character(world, targets) is not { } character)
         {
             var fallback = world.Points[0];
-            return lastFollow ?? new CameraState(fallback.Position, FreeCamMotion.LookAtFrom(fallback.Position, fallback.Yaw, fallback.Pitch), offset.Fov, offset.Roll);
+            return lastFollow
+                ?? new CameraState(
+                    fallback.Position,
+                    FreeCamMotion.LookAtFrom(fallback.Position, fallback.Yaw, fallback.Pitch),
+                    offset.Fov,
+                    offset.Roll
+                );
         }
 
         var facing = world.FollowTurns ? character.Facing : heldFacing ??= character.Facing;
         var at = new Anchor(character.Position, facing).ToWorld(offset);
         var position = positionSmoother.Step(at.Position, dt, world.Smoothing);
         var look = FreeCamMotion.LookAtFrom(position, EaseYaw(at.Yaw, dt, world.Smoothing), at.Pitch);
-        if (world.FollowLooks && TrackAim.Toward(position, smoother.Step(character.Position + (Vector3.UnitY * world.AimHeight), dt, world.Smoothing)) is { } aim)
+        if (
+            world.FollowLooks
+            && TrackAim.Toward(
+                position,
+                smoother.Step(character.Position + (Vector3.UnitY * world.AimHeight), dt, world.Smoothing)
+            )
+                is { } aim
+        )
             look = FreeCamMotion.LookAtFrom(position, aim.Yaw, aim.Pitch);
 
         lastFollow = new CameraState(position, look, offset.Fov, offset.Roll);
@@ -96,8 +125,10 @@ public sealed class AimTracker
     /// <summary>Eases the Follow yaw the short way round towards <paramref name="target"/>, with the smoother's time constant.</summary>
     private float EaseYaw(float target, float dt, float smoothing)
     {
-        if (easedYaw is not { } from) return (easedYaw = target).Value;
-        if (dt <= 0f) return from;
+        if (easedYaw is not { } from)
+            return (easedYaw = target).Value;
+        if (dt <= 0f)
+            return from;
         var delta = Angles.Delta(from, target);
         var timeConstant = Math.Clamp(smoothing, 0f, 1f) * AimSmoother.SecondsPerSmoothing;
         var next = timeConstant <= 0f ? from + delta : from + (delta * (1f - MathF.Exp(-dt / timeConstant)));
@@ -105,10 +136,11 @@ public sealed class AimTracker
         return next;
     }
 
-    private Vector3? Target(Track world, float dt) => world.Aim switch
-    {
-        AimMode.LookAt when world.LookAtPlaced => world.LookAt,
-        AimMode.WatchTarget when CharacterAim(world, targets) is { } aim => smoother.Step(aim, dt, world.Smoothing),
-        _ => null,
-    };
+    private Vector3? Target(Track world, float dt) =>
+        world.Aim switch
+        {
+            AimMode.LookAt when world.LookAtPlaced => world.LookAt,
+            AimMode.WatchTarget when CharacterAim(world, targets) is { } aim => smoother.Step(aim, dt, world.Smoothing),
+            _ => null,
+        };
 }

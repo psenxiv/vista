@@ -4,7 +4,12 @@ using Vista.Core.Camera;
 namespace Vista.Core.Editing;
 
 /// <summary>What a finished click does to the selection.</summary>
-public enum ClickKind { None, Select, Deselect }
+public enum ClickKind
+{
+    None,
+    Select,
+    Deselect,
+}
 
 /// <summary>A click's effect; <see cref="Index"/> is the marker for <see cref="ClickKind.Select"/>.</summary>
 public readonly record struct ClickOutcome(ClickKind Kind, int Index = -1);
@@ -29,7 +34,14 @@ public sealed class ClickSelection
     public bool HoldingMarker => down && marker is not null;
 
     /// <summary>Feeds one frame of mouse state and camera look; returns the outcome on the frame a click is released.</summary>
-    public ClickOutcome Update(bool mouseDown, Vector2 cursor, (float Yaw, float Pitch) look, bool overUi, bool overGizmo, int? marker)
+    public ClickOutcome Update(
+        bool mouseDown,
+        Vector2 cursor,
+        (float Yaw, float Pitch) look,
+        bool overUi,
+        bool overGizmo,
+        int? marker
+    )
     {
         if (mouseDown && !down)
         {
@@ -44,20 +56,22 @@ public sealed class ClickSelection
 
         if (mouseDown)
         {
-            if (Vector2.Distance(cursor, start) > MaxTravel || Turned(look)) travelled = true;
+            if (Vector2.Distance(cursor, start) > MaxTravel || Turned(look))
+                travelled = true;
             return default;
         }
 
-        if (!down) return default;
+        if (!down)
+            return default;
         down = false;
-        if (ignored || travelled) return default;
+        if (ignored || travelled)
+            return default;
         return this.marker is { } m ? new ClickOutcome(ClickKind.Select, m) : new ClickOutcome(ClickKind.Deselect);
     }
 
     /// <summary>Forgets a press in progress.</summary>
     public void Reset() => down = false;
 
-    private bool Turned((float Yaw, float Pitch) look)
-        => MathF.Abs(Angles.Wrap(look.Yaw - startLook.Yaw)) > MaxTurn
-        || MathF.Abs(look.Pitch - startLook.Pitch) > MaxTurn;
+    private bool Turned((float Yaw, float Pitch) look) =>
+        MathF.Abs(Angles.Wrap(look.Yaw - startLook.Yaw)) > MaxTurn || MathF.Abs(look.Pitch - startLook.Pitch) > MaxTurn;
 }

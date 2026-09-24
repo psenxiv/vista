@@ -17,14 +17,16 @@ public readonly record struct TimingView(float From, float To)
     /// <summary>Zooms by <paramref name="factor"/>, below 1 in and above 1 out, keeping <paramref name="anchor"/> where it is on screen and staying within the shot.</summary>
     public TimingView Zoom(float anchor, float factor, float duration)
     {
-        if (!float.IsFinite(factor) || factor <= 0f || !float.IsFinite(anchor)) return this;
+        if (!float.IsFinite(factor) || factor <= 0f || !float.IsFinite(anchor))
+            return this;
         var span = Math.Clamp(Span * factor, MathF.Min(MinSpan, MathF.Max(duration, 0f)), MathF.Max(duration, 0f));
         var fraction = Span > 0f ? Math.Clamp((anchor - From) / Span, 0f, 1f) : 0.5f;
         return Place(anchor - (fraction * span), span, duration);
     }
 
     /// <summary>Slides the view by <paramref name="seconds"/>, stopping at either end of the shot.</summary>
-    public TimingView Pan(float seconds, float duration) => float.IsFinite(seconds) ? Place(From + seconds, Span, duration) : this;
+    public TimingView Pan(float seconds, float duration) =>
+        float.IsFinite(seconds) ? Place(From + seconds, Span, duration) : this;
 
     /// <summary>The view kept within a shot whose length has changed.</summary>
     public TimingView Clamp(float duration) => Place(From, Span, duration);
@@ -34,7 +36,8 @@ public readonly record struct TimingView(float From, float To)
     {
         var from = evaluator.DistanceAt(From);
         var to = evaluator.DistanceAt(To);
-        if (to - from >= 1e-3f) return (from, to);
+        if (to - from >= 1e-3f)
+            return (from, to);
         var middle = (from + to) / 2f;
         return (middle - 0.5f, middle + 0.5f);
     }

@@ -15,22 +15,37 @@ internal sealed class PendingField(Func<bool> canApply)
     {
         var value = pending is { } p && p.Id == id ? p.Value : current;
         ImGui.SetNextItemWidth(width);
-        if (ImGui.DragFloat($"##{id}", ref value, range.Speed, range.Min, range.Max, format, ImGuiSliderFlags.AlwaysClamp)) pending = (id, value, current, apply);
-        if (pending is { } done && done.Id == id && !ImGui.IsItemActive()) Commit();
+        if (
+            ImGui.DragFloat(
+                $"##{id}",
+                ref value,
+                range.Speed,
+                range.Min,
+                range.Max,
+                format,
+                ImGuiSliderFlags.AlwaysClamp
+            )
+        )
+            pending = (id, value, current, apply);
+        if (pending is { } done && done.Id == id && !ImGui.IsItemActive())
+            Commit();
     }
 
     /// <summary>Applies a typed value still waiting for its field to lose focus; dropped if it can no longer apply or did not change.</summary>
     public void Commit()
     {
-        if (pending is not { } p) return;
+        if (pending is not { } p)
+            return;
         pending = null;
-        if (canApply() && p.Value != p.Shown) p.Apply(p.Value);
+        if (canApply() && p.Value != p.Shown)
+            p.Apply(p.Value);
     }
 
     /// <summary>Applies field <paramref name="id"/>'s waiting value, for a field whose menu closed before it could lose focus.</summary>
     public void Commit(string id)
     {
-        if (pending is { } p && p.Id == id) Commit();
+        if (pending is { } p && p.Id == id)
+            Commit();
     }
 
     /// <summary>Drops a typed value without applying it.</summary>

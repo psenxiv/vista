@@ -15,7 +15,8 @@ public static class CameraOrientation
     public static Vector3 UpFor(Vector3 position, Vector3 lookAt)
     {
         var view = lookAt - position;
-        if (view.LengthSquared() < float.Epsilon) return Vector3.UnitY;
+        if (view.LengthSquared() < float.Epsilon)
+            return Vector3.UnitY;
 
         var forward = Vector3.Normalize(view);
         var reference = MathF.Abs(forward.Y) > 0.9999f ? VerticalFallback : Vector3.UnitY;
@@ -28,7 +29,8 @@ public static class CameraOrientation
     {
         var up = UpFor(position, lookAt);
         var view = lookAt - position;
-        if (roll == 0f || view.LengthSquared() < float.Epsilon) return up;
+        if (roll == 0f || view.LengthSquared() < float.Epsilon)
+            return up;
 
         return Vector3.Transform(up, Quaternion.CreateFromAxisAngle(Vector3.Normalize(view), roll));
     }

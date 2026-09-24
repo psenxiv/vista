@@ -12,7 +12,8 @@ public class TurnHeatTests
     private static TrackEvaluator Turning(params float[] yaws)
     {
         var track = TrackEditing.Empty() with { Speed = 10f };
-        for (var i = 0; i < yaws.Length; i++) track = TrackEditing.Append(track, Point(i * 10f, yaw: yaws[i]));
+        for (var i = 0; i < yaws.Length; i++)
+            track = TrackEditing.Append(track, Point(i * 10f, yaw: yaws[i]));
         return new TrackEvaluator(track);
     }
 
@@ -22,12 +23,13 @@ public class TurnHeatTests
         // Yaw 0, 1, 2, 3 a second apart: the middle leg's slopes are both 1 per second, so it turns at exactly 1 rad/s ≈ 57.296°/s.
         var samples = TurnHeat.Samples(Turning(0f, 1f, 2f, 3f));
 
-        foreach (var sample in samples.Skip(32).Take(27)) Assert.Equal(57.296f, sample.DegreesPerSecond, 0.05f);
+        foreach (var sample in samples.Skip(32).Take(27))
+            Assert.Equal(57.296f, sample.DegreesPerSecond, 0.05f);
     }
 
     [Fact]
-    public void AStillLookReadsAsZero()
-        => Assert.All(TurnHeat.Samples(Turning(0.5f, 0.5f, 0.5f)), s => Assert.Equal(0f, s.DegreesPerSecond, 1e-3f));
+    public void AStillLookReadsAsZero() =>
+        Assert.All(TurnHeat.Samples(Turning(0.5f, 0.5f, 0.5f)), s => Assert.Equal(0f, s.DegreesPerSecond, 1e-3f));
 
     [Fact]
     public void ItSamplesThirtyTimesASecondAndTheFirstHasNoRate()
@@ -44,13 +46,15 @@ public class TurnHeatTests
     public void AStraightPathReadsAsZero()
     {
         var track = TrackEditing.Empty(AimMode.PathTangent) with { Speed = 10f };
-        foreach (var x in new[] { 0f, 10f, 20f }) track = TrackEditing.Append(track, Point(x));
+        foreach (var x in new[] { 0f, 10f, 20f })
+            track = TrackEditing.Append(track, Point(x));
 
         Assert.All(TurnHeat.Samples(new TrackEvaluator(track)), s => Assert.Equal(0f, s.DegreesPerSecond, 1e-2f));
     }
 
     [Fact]
-    public void ATrackWithNoPointsHasNoSamples() => Assert.Empty(TurnHeat.Samples(new TrackEvaluator(TrackEditing.Empty())));
+    public void ATrackWithNoPointsHasNoSamples() =>
+        Assert.Empty(TurnHeat.Samples(new TrackEvaluator(TrackEditing.Empty())));
 
     [Theory]
     [InlineData(0f, 0f)]
@@ -58,5 +62,6 @@ public class TurnHeatTests
     [InlineData(90f, 1f)]
     [InlineData(180f, 1f)]
     [InlineData(-5f, 0f)]
-    public void TheScaleIsWarmAt45AndHotAt90(float degreesPerSecond, float level) => Assert.Equal(level, TurnHeat.Level(degreesPerSecond), 1e-5f);
+    public void TheScaleIsWarmAt45AndHotAt90(float degreesPerSecond, float level) =>
+        Assert.Equal(level, TurnHeat.Level(degreesPerSecond), 1e-5f);
 }

@@ -13,14 +13,12 @@ public static class FreeCamMotion
     /// <param name="yaw">Horizontal angle in radians, as the game reports DirH.</param>
     /// <param name="pitch">Vertical angle in radians. Positive looks up.</param>
     /// <param name="speed">Units per second at full input.</param>
-    public static Vector3 Step(Vector3 position, Vector3 input,
-                               float yaw, float pitch, float speed, float deltaSeconds)
+    public static Vector3 Step(Vector3 position, Vector3 input, float yaw, float pitch, float speed, float deltaSeconds)
     {
-        if (input == Vector3.Zero) return position;
+        if (input == Vector3.Zero)
+            return position;
 
-        var move = (Direction(yaw, pitch) * input.X)
-                 + (Vector3.UnitY * input.Y)
-                 + (Right(yaw) * input.Z);
+        var move = (Direction(yaw, pitch) * input.X) + (Vector3.UnitY * input.Y) + (Right(yaw) * input.Z);
 
         return position + (move * speed * deltaSeconds);
     }
@@ -34,8 +32,8 @@ public static class FreeCamMotion
     }
 
     /// <summary>A point ahead of the camera along its facing.</summary>
-    public static Vector3 LookAtFrom(Vector3 position, float yaw, float pitch)
-        => position + (Direction(yaw, pitch) * LookAtDistance);
+    public static Vector3 LookAtFrom(Vector3 position, float yaw, float pitch) =>
+        position + (Direction(yaw, pitch) * LookAtDistance);
 
     /// <summary>Unit view direction. Sign convention measured in game, not assumed.</summary>
     private static Vector3 Direction(float yaw, float pitch)
@@ -45,6 +43,5 @@ public static class FreeCamMotion
     }
 
     /// <summary>Horizontal strafe axis, so rising never drifts sideways.</summary>
-    private static Vector3 Right(float yaw)
-        => new(MathF.Cos(yaw), 0f, -MathF.Sin(yaw));
+    private static Vector3 Right(float yaw) => new(MathF.Cos(yaw), 0f, -MathF.Sin(yaw));
 }

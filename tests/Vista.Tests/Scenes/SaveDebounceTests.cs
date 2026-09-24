@@ -54,7 +54,8 @@ public class SaveDebounceTests
         Assert.True(debounce.Due(copy, 1.0));
 
         // A value-equal copy of the pending scene arriving at 1.2 s restarts the wait: due from 2.2 s.
-        var again = copy with { };
+        var again = copy with
+        { };
         Assert.False(debounce.Due(again, 1.2));
         Assert.False(debounce.Due(again, 2.0));
         Assert.True(debounce.Due(again, 2.2));

@@ -97,7 +97,12 @@ public class TrackPlaybackTests
     [InlineData(true, PlaybackDirection.Reverse, 10.0, 8.0)]
     [InlineData(false, PlaybackDirection.PingPong, 0.0, 2.0)]
     [InlineData(true, PlaybackDirection.PingPong, 0.0, 2.0)]
-    public void NegativeFrameTimeDoesNotRunTimeBackwards(bool loop, PlaybackDirection direction, double atZero, double atTwo)
+    public void NegativeFrameTimeDoesNotRunTimeBackwards(
+        bool loop,
+        PlaybackDirection direction,
+        double atZero,
+        double atTwo
+    )
     {
         var fresh = new TrackPlayback(StraightTrack(loop, direction));
         fresh.Advance(-1f);
@@ -118,7 +123,10 @@ public class TrackPlaybackTests
     [InlineData(true, PlaybackDirection.PingPong)]
     public void ZeroDurationKeepsShotTimeAtZero(bool loop, PlaybackDirection direction)
     {
-        var track = TrackEditing.Append(TrackEditing.SetDirection(TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop), direction), Point(0f, 0f, 0f));
+        var track = TrackEditing.Append(
+            TrackEditing.SetDirection(TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop), direction),
+            Point(0f, 0f, 0f)
+        );
         var playback = new TrackPlayback(track);
 
         playback.Advance(5f);
@@ -330,16 +338,19 @@ public class TrackPlaybackTests
         Assert.False(playback.IsFinished);
     }
 
-
-    private static void GuardAt(NearbyCharacters characters, float x)
-        => characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
+    private static void GuardAt(NearbyCharacters characters, float x) =>
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
 
     [Fact]
     public void AWatchedCharacterIsAimedAtAndASeekOrRestartSnapsBackOntoThem()
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, 0f);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with { TargetName = "Guard", Smoothing = 1f };
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with
+        {
+            TargetName = "Guard",
+            Smoothing = 1f,
+        };
         var playback = new TrackPlayback(track, characters);
 
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(1f / 60f)!.Value, 3);

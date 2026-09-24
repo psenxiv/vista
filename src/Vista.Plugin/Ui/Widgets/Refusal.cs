@@ -6,6 +6,7 @@ internal static class Refusal
     /// <summary>Warns if the edit was refused; does nothing if it went through.</summary>
     public static void Report(string? refusal)
     {
-        if (refusal is not null) Plugin.Log.Warning("[ui] {Refusal}", refusal);
+        if (refusal is not null)
+            Plugin.Log.Warning("[ui] {Refusal}", refusal);
     }
 }

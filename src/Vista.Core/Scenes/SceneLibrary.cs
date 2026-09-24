@@ -32,7 +32,9 @@ public sealed class SceneLibrary
     public string? Open(string? last)
     {
         var names = Scenes();
-        var name = names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault();
+        var name =
+            names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase))
+            ?? names.FirstOrDefault();
         return name is null ? Create(SceneNames.NextFree(Stem, Folder.SceneFiles())) : Load(name);
     }
 
@@ -59,8 +61,10 @@ public sealed class SceneLibrary
     {
         var trimmed = name.Trim();
         var refusal = NameRefusal(trimmed, renaming: true);
-        if (refusal is not null) return refusal;
-        if (trimmed == CurrentName) return null;
+        if (refusal is not null)
+            return refusal;
+        if (trimmed == CurrentName)
+            return null;
 
         try
         {
@@ -118,14 +122,14 @@ public sealed class SceneLibrary
     /// <summary>Saves the open scene if it has changed since it was last saved. Returns why it was refused, or null.</summary>
     public string? SaveNow()
     {
-        if (CurrentName.Length == 0) return null;
+        if (CurrentName.Length == 0)
+            return null;
         var current = scene();
         return ReferenceEquals(current, saved) ? null : Save(CurrentName, current);
     }
 
     /// <summary>Saves the open scene once it has been unchanged for SaveDebounce.DelaySeconds after a change, at time <paramref name="now"/> in seconds. Returns why it was refused, or null.</summary>
     public string? Tick(double now) => debounce is not null && debounce.Due(scene(), now) ? SaveNow() : null;
-
 
     private string? Create(string name)
     {
@@ -151,7 +155,8 @@ public sealed class SceneLibrary
     private string? Adopt(string name, Scene opened)
     {
         var refusal = load(opened);
-        if (refusal is not null) return refusal;
+        if (refusal is not null)
+            return refusal;
         CurrentName = name;
         saved = scene();
         debounce = new SaveDebounce(saved);

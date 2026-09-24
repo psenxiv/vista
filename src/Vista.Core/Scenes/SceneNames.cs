@@ -11,17 +11,45 @@ public static class SceneNames
     private static readonly HashSet<char> Forbidden = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
     private static readonly HashSet<string> Devices = new(
-        ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"],
-        StringComparer.OrdinalIgnoreCase);
+        [
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9",
+        ],
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>Why the trimmed <paramref name="name"/> can't be a file name, or null when it can.</summary>
     public static string? Refusal(string name)
     {
         var trimmed = name.Trim();
-        if (trimmed.Length == 0) return "Enter a name";
-        if (trimmed.Length > MaxLength) return "That name is too long";
-        if (trimmed.Any(c => char.IsControl(c) || Forbidden.Contains(c))) return Unusable;
-        if (trimmed.EndsWith('.') || Devices.Contains(trimmed)) return Unusable;
+        if (trimmed.Length == 0)
+            return "Enter a name";
+        if (trimmed.Length > MaxLength)
+            return "That name is too long";
+        if (trimmed.Any(c => char.IsControl(c) || Forbidden.Contains(c)))
+            return Unusable;
+        if (trimmed.EndsWith('.') || Devices.Contains(trimmed))
+            return Unusable;
         return null;
     }
 
@@ -39,7 +67,8 @@ public static class SceneNames
         for (var n = 1; ; n++)
         {
             var candidate = $"{stem} {n}";
-            if (!Taken(candidate, names)) return candidate;
+            if (!Taken(candidate, names))
+                return candidate;
         }
     }
 
@@ -48,11 +77,13 @@ public static class SceneNames
     {
         var names = existing.ToList();
         var copy = $"{name} copy";
-        if (!Taken(copy, names)) return copy;
+        if (!Taken(copy, names))
+            return copy;
         for (var n = 2; ; n++)
         {
             var candidate = $"{copy} {n}";
-            if (!Taken(candidate, names)) return candidate;
+            if (!Taken(candidate, names))
+                return candidate;
         }
     }
 }

@@ -10,7 +10,11 @@ public class TimingCompilerTests
 {
     private static ControlPoint P(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
 
-    private static Track Three() => TrackEditing.Append(TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty() with { Speed = 2f }, P(0f)), P(10f)), P(20f));
+    private static Track Three() =>
+        TrackEditing.Append(
+            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty() with { Speed = 2f }, P(0f)), P(10f)),
+            P(20f)
+        );
 
     private static float[] Times(Track t) => new TrackEvaluator(t).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
 
@@ -19,11 +23,14 @@ public class TimingCompilerTests
         var actual = Times(track);
         Assert.Equal(expected.Length, actual.Length);
         for (var i = 0; i < expected.Length; i++)
-            Assert.True(MathF.Abs(expected[i] - actual[i]) <= 0.05f, $"key {i}: expected {expected[i]}, got {actual[i]} in [{string.Join(", ", actual)}]");
+            Assert.True(
+                MathF.Abs(expected[i] - actual[i]) <= 0.05f,
+                $"key {i}: expected {expected[i]}, got {actual[i]} in [{string.Join(", ", actual)}]"
+            );
     }
 
-    private static void AssertNear(float expected, float actual, float within)
-        => Assert.True(MathF.Abs(expected - actual) <= within, $"expected {expected}, got {actual}");
+    private static void AssertNear(float expected, float actual, float within) =>
+        Assert.True(MathF.Abs(expected - actual) <= within, $"expected {expected}, got {actual}");
 
     // Compiler and evaluator
 
@@ -59,7 +66,10 @@ public class TimingCompilerTests
 
         AssertTimes([0f, 5f, 8f, 13f], track);
         Assert.Equal(new[] { 0f, 1f, 1f, 2f }, keys.Select(k => k.Position));
-        Assert.Equal(new[] { KeyRole.Point, KeyRole.Point, KeyRole.HoldEnd, KeyRole.Point }, Enumerable.Range(0, 4).Select(k => TrackEditing.RoleOf(track, k)));
+        Assert.Equal(
+            new[] { KeyRole.Point, KeyRole.Point, KeyRole.HoldEnd, KeyRole.Point },
+            Enumerable.Range(0, 4).Select(k => TrackEditing.RoleOf(track, k))
+        );
         Assert.Equal(4, TrackEditing.KeyCount(track));
     }
 
@@ -83,7 +93,11 @@ public class TimingCompilerTests
     [Fact]
     public void ALegIsHeldAtTheLongestLeg()
     {
-        var track = TrackEditing.SetLegSpeed(TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)), 1, 0.01f);
+        var track = TrackEditing.SetLegSpeed(
+            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)),
+            1,
+            0.01f
+        );
         AssertNear(TrackEditing.MaxSeconds, new TrackEvaluator(track).LegSeconds(1), 0.01f);
     }
 
@@ -110,7 +124,7 @@ public class TimingCompilerTests
     [Fact]
     public void LegAtFindsTheLegAndSkipsHolds()
     {
-        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Three(), 1, 2f));   // keys at 0, 5, 7, 12
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Three(), 1, 2f)); // keys at 0, 5, 7, 12
         Assert.Equal(1, evaluator.LegAt(2f));
         Assert.Null(evaluator.LegAt(6f));
         Assert.Equal(2, evaluator.LegAt(9f));
@@ -118,8 +132,8 @@ public class TimingCompilerTests
     }
 
     [Fact]
-    public void ATimingListThatDoesNotMatchThePointsIsRefused()
-        => Assert.Throws<ArgumentException>(() => new TrackEvaluator(Three() with { Timing = [] }));
+    public void ATimingListThatDoesNotMatchThePointsIsRefused() =>
+        Assert.Throws<ArgumentException>(() => new TrackEvaluator(Three() with { Timing = [] }));
 
     // Duration
 
@@ -322,7 +336,8 @@ public class TimingCompilerTests
 
     // The key drag
 
-    private static Track Drag(Track track, int key, float time) => TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
+    private static Track Drag(Track track, int key, float time) =>
+        TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
 
     [Fact]
     public void DraggingAHoldingPointsKeyTradesTimeWithItsHold()
@@ -334,8 +349,12 @@ public class TimingCompilerTests
     }
 
     [Fact]
-    public void AHoldEndDragKeepsTheHoldAboveTheKeyGap()
-        => AssertNear(TrackEditing.MinKeyGap, TrackEditing.HoldSeconds(Drag(TrackEditing.SetHold(Three(), 1, 3f), 2, 0f), 1), 0.001f);
+    public void AHoldEndDragKeepsTheHoldAboveTheKeyGap() =>
+        AssertNear(
+            TrackEditing.MinKeyGap,
+            TrackEditing.HoldSeconds(Drag(TrackEditing.SetHold(Three(), 1, 3f), 2, 0f), 1),
+            0.001f
+        );
 
     [Fact]
     public void DraggingAKeyToWhereItIsChangesNothing()

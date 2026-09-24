@@ -8,11 +8,14 @@ namespace Vista.Tests.Tracks.Timing;
 
 public class TimingEditingTests
 {
-    private static Track MoveKey(Track track, int key, float time) => TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
+    private static Track MoveKey(Track track, int key, float time) =>
+        TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
 
-    private static float[] Times(Track track) => new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
+    private static float[] Times(Track track) =>
+        new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
 
-    private static Track RippleKey(Track track, int key, float time) => TimingEditing.RippleKey(track, new TrackEvaluator(track), key, time);
+    private static Track RippleKey(Track track, int key, float time) =>
+        TimingEditing.RippleKey(track, new TrackEvaluator(track), key, time);
 
     [Fact]
     public void SetKeyModeSetsBothSidesAndRefusesManual()
@@ -62,7 +65,7 @@ public class TimingEditingTests
     [Fact]
     public void AHoldEndDragChangesTheHoldAndShiftsLaterKeys()
     {
-        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);   // keys 0, 5, 7, 12
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f); // keys 0, 5, 7, 12
         track = MoveKey(track, 2, 8f);
         Assert.Equal(new[] { 0f, 5f, 8f, 13f }, Times(track));
         Assert.Equal(1f, new TrackEvaluator(track).Keys[2].Position);
@@ -81,11 +84,23 @@ public class TimingEditingTests
     public void HandlesSetManualSidesAndBrokenIsKept()
     {
         var track = TimingEditing.SetHandles(Build3PointTrack(), 1, 0.1f, 0.3f);
-        Assert.Equal(new PointTiming(InMode: TangentMode.Manual, OutMode: TangentMode.Manual, InTangent: 0.1f, OutTangent: 0.3f), track.Timing[1]);
-        Assert.Equal(new TimingKey(5f, 1f, TangentMode.Manual, TangentMode.Manual, 0.1f, 0.3f), new TrackEvaluator(track).Keys[1] with { Time = 5f });
+        Assert.Equal(
+            new PointTiming(InMode: TangentMode.Manual, OutMode: TangentMode.Manual, InTangent: 0.1f, OutTangent: 0.3f),
+            track.Timing[1]
+        );
+        Assert.Equal(
+            new TimingKey(5f, 1f, TangentMode.Manual, TangentMode.Manual, 0.1f, 0.3f),
+            new TrackEvaluator(track).Keys[1] with
+            {
+                Time = 5f,
+            }
+        );
 
         track = TimingEditing.SetHandles(TimingEditing.SetBroken(track, 1, true), 1, null, 0.5f);
-        Assert.Equal((0.1f, 0.5f, true), (track.Timing[1].InTangent, track.Timing[1].OutTangent, track.Timing[1].Broken));
+        Assert.Equal(
+            (0.1f, 0.5f, true),
+            (track.Timing[1].InTangent, track.Timing[1].OutTangent, track.Timing[1].Broken)
+        );
     }
 
     [Fact]
@@ -93,20 +108,36 @@ public class TimingEditingTests
     {
         var held = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
         var arrival = TimingEditing.SetHandles(held, 1, 0.1f, 0.3f);
-        Assert.Equal((TangentMode.Manual, TangentMode.Auto, 0.1f, 0f), (arrival.Timing[1].InMode, arrival.Timing[1].OutMode, arrival.Timing[1].InTangent, arrival.Timing[1].OutTangent));
+        Assert.Equal(
+            (TangentMode.Manual, TangentMode.Auto, 0.1f, 0f),
+            (
+                arrival.Timing[1].InMode,
+                arrival.Timing[1].OutMode,
+                arrival.Timing[1].InTangent,
+                arrival.Timing[1].OutTangent
+            )
+        );
 
         var departure = TimingEditing.SetHandles(held, 2, 0.1f, 0.3f);
-        Assert.Equal((TangentMode.Auto, TangentMode.Manual, 0f, 0.3f), (departure.Timing[1].InMode, departure.Timing[1].OutMode, departure.Timing[1].InTangent, departure.Timing[1].OutTangent));
+        Assert.Equal(
+            (TangentMode.Auto, TangentMode.Manual, 0f, 0.3f),
+            (
+                departure.Timing[1].InMode,
+                departure.Timing[1].OutMode,
+                departure.Timing[1].InTangent,
+                departure.Timing[1].OutTangent
+            )
+        );
     }
 
     [Fact]
-    public void NegativeHandleSlopesClampToZero()
-        => Assert.Equal(0f, TimingEditing.SetHandles(Build3PointTrack(), 1, -2f, null).Timing[1].InTangent);
+    public void NegativeHandleSlopesClampToZero() =>
+        Assert.Equal(0f, TimingEditing.SetHandles(Build3PointTrack(), 1, -2f, null).Timing[1].InTangent);
 
     [Fact]
     public void HandlesExistOnlyWhereASpanIsNotAHold()
     {
-        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);   // keys 0, 5, 7, 12
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f); // keys 0, 5, 7, 12
         Assert.False(TimingEditing.HasHandle(track, 0, KeySide.In));
         Assert.True(TimingEditing.HasHandle(track, 0, KeySide.Out));
         Assert.False(TimingEditing.HasHandle(track, 1, KeySide.Out));

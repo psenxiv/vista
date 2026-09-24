@@ -26,7 +26,10 @@ public class AimSettingsTests
     [Fact]
     public void ChoosingLookAtFirstPlacesItTenYalmsAlongTheFirstPointsAim()
     {
-        var track = TrackEditing.Append(TrackEditing.Empty(), new ControlPoint(new Vector3(1f, 2f, 3f), MathF.PI / 2f, 0f, 1f));
+        var track = TrackEditing.Append(
+            TrackEditing.Empty(),
+            new ControlPoint(new Vector3(1f, 2f, 3f), MathF.PI / 2f, 0f, 1f)
+        );
 
         var looking = TrackEditing.SetAim(track, AimMode.LookAt, Camera);
 
@@ -36,13 +39,20 @@ public class AimSettingsTests
     }
 
     [Fact]
-    public void WithNoPointsTheLookAtGoesTenYalmsAheadOfTheCamera()
-        => Near(new Vector3(90f, 5f, 100f), TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera).LookAt, 1e-4f);
+    public void WithNoPointsTheLookAtGoesTenYalmsAheadOfTheCamera() =>
+        Near(
+            new Vector3(90f, 5f, 100f),
+            TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera).LookAt,
+            1e-4f
+        );
 
     [Fact]
     public void ComingBackToLookAtKeepsThePointWhereItWas()
     {
-        var moved = TrackEditing.SetLookAt(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera), new Vector3(7f, 8f, 9f));
+        var moved = TrackEditing.SetLookAt(
+            TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera),
+            new Vector3(7f, 8f, 9f)
+        );
 
         var back = TrackEditing.SetAim(TrackEditing.SetAim(moved, AimMode.AimKeys, Camera), AimMode.LookAt, Camera);
 
@@ -91,7 +101,11 @@ public class AimSettingsTests
     [Fact]
     public void ClearForgetsTheLookAtAndTheCharacter()
     {
-        var track = TrackEditing.SetTarget(TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera), "Aya", "Gilgamesh");
+        var track = TrackEditing.SetTarget(
+            TrackEditing.SetAim(TrackEditing.Empty(), AimMode.LookAt, Camera),
+            "Aya",
+            "Gilgamesh"
+        );
 
         var cleared = TrackEditing.Clear(track);
 

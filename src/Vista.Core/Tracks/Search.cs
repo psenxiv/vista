@@ -9,7 +9,10 @@ internal static class Search
         while (hi - lo > 1)
         {
             var mid = (lo + hi) / 2;
-            if (values[mid] <= target) lo = mid; else hi = mid;
+            if (values[mid] <= target)
+                lo = mid;
+            else
+                hi = mid;
         }
 
         return lo;

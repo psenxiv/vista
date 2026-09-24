@@ -51,12 +51,17 @@ public static class TrackEditing
     public const string FollowHasOnePoint = "A Follow Target track has one point";
 
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
-    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1")
-        => new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
+    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1") =>
+        new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
 
     /// <summary>An empty track that keeps <paramref name="track"/>'s Id, Name and anchor.</summary>
-    public static Track Clear(Track track)
-        => Empty(name: track.Name) with { Id = track.Id, Anchor = track.Anchor, AnchorPlaced = track.AnchorPlaced };
+    public static Track Clear(Track track) =>
+        Empty(name: track.Name) with
+        {
+            Id = track.Id,
+            Anchor = track.Anchor,
+            AnchorPlaced = track.AnchorPlaced,
+        };
 
     /// <summary>How many timing keys the track compiles to.</summary>
     public static int KeyCount(Track track) => track.Points.Count + track.Timing.Count(t => t.Hold > 0f);
@@ -72,7 +77,8 @@ public static class TrackEditing
     {
         ValidatePointIndex(track, point, "point");
         var key = 0;
-        for (var p = 0; p < point; p++) key += track.Timing[p].Hold > 0f ? 2 : 1;
+        for (var p = 0; p < point; p++)
+            key += track.Timing[p].Hold > 0f ? 2 : 1;
         return key;
     }
 
@@ -94,10 +100,14 @@ public static class TrackEditing
     public static float[] LegLengths(Track track)
     {
         var lengths = new float[track.Points.Count];
-        if (lengths.Length < 2) return lengths;
+        if (lengths.Length < 2)
+            return lengths;
 
-        var segments = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray()).SegmentLengths(TrackEvaluator.MinTimingLength);
-        for (var leg = 1; leg < lengths.Length; leg++) lengths[leg] = segments[leg - 1];
+        var segments = new ArcLengthTable(track.Points.Select(p => p.Position).ToArray()).SegmentLengths(
+            TrackEvaluator.MinTimingLength
+        );
+        for (var leg = 1; leg < lengths.Length; leg++)
+            lengths[leg] = segments[leg - 1];
         return lengths;
     }
 
@@ -113,7 +123,8 @@ public static class TrackEditing
     {
         for (var leg = 1; leg < track.Points.Count; leg++)
         {
-            if (track.Timing[leg].LegSpeed is null) return false;
+            if (track.Timing[leg].LegSpeed is null)
+                return false;
         }
 
         return true;
@@ -134,21 +145,30 @@ public static class TrackEditing
     }
 
     /// <summary>Appends a point whose leg follows the track speed.</summary>
-    public static Track Append(Track track, ControlPoint point)
-        => track with { Points = [.. track.Points, point], Timing = [.. track.Timing, new PointTiming()] };
+    public static Track Append(Track track, ControlPoint point) =>
+        track with
+        {
+            Points = [.. track.Points, point],
+            Timing = [.. track.Timing, new PointTiming()],
+        };
 
     /// <summary>Inserts a point after point <paramref name="index"/>, both halves keeping the split leg's speed and pin; after the last point it appends.</summary>
     public static Track InsertAfter(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "insert");
-        if (index == track.Points.Count - 1) return Append(track, point);
+        if (index == track.Points.Count - 1)
+            return Append(track, point);
 
         var points = track.Points.ToList();
         points.Insert(index + 1, point);
         var timing = track.Timing.ToList();
         timing.Insert(index + 1, new PointTiming(LegSpeed: track.Timing[index + 1].LegSpeed));
 
-        return track with { Points = points, Timing = timing };
+        return track with
+        {
+            Points = points,
+            Timing = timing,
+        };
     }
 
     /// <summary>Removes point <paramref name="index"/>: a middle point's legs merge at the first leg's speed, an end point's leg goes.</summary>
@@ -156,7 +176,8 @@ public static class TrackEditing
     {
         ValidatePointIndex(track, index, "delete");
         var n = track.Points.Count;
-        if (n == 1) return track with { Points = [], Timing = [] };
+        if (n == 1)
+            return track with { Points = [], Timing = [] };
 
         var points = track.Points.ToList();
         points.RemoveAt(index);
@@ -178,19 +199,27 @@ public static class TrackEditing
         timing[index + 1] = timing[index + 1] with { LegSpeed = timing[index].LegSpeed };
         timing.RemoveAt(index);
 
-        return track with { Points = points, Timing = timing };
+        return track with
+        {
+            Points = points,
+            Timing = timing,
+        };
     }
 
     /// <summary>Removes points <paramref name="indices"/>, highest first, each as <see cref="Delete(Track, int)"/> removes one.</summary>
-    public static Track Delete(Track track, IReadOnlyCollection<int> indices) => indices.Distinct().OrderDescending().Aggregate(track, Delete);
+    public static Track Delete(Track track, IReadOnlyCollection<int> indices) =>
+        indices.Distinct().OrderDescending().Aggregate(track, Delete);
 
     /// <summary>Puts the points in <paramref name="order"/> (old indices); holds travel with their point, leg speeds and easing stay in their slots.</summary>
     public static Track Reorder(Track track, IReadOnlyList<int> order)
     {
         var points = BlockMove.Apply(track.Points, order);
-        if (order.Select((old, slot) => old == slot).All(same => same)) return track;
+        if (order.Select((old, slot) => old == slot).All(same => same))
+            return track;
 
-        var timing = order.Select((moved, slot) => track.Timing[slot] with { Hold = track.Timing[moved].Hold }).ToList();
+        var timing = order
+            .Select((moved, slot) => track.Timing[slot] with { Hold = track.Timing[moved].Hold })
+            .ToList();
         timing[0] = timing[0] with { LegSpeed = null };
         return track with { Points = points, Timing = timing };
     }
@@ -199,7 +228,8 @@ public static class TrackEditing
     public static Track Replace(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "replace");
-        if (Equals(track.Points[index], point)) return track;
+        if (Equals(track.Points[index], point))
+            return track;
 
         var points = new List<ControlPoint>(track.Points) { [index] = point };
         return track with { Points = points };
@@ -209,35 +239,43 @@ public static class TrackEditing
     public static Track SetHold(Track track, int index, float seconds)
     {
         ValidatePointIndex(track, index, "hold");
-        if (float.IsNaN(seconds)) return track;
+        if (float.IsNaN(seconds))
+            return track;
         var clamped = Math.Clamp(seconds, 0f, MaxSeconds);
-        if (clamped < MinKeyGap) clamped = 0f;
+        if (clamped < MinKeyGap)
+            clamped = 0f;
         return WithTiming(track, index, track.Timing[index] with { Hold = clamped });
     }
 
     /// <summary>Sets which way the track plays; never touches points or timing.</summary>
-    public static Track SetDirection(Track track, PlaybackDirection direction)
-        => track.Direction == direction ? track : track with { Direction = direction };
+    public static Track SetDirection(Track track, PlaybackDirection direction) =>
+        track.Direction == direction ? track : track with { Direction = direction };
 
     /// <summary>Sets whether the track loops; never touches points or timing.</summary>
-    public static Track SetLoop(Track track, bool loop)
-        => track.Loop == loop ? track : track with { Loop = loop };
+    public static Track SetLoop(Track track, bool loop) => track.Loop == loop ? track : track with { Loop = loop };
 
     /// <summary>Sets the aim mode; the first Look At places its point 10 yalms along the first point's aim, or <paramref name="camera"/>'s with no points.</summary>
     public static Track SetAim(Track track, AimMode aim, ControlPoint camera)
     {
-        if (track.Aim == aim) return track;
+        if (track.Aim == aim)
+            return track;
         var result = track with { Aim = aim };
-        if (aim != AimMode.LookAt || track.LookAtPlaced) return result;
+        if (aim != AimMode.LookAt || track.LookAtPlaced)
+            return result;
 
         var from = track.Points.Count > 0 ? track.Points[0] : camera;
-        return result with { LookAt = FreeCamMotion.LookAtFrom(from.Position, from.Yaw, from.Pitch), LookAtPlaced = true };
+        return result with
+        {
+            LookAt = FreeCamMotion.LookAtFrom(from.Position, from.Yaw, from.Pitch),
+            LookAtPlaced = true,
+        };
     }
 
     /// <summary>Puts the Look At point at <paramref name="local"/>, relative to the track's anchor; unchanged when not finite.</summary>
     public static Track SetLookAt(Track track, Vector3 local)
     {
-        if (!float.IsFinite(local.X) || !float.IsFinite(local.Y) || !float.IsFinite(local.Z)) return track;
+        if (!float.IsFinite(local.X) || !float.IsFinite(local.Y) || !float.IsFinite(local.Z))
+            return track;
         return track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
     }
 
@@ -246,13 +284,20 @@ public static class TrackEditing
     {
         var chosen = string.IsNullOrWhiteSpace(name) ? null : name;
         var home = chosen is null || string.IsNullOrWhiteSpace(world) ? null : world;
-        return track.TargetName == chosen && track.TargetWorld == home ? track : track with { TargetName = chosen, TargetWorld = home };
+        return track.TargetName == chosen && track.TargetWorld == home
+            ? track
+            : track with
+            {
+                TargetName = chosen,
+                TargetWorld = home,
+            };
     }
 
     /// <summary>Sets the aim height above the character's feet, clamped to 0 to <see cref="MaxAimHeight"/>.</summary>
     public static Track SetAimHeight(Track track, float yalms)
     {
-        if (!float.IsFinite(yalms)) return track;
+        if (!float.IsFinite(yalms))
+            return track;
         var clamped = Math.Clamp(yalms, 0f, MaxAimHeight);
         return clamped == track.AimHeight ? track : track with { AimHeight = clamped };
     }
@@ -260,7 +305,8 @@ public static class TrackEditing
     /// <summary>Sets how far ahead along the path Direction of travel looks, clamped to 0 to <see cref="MaxLookAhead"/> seconds.</summary>
     public static Track SetLookAhead(Track track, float seconds)
     {
-        if (!float.IsFinite(seconds)) return track;
+        if (!float.IsFinite(seconds))
+            return track;
         var clamped = Math.Clamp(seconds, 0f, MaxLookAhead);
         return clamped == track.LookAhead ? track : track with { LookAhead = clamped };
     }
@@ -268,21 +314,25 @@ public static class TrackEditing
     /// <summary>Sets how heavily the aim eases onto the character, clamped to 0 to 1.</summary>
     public static Track SetSmoothing(Track track, float smoothing)
     {
-        if (!float.IsFinite(smoothing)) return track;
+        if (!float.IsFinite(smoothing))
+            return track;
         var clamped = Math.Clamp(smoothing, 0f, 1f);
         return clamped == track.Smoothing ? track : track with { Smoothing = clamped };
     }
 
     /// <summary>Sets whether a Follow Target offset turns as the character turns.</summary>
-    public static Track SetFollowTurns(Track track, bool turns) => track.FollowTurns == turns ? track : track with { FollowTurns = turns };
+    public static Track SetFollowTurns(Track track, bool turns) =>
+        track.FollowTurns == turns ? track : track with { FollowTurns = turns };
 
     /// <summary>Sets whether a Follow Target camera looks at the character rather than keeping its recorded aim.</summary>
-    public static Track SetFollowLooks(Track track, bool looks) => track.FollowLooks == looks ? track : track with { FollowLooks = looks };
+    public static Track SetFollowLooks(Track track, bool looks) =>
+        track.FollowLooks == looks ? track : track with { FollowLooks = looks };
 
     /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
     public static Track SetSpeed(Track track, float speed)
     {
-        if (float.IsNaN(speed)) return track;
+        if (float.IsNaN(speed))
+            return track;
         var clamped = ClampSpeed(speed);
         return clamped == track.Speed ? track : track with { Speed = clamped };
     }
@@ -290,14 +340,16 @@ public static class TrackEditing
     /// <summary>Sets the track speed so the shot, holds included, takes <paramref name="seconds"/> as near as the ranges allow; unchanged when every leg is pinned.</summary>
     public static Track SetDuration(Track track, float seconds)
     {
-        if (float.IsNaN(seconds) || AllPinned(track)) return track;
+        if (float.IsNaN(seconds) || AllPinned(track))
+            return track;
 
         var target = MathF.Min(seconds, MaxShotSeconds);
         var lengths = LegLengths(track);
         var fixedSeconds = track.Timing.Sum(t => (double)t.Hold);
         for (var leg = 1; leg < lengths.Length; leg++)
         {
-            if (track.Timing[leg].LegSpeed is { } pinned) fixedSeconds += TimingCompiler.LegDuration(lengths[leg], pinned);
+            if (track.Timing[leg].LegSpeed is { } pinned)
+                fixedSeconds += TimingCompiler.LegDuration(lengths[leg], pinned);
         }
 
         double Total(double speed)
@@ -305,21 +357,27 @@ public static class TrackEditing
             var total = fixedSeconds;
             for (var leg = 1; leg < lengths.Length; leg++)
             {
-                if (track.Timing[leg].LegSpeed is null) total += TimingCompiler.LegDuration(lengths[leg], (float)speed);
+                if (track.Timing[leg].LegSpeed is null)
+                    total += TimingCompiler.LegDuration(lengths[leg], (float)speed);
             }
 
             return total;
         }
 
-        if (Total(MinSpeed) <= target) return SetSpeed(track, MinSpeed);
-        if (Total(MaxSpeed) >= target) return SetSpeed(track, MaxSpeed);
+        if (Total(MinSpeed) <= target)
+            return SetSpeed(track, MinSpeed);
+        if (Total(MaxSpeed) >= target)
+            return SetSpeed(track, MaxSpeed);
 
         var low = Math.Log(MinSpeed);
         var high = Math.Log(MaxSpeed);
         for (var i = 0; i < DurationSteps; i++)
         {
             var mid = (low + high) / 2.0;
-            if (Total(Math.Exp(mid)) > target) low = mid; else high = mid;
+            if (Total(Math.Exp(mid)) > target)
+                low = mid;
+            else
+                high = mid;
         }
 
         return SetSpeed(track, (float)Math.Exp((low + high) / 2.0));
@@ -329,7 +387,8 @@ public static class TrackEditing
     public static Track SetLegSpeed(Track track, int leg, float speed)
     {
         ValidateLegIndex(track, leg);
-        if (float.IsNaN(speed)) return track;
+        if (float.IsNaN(speed))
+            return track;
         return WithTiming(track, leg, track.Timing[leg] with { LegSpeed = ClampSpeed(speed) });
     }
 
@@ -337,7 +396,8 @@ public static class TrackEditing
     public static Track SetLegDuration(Track track, int leg, float seconds)
     {
         ValidateLegIndex(track, leg);
-        if (float.IsNaN(seconds)) return track;
+        if (float.IsNaN(seconds))
+            return track;
         return SetLegSpeed(track, leg, LegLengths(track)[leg] / Math.Clamp(seconds, MinLegSeconds, MaxSeconds));
     }
 
@@ -351,7 +411,8 @@ public static class TrackEditing
     /// <summary>The track with point <paramref name="index"/>'s timing replaced, or the same track when it is unchanged.</summary>
     internal static Track WithTiming(Track track, int index, PointTiming value)
     {
-        if (track.Timing[index] == value) return track;
+        if (track.Timing[index] == value)
+            return track;
         var timing = track.Timing.ToList();
         timing[index] = value;
         return track with { Timing = timing };
@@ -387,7 +448,8 @@ public static class TrackEditing
         for (var p = 0; ; p++)
         {
             var next = first + (track.Timing[p].Hold > 0f ? 2 : 1);
-            if (key < next) return (p, key == first ? KeyRole.Point : KeyRole.HoldEnd);
+            if (key < next)
+                return (p, key == first ? KeyRole.Point : KeyRole.HoldEnd);
             first = next;
         }
     }

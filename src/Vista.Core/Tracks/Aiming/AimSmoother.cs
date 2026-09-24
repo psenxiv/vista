@@ -19,7 +19,8 @@ public sealed class AimSmoother
             return target;
         }
 
-        if (dt <= 0f) return from;
+        if (dt <= 0f)
+            return from;
         var timeConstant = Math.Clamp(smoothing, 0f, 1f) * SecondsPerSmoothing;
         var next = timeConstant <= 0f ? target : Vector3.Lerp(from, target, 1f - MathF.Exp(-dt / timeConstant));
         current = next;

@@ -18,12 +18,11 @@ public class CatmullRomTests
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
-    public void SegmentCountIsZeroBelowTheMinimumPointCount(int pointCount)
-        => Assert.Equal(0, CatmullRom.SegmentCount(pointCount));
+    public void SegmentCountIsZeroBelowTheMinimumPointCount(int pointCount) =>
+        Assert.Equal(0, CatmullRom.SegmentCount(pointCount));
 
     [Fact]
-    public void SegmentCountForOpenTrackIsOneLessThanPointCount()
-        => Assert.Equal(4, CatmullRom.SegmentCount(5));
+    public void SegmentCountForOpenTrackIsOneLessThanPointCount() => Assert.Equal(4, CatmullRom.SegmentCount(5));
 
     [Fact]
     public void CurvePassesThroughEveryControlPointOnAnOpenTrack()
@@ -134,8 +133,10 @@ public class CatmullRomTests
                 var minus = CatmullRom.Evaluate(FivePoints, segment, t - h);
                 var finite = (plus - minus) / (2f * h);
 
-                Assert.True((analytic - finite).Length() < 0.01f,
-                    $"segment {segment} t={t}: analytic {analytic}, finite difference {finite}");
+                Assert.True(
+                    (analytic - finite).Length() < 0.01f,
+                    $"segment {segment} t={t}: analytic {analytic}, finite difference {finite}"
+                );
             }
         }
     }

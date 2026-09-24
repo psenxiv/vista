@@ -57,8 +57,8 @@ public class PoseMatrixTests
         Assert.True(MathF.Abs(WrappedDifference(roll, r)) < 1e-4f);
     }
 
-    private static float WrappedDifference(float expected, float actual)
-        => MathF.IEEERemainder(expected - actual, MathF.Tau);
+    private static float WrappedDifference(float expected, float actual) =>
+        MathF.IEEERemainder(expected - actual, MathF.Tau);
 
     [Fact]
     public void ToPoseIgnoresScaleAndClampsPitch()

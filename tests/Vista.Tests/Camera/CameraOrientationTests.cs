@@ -44,8 +44,8 @@ public class CameraOrientationTests
     }
 
     [Theory]
-    [InlineData(0f, -1f, 0f)]  // straight down
-    [InlineData(0f, 1f, 0f)]   // straight up
+    [InlineData(0f, -1f, 0f)] // straight down
+    [InlineData(0f, 1f, 0f)] // straight up
     public void VerticalViewDoesNotCollapse(float x, float y, float z)
     {
         var up = CameraOrientation.UpFor(Vector3.Zero, new Vector3(x, y, z) * 10f);

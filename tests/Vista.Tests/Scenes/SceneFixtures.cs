@@ -23,7 +23,8 @@ internal sealed class TempFolder : IDisposable
     internal string Presets => Folder.PresetsDir;
 
     /// <summary>The file names in scenes/, sorted ordinally.</summary>
-    internal string[] SceneFiles() => Directory.GetFiles(Scenes).Select(f => Path.GetFileName(f)).Order(StringComparer.Ordinal).ToArray();
+    internal string[] SceneFiles() =>
+        Directory.GetFiles(Scenes).Select(f => Path.GetFileName(f)).Order(StringComparer.Ordinal).ToArray();
 
     public void Dispose() => Directory.Delete(parent, recursive: true);
 }

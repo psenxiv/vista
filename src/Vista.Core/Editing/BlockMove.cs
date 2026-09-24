@@ -7,10 +7,14 @@ public static class BlockMove
     /// <remarks>Dropped on a row below the grabbed one, the block goes just after it; above, just before it.</remarks>
     public static int[]? Order(int count, IReadOnlyCollection<int> moving, int grabbed, int? target)
     {
-        if (moving.Count == 0 || moving.Any(i => i < 0 || i >= count)) throw new ArgumentException("There is no such row to move.");
-        if (!moving.Contains(grabbed)) throw new ArgumentException("The grabbed row isn't one of those moving.");
-        if (target is { } t && (t < 0 || t >= count)) throw new ArgumentException("There is no such row to drop on.");
-        if (target is { } inside && moving.Contains(inside)) return null;
+        if (moving.Count == 0 || moving.Any(i => i < 0 || i >= count))
+            throw new ArgumentException("There is no such row to move.");
+        if (!moving.Contains(grabbed))
+            throw new ArgumentException("The grabbed row isn't one of those moving.");
+        if (target is { } t && (t < 0 || t >= count))
+            throw new ArgumentException("There is no such row to drop on.");
+        if (target is { } inside && moving.Contains(inside))
+            return null;
 
         var block = moving.Distinct().Order().ToArray();
         var rest = Enumerable.Range(0, count).Where(i => !block.Contains(i)).ToList();
@@ -23,7 +27,11 @@ public static class BlockMove
     /// <summary><paramref name="items"/> in <paramref name="order"/>, which must list each index once.</summary>
     public static IReadOnlyList<T> Apply<T>(IReadOnlyList<T> items, IReadOnlyList<int> order)
     {
-        if (order.Count != items.Count || order.Distinct().Count() != items.Count || order.Any(i => i < 0 || i >= items.Count))
+        if (
+            order.Count != items.Count
+            || order.Distinct().Count() != items.Count
+            || order.Any(i => i < 0 || i >= items.Count)
+        )
             throw new ArgumentException("An order must list each row once.");
         return order.Select(i => items[i]).ToArray();
     }
@@ -32,7 +40,8 @@ public static class BlockMove
     public static int NewIndex(IReadOnlyList<int> order, int old)
     {
         for (var i = 0; i < order.Count; i++)
-            if (order[i] == old) return i;
+            if (order[i] == old)
+                return i;
         throw new ArgumentException("That row isn't in the order.");
     }
 }

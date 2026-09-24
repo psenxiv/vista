@@ -12,8 +12,8 @@ public class EditLimitsTests
     [InlineData(5f, 5f)]
     [InlineData(9999f, 600f)]
     [InlineData(float.NaN, 0.1f)]
-    public void LegClampsToATenthOfASecondAndTenMinutes(float input, float expected)
-        => Assert.Equal(expected, EditLimits.Leg(input));
+    public void LegClampsToATenthOfASecondAndTenMinutes(float input, float expected) =>
+        Assert.Equal(expected, EditLimits.Leg(input));
 
     [Theory]
     [InlineData(-1f, 0f)]
@@ -21,8 +21,8 @@ public class EditLimitsTests
     [InlineData(2.5f, 2.5f)]
     [InlineData(9999f, 600f)]
     [InlineData(float.PositiveInfinity, 0f)]
-    public void HoldClampsToZeroAndTenMinutes(float input, float expected)
-        => Assert.Equal(expected, EditLimits.Hold(input));
+    public void HoldClampsToZeroAndTenMinutes(float input, float expected) =>
+        Assert.Equal(expected, EditLimits.Hold(input));
 
     [Theory]
     [InlineData(0f, 0.01f)]
@@ -30,8 +30,8 @@ public class EditLimitsTests
     [InlineData(2.5f, 2.5f)]
     [InlineData(9999f, 100f)]
     [InlineData(float.NaN, 5f)]
-    public void SpeedClampsToAHundredthAndAHundredYalmsPerSecond(float input, float expected)
-        => Assert.Equal(expected, EditLimits.Speed(input));
+    public void SpeedClampsToAHundredthAndAHundredYalmsPerSecond(float input, float expected) =>
+        Assert.Equal(expected, EditLimits.Speed(input));
 
     [Theory]
     [InlineData(0f, 0.2f)]
@@ -39,8 +39,8 @@ public class EditLimitsTests
     [InlineData(30f, 30f)]
     [InlineData(99999f, 3600f)]
     [InlineData(float.NaN, 0.2f)]
-    public void ShotDurationClampsToTwoTenthsOfASecondAndAnHour(float input, float expected)
-        => Assert.Equal(expected, EditLimits.ShotDuration(input));
+    public void ShotDurationClampsToTwoTenthsOfASecondAndAnHour(float input, float expected) =>
+        Assert.Equal(expected, EditLimits.ShotDuration(input));
 
     [Fact]
     public void PitchClampsToTheGizmoLimit()
@@ -56,8 +56,8 @@ public class EditLimitsTests
     [InlineData(MathF.PI + 0.5f, -MathF.PI + 0.5f)]
     [InlineData(-MathF.PI - 0.5f, MathF.PI - 0.5f)]
     [InlineData(float.NaN, 0f)]
-    public void AnglesWrapToAHalfTurnEitherWay(float input, float expected)
-        => Assert.Equal(expected, EditLimits.Angle(input), 4);
+    public void AnglesWrapToAHalfTurnEitherWay(float input, float expected) =>
+        Assert.Equal(expected, EditLimits.Angle(input), 4);
 
     [Fact]
     public void FovClampsToFiveToOneHundredAndTwentyDegrees()

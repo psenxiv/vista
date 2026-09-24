@@ -16,10 +16,23 @@ public static class PoseMatrix
         var back = -forward;
 
         return new Matrix4x4(
-            right.X, right.Y, right.Z, 0f,
-            up.X, up.Y, up.Z, 0f,
-            back.X, back.Y, back.Z, 0f,
-            position.X, position.Y, position.Z, 1f);
+            right.X,
+            right.Y,
+            right.Z,
+            0f,
+            up.X,
+            up.Y,
+            up.Z,
+            0f,
+            back.X,
+            back.Y,
+            back.Z,
+            0f,
+            position.X,
+            position.Y,
+            position.Z,
+            1f
+        );
     }
 
     /// <summary>The camera pose a gizmo matrix describes, with pitch clamped to <see cref="TrackAim.PitchLimit"/>.</summary>

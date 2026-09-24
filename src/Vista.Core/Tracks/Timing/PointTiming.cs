@@ -8,4 +8,5 @@ public sealed record PointTiming(
     TangentMode OutMode = TangentMode.Auto,
     float InTangent = 0f,
     float OutTangent = 0f,
-    bool Broken = false);
+    bool Broken = false
+);

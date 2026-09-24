@@ -12,12 +12,19 @@ namespace Vista.Tests;
 internal static class Fixtures
 {
     /// <summary>A control point at the given position, aim and field of view.</summary>
-    internal static ControlPoint Point(float x, float y = 0f, float z = 0f, float yaw = 0f, float pitch = 0f, float fov = 1f, float roll = 0f)
-        => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
+    internal static ControlPoint Point(
+        float x,
+        float y = 0f,
+        float z = 0f,
+        float yaw = 0f,
+        float pitch = 0f,
+        float fov = 1f,
+        float roll = 0f
+    ) => new(new Vector3(x, y, z), yaw, pitch, fov, roll);
 
     /// <summary>The demo scene the plugin ships, as the test project copies it.</summary>
-    internal static string DemoSceneJson()
-        => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Demo", "Demo - Limsa.json"));
+    internal static string DemoSceneJson() =>
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Demo", "Demo - Limsa.json"));
 
     /// <summary>The shipped demo scene, read.</summary>
     internal static Scene DemoScene() => SceneJson.Read(DemoSceneJson());
@@ -35,8 +42,12 @@ internal static class Fixtures
     // Points at x = 0, 5, 10 in two 5 s legs: a 10 s track.
     internal static Track StraightTrack(bool loop = false, PlaybackDirection direction = PlaybackDirection.Forward)
     {
-        var track = TrackEditing.SetDirection(TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop), direction);
-        foreach (var x in new[] { 0f, 5f, 10f }) track = TrackEditing.Append(track, Point(x));
+        var track = TrackEditing.SetDirection(
+            TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop),
+            direction
+        );
+        foreach (var x in new[] { 0f, 5f, 10f })
+            track = TrackEditing.Append(track, Point(x));
         return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
     }
 

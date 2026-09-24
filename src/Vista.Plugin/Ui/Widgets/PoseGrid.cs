@@ -1,8 +1,8 @@
 using System.Numerics;
-using Vista.Plugin.Editor;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
+using Vista.Plugin.Editor;
 
 namespace Vista.Plugin.Ui.Widgets;
 
@@ -15,50 +15,77 @@ internal static class PoseGrid
     public const float FovSpeed = 0.1f;
 
     /// <summary>Which clipboard button was pressed this frame.</summary>
-    public enum Clip { None, Copy, Paste, Delete }
+    public enum Clip
+    {
+        None,
+        Copy,
+        Paste,
+        Delete,
+    }
 
     /// <summary>The spacing both windows draw the header and grid with.</summary>
-    public static IDisposable Style()
-        => ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f)).Push(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
+    public static IDisposable Style() =>
+        ImRaii
+            .PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f))
+            .Push(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
 
     /// <summary>The move and rotate buttons for <paramref name="mode"/>, then copy, paste and delete right-aligned over the grid; the clipboard buttons that cannot act are disabled.</summary>
-    public static Clip Header(GizmoMode mode, Action<GizmoMode> setMode, bool rotates, float gridWidth, bool canCopy, bool canPaste, bool canDelete)
+    public static Clip Header(
+        GizmoMode mode,
+        Action<GizmoMode> setMode,
+        bool rotates,
+        float gridWidth,
+        bool canCopy,
+        bool canPaste,
+        bool canDelete
+    )
     {
         // A move button lights when rotate is not the mode, or cannot be: an anchor falls back to world.
         var moving = !rotates || mode != GizmoMode.Rotate;
         var local = moving && mode == GizmoMode.MoveLocal;
 
-        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)")) setMode(GizmoMode.Move);
+        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)"))
+            setMode(GizmoMode.Move);
         ImGui.SameLine();
-        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)")) setMode(GizmoMode.MoveLocal);
+        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)"))
+            setMode(GizmoMode.MoveLocal);
         ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X * 3f);
         ImGui.BeginDisabled(!rotates);
-        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && mode == GizmoMode.Rotate, "Rotate")) setMode(GizmoMode.Rotate);
+        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && mode == GizmoMode.Rotate, "Rotate"))
+            setMode(GizmoMode.Rotate);
         ImGui.EndDisabled();
 
         // Right-align to last frame's grid, whose width is its columns' own, not the window's.
         var gap = ImGui.GetStyle().ItemSpacing.X;
-        var icons = IconButton.Width(FontAwesomeIcon.Copy) + IconButton.Width(FontAwesomeIcon.Paste) + IconButton.Width(FontAwesomeIcon.Trash) + (gap * 2f);
+        var icons =
+            IconButton.Width(FontAwesomeIcon.Copy)
+            + IconButton.Width(FontAwesomeIcon.Paste)
+            + IconButton.Width(FontAwesomeIcon.Trash)
+            + (gap * 2f);
         ImGui.SameLine();
         ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + gridWidth - icons));
 
         var clip = Clip.None;
         ImGui.BeginDisabled(!canCopy);
-        if (IconButton.Draw("copy-pose", FontAwesomeIcon.Copy, "Copy position, aim, roll and FoV")) clip = Clip.Copy;
+        if (IconButton.Draw("copy-pose", FontAwesomeIcon.Copy, "Copy position, aim, roll and FoV"))
+            clip = Clip.Copy;
         ImGui.EndDisabled();
         ImGui.SameLine();
         ImGui.BeginDisabled(!canPaste);
-        if (IconButton.Draw("paste-pose", FontAwesomeIcon.Paste, "Paste position, aim, roll and FoV")) clip = Clip.Paste;
+        if (IconButton.Draw("paste-pose", FontAwesomeIcon.Paste, "Paste position, aim, roll and FoV"))
+            clip = Clip.Paste;
         ImGui.EndDisabled();
         ImGui.SameLine();
         ImGui.BeginDisabled(!canDelete);
-        if (IconButton.Draw("delete-pose", FontAwesomeIcon.Trash, "Delete point", danger: true)) clip = Clip.Delete;
+        if (IconButton.Draw("delete-pose", FontAwesomeIcon.Trash, "Delete point", danger: true))
+            clip = Clip.Delete;
         ImGui.EndDisabled();
         return clip;
     }
 
     /// <summary>Starts the grid: an icon column, then three field columns.</summary>
-    public static bool BeginGrid() => ImGui.BeginTable("pose", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.NoHostExtendX);
+    public static bool BeginGrid() =>
+        ImGui.BeginTable("pose", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.NoHostExtendX);
 
     /// <summary>Ends the grid and returns its width, for aligning next frame's header.</summary>
     public static float EndGrid()
@@ -76,7 +103,8 @@ internal static class PoseGrid
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
             ImGui.TextUnformatted(icon.ToIconString());
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(name);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(name);
     }
 
     /// <summary>A row's action in the first column, in place of its label.</summary>

@@ -43,8 +43,10 @@ public class ArcLengthTableTests
             Assert.True(MathF.Abs(d - arcMean) < arcMean * 0.05f, $"arc-length step {d} strays from mean {arcMean}");
 
         var naiveMean = naiveDistances.Average();
-        Assert.True(naiveDistances.Max() > naiveMean * 1.5f,
-            "naive parameter spacing should be uneven on a bunched-then-spread segment");
+        Assert.True(
+            naiveDistances.Max() > naiveMean * 1.5f,
+            "naive parameter spacing should be uneven on a bunched-then-spread segment"
+        );
     }
 
     private static float[] ConsecutiveDistances(Vector3[] points)

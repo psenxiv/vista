@@ -45,7 +45,8 @@ public sealed class ArcLengthTable
     public float[] SegmentLengths(float minimum)
     {
         var lengths = new float[SegmentCount];
-        for (var i = 0; i < lengths.Length; i++) lengths[i] = MathF.Max(SegmentLength(i), minimum);
+        for (var i = 0; i < lengths.Length; i++)
+            lengths[i] = MathF.Max(SegmentLength(i), minimum);
         return lengths;
     }
 
@@ -57,7 +58,8 @@ public sealed class ArcLengthTable
     {
         var samples = _cumulative[CheckSegment(segment)];
         var length = samples[^1];
-        if (length <= 0f) return fraction;
+        if (length <= 0f)
+            return fraction;
 
         var target = Math.Clamp(fraction, 0f, 1f) * length;
 
@@ -72,8 +74,10 @@ public sealed class ArcLengthTable
     private int CheckSegment(int segment)
     {
         if (segment < 0 || segment >= SegmentCount)
-            throw new ArgumentOutOfRangeException(nameof(segment),
-                SegmentCount == 0 ? "the table has no segments" : $"segment must be 0..{SegmentCount - 1}");
+            throw new ArgumentOutOfRangeException(
+                nameof(segment),
+                SegmentCount == 0 ? "the table has no segments" : $"segment must be 0..{SegmentCount - 1}"
+            );
         return segment;
     }
 }

@@ -37,12 +37,16 @@ internal sealed class GameSession
         get => config.HideUiInLive;
         set
         {
-            if (config.HideUiInLive == value) return;
+            if (config.HideUiInLive == value)
+                return;
             config.HideUiInLive = value;
             config.Save();
-            if (state.Mode != CameraMode.Live) return;
-            if (value && !state.Director.IsPaused && !state.Director.IsFinished) GameUi.Hide();
-            else if (!value) GameUi.Restore();
+            if (state.Mode != CameraMode.Live)
+                return;
+            if (value && !state.Director.IsPaused && !state.Director.IsFinished)
+                GameUi.Hide();
+            else if (!value)
+                GameUi.Restore();
         }
     }
 
@@ -59,13 +63,25 @@ internal sealed class GameSession
     public FlySpeed Speed => freeCam.Speed;
 
     /// <summary>The free camera's position while editing.</summary>
-    public Vector3 CameraPosition { get => freeCam.Position; set => freeCam.Position = value; }
+    public Vector3 CameraPosition
+    {
+        get => freeCam.Position;
+        set => freeCam.Position = value;
+    }
 
     /// <summary>The free camera's roll in radians.</summary>
-    public float CameraRoll { get => freeCam.Roll; set => freeCam.Roll = value; }
+    public float CameraRoll
+    {
+        get => freeCam.Roll;
+        set => freeCam.Roll = value;
+    }
 
     /// <summary>The field of view the camera is looking through, in radians.</summary>
-    public float CameraFov { get => freeCam.Fov; set => freeCam.Fov = value; }
+    public float CameraFov
+    {
+        get => freeCam.Fov;
+        set => freeCam.Fov = value;
+    }
 
     /// <summary>The game's field of view from just before Vista took the camera, or null when Vista does not hold it.</summary>
     public float? TakeoverFov => snapshotBeforeTakeover?.Fov;
@@ -83,10 +99,15 @@ internal sealed class GameSession
     /// <summary>Starts free-cam: from Off or View at the game camera, from Live at the current frame. No-op while editing.</summary>
     public void EnterEdit()
     {
-        if (state.Mode == CameraMode.Editing) return;
+        if (state.Mode == CameraMode.Editing)
+            return;
 
         var start = state.Mode == CameraMode.Live ? lastFrame ?? CameraAccess.ReadState() : CameraAccess.ReadState();
-        if (start is null) { Plugin.Log.Error("[vista] cannot read camera state."); return; }
+        if (start is null)
+        {
+            Plugin.Log.Error("[vista] cannot read camera state.");
+            return;
+        }
 
         switch (state.Edit())
         {
@@ -128,13 +149,15 @@ internal sealed class GameSession
     public void StopPlay()
     {
         var editing = state.Mode == CameraMode.Editing;
-        if (state.Stop()) Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
+        if (state.Stop())
+            Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
     }
 
     /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason, CameraMode to = CameraMode.Off)
     {
-        if (!state.Release(to) && !owned) return;
+        if (!state.Release(to) && !owned)
+            return;
 
         freeCam.Disable();
         GameUi.Restore();
@@ -169,16 +192,20 @@ internal sealed class GameSession
     /// <summary>Sets the aim mode; the first Look At with no points goes ahead of the camera. Returns why it was refused, or null.</summary>
     public string? SetAim(AimMode aim)
     {
-        if (CameraPoint() is { } camera) return state.SetAim(aim, camera);
+        if (CameraPoint() is { } camera)
+            return state.SetAim(aim, camera);
         var placesFromCamera = aim == AimMode.LookAt && state.Track is { Points.Count: 0, LookAtPlaced: false };
-        return state.Mode == CameraMode.Editing && placesFromCamera ? "Cannot read the camera." : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
+        return state.Mode == CameraMode.Editing && placesFromCamera
+            ? "Cannot read the camera."
+            : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
     }
 
     /// <summary>Edits a track and flies the editor camera to its first point, as a point's double-click does. Returns why it was refused, or null.</summary>
     public string? FlyToFirstPoint(Guid id)
     {
         var refusal = state.SwitchTrack(id);
-        if (refusal is null) JumpToPoint(0);
+        if (refusal is null)
+            JumpToPoint(0);
         return refusal;
     }
 
@@ -187,21 +214,25 @@ internal sealed class GameSession
     {
         var fromEditing = state.Mode == CameraMode.Editing && state.Transport.Scrubbing;
         state.Transport.EndScrub();
-        if (fromEditing && state.World.FrameAt(state.Transport.ScrubHead) is { } frame) FlyFrom(frame);
+        if (fromEditing && state.World.FrameAt(state.Transport.ScrubHead) is { } frame)
+            FlyFrom(frame);
     }
 
     /// <summary>Puts the free-cam at point <paramref name="index"/> while editing, as a scrub release would.</summary>
     public void JumpToPoint(int index)
     {
-        if (state.Mode != CameraMode.Editing || index < 0 || index >= state.Track.Points.Count) return;
+        if (state.Mode != CameraMode.Editing || index < 0 || index >= state.Track.Points.Count)
+            return;
         state.Transport.ScrubTo(state.World.Evaluator.PointSeconds(index));
-        if (state.World.FrameAt(state.Transport.ScrubHead) is { } frame) FlyFrom(frame);
+        if (state.World.FrameAt(state.Transport.ScrubHead) is { } frame)
+            FlyFrom(frame);
     }
 
     /// <summary>Where the camera goes this frame, or null to leave it to the game. Called from the camera hook.</summary>
     public CameraState? Frame(float dt)
     {
-        if (!owned) return null;
+        if (!owned)
+            return null;
 
         var frame = state.Mode switch
         {
@@ -217,8 +248,10 @@ internal sealed class GameSession
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
-        if (state.Mode != CameraMode.Editing) return "Points can only be added while editing.";
-        if (state.Transport.Scrubbing) return "Points cannot be added while scrubbing.";
+        if (state.Mode != CameraMode.Editing)
+            return "Points can only be added while editing.";
+        if (state.Transport.Scrubbing)
+            return "Points cannot be added while scrubbing.";
         return CameraPoint() is { } point ? edit(point) : "Cannot read the camera.";
     }
 
@@ -233,7 +266,8 @@ internal sealed class GameSession
 
         var camera = CameraAccess.ReadState();
         var angles = CameraAccess.ReadAngles();
-        if (camera is null || angles is null) return null;
+        if (camera is null || angles is null)
+            return null;
 
         var (yaw, pitch) = angles.Value;
         return new ControlPoint(camera.Value.Position, yaw, pitch, camera.Value.Fov, freeCam.Roll);
@@ -243,19 +277,24 @@ internal sealed class GameSession
     private CameraState? EditingFrame(float dt)
     {
         var transport = state.Transport;
-        if (transport.Previewing && FreeCam.HasFlightInput()) transport.StopPreview();
+        if (transport.Previewing && FreeCam.HasFlightInput())
+            transport.StopPreview();
         var frame = transport.AdvancePreview(dt);
 
         if (previewedLastFrame && !transport.Previewing)
         {
             previewedLastFrame = false;
-            if ((frame ?? lastFrame ?? state.World.FrameAt(transport.ScrubHead)) is { } last) FlyFrom(last);
+            if ((frame ?? lastFrame ?? state.World.FrameAt(transport.ScrubHead)) is { } last)
+                FlyFrom(last);
             return freeCam.Tick(dt);
         }
 
         previewedLastFrame = transport.Previewing;
-        if (frame is { } previewing) return previewing;
-        return transport.Scrubbing && state.World.FrameAt(transport.ScrubHead) is { } scrubbed ? scrubbed : freeCam.Tick(dt);
+        if (frame is { } previewing)
+            return previewing;
+        return transport.Scrubbing && state.World.FrameAt(transport.ScrubHead) is { } scrubbed
+            ? scrubbed
+            : freeCam.Tick(dt);
     }
 
     /// <summary>Carries out a play or restart outcome in game. <paramref name="previewRefusal"/> says a refusal is the edited track's, not the playlist's.</summary>
@@ -267,15 +306,19 @@ internal sealed class GameSession
                 Plugin.Log.Information("[vista] preview");
                 return;
             case PlayOutcome.Refused:
-                Plugin.Log.Debug(previewRefusal
-                    ? "[vista] cannot preview a track with no points."
-                    : "[vista] nothing to play: add a track with points to the playlist.");
+                Plugin.Log.Debug(
+                    previewRefusal
+                        ? "[vista] cannot preview a track with no points."
+                        : "[vista] nothing to play: add a track with points to the playlist."
+                );
                 return;
             case PlayOutcome.ReHid:
-                if (HideUiInLive) GameUi.Hide();
+                if (HideUiInLive)
+                    GameUi.Hide();
                 return;
             case PlayOutcome.Resumed:
-                if (HideUiInLive) GameUi.Hide();
+                if (HideUiInLive)
+                    GameUi.Hide();
                 Plugin.Log.Information("[vista] resumed");
                 return;
             case PlayOutcome.StartedFromGame or PlayOutcome.CuedFromGame:
@@ -291,7 +334,8 @@ internal sealed class GameSession
             return;
         }
 
-        if (HideUiInLive) GameUi.Hide();
+        if (HideUiInLive)
+            GameUi.Hide();
         Plugin.Log.Information("[vista] mode: live, {Count} playlist entries", state.Scene.Playlist.Count);
     }
 

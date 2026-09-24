@@ -43,7 +43,13 @@ public class GuideMarkdownTests
         Assert.Equal(2, bullets.Items.Count);
         Assert.Equal([P("two continued")], bullets.Items[1]);
         var numbered = Assert.IsType<NumberedList>(blocks[1]);
-        Assert.Equal([[P("first")], [P("second")]], numbered.Items);
+        Assert.Equal(
+            [
+                [P("first")],
+                [P("second")],
+            ],
+            numbered.Items
+        );
     }
 
     [Fact]
@@ -52,7 +58,13 @@ public class GuideMarkdownTests
         var blocks = GuideMarkdown.Parse("| Key | Does |\n|---|---|\n|  `E`  | Fly **up** |\n| Q | Fly down |");
 
         var table = Assert.IsType<Table>(Assert.Single(blocks));
-        Assert.Equal([[P("Key")], [P("Does")]], table.Header);
+        Assert.Equal(
+            [
+                [P("Key")],
+                [P("Does")],
+            ],
+            table.Header
+        );
         Assert.Equal(2, table.Rows.Count);
         Assert.Equal([K("E")], table.Rows[0][0]);
         Assert.Equal([P("Fly "), B("up")], table.Rows[0][1]);
@@ -72,7 +84,9 @@ public class GuideMarkdownTests
     [Fact]
     public void BoldAndKeysSplitAParagraphIntoRuns()
     {
-        var runs = Assert.IsType<Paragraph>(Assert.Single(GuideMarkdown.Parse("Press `Space` to **play**, then stop."))).Runs;
+        var runs = Assert
+            .IsType<Paragraph>(Assert.Single(GuideMarkdown.Parse("Press `Space` to **play**, then stop.")))
+            .Runs;
 
         Assert.Equal([P("Press "), K("Space"), P(" to "), B("play"), P(", then stop.")], runs);
     }
@@ -86,26 +100,38 @@ public class GuideMarkdownTests
     [Fact]
     public void ALinkCarriesItsPage()
     {
-        Assert.Equal([P("See "), new Run("Timing", RunStyle.Link, "timing.md"), P(" for more.")], GuideMarkdown.Inline("See [Timing](timing.md) for more."));
+        Assert.Equal(
+            [P("See "), new Run("Timing", RunStyle.Link, "timing.md"), P(" for more.")],
+            GuideMarkdown.Inline("See [Timing](timing.md) for more.")
+        );
     }
 
     [Fact]
     public void AKeyCombinationSplitsIntoKeysJoinedByAPlainPlus()
     {
-        Assert.Equal([P("Press "), K("Ctrl"), P(" + "), K("Space"), P(".")], GuideMarkdown.Inline("Press `Ctrl + Space`."));
+        Assert.Equal(
+            [P("Press "), K("Ctrl"), P(" + "), K("Space"), P(".")],
+            GuideMarkdown.Inline("Press `Ctrl + Space`.")
+        );
     }
 
     [Fact]
     public void ASpanStartingWithASlashIsOneCommand()
     {
         // The " + " split applies to keys only, so a command keeps any plus it has.
-        Assert.Equal([P("Type "), new Run("/vista a + b", RunStyle.Command)], GuideMarkdown.Inline("Type `/vista a + b`"));
+        Assert.Equal(
+            [P("Type "), new Run("/vista a + b", RunStyle.Command)],
+            GuideMarkdown.Inline("Type `/vista a + b`")
+        );
     }
 
     [Fact]
     public void AnIconTagBecomesAnIconRunNamedByTheTag()
     {
-        Assert.Equal([P("Click "), new Run("ChartLine", RunStyle.Icon), P(" to open it.")], GuideMarkdown.Inline("Click {icon:ChartLine} to open it."));
+        Assert.Equal(
+            [P("Click "), new Run("ChartLine", RunStyle.Icon), P(" to open it.")],
+            GuideMarkdown.Inline("Click {icon:ChartLine} to open it.")
+        );
     }
 
     [Fact]

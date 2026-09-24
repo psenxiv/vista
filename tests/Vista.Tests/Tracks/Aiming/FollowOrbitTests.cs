@@ -61,5 +61,6 @@ public class FollowOrbitTests
     }
 
     [Fact]
-    public void DistanceNeverGoesBelowZero() => Assert.Equal(0f, FollowOrbit.Of(FollowOrbit.With(Behind, new Orbit(-3f, 0f, 2f))).Distance, 4);
+    public void DistanceNeverGoesBelowZero() =>
+        Assert.Equal(0f, FollowOrbit.Of(FollowOrbit.With(Behind, new Orbit(-3f, 0f, 2f))).Distance, 4);
 }

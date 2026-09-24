@@ -15,7 +15,8 @@ public class SessionSelectionTests
     {
         var state = new SessionState();
         state.Edit();
-        foreach (var x in new[] { 5f, 10f, 20f, 30f }) state.AddToEnd(Point(x));
+        foreach (var x in new[] { 5f, 10f, 20f, 30f })
+            state.AddToEnd(Point(x));
         var first = state.EditedTrackId;
         state.AddTrack();
         state.AddTrack();
@@ -227,8 +228,14 @@ public class SessionSelectionTests
 
         state.Selection.ClickPoint(1, RowClick.Toggle);
 
-        Assert.Equal("Tracks can only be selected while editing.", state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle));
-        Assert.Equal("Playlist entries can only be selected while editing.", state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle));
+        Assert.Equal(
+            "Tracks can only be selected while editing.",
+            state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle)
+        );
+        Assert.Equal(
+            "Playlist entries can only be selected while editing.",
+            state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle)
+        );
         Assert.Equal([0], state.Selection.Points);
     }
 

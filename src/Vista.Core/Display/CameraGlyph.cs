@@ -21,7 +21,8 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
     {
         var f = Vector3.Normalize(forward);
         var u = up - (f * Vector3.Dot(up, f));
-        if (u.LengthSquared() < 1e-8f) u = CameraOrientation.UpFor(Vector3.Zero, f);
+        if (u.LengthSquared() < 1e-8f)
+            u = CameraOrientation.UpFor(Vector3.Zero, f);
         u = Vector3.Normalize(u);
         var side = Vector3.Cross(u, f);
 
@@ -35,9 +36,15 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
 
         return new CameraGlyph(
             apex,
-            [top - (side * halfWidth), top + (side * halfWidth), bottom + (side * halfWidth), bottom - (side * halfWidth)],
+            [
+                top - (side * halfWidth),
+                top + (side * halfWidth),
+                bottom + (side * halfWidth),
+                bottom - (side * halfWidth),
+            ],
             top - (side * tab * TabHalfWidth),
             top + (u * tab * TabHeight),
-            top + (side * tab * TabHalfWidth));
+            top + (side * tab * TabHalfWidth)
+        );
     }
 }

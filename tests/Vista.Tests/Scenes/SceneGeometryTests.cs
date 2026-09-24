@@ -14,14 +14,19 @@ public class SceneGeometryTests
     // The two together put the track's anchor at (102.701512, 2, 45.792645) yaw 1.5.
     private static Scene Anchored()
     {
-        var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f), AnchorPlaced = true };
+        var scene = SceneEditing.New() with
+        {
+            Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f),
+            AnchorPlaced = true,
+        };
         var track = scene.Tracks[0] with { Anchor = new Anchor(new Vector3(5f, 0f, 0f), 0.5f), AnchorPlaced = true };
-        foreach (var x in new[] { 0f, 10f, 20f }) track = TrackEditing.Append(track, Point(x));
+        foreach (var x in new[] { 0f, 10f, 20f })
+            track = TrackEditing.Append(track, Point(x));
         return SceneEditing.Replace(scene, track);
     }
 
-    private static IReadOnlyList<Vector3> WorldPositions(Scene scene)
-        => SceneGeometry.InWorld(scene, scene.Tracks[0]).Points.Select(p => p.Position).ToList();
+    private static IReadOnlyList<Vector3> WorldPositions(Scene scene) =>
+        SceneGeometry.InWorld(scene, scene.Tracks[0]).Points.Select(p => p.Position).ToList();
 
     [Fact]
     public void InWorldPlacesPointsThroughBothAnchors()
@@ -72,7 +77,11 @@ public class SceneGeometryTests
         var placed = SceneGeometry.PlaceFor(added, id, new Vector3(120f, 8f, 40f), 3f);
 
         Assert.Equal(scene.Anchor, placed.Anchor);
-        Near(new Vector3(120f, 3f, 40f), SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Position, 1e-4f);
+        Near(
+            new Vector3(120f, 3f, 40f),
+            SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Position,
+            1e-4f
+        );
         Assert.Equal(0f, SceneGeometry.WorldAnchor(placed, SceneEditing.Get(placed, id)).Yaw, 1e-4f);
     }
 
@@ -90,7 +99,8 @@ public class SceneGeometryTests
         var before = WorldPositions(scene);
         var moved = SceneGeometry.MoveSceneAnchor(scene, new Anchor(new Vector3(-30f, 1f, 8f), -0.7f), carry: false);
 
-        for (var i = 0; i < before.Count; i++) Near(before[i], WorldPositions(moved)[i], 1e-4f);
+        for (var i = 0; i < before.Count; i++)
+            Near(before[i], WorldPositions(moved)[i], 1e-4f);
         Assert.Equal(-0.7f, moved.Anchor.Yaw);
     }
 
@@ -112,7 +122,12 @@ public class SceneGeometryTests
         var scene = Anchored();
         var before = WorldPositions(scene);
         var worldYawsBefore = SceneGeometry.InWorld(scene, scene.Tracks[0]).Points.Select(p => p.Yaw).ToList();
-        var moved = SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, new Anchor(new Vector3(80f, 0f, 30f), 2f), carry: false);
+        var moved = SceneGeometry.MoveTrackAnchor(
+            scene,
+            scene.Tracks[0].Id,
+            new Anchor(new Vector3(80f, 0f, 30f), 2f),
+            carry: false
+        );
 
         var world = SceneGeometry.InWorld(moved, moved.Tracks[0]);
         for (var i = 0; i < before.Count; i++)
@@ -127,12 +142,17 @@ public class SceneGeometryTests
     {
         var scene = SceneEditing.New();
         Assert.True(SceneGeometry.MoveSceneAnchor(scene, new Anchor(Vector3.One, 0f), carry: true).AnchorPlaced);
-        Assert.True(SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, new Anchor(Vector3.One, 0f), carry: true).Tracks[0].AnchorPlaced);
+        Assert.True(
+            SceneGeometry
+                .MoveTrackAnchor(scene, scene.Tracks[0].Id, new Anchor(Vector3.One, 0f), carry: true)
+                .Tracks[0]
+                .AnchorPlaced
+        );
     }
 
     // The track in Anchored() with its Look At point at (0, 3, −10) local to its anchor.
-    private static Scene WithLookAt(Scene scene)
-        => SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(0f, 3f, -10f), LookAtPlaced = true });
+    private static Scene WithLookAt(Scene scene) =>
+        SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(0f, 3f, -10f), LookAtPlaced = true });
 
     private static Vector3 WorldLookAt(Scene scene) => SceneGeometry.InWorld(scene, scene.Tracks[0]).LookAt;
 
@@ -150,8 +170,19 @@ public class SceneGeometryTests
     [Fact]
     public void ATrackWithOnlyALookAtIsStillCarried()
     {
-        var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 0f), AnchorPlaced = true };
-        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(1f, 0f, 0f), LookAtPlaced = true });
+        var scene = SceneEditing.New() with
+        {
+            Anchor = new Anchor(new Vector3(100f, 2f, 50f), 0f),
+            AnchorPlaced = true,
+        };
+        scene = SceneEditing.Replace(
+            scene,
+            scene.Tracks[0] with
+            {
+                LookAt = new Vector3(1f, 0f, 0f),
+                LookAtPlaced = true,
+            }
+        );
 
         Near(new Vector3(101f, 2f, 50f), WorldLookAt(scene), 1e-4f);
     }
@@ -173,7 +204,12 @@ public class SceneGeometryTests
         var scene = WithLookAt(Anchored());
         var before = WorldLookAt(scene);
 
-        var moved = SceneGeometry.MoveTrackAnchor(scene, scene.Tracks[0].Id, new Anchor(new Vector3(80f, 0f, 30f), 2f), carry: false);
+        var moved = SceneGeometry.MoveTrackAnchor(
+            scene,
+            scene.Tracks[0].Id,
+            new Anchor(new Vector3(80f, 0f, 30f), 2f),
+            carry: false
+        );
 
         Near(before, WorldLookAt(moved), 1e-4f);
     }
@@ -193,7 +229,14 @@ public class SceneGeometryTests
     public void PlacingTheAnchorsLeavesALookAtPlacedBeforeThemInTheWorld()
     {
         var scene = SceneEditing.New();
-        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(5f, 6f, 7f), LookAtPlaced = true });
+        scene = SceneEditing.Replace(
+            scene,
+            scene.Tracks[0] with
+            {
+                LookAt = new Vector3(5f, 6f, 7f),
+                LookAtPlaced = true,
+            }
+        );
 
         var placed = SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(20f, 9f, -3f), 2f);
 
@@ -203,8 +246,19 @@ public class SceneGeometryTests
     [Fact]
     public void PlacingATrackAnchorUnderAPlacedSceneAnchorLeavesItsLookAtInTheWorld()
     {
-        var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f), AnchorPlaced = true };
-        scene = SceneEditing.Replace(scene, scene.Tracks[0] with { LookAt = new Vector3(5f, 6f, 7f), LookAtPlaced = true });
+        var scene = SceneEditing.New() with
+        {
+            Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f),
+            AnchorPlaced = true,
+        };
+        scene = SceneEditing.Replace(
+            scene,
+            scene.Tracks[0] with
+            {
+                LookAt = new Vector3(5f, 6f, 7f),
+                LookAtPlaced = true,
+            }
+        );
         var before = WorldLookAt(scene);
 
         var placed = SceneGeometry.PlaceFor(scene, scene.Tracks[0].Id, new Vector3(20f, 9f, -3f), 2f);
@@ -218,10 +272,23 @@ public class SceneGeometryTests
     {
         // The anchored scene with its track under Follow Target and one point at (0, 2, 5).
         var anchored = Anchored();
-        var scene = SceneEditing.Replace(anchored, anchored.Tracks[0] with { Aim = AimMode.FollowTarget, Points = [new ControlPoint(new Vector3(0f, 2f, 5f), 0f, 0f, 1f)], Timing = [new PointTiming()] });
+        var scene = SceneEditing.Replace(
+            anchored,
+            anchored.Tracks[0] with
+            {
+                Aim = AimMode.FollowTarget,
+                Points = [new ControlPoint(new Vector3(0f, 2f, 5f), 0f, 0f, 1f)],
+                Timing = [new PointTiming()],
+            }
+        );
         var track = scene.Tracks[0];
 
-        var moved = SceneGeometry.MoveTrackAnchor(scene, track.Id, new Anchor(new Vector3(30f, 0f, 30f), 1f), carry: false);
+        var moved = SceneGeometry.MoveTrackAnchor(
+            scene,
+            track.Id,
+            new Anchor(new Vector3(30f, 0f, 30f), 1f),
+            carry: false
+        );
 
         Assert.Equal(track.Points, moved.Tracks[0].Points);
     }

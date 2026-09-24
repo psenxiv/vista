@@ -20,7 +20,10 @@ public sealed class Transport
     public bool Scrubbing { get; private set; }
 
     /// <summary>Seconds under the scrub head: shot time while live or previewing, otherwise the last scrubbed or jumped-to time.</summary>
-    public double ScrubHead => session.Mode == CameraMode.Live ? session.Director.ShotTime : preview?.ShotTime ?? Math.Min(scrubTime, session.Duration);
+    public double ScrubHead =>
+        session.Mode == CameraMode.Live
+            ? session.Director.ShotTime
+            : preview?.ShotTime ?? Math.Min(scrubTime, session.Duration);
 
     /// <summary>The scrub bar's length: the playing entry's while live, otherwise the edited track's.</summary>
     public double ScrubLength => session.Mode == CameraMode.Live ? session.Director.ShotLength : session.Duration;
@@ -28,16 +31,19 @@ public sealed class Transport
     /// <summary>Advances an Edit preview, stopping it at the end of a cycle that doesn't loop. Returns its frame, or null when not previewing.</summary>
     public CameraState? AdvancePreview(float dt)
     {
-        if (preview is not { } playback) return null;
+        if (preview is not { } playback)
+            return null;
         var frame = playback.Advance(dt);
-        if (playback.IsFinished) StopPreview();
+        if (playback.IsFinished)
+            StopPreview();
         return frame;
     }
 
     /// <summary>Stops an Edit preview, leaving the scrub head at its shot time. Returns false if none was playing.</summary>
     public bool StopPreview()
     {
-        if (preview is not { } playback) return false;
+        if (preview is not { } playback)
+            return false;
         scrubTime = playback.ShotTime;
         preview = null;
         return true;
@@ -47,27 +53,34 @@ public sealed class Transport
     public void BeginScrub()
     {
         StopPreview();
-        if (session.Released || Scrubbing) return;
+        if (session.Released || Scrubbing)
+            return;
         Scrubbing = true;
         resumeAfterScrub = session.Mode == CameraMode.Live && !session.Director.IsPaused;
-        if (session.Mode == CameraMode.Live) session.Director.Pause();
+        if (session.Mode == CameraMode.Live)
+            session.Director.Pause();
     }
 
     /// <summary>Moves the scrub head to <paramref name="time"/> within the track; live, playback seeks there. No effect in Off or View.</summary>
     public void ScrubTo(double time)
     {
-        if (session.Mode == CameraMode.Editing) StopPreview();
-        if (session.Released) return;
+        if (session.Mode == CameraMode.Editing)
+            StopPreview();
+        if (session.Released)
+            return;
         scrubTime = Math.Clamp(time, 0.0, ScrubLength);
-        if (session.Mode == CameraMode.Live) session.Director.Seek(scrubTime);
+        if (session.Mode == CameraMode.Live)
+            session.Director.Seek(scrubTime);
     }
 
     /// <summary>Stops dragging the scrub head; live, playback carries on as it was before.</summary>
     public void EndScrub()
     {
-        if (!Scrubbing) return;
+        if (!Scrubbing)
+            return;
         Scrubbing = false;
-        if (session.Mode == CameraMode.Live && resumeAfterScrub) session.Director.Resume();
+        if (session.Mode == CameraMode.Live && resumeAfterScrub)
+            session.Director.Resume();
     }
 
     /// <summary>Plays <paramref name="playback"/> as the Edit preview, from the scrub head unless <paramref name="fromStart"/> or the scrub head is where the shot finishes.</summary>
@@ -76,7 +89,8 @@ public sealed class Transport
         if (!fromStart)
         {
             playback.Seek(ScrubHead);
-            if (playback.IsFinished) playback.Restart();
+            if (playback.IsFinished)
+                playback.Restart();
         }
 
         preview = playback;

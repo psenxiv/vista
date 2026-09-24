@@ -1,12 +1,12 @@
 using System.Numerics;
-using Vista.Core.Scenes;
-using Vista.Plugin.Session;
-using Vista.Plugin.Ui.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Vista.Core.Scenes;
+using Vista.Plugin.Session;
+using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Ui.Windows;
 
@@ -35,8 +35,8 @@ internal sealed class SetupWindow : Window
     public override void OnOpen() => parent = files.Ready ? files.Chosen : null;
 
     /// <summary>Centres the window the first time it appears.</summary>
-    public override void PreDraw()
-        => ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+    public override void PreDraw() =>
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
     public override void Draw()
     {
@@ -45,7 +45,15 @@ internal sealed class SetupWindow : Window
         ImGui.Spacing();
 
         if (IconButton.Draw("choose-folder", FontAwesomeIcon.Folder, "Choose folder"))
-            picker.OpenFolderDialog("Choose folder", (ok, path) => { if (ok) parent = path; }, files.Chosen);
+            picker.OpenFolderDialog(
+                "Choose folder",
+                (ok, path) =>
+                {
+                    if (ok)
+                        parent = path;
+                },
+                files.Chosen
+            );
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
         using (ImRaii.PushColor(ImGuiCol.Text, parent is null ? UiColours.Muted() : UiColours.Accent))
@@ -55,7 +63,12 @@ internal sealed class SetupWindow : Window
 
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Width - OkWidth);
         ImGui.BeginDisabled(parent is null);
-        if (ImGui.Button("Ok", new Vector2(OkWidth, 0f)) && parent is not null && files.Choose(parent) is null && files.Ready)
+        if (
+            ImGui.Button("Ok", new Vector2(OkWidth, 0f))
+            && parent is not null
+            && files.Choose(parent) is null
+            && files.Ready
+        )
         {
             IsOpen = false;
             continued();

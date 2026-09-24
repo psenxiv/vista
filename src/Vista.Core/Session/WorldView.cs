@@ -28,7 +28,12 @@ public sealed class WorldView
     public Track WorldOf(Track local)
     {
         var scene = session.Scene;
-        if (worlds.TryGetValue(local.Id, out var cached) && ReferenceEquals(cached.Local, local) && cached.Scene == scene.Anchor) return cached.World;
+        if (
+            worlds.TryGetValue(local.Id, out var cached)
+            && ReferenceEquals(cached.Local, local)
+            && cached.Scene == scene.Anchor
+        )
+            return cached.World;
         var world = SceneGeometry.InWorld(scene, local);
         worlds[local.Id] = (local, scene.Anchor, world);
         return world;
@@ -38,8 +43,14 @@ public sealed class WorldView
     public Track Shown(Track local)
     {
         var world = WorldOf(local);
-        if (local.Points.Count != 1 || FollowFrame(local) is not { } frame) return world;
-        if (shown.TryGetValue(local.Id, out var cached) && ReferenceEquals(cached.World, world) && cached.Frame == frame) return cached.Shown;
+        if (local.Points.Count != 1 || FollowFrame(local) is not { } frame)
+            return world;
+        if (
+            shown.TryGetValue(local.Id, out var cached)
+            && ReferenceEquals(cached.World, world)
+            && cached.Frame == frame
+        )
+            return cached.Shown;
         var result = world with { Points = [frame.ToWorld(local.Points[0])] };
         shown[local.Id] = (world, frame, result);
         return result;
@@ -65,7 +76,8 @@ public sealed class WorldView
     public CameraState? FrameAt(double time)
     {
         var local = session.StoredTrack;
-        if (local.Points.Count == 0) return null;
+        if (local.Points.Count == 0)
+            return null;
         scrubAim.Reset();
         return scrubAim.Frame(Evaluator, WorldOf(local), time, 0f);
     }
@@ -93,6 +105,8 @@ public sealed class WorldView
     }
 
     /// <summary>The frame a Follow track's point is stored in, finding its character near <paramref name="world"/>'s anchor.</summary>
-    private Anchor? FollowFrame(Track local, Track world)
-        => local is { Aim: AimMode.FollowTarget, Points.Count: <= 1 } && AimTracker.Character(world, aimTargets) is { } c ? new Anchor(c.Position, c.Facing) : null;
+    private Anchor? FollowFrame(Track local, Track world) =>
+        local is { Aim: AimMode.FollowTarget, Points.Count: <= 1 } && AimTracker.Character(world, aimTargets) is { } c
+            ? new Anchor(c.Position, c.Facing)
+            : null;
 }

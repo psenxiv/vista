@@ -14,7 +14,14 @@ public class PointTransferTests
     [
         new(Hold: 1f),
         new(LegSpeed: 2f, Hold: 0.5f, InMode: TangentMode.Linear),
-        new(LegSpeed: 3f, InMode: TangentMode.Manual, OutMode: TangentMode.Manual, InTangent: 0.25f, OutTangent: 0.75f, Broken: true),
+        new(
+            LegSpeed: 3f,
+            InMode: TangentMode.Manual,
+            OutMode: TangentMode.Manual,
+            InTangent: 0.25f,
+            OutTangent: 0.75f,
+            Broken: true
+        ),
         new(LegSpeed: 4f, OutMode: TangentMode.Flat),
     ];
 
@@ -29,11 +36,21 @@ public class PointTransferTests
     private static Scene TwoTracks()
     {
         var scene = SceneEditing.New() with { Anchor = new Anchor(new Vector3(100f, 0f, 0f), 0f), AnchorPlaced = true };
-        var a = scene.Tracks[0] with { Name = "A", AnchorPlaced = true, Points = [Point(0f), Point(10f), Point(20f), Point(30f)], Timing = SourceTiming };
+        var a = scene.Tracks[0] with
+        {
+            Name = "A",
+            AnchorPlaced = true,
+            Points = [Point(0f), Point(10f), Point(20f), Point(30f)],
+            Timing = SourceTiming,
+        };
         var (added, id) = SceneEditing.Add(SceneEditing.Replace(scene, a));
         var b = SceneEditing.Get(added, id) with
         {
-            Name = "B", Anchor = new Anchor(new Vector3(10f, 0f, 20f), MathF.PI / 2f), AnchorPlaced = true, Points = [Point(0f)], Timing = [new PointTiming()],
+            Name = "B",
+            Anchor = new Anchor(new Vector3(10f, 0f, 20f), MathF.PI / 2f),
+            AnchorPlaced = true,
+            Points = [Point(0f)],
+            Timing = [new PointTiming()],
         };
         return SceneEditing.Replace(added, b);
     }
@@ -44,7 +61,14 @@ public class PointTransferTests
     public void PointsGoOnTheEndInSourceOrderRelativeToTheDestinationsAnchor()
     {
         var scene = TwoTracks();
-        var (result, to, moved) = PointTransfer.Move(scene, scene.Tracks[0].Id, [2, 1], [W2, W1], scene.Tracks[1].Id, NoGround);
+        var (result, to, moved) = PointTransfer.Move(
+            scene,
+            scene.Tracks[0].Id,
+            [2, 1],
+            [W2, W1],
+            scene.Tracks[1].Id,
+            NoGround
+        );
 
         var b = result.Tracks[1];
         Assert.Equal(scene.Tracks[1].Id, to);
@@ -64,7 +88,9 @@ public class PointTransferTests
     public void TimingTravelsAndAPinnedLegStaysBetweenNeighbours()
     {
         var scene = TwoTracks();
-        var b = PointTransfer.Move(scene, scene.Tracks[0].Id, [2, 1], [W2, W1], scene.Tracks[1].Id, NoGround).Scene.Tracks[1];
+        var b = PointTransfer
+            .Move(scene, scene.Tracks[0].Id, [2, 1], [W2, W1], scene.Tracks[1].Id, NoGround)
+            .Scene.Tracks[1];
 
         Assert.Equal(new PointTiming(), b.Timing[0]);
         Assert.Equal(SourceTiming[1] with { LegSpeed = null }, b.Timing[1]);
@@ -75,7 +101,9 @@ public class PointTransferTests
     public void APinnedLegBetweenPointsThatWereApartFollowsTheTrackSpeed()
     {
         var scene = TwoTracks();
-        var b = PointTransfer.Move(scene, scene.Tracks[0].Id, [0, 2], [W1, W2], scene.Tracks[1].Id, NoGround).Scene.Tracks[1];
+        var b = PointTransfer
+            .Move(scene, scene.Tracks[0].Id, [0, 2], [W1, W2], scene.Tracks[1].Id, NoGround)
+            .Scene.Tracks[1];
 
         Assert.Equal(SourceTiming[0], b.Timing[1]);
         Assert.Equal(SourceTiming[2] with { LegSpeed = null }, b.Timing[2]);
@@ -85,7 +113,9 @@ public class PointTransferTests
     public void TheSourceClosesItsGapsAsDeletingWould()
     {
         var scene = TwoTracks();
-        var a = PointTransfer.Move(scene, scene.Tracks[0].Id, [1, 2], [W1, W2], scene.Tracks[1].Id, NoGround).Scene.Tracks[0];
+        var a = PointTransfer
+            .Move(scene, scene.Tracks[0].Id, [1, 2], [W1, W2], scene.Tracks[1].Id, NoGround)
+            .Scene.Tracks[0];
 
         // Deleting 2 merges legs 2 and 3 at leg 2's speed (3); deleting 1 then merges that with leg 1 at leg 1's (2).
         Assert.Equal([Point(0f), Point(30f)], a.Points);
@@ -97,7 +127,14 @@ public class PointTransferTests
     {
         var scene = TwoTracks();
         var world = new[] { W1, W2, Point(120f), Point(130f) };
-        var (result, _, moved) = PointTransfer.Move(scene, scene.Tracks[0].Id, [0, 1, 2, 3], world, scene.Tracks[1].Id, NoGround);
+        var (result, _, moved) = PointTransfer.Move(
+            scene,
+            scene.Tracks[0].Id,
+            [0, 1, 2, 3],
+            world,
+            scene.Tracks[1].Id,
+            NoGround
+        );
 
         Assert.Empty(result.Tracks[0].Points);
         Assert.Empty(result.Tracks[0].Timing);
@@ -152,7 +189,10 @@ public class PointTransferTests
     public void HiddenTracksAndThePlaylistAreLeftAlone()
     {
         var two = TwoTracks();
-        var scene = SceneEditing.SetHidden(two, [two.Tracks[1].Id], true) with { Playlist = [new PlaylistEntry(Guid.NewGuid(), two.Tracks[0].Id)] };
+        var scene = SceneEditing.SetHidden(two, [two.Tracks[1].Id], true) with
+        {
+            Playlist = [new PlaylistEntry(Guid.NewGuid(), two.Tracks[0].Id)],
+        };
         var result = PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[1].Id, NoGround).Scene;
 
         Assert.Equal(scene.Hidden, result.Hidden);
@@ -165,7 +205,9 @@ public class PointTransferTests
         var two = TwoTracks();
         var scene = SceneEditing.Replace(two, TrackEditing.Clear(two.Tracks[1]) with { Aim = AimMode.FollowTarget });
 
-        var refused = Assert.Throws<ArgumentException>(() => PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[1].Id, NoGround));
+        var refused = Assert.Throws<ArgumentException>(() =>
+            PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[1].Id, NoGround)
+        );
         Assert.Equal("A Follow Target track has one point", refused.Message);
     }
 
@@ -173,15 +215,21 @@ public class PointTransferTests
     public void PointsAreNotMovedOntoTheirOwnTrack()
     {
         var scene = TwoTracks();
-        Assert.Throws<ArgumentException>(() => PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[0].Id, NoGround));
+        Assert.Throws<ArgumentException>(() =>
+            PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[0].Id, NoGround)
+        );
     }
 
     [Fact]
     public void UnknownTracksAreRefused()
     {
         var scene = TwoTracks();
-        Assert.Throws<ArgumentException>(() => PointTransfer.Move(scene, Guid.NewGuid(), [0], [W1], scene.Tracks[1].Id, NoGround));
-        Assert.Throws<ArgumentException>(() => PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], Guid.NewGuid(), NoGround));
+        Assert.Throws<ArgumentException>(() =>
+            PointTransfer.Move(scene, Guid.NewGuid(), [0], [W1], scene.Tracks[1].Id, NoGround)
+        );
+        Assert.Throws<ArgumentException>(() =>
+            PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], Guid.NewGuid(), NoGround)
+        );
     }
 
     [Fact]

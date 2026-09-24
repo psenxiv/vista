@@ -1,5 +1,5 @@
-using Vista.Core.Session;
 using Dalamud.Bindings.ImGui;
+using Vista.Core.Session;
 
 namespace Vista.Plugin.Ui.Widgets;
 
@@ -15,8 +15,10 @@ internal static class LiveDrag
             dragging = true;
         }
 
-        if (changed) preview();
-        if (!ImGui.IsItemDeactivated()) return;
+        if (changed)
+            preview();
+        if (!ImGui.IsItemDeactivated())
+            return;
         dragging = false;
         session.EndLiveEdit();
     }
@@ -24,7 +26,8 @@ internal static class LiveDrag
     /// <summary>Ends a drag a closed window never saw let go.</summary>
     public static void End(SessionState session, ref bool dragging)
     {
-        if (!dragging) return;
+        if (!dragging)
+            return;
         dragging = false;
         session.EndLiveEdit();
     }

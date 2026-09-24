@@ -5,7 +5,8 @@ namespace Vista.Tests.Tracks.Timing;
 
 public class TimedChannelTests
 {
-    private static TimedChannel Channel(float[] values, float[] arrive, float[]? depart = null) => new(values, arrive, depart ?? arrive);
+    private static TimedChannel Channel(float[] values, float[] arrive, float[]? depart = null) =>
+        new(values, arrive, depart ?? arrive);
 
     // The slope at t from either side, over a millisecond.
     private static (float Left, float Right) Slopes(TimedChannel channel, float t)
@@ -20,7 +21,8 @@ public class TimedChannelTests
         float[] values = [1f, 4f, -2f, 6f];
         var channel = Channel(values, [0f, 1f, 3f, 4f]);
 
-        for (var i = 0; i < values.Length; i++) Assert.Equal(values[i], channel.At(new[] { 0f, 1f, 3f, 4f }[i]), 1e-5f);
+        for (var i = 0; i < values.Length; i++)
+            Assert.Equal(values[i], channel.At(new[] { 0f, 1f, 3f, 4f }[i]), 1e-5f);
     }
 
     [Fact]

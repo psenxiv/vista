@@ -12,9 +12,11 @@ public static class MarkerHitTest
         var bestDistance = radius * radius;
         for (var i = 0; i < markers.Count; i++)
         {
-            if (markers[i] is not { } marker) continue;
+            if (markers[i] is not { } marker)
+                continue;
             var distance = Vector2.DistanceSquared(marker, cursor);
-            if (distance > bestDistance) continue;
+            if (distance > bestDistance)
+                continue;
             best = i;
             bestDistance = distance;
         }

@@ -15,8 +15,12 @@ public class AimTrackerTests
 
     private static Track Single(AimMode aim) => TrackEditing.Append(TrackEditing.Empty(aim), Camera);
 
-    private static Track Watching(string? name = "Guard", float smoothing = 0f)
-        => Single(AimMode.WatchTarget) with { TargetName = name, Smoothing = smoothing };
+    private static Track Watching(string? name = "Guard", float smoothing = 0f) =>
+        Single(AimMode.WatchTarget) with
+        {
+            TargetName = name,
+            Smoothing = smoothing,
+        };
 
     // A guard whose aim point, 1.3 above the feet, is at (x, 0, −10).
     private static NearbyCharacters GuardAt(float x)
@@ -26,9 +30,8 @@ public class AimTrackerTests
         return characters;
     }
 
-    private static CameraState Frame(AimTracker tracker, Track track, float dt = 1f / 60f)
-        => tracker.Frame(new TrackEvaluator(track), track, 0.0, dt)!.Value;
-
+    private static CameraState Frame(AimTracker tracker, Track track, float dt = 1f / 60f) =>
+        tracker.Frame(new TrackEvaluator(track), track, 0.0, dt)!.Value;
 
     [Fact]
     public void WatchAimsAtTheCharacterAtItsAimHeight()
@@ -51,7 +54,10 @@ public class AimTrackerTests
     public void ADuplicateNameResolvesNearestTheTracksAnchor()
     {
         var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Guard", null, new Vector3(20f, -1.3f, -10f))]);
+        characters.Update([
+            new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f)),
+            new LoadedCharacter("Guard", null, new Vector3(20f, -1.3f, -10f)),
+        ]);
         var track = Watching() with { Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
         AimsAt(new Vector3(20f, 0f, -10f), Frame(new AimTracker(characters), track), 3);
@@ -61,8 +67,15 @@ public class AimTrackerTests
     public void TheTracksWorldReachesTheCharacterSearch()
     {
         var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -1.3f, -10f)), new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -1.3f, -10f))]);
-        var track = Watching("Aya") with { TargetWorld = "Gilgamesh", Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
+        characters.Update([
+            new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -1.3f, -10f)),
+            new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -1.3f, -10f)),
+        ]);
+        var track = Watching("Aya") with
+        {
+            TargetWorld = "Gilgamesh",
+            Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f),
+        };
 
         Assert.Equal(new Vector3(-20f, 0f, -10f), AimTracker.CharacterAim(track, characters));
     }
@@ -94,7 +107,11 @@ public class AimTrackerTests
         Frame(tracker, track);
 
         characters.Update(GuardAt(10f).All);
-        AimsAt(Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)), Frame(tracker, track, 0.5f), 3);
+        AimsAt(
+            Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)),
+            Frame(tracker, track, 0.5f),
+            3
+        );
 
         tracker.Reset();
         AimsAt(new Vector3(10f, 0f, -10f), Frame(tracker, track), 3);
@@ -139,8 +156,19 @@ public class AimTrackerTests
     }
 
     // A Follow track whose one point is the offset (0, 2, 5) behind and above, looking back along −z (yaw 0).
-    private static Track FollowingAt(ControlPoint offset, bool turns = true, bool looks = false, float smoothing = 0f)
-        => TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), offset) with { TargetName = "Guard", FollowTurns = turns, FollowLooks = looks, Smoothing = smoothing };
+    private static Track FollowingAt(
+        ControlPoint offset,
+        bool turns = true,
+        bool looks = false,
+        float smoothing = 0f
+    ) =>
+        TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), offset) with
+        {
+            TargetName = "Guard",
+            FollowTurns = turns,
+            FollowLooks = looks,
+            Smoothing = smoothing,
+        };
 
     private static readonly ControlPoint Behind = new(new Vector3(0f, 2f, 5f), 0f, 0f, 1f);
 
@@ -189,7 +217,13 @@ public class AimTrackerTests
     [Fact]
     public void LookAtCharacterAimsAtTheirAimHeight()
     {
-        var frame = Frame(new AimTracker(GuardStanding(Vector3.Zero, 0f)), FollowingAt(Behind, looks: true) with { AimHeight = 1.3f });
+        var frame = Frame(
+            new AimTracker(GuardStanding(Vector3.Zero, 0f)),
+            FollowingAt(Behind, looks: true) with
+            {
+                AimHeight = 1.3f,
+            }
+        );
 
         AimsAt(new Vector3(0f, 1.3f, 0f), frame, 3);
     }
@@ -291,7 +325,11 @@ public class AimTrackerTests
         var anchor = new Anchor(new Vector3(5f, 1f, -3f), 0.8f);
         var world = FollowingAt(Behind) with { Anchor = anchor, Points = [anchor.ToWorld(Behind)] };
 
-        Near(new Vector3(10f, 2f, 5f), Frame(new AimTracker(GuardStanding(new Vector3(10f, 0f, 0f), 0f)), world).Position, 1e-4f);
+        Near(
+            new Vector3(10f, 2f, 5f),
+            Frame(new AimTracker(GuardStanding(new Vector3(10f, 0f, 0f), 0f)), world).Position,
+            1e-4f
+        );
         Near(anchor.ToWorld(Behind.Position), Frame(new AimTracker(new NearbyCharacters()), world).Position, 1e-4f);
     }
 
@@ -301,7 +339,10 @@ public class AimTrackerTests
         var guard = GuardStanding(new Vector3(3f, 0f, 4f), 0f);
 
         Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.TargetPoint(Watching() with { AimHeight = 1.3f }, guard));
-        Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.TargetPoint(FollowingAt(Behind) with { AimHeight = 1.3f }, guard));
+        Assert.Equal(
+            new Vector3(3f, 1.3f, 4f),
+            AimTracker.TargetPoint(FollowingAt(Behind) with { AimHeight = 1.3f }, guard)
+        );
         Assert.Null(AimTracker.TargetPoint(Single(AimMode.AimKeys) with { TargetName = "Guard" }, guard));
         Assert.Null(AimTracker.TargetPoint(Watching(), new NearbyCharacters()));
     }
@@ -314,7 +355,10 @@ public class AimTrackerTests
 
         Assert.Equal(new Vector3(1f, 2f, 3f), AimTracker.AimPoint(lookAt, guard));
         Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.AimPoint(Watching() with { AimHeight = 1.3f }, guard));
-        Assert.Equal(new Vector3(3f, 1.3f, 4f), AimTracker.AimPoint(FollowingAt(Behind, looks: true) with { AimHeight = 1.3f }, guard));
+        Assert.Equal(
+            new Vector3(3f, 1.3f, 4f),
+            AimTracker.AimPoint(FollowingAt(Behind, looks: true) with { AimHeight = 1.3f }, guard)
+        );
         Assert.Null(AimTracker.AimPoint(FollowingAt(Behind, looks: false), guard));
         Assert.Null(AimTracker.AimPoint(Single(AimMode.AimKeys), guard));
     }

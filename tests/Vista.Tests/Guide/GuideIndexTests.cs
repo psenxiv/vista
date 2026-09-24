@@ -18,12 +18,14 @@ public class GuideIndexTests
     [Fact]
     public void AnIndentedEntryIsASubTopicOfTheOneAbove()
     {
-        var topics = GuideIndex.Parse("""
+        var topics = GuideIndex.Parse(
+            """
             - [Aim](aim.md)
               - [Look At](aim-look-at.md)
               - [Watch Target](aim-watch.md)
             - [Playlist](playlist.md)
-            """);
+            """
+        );
 
         Assert.Equal(["Aim", "Playlist"], topics.Select(t => t.Title));
         Assert.Equal(["Look At", "Watch Target"], topics[0].Children.Select(t => t.Title));

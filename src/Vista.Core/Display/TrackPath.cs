@@ -12,7 +12,8 @@ public static class TrackPath
     /// <summary>Points along the path through <paramref name="points"/>, about <paramref name="spacing"/> metres apart, starting and ending on the track.</summary>
     public static IReadOnlyList<Vector3> Sample(IReadOnlyList<Vector3> points, float spacing)
     {
-        if (points.Count < 2) return points.ToArray();
+        if (points.Count < 2)
+            return points.ToArray();
 
         var table = new ArcLengthTable(points);
         var samples = new List<Vector3> { points[0] };

@@ -51,7 +51,12 @@ public class TimingGraphTests
 
     // A plot 100 x 50 at the origin, showing 2-6 s and 4-12 yalms: 25 px per second, 6.25 px per yalm.
     private static readonly TimingGraph Zoomed = new(Vector2.Zero, new Vector2(100f, 50f), 10f, 20f)
-        { TimeFrom = 2f, TimeTo = 6f, DistanceFrom = 4f, DistanceTo = 12f };
+    {
+        TimeFrom = 2f,
+        TimeTo = 6f,
+        DistanceFrom = 4f,
+        DistanceTo = 12f,
+    };
 
     [Fact]
     public void AZoomedGraphMapsTheViewOntoThePlot()

@@ -23,10 +23,20 @@ public readonly record struct Anchor(Vector3 Position, float Yaw)
     public Vector3 ToLocal(Vector3 world) => Turn(world - Position, -Yaw);
 
     /// <summary>A point local to this anchor, placed in the world: moved, turned, and its yaw added to.</summary>
-    public ControlPoint ToWorld(ControlPoint local) => local with { Position = ToWorld(local.Position), Yaw = local.Yaw + Yaw };
+    public ControlPoint ToWorld(ControlPoint local) =>
+        local with
+        {
+            Position = ToWorld(local.Position),
+            Yaw = local.Yaw + Yaw,
+        };
 
     /// <summary>A world point as seen from this anchor.</summary>
-    public ControlPoint ToLocal(ControlPoint world) => world with { Position = ToLocal(world.Position), Yaw = world.Yaw - Yaw };
+    public ControlPoint ToLocal(ControlPoint world) =>
+        world with
+        {
+            Position = ToLocal(world.Position),
+            Yaw = world.Yaw - Yaw,
+        };
 
     /// <summary>An anchor local to this one, placed in the world.</summary>
     public Anchor ToWorld(Anchor child) => new(ToWorld(child.Position), child.Yaw + Yaw);

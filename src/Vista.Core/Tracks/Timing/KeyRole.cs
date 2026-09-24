@@ -1,4 +1,8 @@
 namespace Vista.Core.Tracks.Timing;
 
 /// <summary>What a timing key is: a point's arrival or the end of its hold.</summary>
-public enum KeyRole { Point, HoldEnd }
+public enum KeyRole
+{
+    Point,
+    HoldEnd,
+}

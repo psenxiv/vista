@@ -13,8 +13,7 @@ public class AimSmootherTests
     private static readonly float HalfSecondAtFull = 10f * (1f - MathF.Exp(-1f));
 
     [Fact]
-    public void TheFirstStepLandsOnTheTarget()
-        => Assert.Equal(Target, new AimSmoother().Step(Target, 1f / 60f, 1f));
+    public void TheFirstStepLandsOnTheTarget() => Assert.Equal(Target, new AimSmoother().Step(Target, 1f / 60f, 1f));
 
     [Fact]
     public void AtFullSmoothingHalfASecondClosesOneTimeConstant()
@@ -35,8 +34,10 @@ public class AimSmootherTests
         var a = Vector3.Zero;
         var b = Vector3.Zero;
 
-        for (var i = 0; i < 12; i++) a = sixty.Step(Target, 1f / 60f, 0.3f);
-        for (var i = 0; i < 6; i++) b = thirty.Step(Target, 1f / 30f, 0.3f);
+        for (var i = 0; i < 12; i++)
+            a = sixty.Step(Target, 1f / 60f, 0.3f);
+        for (var i = 0; i < 6; i++)
+            b = thirty.Step(Target, 1f / 30f, 0.3f);
 
         Assert.Equal(a.X, b.X, 3);
     }

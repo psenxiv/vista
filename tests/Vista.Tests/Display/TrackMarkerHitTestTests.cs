@@ -53,11 +53,7 @@ public class TrackMarkerHitTestTests
     [Fact]
     public void OffScreenAndOutOfRangeMarkersAreNotHit()
     {
-        var markers = new[]
-        {
-            new TrackMarker(Edited, 0, null),
-            new TrackMarker(Other, 0, new Vector2(200f, 200f)),
-        };
+        var markers = new[] { new TrackMarker(Edited, 0, null), new TrackMarker(Other, 0, new Vector2(200f, 200f)) };
         Assert.Null(TrackMarkerHitTest.Nearest(markers, Edited, new Vector2(100f, 100f), 10f));
         Assert.Null(TrackMarkerHitTest.Nearest([], Edited, Vector2.Zero, 10f));
     }

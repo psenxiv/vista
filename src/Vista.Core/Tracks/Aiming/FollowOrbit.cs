@@ -22,9 +22,10 @@ public static class FollowOrbit
     {
         var current = Of(offset);
         var turned = new Anchor(Vector3.Zero, orbit.Angle - current.Angle).ToWorld(offset);
-        var across = current.Distance > Epsilon
-            ? Vector3.Normalize(turned.Position with { Y = 0f })
-            : new Vector3(MathF.Sin(orbit.Angle), 0f, MathF.Cos(orbit.Angle));
+        var across =
+            current.Distance > Epsilon
+                ? Vector3.Normalize(turned.Position with { Y = 0f })
+                : new Vector3(MathF.Sin(orbit.Angle), 0f, MathF.Cos(orbit.Angle));
         var distance = MathF.Max(0f, orbit.Distance);
         return turned with { Position = new Vector3(across.X * distance, orbit.Height, across.Z * distance) };
     }

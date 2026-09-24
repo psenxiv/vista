@@ -18,12 +18,12 @@ public static class CatmullRom
     public static int SegmentCount(int pointCount) => Math.Max(pointCount - 1, 0);
 
     /// <summary>Position on the curve at parameter t in [0, 1] across the given segment.</summary>
-    public static Vector3 Evaluate(IReadOnlyList<Vector3> points, int segment, float t)
-        => EvaluateCore(points, segment, t).Value;
+    public static Vector3 Evaluate(IReadOnlyList<Vector3> points, int segment, float t) =>
+        EvaluateCore(points, segment, t).Value;
 
     /// <summary>d/dt of the curve at parameter t in [0, 1] across the given segment.</summary>
-    public static Vector3 Derivative(IReadOnlyList<Vector3> points, int segment, float t)
-        => EvaluateCore(points, segment, t).Deriv;
+    public static Vector3 Derivative(IReadOnlyList<Vector3> points, int segment, float t) =>
+        EvaluateCore(points, segment, t).Deriv;
 
     private static Dual EvaluateCore(IReadOnlyList<Vector3> points, int segment, float t)
     {
@@ -53,14 +53,18 @@ public static class CatmullRom
         var c = Lerp(b1, b2, t1, t2, u);
 
         // u is affine in t (u = t1 + t * (t2 - t1)), so scale the u-derivative by du/dt.
-        return c with { Deriv = c.Deriv * (t2 - t1) };
+        return c with
+        {
+            Deriv = c.Deriv * (t2 - t1),
+        };
     }
 
     /// <summary>Barry-Goldman linear step, clamped to the start point on a zero knot interval.</summary>
     private static Dual Lerp(Dual a, Dual b, float ta, float tb, float u)
     {
         var denom = tb - ta;
-        if (MathF.Abs(denom) < KnotEpsilon) return a;
+        if (MathF.Abs(denom) < KnotEpsilon)
+            return a;
 
         var factor = (u - ta) / denom;
         var value = a.Value + ((b.Value - a.Value) * factor);
@@ -71,13 +75,17 @@ public static class CatmullRom
     private static float KnotDelta(Vector3 a, Vector3 b) => MathF.Pow(Vector3.Distance(a, b), Alpha);
 
     /// <summary>Endpoints duplicate to supply the phantom points.</summary>
-    private static Vector3 GetPoint(IReadOnlyList<Vector3> points, int index)
-        => points[Math.Clamp(index, 0, points.Count - 1)];
+    private static Vector3 GetPoint(IReadOnlyList<Vector3> points, int index) =>
+        points[Math.Clamp(index, 0, points.Count - 1)];
 
     private static void ValidateSegment(int pointCount, int segment)
     {
         var count = SegmentCount(pointCount);
         if (segment < 0 || segment >= count)
-            throw new ArgumentOutOfRangeException(nameof(segment), segment, $"segment must be in [0, {count}) for {pointCount} point(s)");
+            throw new ArgumentOutOfRangeException(
+                nameof(segment),
+                segment,
+                $"segment must be in [0, {count}) for {pointCount} point(s)"
+            );
     }
 }
