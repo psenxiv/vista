@@ -8,7 +8,7 @@ public static class FreeCamMotion
     /// <summary>Matches the range the game's own look-at target sits at, roughly 1.5 to 20.</summary>
     public const float LookAtDistance = 10f;
 
-    /// <summary>Advances a camera position by one frame of input, along the camera's own facing, up and right.</summary>
+    /// <summary>Advances a camera position by one frame of input: along the camera's own facing and right, and straight up or down.</summary>
     /// <param name="input">(forward, up, right), each in [-1, 1].</param>
     /// <param name="speed">Units per second at full input.</param>
     public static Vector3 Step(Vector3 position, Vector3 input, Quaternion rotation, float speed, float deltaSeconds)
@@ -18,7 +18,7 @@ public static class FreeCamMotion
 
         var move =
             (CameraRotation.Forward(rotation) * input.X)
-            + (CameraRotation.Up(rotation) * input.Y)
+            + (Vector3.UnitY * input.Y)
             + (Vector3.Transform(Vector3.UnitX, rotation) * input.Z);
 
         return position + (move * speed * deltaSeconds);

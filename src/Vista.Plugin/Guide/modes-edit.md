@@ -7,7 +7,7 @@ Edit is where you build your shots. You fly a free camera, add points and change
 | Key | Does |
 |---|---|
 | `W` `A` `S` `D` | Fly forward, left, back and right |
-| `E` / `Q` | Fly up / down the screen |
+| `E` / `Q` | Fly up / down |
 | `Ctrl + Q` / `Ctrl + E` | Roll left / right |
 | `Shift` | Fly faster while held |
 | Mouse | Look in any direction |

@@ -48,15 +48,15 @@ public class FreeCamMotionTests
         Assert.Equal(2f, fast.Length(), 5);
     }
 
-    // One second at speed 1 moves one unit along the facing, the camera's up or its right, as derived above.
+    // One second at speed 1 moves one unit along the facing or the camera's right, as derived above, or straight up or down.
     [Theory]
     [InlineData(1f, 0f, 0f, -0.6123724f, 0.5f, -0.6123724f)]
     [InlineData(-1f, 0f, 0f, 0.6123724f, -0.5f, 0.6123724f)]
     [InlineData(0f, 0f, 1f, 0.7071068f, 0f, -0.7071068f)]
     [InlineData(0f, 0f, -1f, -0.7071068f, 0f, 0.7071068f)]
-    [InlineData(0f, 1f, 0f, 0.3535534f, 0.8660254f, 0.3535534f)]
-    [InlineData(0f, -1f, 0f, -0.3535534f, -0.8660254f, -0.3535534f)]
-    public void OneSecondOfInputMovesAlongTheCamerasOwnAxes(
+    [InlineData(0f, 1f, 0f, 0f, 1f, 0f)]
+    [InlineData(0f, -1f, 0f, 0f, -1f, 0f)]
+    public void OneSecondOfInputMovesAlongTheViewOrStraightUp(
         float forward,
         float up,
         float right,
@@ -73,9 +73,10 @@ public class FreeCamMotionTests
     }
 
     [Fact]
-    public void UpInputUpsideDownMovesUpThePicture()
+    public void UpInputUpsideDownStillMovesStraightUp()
     {
-        // Rolled half a turn about the facing (0,0,-1), the camera's up is world (0,-1,0): one second of up at speed 3 drops 3.
+        // Rolled half a turn about the facing (0,0,-1), the camera's up is world (0,-1,0), but up input moves straight up:
+        // one second at speed 3 rises 3.
         var moved = FreeCamMotion.Step(
             Vector3.Zero,
             new Vector3(0, 1, 0),
@@ -85,7 +86,7 @@ public class FreeCamMotionTests
         );
 
         Assert.Equal(0f, moved.X, 5);
-        Assert.Equal(-3f, moved.Y, 5);
+        Assert.Equal(3f, moved.Y, 5);
         Assert.Equal(0f, moved.Z, 5);
     }
 
