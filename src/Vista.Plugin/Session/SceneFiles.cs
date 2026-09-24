@@ -52,7 +52,12 @@ internal sealed class SceneFiles
         if (!changed && Ready) return null;
 
         // The same folder, gone from disk: put the open scene back in it rather than start empty.
-        if (!changed && library is { } lost && lost.CurrentName.Length > 0) return Report(lost.Recreate());
+        if (!changed && library is { } lost && lost.CurrentName.Length > 0)
+        {
+            var refusal = Report(lost.Recreate());
+            if (refusal is null) AddDemo(lost.Folder);
+            return refusal;
+        }
 
         if (library is { } current && changed) current.SaveNow();
         return Use(parent, changed && config.SaveFolder is not null ? null : config.LastScene);
