@@ -33,7 +33,7 @@ These work in Edit mode. Space and Ctrl + Space also work in Live, and G in View
 | Key                              | Does                                                              |
 | -------------------------------- | ----------------------------------------------------------------- |
 | W A S D                          | Fly forward, left, back, right                                    |
-| E / Q                            | Fly up / down                                                     |
+| E / Q                            | Fly up / down the screen                                          |
 | Ctrl + Q / Ctrl + E              | Roll left / right                                                 |
 | Shift                            | Fly faster while held                                             |
 | Space                            | Play / pause                                                      |

@@ -1,6 +1,6 @@
 # Aim
 
-Aim decides which way the camera points as it moves along a track. The points set where the camera goes, and the aim sets what it looks at. Roll and field of view always come from the points.
+Aim decides which way the camera points as it moves along a track. The points set where the camera goes, and the aim sets what it looks at. Roll and field of view come from the points.
 
 Click {icon:Crosshairs} **Select aim** on the track row to choose:
 
