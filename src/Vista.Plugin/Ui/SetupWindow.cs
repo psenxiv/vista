@@ -9,7 +9,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>Asks for the folder Vista saves in, with Dalamud's folder picker; it can only be closed without choosing once a working folder is set.</summary>
+/// <summary>Asks for the folder Vista saves in, with Dalamud's folder picker; closed without choosing, it comes back the next time Vista opens.</summary>
 internal sealed class SetupWindow : Window
 {
     private const float Width = 440f;
@@ -33,18 +33,9 @@ internal sealed class SetupWindow : Window
     /// <summary>Opens on the folder in use when it works, otherwise with nothing chosen.</summary>
     public override void OnOpen() => parent = files.Ready ? files.Chosen : null;
 
-    /// <summary>Centres the window the first time it appears, and offers a close button only while the folder in use works.</summary>
+    /// <summary>Centres the window the first time it appears.</summary>
     public override void PreDraw()
-    {
-        ShowCloseButton = files.Ready;
-        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
-    }
-
-    /// <summary>Reopens itself while there is no working folder, so it can't be dismissed without choosing one.</summary>
-    public override void OnClose()
-    {
-        if (!files.Ready) IsOpen = true;
-    }
+        => ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
     public override void Draw()
     {
