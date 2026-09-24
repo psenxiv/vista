@@ -33,7 +33,7 @@ public sealed class TimedChannel
 
         for (var leg = 1; leg < n; leg++)
         {
-            if (time > arrive[leg])
+            if (time >= arrive[leg])
                 continue;
             var start = depart[leg - 1];
             if (time <= start)

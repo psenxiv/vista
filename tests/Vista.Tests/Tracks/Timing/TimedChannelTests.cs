@@ -57,6 +57,15 @@ public class TimedChannelTests
     }
 
     [Fact]
+    public void AHeldPointHasItsOwnValueAtTheInstantItIsReached()
+    {
+        // Point 1, whose value is 0, is reached at 10.43251 s and holds; these times put the leg's fraction a hair off 1 there.
+        var channel = Channel([-0.45614034f, 0f, 0f], [0f, 10.43251f, 12f], [0.9230769f, 10.514927f, 12f]);
+
+        Assert.Equal(0f, channel.At(10.43251f));
+    }
+
+    [Fact]
     public void ALegOfNoTimeGivesNoSlope()
     {
         // The second leg takes no time, so point 1's slope is 0; point 0's is half of 10/1. Halfway: 5·0.125 + 10·0.5 = 5.625.
