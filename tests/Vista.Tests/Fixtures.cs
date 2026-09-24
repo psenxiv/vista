@@ -27,7 +27,7 @@ internal static class Fixtures
         (x, y, z) => new Vector3(x, y, z)
     );
 
-    /// <summary>A control point anywhere in <see cref="AnyPosition"/>, with any aim, roll and field of view the editor allows.</summary>
+    /// <summary>A control point anywhere in <see cref="AnyPosition"/>, with any yaw, pitch within 1 radian either way, roll within 0.5 and any field of view the editor allows.</summary>
     private static readonly Gen<ControlPoint> AnyPoint = Gen.Select(
         AnyPosition,
         Gen.Float[-MathF.PI, MathF.PI],

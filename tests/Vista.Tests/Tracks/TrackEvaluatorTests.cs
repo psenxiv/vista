@@ -519,6 +519,39 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void LookingAheadHalfAYalmBlendsHalfwayBetweenTheSpotAndTheWayIntoIt()
+    {
+        // Along +x into a corner at the origin, then along +z; the doubled corner keeps both legs straight. At 1 yalm a
+        // second every place is reached at its distance in seconds, the collapsed corner leg counting 0.1, so looking
+        // 0.5 s ahead the spot is 0.5 yalm on and weighs 0.5. At 2 s the camera is on the corner and the spot 0.4 up the
+        // +z leg, at 90° from +x towards +z; the arrival, from 0.5 yalm before the spot, (-0.5, 0, 0), to it, (0, 0, 0.4),
+        // is at atan2(0.4, 0.5) = 38.66°. Two unit vectors weighed evenly sum along their bisector, 64.33°. The arc-length
+        // table places those points to about 1e-4 yalm, well inside the 1e-3 allowed.
+        var track = Build(
+            [Point(-2f), Point(-1f), Point(0f), Point(0f), Point(0f, z: 1f), Point(0f, z: 2f)],
+            AimMode.PathTangent
+        );
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetSpeed(track, 1f), 0.5f));
+
+        Along(new Vector3(0.43318873f, 0f, 0.90130324f), Facing(evaluator, 2.0), 1e-3f);
+    }
+
+    [Fact]
+    public void LookingAheadInAHoldFacesTheWayIntoTheHeldPoint()
+    {
+        // Along +x into the origin, held 3 s, then off along -z; the doubled origin keeps the last yalm in straight. Until
+        // the look ahead reaches past the hold's end the spot ahead is the held point, so the camera faces the way in, +x.
+        var track = TrackEditing.SetHold(
+            Build([Point(-10f), Point(0f), Point(0f), Point(0f, z: -10f)], AimMode.PathTangent),
+            1,
+            3f
+        );
+        var evaluator = new TrackEvaluator(track);
+
+        Along(Vector3.UnitX, Facing(evaluator, evaluator.PointSeconds(1) + 1.0), 1e-6f);
+    }
+
+    [Fact]
     public void RecordedAimTurnsAtOneRateThroughAPointBetweenLegsOfDifferentTimes()
     {
         // Legs of 10 and 5 yalms at 5 a second take 2 s and 1 s; yaw 0, 1, 3 gives (1/2·1 + 2/1·2) / 3 = 1.5 rad/s at the middle.
@@ -676,6 +709,71 @@ public class TrackEvaluatorTests
 
         for (var i = 1; i <= 16; i++)
             Assert.Equal(Facing(evaluator, arrive), Facing(evaluator, arrive + ((still - arrive) * i / 16)));
+    }
+
+    [Fact]
+    public void DirectionOfTravelTurnsSmoothlyThroughAShortStretchTheScanMissedBeforeALongerOneItFound()
+    {
+        // The track above, then a straight climb from its last point: the scan finds the climb's stretch, so the sweep's,
+        // found later, comes after it in the list though it's earlier in time. Taking the climb's stretch for the sweep
+        // would hold the climb's yaw there and step half a turn at the sweep's edge; 0.01° a microsecond is as above.
+        var track = TrackEditing.SetSpeed(
+            Build(
+                [
+                    Point(18.772842f, 1.7956989f),
+                    Point(0f),
+                    Point(23f, -3.1298702f),
+                    Point(23f, -3.1298702f),
+                    Point(23f, 6.87013f),
+                    Point(23f, 16.87013f),
+                ],
+                AimMode.PathTangent
+            ),
+            10.942029f
+        );
+        track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 1, 9.457632f), 2, 2.3922946f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 2, 1.1724138f), 1f));
+
+        var largest = 0f;
+        for (var t = 1.58; t < 1.61; t += 1e-6)
+            largest = MathF.Max(largest, Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + 1e-6)));
+        Assert.InRange(largest, 0f, 0.01f * Deg);
+    }
+
+    [Fact]
+    public void DirectionOfTravelTurnsEvenlyInTimeThroughAVerticalStretchInsideAHold()
+    {
+        // Held at the origin, the camera looks 2 s ahead to a spot that climbs 10 yalms and runs along +x at z = -0.1,
+        // over it, from (-5, 10, -0.1) to (5, 10, -0.1), the points 10 either side keeping that leg straight and evenly
+        // paced. At 20 yalms a second the spot crosses it before the hold ends, so the stretch covers no distance.
+        // The aim at the spot (x, 10, -0.1) is steeper than 89° while √(x² + 0.01) < 10 tan 1° = 0.174551, that is for
+        // |x| < k = 0.143066. Its edge yaws, atan2(-x, 0.1), are ±φ with φ = atan2(k, 0.1) = 0.960757, and halfway the short
+        // way round is 0. Every leg from (-5, 10, -0.1) on runs at 20 yalms a second, so the spot is over the camera 5/20 s
+        // after that point's time and at the edges k/20 s either side: the stretch is centred 2 s earlier. A quarter and
+        // three quarters through, turning evenly in time, the yaw is ±φ/2 = ±0.480379, where the spot itself is at
+        // ±atan2(k/2, 0.1) = ±0.621. Pacing and edges are right to about 1e-5 of the stretch's 14 ms, so 1e-3 is ample.
+        var track = TrackEditing.SetSpeed(
+            Build(
+                [
+                    Point(15f),
+                    Point(0f),
+                    Point(-15f, 10f, -0.1f),
+                    Point(-5f, 10f, -0.1f),
+                    Point(5f, 10f, -0.1f),
+                    Point(15f, 10f, -0.1f),
+                ],
+                AimMode.PathTangent
+            ),
+            20f
+        );
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 3f), 2f));
+        var middle = evaluator.PointSeconds(3) + (5.0 / 20.0) - 2.0;
+        const double quarter = 0.14306617 / 40.0;
+        float Yaw(double time) => TrackAim.FromDirection(Facing(evaluator, time)).Yaw;
+
+        Assert.Equal(0.480379f, Yaw(middle - quarter), 1e-3f);
+        Assert.Equal(0f, Yaw(middle), 1e-3f);
+        Assert.Equal(-0.480379f, Yaw(middle + quarter), 1e-3f);
     }
 
     [Fact]

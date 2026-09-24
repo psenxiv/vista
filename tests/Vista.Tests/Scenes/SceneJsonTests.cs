@@ -301,7 +301,7 @@ public class SceneJsonTests
     private static readonly Gen<string> AnyName = Gen.String[Gen.Char[' ', '\uD7FF'], 1, 20]
         .Where(s => !string.IsNullOrWhiteSpace(s));
 
-    /// <summary>A path track with every other setting random too, as a scene file holds it; a Follow Target track keeps only its first point, as the editor requires.</summary>
+    /// <summary>A path track with every other setting random too, as a scene file holds it; id, name and anchor are set directly, as <c>SceneJson.Read</c> sets them, not by an edit sequence, and a Follow Target track keeps only its first point, as the editor requires.</summary>
     private static readonly Gen<Track> AnySavedTrack = Gen.Select(
         AnyPathTrack,
         Gen.Select(Gen.Guid, AnyName, Gen.Enum<AimMode>(), Gen.Enum<PlaybackDirection>(), Gen.Bool),
@@ -328,7 +328,7 @@ public class SceneJsonTests
         }
     );
 
-    /// <summary>One to four tracks, some hidden, a playlist of them with random repeats, and a random anchor.</summary>
+    /// <summary>One to four tracks, some hidden, a playlist of them with random repeats, and a random anchor, built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
     private static readonly Gen<Scene> AnyScene = Gen.Select(
         AnySavedTrack.Array[1, 4],
         Gen.Select(Gen.Int[0, 3], Gen.Int[0, PlaylistEditing.MaxLoops], Gen.Guid).Array[0, 6],

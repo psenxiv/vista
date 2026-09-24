@@ -57,7 +57,16 @@ public class TrackAimTests
 
         var (_, pitch) = TrackAim.Along(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
-        Assert.True(pitch <= TrackAim.PitchLimit + 1e-4f, $"pitch {pitch} exceeds the clamp");
+        // Every point has x = z = 0, so the direction is exactly +y, pitch π/2 before the clamp takes it to the limit.
+        Assert.Equal(TrackAim.PitchLimit, pitch, 1e-6f);
+    }
+
+    [Fact]
+    public void UsableRefusesADirectionShorterThanAMillionthAndPassesALongerOneUnchanged()
+    {
+        Assert.Null(TrackAim.Usable(Vector3.Zero));
+        Assert.Null(TrackAim.Usable(new Vector3(0f, 9e-7f, 0f)));
+        Assert.Equal(new Vector3(1e-5f, 0f, 0f), TrackAim.Usable(new Vector3(1e-5f, 0f, 0f)));
     }
 
     [Fact]
