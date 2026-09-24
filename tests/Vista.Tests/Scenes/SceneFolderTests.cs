@@ -42,6 +42,32 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
+    public void AddingASceneWritesItUnderItsName()
+    {
+        Assert.True(Folder.AddScene("Demo - Limsa", DemoSceneJson()));
+
+        Assert.Equal(["Demo - Limsa.json"], temp.SceneFiles());
+        Assert.Equal(DemoSceneJson(), File.ReadAllText(Path.Combine(temp.Scenes, "Demo - Limsa.json")));
+    }
+
+    [Fact]
+    public void AddingASceneLeavesOneWithTheSameNameAloneWhateverItsCase()
+    {
+        Folder.SaveScene("demo - limsa", Named("Mine"));
+
+        Assert.False(Folder.AddScene("Demo - Limsa", DemoSceneJson()));
+
+        Assert.Equal(["demo - limsa.json"], temp.SceneFiles());
+        Assert.Equal("Mine", FirstTrackIn(temp, "demo - limsa"));
+    }
+
+    [Fact]
+    public void TheShippedDemoSceneReads()
+    {
+        Assert.Equal(5, DemoScene().Tracks.Count);
+    }
+
+    [Fact]
     public void ASavedSceneLoadsBack()
     {
         var scene = Named("Crane") with { PlaylistLoops = true };
