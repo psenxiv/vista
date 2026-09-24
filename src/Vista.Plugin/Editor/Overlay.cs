@@ -56,8 +56,7 @@ internal sealed class Overlay
         var labels = new Vector2?[track.Points.Count];
         for (var i = 0; i < track.Points.Count; i++)
         {
-            var (forward, roll, fov) = Pose(track, cache, i, aimPoint);
-            var up = CameraOrientation.UpFor(Vector3.Zero, forward, roll);
+            var (forward, up, fov) = Pose(track, cache, i, aimPoint);
             var glyph = CameraGlyph.Build(track.Points[i].Position, forward, up, fov, aspect, GlyphDepth);
             DrawGlyph(list, view, glyph, selected.Contains(i), palette);
             labels[i] = view.ToScreen(track.Points[i].Position);
@@ -338,8 +337,8 @@ internal sealed class Overlay
         return cache.Evaluator!;
     }
 
-    /// <summary>Point <paramref name="index"/>'s aim, roll and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded.</summary>
-    private static (Vector3 Forward, float Roll, float Fov) Pose(
+    /// <summary>Point <paramref name="index"/>'s aim, up and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded.</summary>
+    private static (Vector3 Forward, Vector3 Up, float Fov) Pose(
         Track track,
         TrackCache cache,
         int index,
@@ -347,16 +346,24 @@ internal sealed class Overlay
     )
     {
         var point = track.Points[index];
-        if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is { } toward)
-            return (FreeCamMotion.LookAtFrom(Vector3.Zero, toward.Yaw, toward.Pitch), point.Roll, point.Fov);
+        var recorded = CameraRotation.FromAngles(point.Yaw, point.Pitch, point.Roll);
+        if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is not null)
+        {
+            var facing = at - point.Position;
+            var up = Vector3.Transform(
+                CameraRotation.Upright(facing),
+                Quaternion.CreateFromAxisAngle(Vector3.Normalize(facing), point.Roll)
+            );
+            return (facing, up, point.Fov);
+        }
 
         if (track.Aim != AimMode.PathTangent)
-            return (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
+            return (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
 
         var evaluator = EvaluatorFor(track, cache);
         return evaluator.Evaluate(evaluator.PointSeconds(index)) is { } frame
-            ? (frame.LookAt - frame.Position, frame.Roll, point.Fov)
-            : (FreeCamMotion.LookAtFrom(Vector3.Zero, point.Yaw, point.Pitch), point.Roll, point.Fov);
+            ? (frame.LookAt - frame.Position, frame.Up, point.Fov)
+            : (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
     }
 
     private static void DrawGlyph(

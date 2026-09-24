@@ -25,15 +25,12 @@ public static class TrackAim
         return (yaw, pitch);
     }
 
-    /// <summary>The pitch-clamped aim from <paramref name="from"/> at <paramref name="target"/>, or null when it is closer than <see cref="MinTargetDistance"/>.</summary>
+    /// <summary>The aim from <paramref name="from"/> at <paramref name="target"/>, or null when it is closer than <see cref="MinTargetDistance"/>.</summary>
     public static (float Yaw, float Pitch)? Toward(Vector3 from, Vector3 target)
     {
         var direction = target - from;
-        return direction.Length() < MinTargetDistance ? null : Along(direction);
+        return direction.Length() < MinTargetDistance ? null : FromDirection(direction);
     }
-
-    /// <summary>The pitch-clamped aim along <paramref name="direction"/>.</summary>
-    public static (float Yaw, float Pitch) Along(Vector3 direction) => FromDirection(direction);
 
     /// <summary><paramref name="direction"/>, or null when it's too short to give an aim.</summary>
     public static Vector3? Usable(Vector3 direction) =>

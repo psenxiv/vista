@@ -159,6 +159,25 @@ internal static class Fixtures
     /// <summary>The smallest change in the picture's up, as the distance between unit ups, looked at for a step: 0.1°.</summary>
     internal const float UpStepFloor = 0.1f * Deg;
 
+    /// <summary>Every step in the picture's up over <paramref name="duration"/> seconds, leaving out any where the facing turns at least a tenth as far (<see cref="SpinPerTurn"/>) in the same moment: keeping level as the view whips round, as it does where a path doubles back.</summary>
+    internal static List<Step> PictureSteps(Func<double, CameraState> frame, double duration)
+    {
+        var moment = StepWindow / (1 << StepHalvings);
+        return
+        [
+            .. Steps(t => frame(t).Up, Vector3.Distance, UpStepFloor, duration)
+                .Where(step =>
+                {
+                    var (a, b) = (frame(step.Time), frame(step.Time + moment));
+                    var turn = Vector3.Distance(
+                        Vector3.Normalize(a.LookAt - a.Position),
+                        Vector3.Normalize(b.LookAt - b.Position)
+                    );
+                    return turn * SpinPerTurn < step.Size;
+                }),
+        ];
+    }
+
     /// <summary>A sudden change in a channel: when it happens and how far it jumps.</summary>
     internal readonly record struct Step(double Time, float Size);
 
@@ -212,6 +231,14 @@ internal static class Fixtures
     /// <summary>How many times as far as the view itself turns the picture may turn to keep level near straight up: 10, above the 9 of a half turn planned over a vertical passage (half a turn over 30° of view, peaking at 1.5 times that average as it eases).</summary>
     private const float SpinPerTurn = 10f;
 
+    /// <summary>The unsigned angle, in radians, the picture turns about its own centre between two frames: <paramref name="upA"/> carried square to <paramref name="forwardB"/> by the minimal rotation from <paramref name="forwardA"/>, against <paramref name="upB"/>.</summary>
+    internal static float Twist(Vector3 forwardA, Vector3 upA, Vector3 forwardB, Vector3 upB)
+    {
+        var carried = Vector3.Transform(upA, CameraRotation.MinimalRotation(forwardA, forwardB));
+        var dot = Math.Clamp(Vector3.Dot(Vector3.Normalize(carried), Vector3.Normalize(upB)), -1f, 1f);
+        return MathF.Acos(dot);
+    }
+
     /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds beyond <see cref="SpinPerTurn"/> times the facing's own turn, in radians: a whip, where the picture turns though the view barely does.</summary>
     internal static float LargestTwist(Func<double, CameraState> frame, double duration)
     {
@@ -226,7 +253,7 @@ internal static class Fixtures
                 Vector3.Normalize(next.LookAt - next.Position)
             );
             var turn = MathF.Acos(Math.Clamp(Vector3.Dot(from, to), -1f, 1f));
-            largest = MathF.Max(largest, CameraRotation.Twist(from, last.Up, to, next.Up) - (SpinPerTurn * turn));
+            largest = MathF.Max(largest, Twist(from, last.Up, to, next.Up) - (SpinPerTurn * turn));
             last = next;
         }
 

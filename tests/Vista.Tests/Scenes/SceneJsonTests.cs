@@ -232,7 +232,7 @@ public class SceneJsonTests
     [Fact]
     public void ValuesAtTheEdgesOfTheirRangesLoad()
     {
-        // The range ends themselves, and a pitch and FoV past the editor's own limits (89°, 120°) that a camera can still record.
+        // The range ends themselves, and a FoV past the editor's own limit (120°) that a camera can still record.
         var track = WithTiming(
             Plain() with
             {

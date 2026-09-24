@@ -33,7 +33,7 @@ public class LevelUpTests
     public void ALevelTurnStaysUpright()
     {
         // A level facing's upright up is world up, whichever way it turns.
-        var level = LevelUp.Along(t => Level(t * MathF.PI / 4), [], 2f, allowInverted: true, Vector3.UnitY);
+        var level = LevelUp.Along(t => Level(t * MathF.PI / 4), 2f, allowInverted: true, Vector3.UnitY);
 
         Near(Vector3.UnitY, level.At(2.0, Level(MathF.PI / 2)), 1e-6f);
     }
@@ -49,7 +49,7 @@ public class LevelUpTests
                 (float)Math.Sin(Math.PI / 4),
                 -(float)(Math.Cos(t * 0.8) * Math.Cos(Math.PI / 4))
             );
-        var level = LevelUp.Along(t => Spiral(t), [], 5f, allowInverted: true, Vector3.UnitY);
+        var level = LevelUp.Along(t => Spiral(t), 5f, allowInverted: true, Vector3.UnitY);
 
         for (var t = 0.0; t <= 5.0; t += 0.25)
         {
@@ -68,7 +68,7 @@ public class LevelUpTests
         // A full turn about +x over 4 s from along -z: straight up at 1 s, along +z at 2 s, straight down at 3 s. The way
         // out of each vertical passage is the reverse of the way in, so the first turns the track upside down and the
         // second rights it: level facing +z, up is -y; back along -z, up is +y.
-        var level = LevelUp.Along(t => OverTheTop(t * Math.PI / 2), [], 4f, allowInverted: true, Vector3.UnitY);
+        var level = LevelUp.Along(t => OverTheTop(t * Math.PI / 2), 4f, allowInverted: true, Vector3.UnitY);
 
         Near(-Vector3.UnitY, level.At(2.0, OverTheTop(Math.PI)), 1e-6f);
         Near(Vector3.UnitY, level.At(4.0, OverTheTop(2 * Math.PI)), 1e-6f);
@@ -94,7 +94,7 @@ public class LevelUpTests
                 ),
                 _ => new Vector3((float)Math.Sin((t - 3) * Math.PI / 2), (float)Math.Cos((t - 3) * Math.PI / 2), 0f),
             };
-        var level = LevelUp.Along(t => Crane(t), [], 4f, allowInverted: true, Vector3.UnitY);
+        var level = LevelUp.Along(t => Crane(t), 4f, allowInverted: true, Vector3.UnitY);
 
         Near(Vector3.UnitY, level.At(4.0, Crane(4.0)), 1e-6f);
         Assert.InRange(LargestStep(level, Crane, 4.0), 0f, 0.9f);
@@ -106,7 +106,7 @@ public class LevelUpTests
         // As a target aim does passing under its point: over the top from along -z to along +z, never inverting. Up
         // leans +z on the way in and -z on the way out, half a turn about the vertical, so straight up at the passage's
         // middle it has turned a quarter, leaning along ±x; level along +z it's upright again.
-        var level = LevelUp.Along(t => OverTheTop(t * Math.PI / 2), [], 2f, allowInverted: false, Vector3.UnitY);
+        var level = LevelUp.Along(t => OverTheTop(t * Math.PI / 2), 2f, allowInverted: false, Vector3.UnitY);
 
         var middle = level.At(1.0, OverTheTop(Math.PI / 2));
         Assert.Equal(1f, MathF.Abs(middle.X), 1e-3f);
@@ -126,7 +126,7 @@ public class LevelUpTests
                 : t < 3 ? 85 * Deg
                 : (85 * Deg) + ((t - 3) * 90 * Deg)
             );
-        var level = LevelUp.Along(t => Climb(t), [1f, 3f], 5f, allowInverted: true, Vector3.UnitY);
+        var level = LevelUp.Along(t => Climb(t), 5f, allowInverted: true, Vector3.UnitY);
 
         Assert.Equal(level.At(1.0, Climb(1.0)), level.At(2.5, Climb(2.5)));
     }
@@ -136,7 +136,7 @@ public class LevelUpTests
     {
         // Facing straight up there's no upright, so the start takes the up it's given.
         var start = new Vector3(0f, 0f, 1f);
-        var level = LevelUp.Along(_ => Vector3.UnitY, [], 1f, allowInverted: true, start);
+        var level = LevelUp.Along(_ => Vector3.UnitY, 1f, allowInverted: true, start);
 
         Near(start, level.At(0.5, Vector3.UnitY), 1e-6f);
     }
@@ -145,15 +145,68 @@ public class LevelUpTests
     public void ATrackEndingInAPassageKeepsTheUpItEnteredWith()
     {
         // Up along -z to straight up at 1 s, then straight up to the end: up leans +z as it enters (upright facing up
-        // along -z), and facing straight up that's (0, 0, 1).
+        // along -z), and facing straight up that's (0, 0, 1). The up for a track starting straight up, (1, 0, 0), plays no
+        // part.
         var level = LevelUp.Along(
             t => OverTheTop(Math.Min(t, 1) * Math.PI / 2),
-            [],
             2f,
             allowInverted: true,
-            Vector3.UnitY
+            Vector3.UnitX
         );
 
         Near(Vector3.UnitZ, level.At(2.0, Vector3.UnitY), 1e-5f);
+    }
+
+    [Fact]
+    public void ATrackStartingNearlyStraightUpStartsLevel()
+    {
+        // Climbing at 84°, facing (1, 10, 0)/√101, the whole shot, inside a passage it never leaves: there is a level up,
+        // square to the facing in the x-y plane and leaning back, (-10, 1, 0)/√101, so the up for a shot starting exactly
+        // straight up, (0, 0, 1), plays no part.
+        var facing = Vector3.Normalize(new Vector3(1f, 10f, 0f));
+        var level = LevelUp.Along(_ => facing, 2f, allowInverted: true, Vector3.UnitZ);
+
+        Near(new Vector3(-10f, 1f, 0f) / MathF.Sqrt(101f), level.At(1.0, facing), 1e-5f);
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(90.0)]
+    [InlineData(180.0)]
+    [InlineData(270.0)]
+    public void SnappingFromLevelIntoAPassageTurnsOverWhicheverWayItHeads(double heading)
+    {
+        // Level for a second, then snapping straight up and tipping on over the top to level the other way. Level has no
+        // lean to start the passage from, so it leans back from the climb; the way out is reversed from that, so the track
+        // turns upside down, whichever way it heads: level at the end, up is (0, -1, 0).
+        var turn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)(heading * Math.PI / 180));
+        Vector3 Facing(double t) =>
+            Vector3.Transform(
+                t < 1 ? new Vector3(0f, 0f, -1f) : OverTheTop(Math.PI / 2 + ((t - 1) * Math.PI / 2)),
+                turn
+            );
+        var level = LevelUp.Along(t => Facing(t), 2f, allowInverted: true, Vector3.UnitY);
+
+        Near(-Vector3.UnitY, level.At(2.0, Facing(2.0)), 1e-5f);
+    }
+
+    [Fact]
+    public void ATrackStartingStraightDownTakesTheGivenUpNegated()
+    {
+        // Facing straight down, the given up for straight up, (0, 0, 1), is negated: (0, 0, -1).
+        var level = LevelUp.Along(_ => -Vector3.UnitY, 1f, allowInverted: true, Vector3.UnitZ);
+
+        Near(-Vector3.UnitZ, level.At(0.5, -Vector3.UnitY), 1e-6f);
+    }
+
+    [Fact]
+    public void APassageLeftInTheShotsLastStepStillEndsLevel()
+    {
+        // Over the top at 90° a second for 1.175 s, never inverting: the facing leaves the passage (105° over) at 1.167 s,
+        // in the shot's last step, and ends at 105.75° over, (0, sin 105.75°, -cos 105.75°) = (0, 0.96246, 0.27144). Leaning
+        // along +z past the top, its upright up is (0, 0.27144, -0.96246).
+        var level = LevelUp.Along(t => OverTheTop(t * Math.PI / 2), 1.175f, allowInverted: false, Vector3.UnitY);
+
+        Near(new Vector3(0f, 0.27144f, -0.96246f), level.At(1.175, OverTheTop(1.175 * Math.PI / 2)), 1e-4f);
     }
 }

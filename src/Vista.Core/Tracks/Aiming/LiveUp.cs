@@ -23,7 +23,7 @@ public static class LiveUp
     {
         var angle = MathF.Acos(Math.Clamp(Vector3.Dot(Vector3.Normalize(from), Vector3.Normalize(to)), -1f, 1f));
         var carried = angle > SnapAngle ? up : Vector3.Transform(up, CameraRotation.MinimalRotation(from, to));
-        return Square(carried, Vector3.Normalize(to));
+        return CameraRotation.SquareUp(carried, Vector3.Normalize(to));
     }
 
     /// <summary>The up turned about unit <paramref name="forward"/> toward <paramref name="target"/> for <paramref name="seconds"/>, no faster than <see cref="SettleRate"/> and fading near straight up or down, and the way it turned (+1 or -1): near a half turn it keeps going <paramref name="way"/>, the way it last turned.</summary>
@@ -35,8 +35,11 @@ public static class LiveUp
         float way
     )
     {
-        var sideways = MathF.Sqrt((forward.X * forward.X) + (forward.Z * forward.Z));
-        var fade = Math.Clamp((sideways - LevelUp.PassageSideways) / (PoleFade - LevelUp.PassageSideways), 0f, 1f);
+        var fade = Math.Clamp(
+            (CameraRotation.Sideways(forward) - LevelUp.PassageSideways) / (PoleFade - LevelUp.PassageSideways),
+            0f,
+            1f
+        );
         if (fade <= 0f || seconds <= 0f)
             return (up, way);
         var angle = MathF.Atan2(Vector3.Dot(Vector3.Cross(up, target), forward), Vector3.Dot(up, target));
@@ -47,15 +50,8 @@ public static class LiveUp
         if (turn == 0f)
             return (up, way);
         return (
-            Square(Vector3.Transform(up, Quaternion.CreateFromAxisAngle(forward, turn)), forward),
+            CameraRotation.SquareUp(Vector3.Transform(up, Quaternion.CreateFromAxisAngle(forward, turn)), forward),
             MathF.Sign(turn)
         );
-    }
-
-    /// <summary><paramref name="up"/> made square to unit <paramref name="forward"/> and unit length, or upright if it lies along the forward.</summary>
-    private static Vector3 Square(Vector3 up, Vector3 forward)
-    {
-        var squared = up - (forward * Vector3.Dot(up, forward));
-        return squared.LengthSquared() > 1e-12f ? Vector3.Normalize(squared) : CameraRotation.Upright(forward);
     }
 }

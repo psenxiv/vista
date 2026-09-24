@@ -3,11 +3,17 @@ using Vista.Core.Camera;
 
 namespace Vista.Core.Tracks.Aiming;
 
-/// <summary>A camera's up along a shot, worked out once and read back at any time: level (upright, or inverted while the track is upside down) except through each vertical passage, where the picture makes one planned turn from level at the passage's start to level at its end.</summary>
+/// <summary>A shot's up, worked out once: level, upright or inverted, except through each vertical passage, where it turns once from level to level.</summary>
 public sealed class LevelUp
 {
-    /// <summary>The most seconds between the samples the facing is read at to find the passages.</summary>
-    public const double StepSeconds = 0.01;
+    /// <summary>The most seconds between the samples the facing is read at to find the passages, before refining.</summary>
+    private const double StepSeconds = 0.1;
+
+    /// <summary>A step that crosses a passage's edge is halved until it's no longer than this, so each passage starts and ends within a millisecond of its edge.</summary>
+    private const float EdgeSeconds = 0.001f;
+
+    /// <summary>A shot starting with a sideways part shorter than this, within 0.006° of straight up or down, has no level to start from.</summary>
+    private const float Vertical = 1e-4f;
 
     /// <summary>A facing whose sideways part is shorter than this, within 15° of straight up or down, is in a vertical passage, where level is only the heading and swings round fast.</summary>
     public static readonly float PassageSideways = MathF.Sin(15f * MathF.PI / 180f);
@@ -15,7 +21,7 @@ public sealed class LevelUp
     /// <summary>A step where the facing turns more than this, 5°, is halved until it doesn't, so a facing whipping through straight up can't cross a passage between samples.</summary>
     private const float MostTurnPerSample = 5f * MathF.PI / 180f;
 
-    /// <summary>The most times a step is halved: 10 ms down to about 0.15 µs, past float time's resolution over a long shot.</summary>
+    /// <summary>The most times a step is halved: 0.1 s down to about 1.5 µs, past float time's resolution over a long shot.</summary>
     private const int MostHalvings = 16;
 
     /// <summary>A passage whose way out is reversed from its way in by more than 135° (a dot product below -cos 45°), as over the top of a loop, turns the track upside down, or back upright.</summary>
@@ -36,10 +42,9 @@ public sealed class LevelUp
         passageStarts = [.. passages.Select(p => times[p.Start])];
     }
 
-    /// <summary>The up along a shot of <paramref name="duration"/> seconds facing <paramref name="facing"/> (null keeps the facing before), sampled at <see cref="StepSeconds"/>, more finely where the facing turns fast, and at <paramref name="breaks"/>, the shot's key times. Passages turn it upside down only when <paramref name="allowInverted"/>; a shot that starts facing straight up takes <paramref name="verticalStartUp"/>, negated facing straight down.</summary>
+    /// <summary>The up along a shot of <paramref name="duration"/> seconds facing <paramref name="facing"/> (null keeps the facing before), inverting over loops when <paramref name="allowInverted"/>; a shot starting straight up takes <paramref name="verticalStartUp"/>, negated straight down.</summary>
     public static LevelUp Along(
         Func<double, Vector3?> facing,
-        IEnumerable<float> breaks,
         float duration,
         bool allowInverted,
         Vector3 verticalStartUp
@@ -48,9 +53,7 @@ public sealed class LevelUp
         var steps = Enumerable
             .Range(0, (int)Math.Ceiling(duration / StepSeconds) + 1)
             .Select(k => (float)Math.Min(k * StepSeconds, duration))
-            .Concat(breaks.Where(t => t > 0f && t < duration))
             .Distinct()
-            .Order()
             .ToArray();
         Vector3 FacingAt(float time, Vector3 before) =>
             facing(time) is { } f && f != Vector3.Zero ? Vector3.Normalize(f) : before;
@@ -62,11 +65,12 @@ public sealed class LevelUp
         void Refine(float from, Vector3 fromFacing, float to, Vector3 toFacing, int halvings)
         {
             var middle = (from + to) / 2f;
+            var crossesEdge = InPassage(fromFacing) != InPassage(toFacing) && to - from > EdgeSeconds;
             if (
                 halvings < MostHalvings
                 && middle > from
                 && middle < to
-                && Angle(fromFacing, toFacing) > MostTurnPerSample
+                && (crossesEdge || Angle(fromFacing, toFacing) > MostTurnPerSample)
             )
             {
                 var middleFacing = FacingAt(middle, fromFacing);
@@ -97,38 +101,39 @@ public sealed class LevelUp
             if (!InPassage(sampleFacings[k]))
                 continue;
             var start = k == 0 ? 0 : k - 1;
+            var pole = MathF.Sign(sampleFacings[k].Y);
             var end = k;
             while (end < sampleTimes.Length && InPassage(sampleFacings[end]))
                 end++;
             if (end == sampleTimes.Length)
             {
-                var (held, heldTilt) =
-                    start == k
-                        ? Tilted(sampleFacings[0].Y < 0f ? -verticalStartUp : verticalStartUp)
-                        : Level(sampleFacings[start], inverted);
-                found.Add(new Passage(start, null, held, heldTilt, 0f, heldTilt, inverted, inverted, FromLevel: false));
+                var held =
+                    start == k && CameraRotation.Sideways(sampleFacings[0]) < Vertical
+                        ? Flat(pole * verticalStartUp)
+                        : Level(sampleFacings[start], inverted, pole);
+                found.Add(new Passage(start, null, held, 0f, inverted, inverted, FromLevel: false));
                 break;
             }
 
-            var (to, toTilt) = Level(sampleFacings[end], inverted);
+            var to = Level(sampleFacings[end], inverted, pole);
             if (start == k)
             {
                 // A shot that starts inside a passage has no picture before it to turn from, so it starts as it leaves.
-                found.Add(new Passage(start, end, to, toTilt, 0f, toTilt, inverted, inverted, FromLevel: false));
+                found.Add(new Passage(start, end, to, 0f, inverted, inverted, FromLevel: false));
                 k = end;
                 continue;
             }
 
-            var (from, fromTilt) = Level(sampleFacings[start], inverted);
+            var from = Level(sampleFacings[start], inverted, pole);
             var after = inverted;
             if (allowInverted && Vector3.Dot(from, to) < Reversed)
             {
                 after = !inverted;
-                (to, toTilt) = (-to, -toTilt);
+                to = -to;
             }
 
             var turn = MathF.Atan2(Vector3.Dot(Vector3.Cross(from, to), Vector3.UnitY), Vector3.Dot(from, to));
-            found.Add(new Passage(start, end, from, fromTilt, turn, toTilt, inverted, after, FromLevel: true));
+            found.Add(new Passage(start, end, from, turn, inverted, after, FromLevel: true));
             inverted = after;
             k = end;
         }
@@ -152,14 +157,11 @@ public sealed class LevelUp
         if (share <= 0f && passage.FromLevel)
             return passage.InvertedBefore ? -Level(forward) : Level(forward);
 
-        // Eased at both ends, so the picture starts and stops turning gently.
+        // Eased at both ends, so the picture starts and stops turning gently. Any level lean squared to a steep facing is an
+        // up for it: squared to the facing it leans from, it's that facing's level up exactly.
         var eased = share * share * (3f - (2f * share));
-        var heading = Vector3.Transform(
-            passage.From,
-            Quaternion.CreateFromAxisAngle(Vector3.UnitY, passage.Turn * eased)
-        );
-        var tilt = passage.FromTilt + ((passage.ToTilt - passage.FromTilt) * eased);
-        return Square((heading * MathF.Cos(tilt)) + (Vector3.UnitY * MathF.Sin(tilt)), forward);
+        var lean = Vector3.Transform(passage.From, Quaternion.CreateFromAxisAngle(Vector3.UnitY, passage.Turn * eased));
+        return CameraRotation.SquareUp(lean, forward);
     }
 
     /// <summary>How far, in radians, the facing has turned from the shot's start to <paramref name="time"/>, facing unit <paramref name="forward"/>.</summary>
@@ -170,10 +172,7 @@ public sealed class LevelUp
     }
 
     /// <summary>Whether unit <paramref name="forward"/> is within a vertical passage.</summary>
-    private static bool InPassage(Vector3 forward) => Sideways(forward) < PassageSideways;
-
-    /// <summary>The length of unit <paramref name="forward"/>'s level part.</summary>
-    private static float Sideways(Vector3 forward) => MathF.Sqrt((forward.X * forward.X) + (forward.Z * forward.Z));
+    private static bool InPassage(Vector3 forward) => CameraRotation.Sideways(forward) < PassageSideways;
 
     /// <summary>The angle between two unit vectors, precise when they're close.</summary>
     private static float Angle(Vector3 a, Vector3 b) => MathF.Atan2(Vector3.Cross(a, b).Length(), Vector3.Dot(a, b));
@@ -181,36 +180,23 @@ public sealed class LevelUp
     /// <summary>The upright up facing unit <paramref name="forward"/>.</summary>
     private static Vector3 Level(Vector3 forward) => CameraRotation.Upright(forward);
 
-    /// <summary>Level facing unit <paramref name="forward"/>, inverted when <paramref name="inverted"/>, as the level way it leans and its tilt up from level, in radians.</summary>
-    private static (Vector3 Heading, float Tilt) Level(Vector3 forward, bool inverted)
+    /// <summary>The level way the up leans facing unit <paramref name="forward"/> at a passage toward <paramref name="pole"/> (1 up, -1 down), reversed when <paramref name="inverted"/>; facing level, it leans back from a climb.</summary>
+    private static Vector3 Level(Vector3 forward, bool inverted, float pole)
     {
-        var (heading, tilt) = Tilted(Level(forward));
-        return inverted ? (-heading, -tilt) : (heading, tilt);
+        var up = Level(forward);
+        var lean = CameraRotation.Sideways(up) > 1e-6f ? Flat(up) : Flat(-pole * forward);
+        return inverted ? -lean : lean;
     }
 
-    /// <summary><paramref name="up"/> as the level way it leans and its tilt up from level, in radians; straight up leans along -z.</summary>
-    private static (Vector3 Heading, float Tilt) Tilted(Vector3 up)
-    {
-        var level = new Vector3(up.X, 0f, up.Z);
-        var length = level.Length();
-        return (length > 1e-6f ? level / length : new Vector3(0f, 0f, -1f), MathF.Atan2(up.Y, length));
-    }
+    /// <summary><paramref name="v"/>'s level part as a unit vector.</summary>
+    private static Vector3 Flat(Vector3 v) => Vector3.Normalize(new Vector3(v.X, 0f, v.Z));
 
-    /// <summary><paramref name="up"/> made square to unit <paramref name="forward"/> and unit length, or upright if it lies along the forward.</summary>
-    private static Vector3 Square(Vector3 up, Vector3 forward)
-    {
-        var squared = up - (forward * Vector3.Dot(up, forward));
-        return squared.LengthSquared() > 1e-12f ? Vector3.Normalize(squared) : Level(forward);
-    }
-
-    /// <summary>A vertical passage from sample <see cref="Start"/>, the last level sample before it (or the shot's start), to sample <see cref="End"/>, the first after it (null if the shot ends inside it). Up turns about the vertical by <see cref="Turn"/> from leaning along <see cref="From"/>, while its tilt goes from <see cref="FromTilt"/> to <see cref="ToTilt"/>; <see cref="FromLevel"/> is whether it starts from a level sample, whose up it keeps until the facing moves.</summary>
+    /// <summary>A vertical passage from sample <see cref="Start"/> to sample <see cref="End"/> (null if the shot ends in it), turning up about the vertical by <see cref="Turn"/> from leaning along <see cref="From"/>; <see cref="FromLevel"/> when it starts from a level sample.</summary>
     private readonly record struct Passage(
         int Start,
         int? End,
         Vector3 From,
-        float FromTilt,
         float Turn,
-        float ToTilt,
         bool InvertedBefore,
         bool InvertedAfter,
         bool FromLevel

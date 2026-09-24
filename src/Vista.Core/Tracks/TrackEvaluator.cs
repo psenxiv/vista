@@ -218,13 +218,7 @@ public sealed class TrackEvaluator
         if (TravelDirection(time, from, segment, fraction) is not { } direction)
             return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(time), fov);
 
-        _travelUp ??= LevelUp.Along(
-            TravelDirection,
-            _keys.Select(k => k.Time),
-            (float)Duration,
-            allowInverted: true,
-            CameraRotation.Up(CameraRotation.FromAngles(_yaws[0], MathF.PI / 2f, 0f))
-        );
+        _travelUp ??= LevelUp.Along(TravelDirection, (float)Duration, allowInverted: true, VerticalStartUp);
         return Framed(time, from, direction, _travelUp.At(time, direction), fov);
     }
 
@@ -238,6 +232,9 @@ public sealed class TrackEvaluator
         return new CameraState(from, from + (forward * FreeCamMotion.LookAtDistance), up, fov);
     }
 
+    /// <summary>The up for a shot that starts facing straight up: the first point's heading at pitch 90°.</summary>
+    private Vector3 VerticalStartUp => CameraRotation.Up(CameraRotation.FromAngles(_yaws[0], MathF.PI / 2f, 0f));
+
     /// <summary>A Look At track's up: upright, turning round as the camera passes under or over its point, worked out once.</summary>
     private LevelUp LookAtUp() =>
         _lookAtUp ??= LevelUp.Along(
@@ -245,10 +242,9 @@ public sealed class TrackEvaluator
                 _track.LookAt - PlaceAt(time).Position is var toward && toward.Length() >= TrackAim.MinTargetDistance
                     ? toward
                     : null,
-            _keys.Select(k => k.Time),
             (float)Duration,
             allowInverted: false,
-            CameraRotation.Up(CameraRotation.FromAngles(_yaws[0], MathF.PI / 2f, 0f))
+            VerticalStartUp
         );
 
     /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped: the look-ahead, else the path's own; null where the path has none.</summary>

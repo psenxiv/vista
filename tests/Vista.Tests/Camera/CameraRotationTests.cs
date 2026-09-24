@@ -16,36 +16,54 @@ public class CameraRotationTests
         { 3f, 1.5f },
     };
 
-    // FreeCamMotion and CameraOrientation are the existing conventions for view direction and up; FromAngles must
-    // keep them, so they are the reference here rather than a derived literal.
+    // FreeCamMotion is the existing convention for the view direction; FromAngles must keep it, so it is the reference
+    // here rather than a derived literal. The upright up at (yaw, pitch) is the pitch-derivative of that direction,
+    // (sin yaw·sin pitch, cos pitch, cos yaw·sin pitch), world up made square to the facing.
     [Theory]
     [MemberData(nameof(AnglePairs))]
-    public void MatchesTheExistingDirectionAndUpConventions(float yaw, float pitch)
+    public void MatchesTheExistingDirectionAndLevelsTheUp(float yaw, float pitch)
     {
         var rotation = CameraRotation.FromAngles(yaw, pitch, 0f);
 
         var expectedForward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
         Near(expectedForward, CameraRotation.Forward(rotation), 1e-5f);
 
-        var expectedUp = Vector3.Normalize(CameraOrientation.UpFor(Vector3.Zero, expectedForward));
+        var expectedUp = new Vector3(
+            MathF.Sin(yaw) * MathF.Sin(pitch),
+            MathF.Cos(pitch),
+            MathF.Cos(yaw) * MathF.Sin(pitch)
+        );
         Near(expectedUp, CameraRotation.Up(rotation), 1e-5f);
     }
 
-    // UpFor's roll parameter is the existing convention for rolling the up vector about the view direction.
+    // Roll turns the upright up U about the facing f, positive rolling right: U cos r + (f × U) sin r.
     [Theory]
     [InlineData(0.5f)]
     [InlineData(-2f)]
     [InlineData(MathF.PI)]
-    public void RollMatchesTheExistingUpForConvention(float roll)
+    public void RollTurnsTheUprightUpAboutTheFacing(float roll)
     {
         const float yaw = MathF.PI / 2f;
         const float pitch = 0.3f;
 
         var rotation = CameraRotation.FromAngles(yaw, pitch, roll);
         var forward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
+        var upright = new Vector3(
+            MathF.Sin(yaw) * MathF.Sin(pitch),
+            MathF.Cos(pitch),
+            MathF.Cos(yaw) * MathF.Sin(pitch)
+        );
 
-        var expectedUp = Vector3.Normalize(CameraOrientation.UpFor(Vector3.Zero, forward, roll));
+        var expectedUp = (upright * MathF.Cos(roll)) + (Vector3.Cross(forward, upright) * MathF.Sin(roll));
         Near(expectedUp, CameraRotation.Up(rotation), 1e-5f);
+    }
+
+    [Fact]
+    public void UprightLeansBackFromAnUpwardFacing()
+    {
+        // Facing (3, 4, 0)/5, 53° up along +x: world up made square to it is (0, 1, 0) - (3, 4, 0)·4/25 = (-12, 9, 0)/25,
+        // which normalises to (-0.8, 0.6, 0): leaning back, never forward.
+        Near(new Vector3(-0.8f, 0.6f, 0f), CameraRotation.Upright(new Vector3(3f, 4f, 0f)), 1e-6f);
     }
 
     private static readonly Gen<float> AnyYawOrRoll = Gen.Float[-MathF.PI + 0.05f, MathF.PI - 0.05f];
@@ -100,42 +118,6 @@ public class CameraRotationTests
         Assert.Equal(0.7f, yaw, 1e-5f);
         Assert.Equal(-MathF.PI / 2f, pitch, 1e-5f);
         Assert.Equal(0f, roll, 1e-5f);
-    }
-
-    [Fact]
-    public void TwistIsZeroForAPureYawTurn()
-    {
-        // At pitch 0 the upright up is (0, 1, 0) for every yaw (sin 0 . sin yaw term vanishes), so both frames
-        // share the same up and the picture does not turn.
-        var forwardA = new Vector3(0f, 0f, -1f);
-        var forwardB = new Vector3(-MathF.Sin(1f), 0f, -MathF.Cos(1f));
-        var up = new Vector3(0f, 1f, 0f);
-
-        Assert.Equal(0f, CameraRotation.Twist(forwardA, up, forwardB, up), 1e-5f);
-    }
-
-    [Fact]
-    public void TwistIsZeroForAPurePitchTurn()
-    {
-        // Going from pitch 0 to pitch 0.5 at yaw 0 is a rotation about world +X by 0.5 rad: forward (0,0,-1) ->
-        // (0, sin 0.5, -cos 0.5), and the same rotation carries up (0,1,0) -> (0, cos 0.5, sin 0.5), which is
-        // exactly the upright up at pitch 0.5 (cos 0.5 . sin 0 for X, cos 0.5 for Y, cos 0 . sin 0.5 for Z).
-        var forwardA = new Vector3(0f, 0f, -1f);
-        var upA = new Vector3(0f, 1f, 0f);
-        var forwardB = new Vector3(0f, 0.479425539f, -0.877582562f);
-        var upB = new Vector3(0f, 0.877582562f, 0.479425539f);
-
-        Assert.Equal(0f, CameraRotation.Twist(forwardA, upA, forwardB, upB), 1e-5f);
-    }
-
-    [Fact]
-    public void TwistMeasuresARollAboutAFixedForward()
-    {
-        var forward = new Vector3(0f, 0f, -1f);
-        var upA = new Vector3(0f, 1f, 0f);
-        var upB = Vector3.Transform(upA, Quaternion.CreateFromAxisAngle(forward, 0.3f));
-
-        Assert.Equal(0.3f, CameraRotation.Twist(forward, upA, forward, upB), 1e-5f);
     }
 
     [Theory]

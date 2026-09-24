@@ -682,6 +682,40 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelIsUpsideDownAtTheTopOfALoopAndUprightAfter()
+    {
+        // A loop in the plane z = 0, as the regression scene's. At its top point, (0, 16, 0), Catmull-Rom's tangent is
+        // ((-7, 10) - (7, 10)) / 2, straight along -x, and the way out of the climb's vertical passage reversed the way
+        // in, so up is the level up inverted: (0, -1, 0). Down the far side the second passage rights it, and along the
+        // last leg, straight along +x (points 7 to 9 in a line), up is (0, 1, 0). The look-at point sits 10 yalms along the facing.
+        var track = TrackEditing.SetLookAhead(
+            Build(
+                [
+                    Point(-20f),
+                    Point(-6f),
+                    Point(4f, 3f),
+                    Point(7f, 10f),
+                    Point(0f, 16f),
+                    Point(-7f, 10f),
+                    Point(-4f, 3f),
+                    Point(6f),
+                    Point(20f),
+                    Point(34f),
+                ],
+                AimMode.PathTangent
+            ),
+            0f
+        );
+        var evaluator = new TrackEvaluator(track);
+        var top = evaluator.Evaluate(evaluator.PointSeconds(4))!.Value;
+
+        Near(-Vector3.UnitX, Facing(evaluator, evaluator.PointSeconds(4)), 1e-5f);
+        Near(-Vector3.UnitY, top.Up, 1e-5f);
+        Assert.Equal(FreeCamMotion.LookAtDistance, Vector3.Distance(top.Position, top.LookAt), 1e-4f);
+        Near(Vector3.UnitY, evaluator.Evaluate(evaluator.Duration)!.Value.Up, 1e-5f);
+    }
+
+    [Fact]
     public void DirectionOfTravelHasNoStepOnATrackThatSweptThroughTheVertical()
     {
         // Found by TheAimNeverSteps as a 1.86° step at 7.63 s, when the aim was capped at 89° and its yaw read from the
@@ -762,6 +796,34 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelKeepsLevelAsTheViewWhipsRoundADoubleback()
+    {
+        // Found by TheAimNeverSteps as an 11.2° picture step at 3.595 s: at a 177° doubleback the look ahead whips the
+        // facing round about 180° in a millisecond, through 69° up. Keeping level, the picture turns with it, at most 1.6
+        // times as far: a turn that follows the view, not a step.
+        var track = TrackEditing.Empty(AimMode.PathTangent) with
+        {
+            Speed = 13f,
+        };
+        foreach (
+            var point in new[]
+            {
+                Point(-10.25f, -3.3181818f, 16f, pitch: -1f, roll: -2.5263157f),
+                Point(-26.304348f, -3.2342892f, -9f, fov: 0.6905582f),
+                Point(0f, -3f, 29.419434f, yaw: -0.32635975f, fov: 0.5496135f, roll: -0.28850555f),
+                Point(11.000916f, 0.88461536f, -21.178062f, pitch: -9.447e-25f, fov: 2f, roll: 2f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 3f), 1, 1f);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 2, 2f), 3, 0.44615385f);
+        track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 1, 44.570385f), 3, 26.346441f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.3770492f));
+
+        Assert.Empty(PictureSteps(t => evaluator.Evaluate(t)!.Value, evaluator.Duration));
+    }
+
+    [Fact]
     public void LookAtStartingStraightUnderItsPointDoesNotWhip()
     {
         // Found by ThePictureNeverWhips as a 7.6° excess in a frame: starting 0.1° from straight under the point, the
@@ -822,9 +884,9 @@ public class TrackEvaluatorTests
         // The camera runs along x from -10 to 30 under a Look At point at (0, 10, 0), reaching x = 0 at 5 s (10 yalms at 2
         // a second). Looking up-and-ahead, upright leans back along -x; looking up-and-back past it, along +x. Look At never
         // inverts, so the picture turns half round about the vertical through the passage, which is symmetric about x = 0:
-        // straight under the point it has turned a quarter, leaning along ±z. The passage's ends fall on 10 ms samples, where
-        // the facing turns 0.115° (2/10 rad a second): a share of the 30° passage off by that, eased at up to 1.5 times,
-        // puts the turn up to 180° × 1.5 × 0.115 / 30 ≈ 1° out, and sin 1° ≈ 0.018.
+        // straight under the point it has turned a quarter, leaning along ±z. The passage's ends fall within 1 ms of its edges,
+        // where the facing turns 0.0115° (2/10 rad a second): the share of the 30° passage off by up to twice that, eased at
+        // up to 1.5 times, puts the turn up to 180° × 1.5 × 0.023 / 30 ≈ 0.2° out, and sin 0.2° ≈ 0.0036.
         var track = TrackEditing.SetLookAt(
             Build([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt),
             new Vector3(0f, 10f, 0f)
@@ -834,18 +896,50 @@ public class TrackEvaluatorTests
         var under = FrameAt(evaluator.PointSeconds(1));
 
         Near(Vector3.UnitY, Vector3.Normalize(under.LookAt - under.Position), 1e-4f);
-        Assert.Equal(0f, under.Up.X, 0.02f);
+        Assert.Equal(0f, under.Up.X, 0.004f);
         Assert.Equal(1f, MathF.Abs(under.Up.Z), 1e-3f);
         Assert.InRange(Fixtures.LargestTwist(FrameAt, evaluator.Duration), 0f, PictureSpinLimit);
         var end = FrameAt(evaluator.Duration);
-        Near(CameraRotation.Upright(end.LookAt - end.Position), end.Up, 1e-3f);
+        // At the end, at (30, 0, 0) facing (-30, 10, 0)/√1000, upright leans back: (10, 30, 0)/√1000.
+        Near(new Vector3(10f, 30f, 0f) / MathF.Sqrt(1000f), end.Up, 1e-5f);
+    }
+
+    [Fact]
+    public void LookAtThatIsVerticalThroughoutTakesItsUpFromTheFirstPointsYaw()
+    {
+        // Rising straight up under the Look At point (0, 10, 0), always facing straight up: there's no upright, so the
+        // picture's top points along the first point's heading at yaw 0.3, (sin 0.3, 0, cos 0.3), as FromAngles gives
+        // at pitch 90°.
+        var track = TrackEditing.SetLookAt(
+            Build([Point(0f, -10f, yaw: 0.3f), Point(0f, 0f)], AimMode.LookAt),
+            new Vector3(0f, 10f, 0f)
+        );
+        var evaluator = new TrackEvaluator(track);
+
+        Near(new Vector3(MathF.Sin(0.3f), 0f, MathF.Cos(0.3f)), evaluator.Evaluate(1.0, track.LookAt)!.Value.Up, 1e-5f);
+    }
+
+    [Fact]
+    public void AnAimPointOtherThanTheLookAtPointStaysUpright()
+    {
+        // The Look At track passes under its point (0, 10, 0) at x = 0; aimed instead at (1, 10, 0) there, the camera
+        // faces (1, 10, 0)/√101 and stays upright: square to the facing in the x-y plane, leaning back, (-10, 1, 0)/√101.
+        var track = TrackEditing.SetLookAt(
+            Build([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt),
+            new Vector3(0f, 10f, 0f)
+        );
+        var evaluator = new TrackEvaluator(track);
+        var frame = evaluator.Evaluate(evaluator.PointSeconds(1), new Vector3(1f, 10f, 0f))!.Value;
+
+        Near(new Vector3(-10f, 1f, 0f) / MathF.Sqrt(101f), frame.Up, 1e-5f);
     }
 
     [Fact]
     public void LookAtOrbitingItsPointStaysUpright()
     {
         // Circling 10 yalms out at 30° below a Look At point, never near straight up: the picture stays exactly upright, as
-        // watching always looked.
+        // watching always looked. At point i the camera is at angle θ = i·45° round the ring, facing in and 30° up,
+        // (-cos θ cos 30°, sin 30°, -sin θ cos 30°), whose upright up leans back: (cos θ sin 30°, cos 30°, sin θ sin 30°).
         var ring = Enumerable
             .Range(0, 8)
             .Select(i => Point(10f * MathF.Cos(i * MathF.PI / 4f), 0f, 10f * MathF.Sin(i * MathF.PI / 4f)));
@@ -855,10 +949,11 @@ public class TrackEvaluatorTests
         );
         var evaluator = new TrackEvaluator(track);
 
-        for (var t = evaluator.PointSeconds(1); t <= evaluator.PointSeconds(6); t += 0.25f)
+        for (var i = 1; i <= 6; i++)
         {
-            var frame = evaluator.Evaluate(t, track.LookAt)!.Value;
-            Near(CameraRotation.Upright(frame.LookAt - frame.Position), frame.Up, 1e-3f);
+            var theta = i * MathF.PI / 4f;
+            var expected = new Vector3(MathF.Cos(theta) * 0.5f, MathF.Cos(30f * Deg), MathF.Sin(theta) * 0.5f);
+            Near(expected, evaluator.Evaluate(evaluator.PointSeconds(i), track.LookAt)!.Value.Up, 1e-5f);
         }
     }
 
@@ -898,12 +993,7 @@ public class TrackEvaluatorTests
                     Assert.Fail(
                         $"The aim steps {steps[0].Size / Deg:0.###}° at {steps[0].Time:0.######} s of {evaluator.Duration:0.###} s"
                     );
-                var flips = Steps(
-                    t => evaluator.Evaluate(t, target)!.Value.Up,
-                    Vector3.Distance,
-                    UpStepFloor,
-                    evaluator.Duration
-                );
+                var flips = PictureSteps(t => evaluator.Evaluate(t, target)!.Value, evaluator.Duration);
                 if (flips.Count > 0)
                     Assert.Fail(
                         $"The picture steps {flips[0].Size / Deg:0.###}° at {flips[0].Time:0.######} s of {evaluator.Duration:0.###} s"

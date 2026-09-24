@@ -51,11 +51,19 @@ public static class CameraRotation
     public static Quaternion FromBasis(Vector3 forward, Vector3 up)
     {
         var f = Vector3.Normalize(forward);
-        var squared = up - (f * Vector3.Dot(f, up));
-        var length = squared.Length();
-        var u = length < DegenerateLength ? Upright(f) : squared / length;
-        return FromForwardAndUp(f, u);
+        return FromForwardAndUp(f, SquareUp(up, f));
     }
+
+    /// <summary><paramref name="up"/> made square to unit <paramref name="forward"/> and unit length, or <see cref="Upright"/> if it lies along the forward.</summary>
+    public static Vector3 SquareUp(Vector3 up, Vector3 forward)
+    {
+        var squared = up - (forward * Vector3.Dot(forward, up));
+        var length = squared.Length();
+        return length < DegenerateLength ? Upright(forward) : squared / length;
+    }
+
+    /// <summary>The length of <paramref name="forward"/>'s level part: 0 facing straight up or down, 1 facing level.</summary>
+    public static float Sideways(Vector3 forward) => MathF.Sqrt((forward.X * forward.X) + (forward.Z * forward.Z));
 
     /// <summary>The unit upright up for a facing: world up projected off the forward, normalised. Falls back to (0,0,1) for a facing straight up and (0,0,-1) for straight down, matching <see cref="FromAngles"/>'s poles.</summary>
     public static Vector3 Upright(Vector3 forward)
@@ -64,14 +72,6 @@ public static class CameraRotation
         var squared = Vector3.UnitY - (f * f.Y);
         var length = squared.Length();
         return length < DegenerateLength ? new Vector3(0f, 0f, f.Y > 0f ? 1f : -1f) : squared / length;
-    }
-
-    /// <summary>The unsigned angle, in radians, the picture turns about its own centre between two frames: <paramref name="upA"/> carried square to <paramref name="forwardB"/> by the minimal rotation from <paramref name="forwardA"/>, against <paramref name="upB"/>.</summary>
-    public static float Twist(Vector3 forwardA, Vector3 upA, Vector3 forwardB, Vector3 upB)
-    {
-        var carried = Vector3.Transform(upA, MinimalRotation(forwardA, forwardB));
-        var dot = Math.Clamp(Vector3.Dot(Vector3.Normalize(carried), Vector3.Normalize(upB)), -1f, 1f);
-        return MathF.Acos(dot);
     }
 
     /// <summary>The unrolled upright up at yaw and pitch: the pitch-derivative of the facing, defined at the poles too.</summary>

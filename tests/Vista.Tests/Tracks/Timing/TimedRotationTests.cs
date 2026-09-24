@@ -35,14 +35,44 @@ public class TimedRotationTests
     [Fact]
     public void APureYawTurnsAtOneRateThroughAPointBetweenLegsOfDifferentTimes()
     {
-        // Yaws 0, 1, 3 reached at 0, 2 and 3 s: legs of 1/2 and 2/1 rad/s, so point 1 turns at
-        // (1/2·1 + 2/1·2) / 3 = 1.5 rad/s, from either side, as a timed channel does.
-        var channel = new TimedRotation([At(0f), At(1f), At(3f)], [0f, 2f, 3f], [0f, 2f, 3f]);
+        // Yaws 0, 1, 3 reached at 0, 2 and 5 s: legs of 1/2 and 2/3 rad/s, each weighted by the other leg's time, so point
+        // 1 turns at (1/2·3 + 2/3·2) / 5 = 0.56667 rad/s, from either side, as a timed channel does.
+        var channel = new TimedRotation([At(0f), At(1f), At(3f)], [0f, 2f, 5f], [0f, 2f, 5f]);
         const double h = 1e-3;
 
         Assert.Equal(1f, YawOf(channel.At(2.0)), 1e-5f);
-        Assert.Equal(1.5f, (float)((YawOf(channel.At(2.0)) - YawOf(channel.At(2.0 - h))) / h), 0.02f);
-        Assert.Equal(1.5f, (float)((YawOf(channel.At(2.0 + h)) - YawOf(channel.At(2.0))) / h), 0.02f);
+        Assert.Equal(0.56667f, (float)((YawOf(channel.At(2.0)) - YawOf(channel.At(2.0 - h))) / h), 0.01f);
+        Assert.Equal(0.56667f, (float)((YawOf(channel.At(2.0 + h)) - YawOf(channel.At(2.0))) / h), 0.01f);
+    }
+
+    [Fact]
+    public void TheLastPointTurnsAtHalfItsLegsRate()
+    {
+        // Yaws 0, 1, 3 reached at 0, 2 and 3 s: the last leg turns 2 rad in 1 s, and an end point takes half its leg's
+        // rate, 1 rad/s.
+        var channel = new TimedRotation([At(0f), At(1f), At(3f)], [0f, 2f, 3f], [0f, 2f, 3f]);
+        const double h = 1e-3;
+
+        Assert.Equal(1f, (float)((YawOf(channel.At(3.0)) - YawOf(channel.At(3.0 - h))) / h), 0.02f);
+    }
+
+    [Fact]
+    public void APointBeforeALegThatTakesNoTimeTurnsAtNoRate()
+    {
+        // Yaws 0, 1, 3 reached at 0, 2 and 2 s: the second leg takes no time, so point 1 turns at 0. The first leg starts
+        // at half its own rate, (1/2)/2 = 0.25 rad/s, so halfway it's at Hermite(0, 1, 0.25·2, 0, ½) = 0.125·0.5 + 0.5·1
+        // = 0.5625.
+        var channel = new TimedRotation([At(0f), At(1f), At(3f)], [0f, 2f, 2f], [0f, 2f, 2f]);
+
+        Assert.Equal(0.5625f, YawOf(channel.At(1.0)), 1e-5f);
+    }
+
+    [Fact]
+    public void ARotationNeedsAnArrivalAndADepartureForEveryPoint()
+    {
+        Assert.Throws<ArgumentException>(() => new TimedRotation([], [], []));
+        Assert.Throws<ArgumentException>(() => new TimedRotation([At(0f), At(1f)], [0f], [0f, 1f]));
+        Assert.Throws<ArgumentException>(() => new TimedRotation([At(0f), At(1f)], [0f, 1f], [0f]));
     }
 
     [Fact]

@@ -54,7 +54,7 @@ public class TrackAimTests
         var points = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 2, 0), new Vector3(0, 3, 0) };
         var table = new ArcLengthTable(points);
 
-        var (_, pitch) = TrackAim.Along(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
+        var (_, pitch) = TrackAim.FromDirection(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
         // Every point has x = z = 0, so the direction is exactly +y: pitch π/2, with no cap.
         Assert.Equal(MathF.PI / 2f, pitch, 1e-6f);
@@ -76,7 +76,7 @@ public class TrackAimTests
         var points = new[] { new Vector3(5, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0), new Vector3(15, 0, 0) };
         var table = new ArcLengthTable(points);
 
-        var actual = TrackAim.Along(TrackAim.PathDirection(points, table, 0, 0.5f)!.Value);
+        var actual = TrackAim.FromDirection(TrackAim.PathDirection(points, table, 0, 0.5f)!.Value);
 
         var expected = TrackAim.FromDirection(new Vector3(1, 0, 0));
         Assert.Equal(expected.Yaw, actual.Yaw, 4);
@@ -98,7 +98,7 @@ public class TrackAimTests
         };
         var table = new ArcLengthTable(points);
 
-        var (yaw, pitch) = TrackAim.Along(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
+        var (yaw, pitch) = TrackAim.FromDirection(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
         Assert.Equal(-90f * Deg, yaw, 1e-4f);
         Assert.Equal(0f, pitch, 1e-4f);
@@ -151,8 +151,12 @@ public class TrackAimTests
         // A camera settling there must not flick, so the end and a hair from it agree to within 0.01°.
         var table = new ArcLengthTable(CurvedEnd);
 
-        var (endYaw, endPitch) = TrackAim.Along(TrackAim.PathDirection(CurvedEnd, table, segment, atEnd)!.Value);
-        var (nearYaw, nearPitch) = TrackAim.Along(TrackAim.PathDirection(CurvedEnd, table, segment, nearEnd)!.Value);
+        var (endYaw, endPitch) = TrackAim.FromDirection(
+            TrackAim.PathDirection(CurvedEnd, table, segment, atEnd)!.Value
+        );
+        var (nearYaw, nearPitch) = TrackAim.FromDirection(
+            TrackAim.PathDirection(CurvedEnd, table, segment, nearEnd)!.Value
+        );
 
         Assert.Equal(endYaw, nearYaw, 0.01f * Deg);
         Assert.Equal(endPitch, nearPitch, 0.01f * Deg);

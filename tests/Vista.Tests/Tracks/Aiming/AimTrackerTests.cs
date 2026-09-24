@@ -147,19 +147,54 @@ public class AimTrackerTests
             frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
             if (last is { } previous)
                 Assert.InRange(
-                    CameraRotation.Twist(
-                        previous.LookAt - previous.Position,
-                        previous.Up,
-                        frame.LookAt - frame.Position,
-                        frame.Up
-                    ),
+                    Twist(previous.LookAt - previous.Position, previous.Up, frame.LookAt - frame.Position, frame.Up),
                     0f,
                     PictureSpinLimit
                 );
             last = frame;
         }
 
-        Near(CameraRotation.Upright(frame.LookAt - frame.Position), frame.Up, 1e-3f);
+        // The guard ends at x = 20, their aim point (20, 10, 0): facing (20, 10, 0)/√500, upright leans back, (-10, 20, 0)/√500.
+        Near(new Vector3(-10f, 20f, 0f) / MathF.Sqrt(500f), frame.Up, 1e-3f);
+    }
+
+    [Fact]
+    public void WatchingOverheadKeepsTheUpSquareToTheFacingAwayFromTheOrigin()
+    {
+        // The camera sits at (3, 0, 0) and the guard crosses straight over it, 10 yalms up. Wherever the camera is, the
+        // picture's up stays square to the way it faces.
+        var characters = new NearbyCharacters();
+        var tracker = new AimTracker(characters);
+        var track = TrackEditing.Append(
+            TrackEditing.Empty(AimMode.WatchTarget),
+            new ControlPoint(new Vector3(3f, 0f, 0f), 0.5f, 0f, 1f)
+        ) with
+        {
+            TargetName = "Guard",
+        };
+        var evaluator = new TrackEvaluator(track);
+        for (var i = 0; i <= 240; i++)
+        {
+            characters.Update([new LoadedCharacter("Guard", null, new Vector3(-17f + (i / 6f), 10f - 1.3f, 0f))]);
+            var frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
+            Assert.Equal(0f, Vector3.Dot(frame.Up, Vector3.Normalize(frame.LookAt - frame.Position)), 1e-5f);
+        }
+    }
+
+    [Fact]
+    public void LosingTheCharacterPassesTheRecordedFrameThroughUnsettled()
+    {
+        // Watching the guard straight overhead, then losing them: the frame falls back to the recorded aim, level at yaw
+        // 0.5, whose upright up is (0, 1, 0), exactly, rather than turning toward it from the overhead up.
+        var characters = new NearbyCharacters();
+        var tracker = new AimTracker(characters);
+        var track = Watching();
+        characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, 10f - 1.3f, 0f))]);
+        Frame(tracker, track);
+
+        characters.Update([]);
+
+        Assert.Equal(Vector3.UnitY, Frame(tracker, track).Up);
     }
 
     [Fact]

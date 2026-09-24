@@ -22,7 +22,7 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
         var f = Vector3.Normalize(forward);
         var u = up - (f * Vector3.Dot(up, f));
         if (u.LengthSquared() < 1e-8f)
-            u = CameraOrientation.UpFor(Vector3.Zero, f);
+            u = CameraRotation.Upright(f);
         u = Vector3.Normalize(u);
         var side = Vector3.Cross(u, f);
 
