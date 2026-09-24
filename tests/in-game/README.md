@@ -1,6 +1,6 @@
 # In-game checklists
 
-The page renders the checklists in `cases/`, listed in `cases/manifest.json`. `cases/` is gitignored: never commit a checklist. The user serves this folder themselves (VS Code Live Server), ticks each row Pass, Fail or N/A, and sends back the results JSON the page downloads. Don't add a serve script.
+The page renders the checklists in `cases/`, listed in `cases/manifest.json`. `cases/` is gitignored: never commit a checklist. The user serves this folder with `make checks`, ticks each row Pass, Fail or N/A, and sends back the results JSON the page downloads.
 
 The page is plain files with no build step, and adding a checklist never needs them touched:
 

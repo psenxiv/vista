@@ -1,4 +1,4 @@
-.PHONY: help build test format lint verify soak mutate regression-scene package bump testing release
+.PHONY: help build test format lint verify soak mutate regression-scene checks package bump testing release
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -26,6 +26,9 @@ mutate: ## Mutation-test Core with Stryker; SINCE=<commit> for changes since it
 
 regression-scene: ## Rewrite the camera regression scene file from its cases
 	@scripts/regression-scene.sh
+
+checks: ## Serve the in-game checklist page; PORT=<n> for other than 3000
+	@scripts/checks.sh $(PORT)
 
 package: ## Release build and latest.zip, as CI makes it
 	@scripts/package.sh

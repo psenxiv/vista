@@ -72,6 +72,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
     make soak              # Run the property tests 20 times, stopping at a failure; RUNS=<n> for another count
     make mutate            # Mutation-test Core with Stryker; SINCE=<commit> for changes since it
     make regression-scene  # Rewrite tests/scenes/Vista - Camera Regression.json from its cases
+    make checks            # Serve the in-game checklist page at localhost:3000; PORT=<n> for another
     make build             # Debug plugin build; sets DALAMUD_HOME
     make test              # Core tests
     make package           # Release build and latest.zip, as CI makes it
