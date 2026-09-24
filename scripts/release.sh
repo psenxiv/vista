@@ -15,7 +15,7 @@ v="$(version)"
 grep -qx "## $v" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section." >&2; exit 1; }
 tag="$channel-v$v"
 git rev-parse -q --verify "refs/tags/$tag" >/dev/null && { echo "Tag $tag already exists." >&2; exit 1; }
-"$ROOT/scripts/test.sh"
+"$ROOT/scripts/verify.sh" --check
 read -r -p "Push $tag and publish it? [y/N] " answer
 [ "$answer" = "y" ] || { echo "Stopped."; exit 1; }
 git tag "$tag"
