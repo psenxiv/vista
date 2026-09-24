@@ -48,7 +48,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
 
 **Mutation-test a feature once, in its final review.** When every task of a plan is done, run `make mutate SINCE=<the plan's base commit>`. Each surviving mutant in the changed code gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach. Property tests are left out, since their random inputs would change a mutant's result from run to run.
 
-**Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) that reproduces it, with its expected number of snaps. Run `make regression-scene` and commit the rewritten file with the case.
+**Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) that reproduces it, with its expected number of snaps. A bug smaller than the step floors in `Fixtures.cs` still gets a case, as something to watch in game, and an example test pins it. Run `make regression-scene` and commit the rewritten file with the case.
 
 **Shared fixtures live in a fixtures file per test area**, with anything used across areas in `tests/Vista.Tests/Fixtures.cs`. A helper needed by a second file moves there rather than being copied.
 

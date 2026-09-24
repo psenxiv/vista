@@ -10,14 +10,12 @@ namespace Vista.Tests.Regression;
 
 public class RegressionSceneTests
 {
-    private const float Deg = MathF.PI / 180f;
-
     [Fact]
     public void TheSceneFileIsCurrent()
     {
         var built = SceneJson.Write(RegressionScene.Build());
         var path = RegressionScene.FilePath();
-        if (Environment.GetEnvironmentVariable(RegressionScene.WriteVariable) is not null)
+        if (Environment.GetEnvironmentVariable(RegressionScene.WriteVariable) == "1")
         {
             File.WriteAllText(path, built);
             return;

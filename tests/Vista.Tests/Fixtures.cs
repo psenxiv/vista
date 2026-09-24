@@ -13,6 +13,9 @@ namespace Vista.Tests;
 /// <summary>Control points, tracks and assertions shared across the test suite.</summary>
 internal static class Fixtures
 {
+    /// <summary>Radians in a degree.</summary>
+    internal const float Deg = MathF.PI / 180f;
+
     /// <summary>The fewest seconds Direction of travel looks ahead in a generated track, since with none it turns at once where the path doubles back, by design.</summary>
     private const float MinGeneratedLookAhead = 0.1f;
 
@@ -38,7 +41,7 @@ internal static class Fixtures
     );
 
     /// <summary>The sharpest turn from one leg into the next in a generated track: Direction of travel snaps round where a path runs back along itself, by design, and within a degree of that it whips round in milliseconds, where float noise reads as a step (a 179.48° turn did).</summary>
-    private const float SharpestGeneratedTurn = 179f * MathF.PI / 180f;
+    private const float SharpestGeneratedTurn = 179f * Deg;
 
     /// <summary>Two to six points, each at least a yalm from the one before, and no leg turning back on the one before sharper than <see cref="SharpestGeneratedTurn"/>.</summary>
     private static readonly Gen<ControlPoint[]> AnyPoints = AnyPoint
@@ -145,16 +148,16 @@ internal static class Fixtures
     private const int StepHalvings = 8;
 
     /// <summary>The facing's step floor, 0.3°, as the distance between unit directions, 2·sin(θ/2), which is θ to within 1e-7 here.</summary>
-    internal const float FacingStepFloor = 0.3f * MathF.PI / 180f;
+    internal const float FacingStepFloor = 0.3f * Deg;
 
     /// <summary>The position's step floor, in yalms.</summary>
     internal const float PositionStepFloor = 0.05f;
 
     /// <summary>The field of view's step floor, 0.1° in radians.</summary>
-    internal const float FovStepFloor = 0.1f * MathF.PI / 180f;
+    internal const float FovStepFloor = 0.1f * Deg;
 
     /// <summary>The roll's step floor, 0.1° in radians.</summary>
-    internal const float RollStepFloor = 0.1f * MathF.PI / 180f;
+    internal const float RollStepFloor = 0.1f * Deg;
 
     /// <summary>A sudden change in a channel: when it happens and how far it jumps.</summary>
     internal readonly record struct Step(double Time, float Size);

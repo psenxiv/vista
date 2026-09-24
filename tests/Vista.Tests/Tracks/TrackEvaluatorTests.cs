@@ -12,8 +12,6 @@ namespace Vista.Tests.Tracks;
 
 public class TrackEvaluatorTests
 {
-    private const float Deg = MathF.PI / 180f;
-
     private static Track Build(IEnumerable<ControlPoint> points, AimMode aim = AimMode.AimKeys)
     {
         var track = TrackEditing.Empty(aim) with { Speed = 2f };

@@ -798,7 +798,7 @@
     },
     {
       "id": "00000000-0000-0000-0001-000000000006",
-      "name": "Hold partway up a climb: yaw holds still",
+      "name": "Hold partway up a climb: keeps facing the same way",
       "anchor": {
         "position": {
           "x": 15,
@@ -1308,7 +1308,7 @@
     },
     {
       "id": "00000000-0000-0000-0001-000000000011",
-      "name": "Straight doubleback: snaps round once",
+      "name": "Straight doubleback, look ahead 0.5: snaps round once",
       "anchor": {
         "position": {
           "x": 45,
@@ -1402,7 +1402,7 @@
     },
     {
       "id": "00000000-0000-0000-0001-000000000012",
-      "name": "Reversal, look ahead 0: snaps round once",
+      "name": "Straight doubleback, look ahead 0: snaps round once",
       "anchor": {
         "position": {
           "x": -45,

@@ -19,7 +19,7 @@ They're classic scripts, not ES modules, so the loader still shows when the page
 3. Never overwrite or reuse a checklist that hasn't been run. Several can be pending at once, and the page keeps each one's progress separately, keyed by file name and `revision`.
 4. Delete the file and its manifest entry once its results are in.
 
-Only write rows a Core test can't cover: ImGui, input, hooks, files on disk, or the game itself.
+Only write rows a Core test can't cover: ImGui, input, hooks, files on disk, or the game itself. The one exception is the camera regression scene pass, which CLAUDE.md asks for on every change to aim, timing or paths: its tests check the maths, and the pass checks how it looks.
 
 ## Shape
 

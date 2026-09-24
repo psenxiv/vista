@@ -44,7 +44,7 @@ internal static class RegressionScene
             0
         ),
         new("Sharp turn in a vertical plane: no flip", Travel([P(8f, 5f, 0f), P(-7f, 0f, 0f), P(8f, -6f, 0f)]), 0),
-        new("Hold partway up a climb: yaw holds still", TrackEditing.SetHold(Travel(Crane), 2, 2f), 0),
+        new("Hold partway up a climb: keeps facing the same way", TrackEditing.SetHold(Travel(Crane), 2, 2f), 0),
         new("Hairpin: turns smoothly", Travel([P(7f, 0f, -2.5f), P(-8f, 0f, 0f), P(7f, 0f, 2.5f)]), 0),
         new(
             "Into and out of a hold: smooth",
@@ -53,11 +53,11 @@ internal static class RegressionScene
         ),
         new("Easing into the last point: settles without a step", EasingIntoTheEnd(), 0),
         new("Recorded aim with field of view and roll: no pop on arrival", RecordedAim(), 0),
-        new("Straight doubleback: snaps round once", Travel(Doubleback), 1),
-        new("Reversal, look ahead 0: snaps round once", Travel(Doubleback, lookAhead: 0f), 1),
+        new("Straight doubleback, look ahead 0.5: snaps round once", Travel(Doubleback), 1),
+        new("Straight doubleback, look ahead 0: snaps round once", Travel(Doubleback, lookAhead: 0f), 1),
     ];
 
-    /// <summary>Four 20-yalm legs along +z, away from the grid, then 15 back at 179°: reverting the hold fix, the float wobble 80 yalms along turns a look ahead 0 aim at that turn by about 0.4°.</summary>
+    /// <summary>Four 20-yalm legs along +z, starting 70 yalms out from the grid, then 15 back at 179°: reverting the hold fix, the float wobble 80 yalms along turns a look ahead 0 aim at that turn by about 0.4°.</summary>
     private static ControlPoint[] RunIntoASharpTurn =>
         [P(0f, 0f, -70f), P(0f, 0f, -50f), P(0f, 0f, -30f), P(0f, 0f, -10f), P(0f, 0f, 10f), P(0.26f, 0f, -5f)];
 

@@ -3,13 +3,12 @@ using Vista.Core.Camera;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Spline;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks.Aiming;
 
 public class TrackAimTests
 {
-    private const float Deg = MathF.PI / 180f;
-
     [Theory]
     [InlineData(0f, 0f)]
     [InlineData(1.2f, -0.3f)]
