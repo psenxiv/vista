@@ -79,15 +79,20 @@ public class CameraRotationTests
     [Fact]
     [Trait("Category", "Property")]
     public void RoundTripReturnsTheOriginalAngles() =>
-        AnyAngles.Sample(angles =>
-        {
-            var (yaw, pitch, roll) = angles;
-            var (gotYaw, gotPitch, gotRoll) = CameraRotation.ToAngles(CameraRotation.FromAngles(yaw, pitch, roll));
+        AnyAngles.Sample(
+            angles =>
+            {
+                var (yaw, pitch, roll) = angles;
+                var (gotYaw, gotPitch, gotRoll) = CameraRotation.ToAngles(CameraRotation.FromAngles(yaw, pitch, roll));
 
-            Assert.Equal(yaw, gotYaw, 1e-5f);
-            Assert.Equal(pitch, gotPitch, 1e-5f);
-            Assert.Equal(roll, gotRoll, 1e-5f);
-        });
+                Assert.Equal(yaw, gotYaw, 1e-5f);
+                Assert.Equal(pitch, gotPitch, 1e-5f);
+                Assert.Equal(roll, gotRoll, 1e-5f);
+            },
+            print: Kept<(float Yaw, float Pitch, float Roll)>(angles =>
+                $"{angles.Yaw:R} {angles.Pitch:R} {angles.Roll:R}"
+            )
+        );
 
     [Fact]
     public void PitchPlusNinetyIsThePoleFacingStraightUp()

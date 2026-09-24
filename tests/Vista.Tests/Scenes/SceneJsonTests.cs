@@ -382,6 +382,6 @@ public class SceneJsonTests
                 );
             },
             iter: 3000,
-            print: SceneJson.Write
+            print: Kept<Scene>(SceneJson.Write)
         );
 }

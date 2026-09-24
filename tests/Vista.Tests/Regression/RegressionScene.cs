@@ -138,13 +138,7 @@ internal static class RegressionScene
     }
 
     /// <summary>The committed scene file's path in the repository.</summary>
-    internal static string FilePath()
-    {
-        var folder = new DirectoryInfo(AppContext.BaseDirectory);
-        while (!File.Exists(Path.Combine(folder.FullName, "Vista.sln")))
-            folder = folder.Parent ?? throw new DirectoryNotFoundException("The test run isn't inside the repository.");
-        return Path.Combine(folder.FullName, "tests", "scenes", FileName);
-    }
+    internal static string FilePath() => Path.Combine(Fixtures.RepositoryRoot(), "tests", "scenes", FileName);
 
     /// <summary>A fixed id: the kind (1 a track, 2 a playlist entry) and the case's index.</summary>
     private static Guid Id(int kind, int index) => new($"00000000-0000-0000-{kind:D4}-{index:D12}");

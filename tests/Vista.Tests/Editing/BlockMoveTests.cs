@@ -111,7 +111,10 @@ public class BlockMoveTests
                 else
                     Assert.Equal(t, order[end]);
             },
-            iter: 100_000
+            iter: 100_000,
+            print: Fixtures.Kept<(int Count, HashSet<int> Moving, int Grabbed, int? Target)>(move =>
+                $"count {move.Count}, moving {string.Join(' ', move.Moving.Order())}, grabbed {move.Grabbed}, target {move.Target}"
+            )
         );
     }
 }

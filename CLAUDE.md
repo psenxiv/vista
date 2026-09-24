@@ -44,9 +44,9 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
 
 **Test a behaviour where it lives.** Pin it once, at the layer that owns it. A `SessionState` test that re-checks what `SceneEditing` already proves adds a second place to edit and no cover. Before adding a test, grep the behaviour's name across the other test directories.
 
-**Property tests (CsCheck) are for invariants that must hold for any valid input**, such as continuity, round trips and permutations. They add to derived examples and never replace them, and a property that only checks a sign or finiteness doesn't count. Generators build inputs through the editing calls the UI makes and state their assumptions. CsCheck seeds each run randomly, so a failure is a real counterexample: never rerun to get a pass; fix the cause and keep the failing case as an example test. Tag each property `[Trait("Category", "Property")]`.
+**Property tests (CsCheck) are for invariants that must hold for any valid input**, such as continuity, round trips and permutations. They add to derived examples and never replace them, and a property that only checks a sign or finiteness doesn't count. Generators build inputs through the editing calls the UI makes and state their assumptions. CsCheck seeds each run randomly, so a failure is a real counterexample: never rerun to get a pass; fix the cause and keep the failing case as an example test. Pass each property's `print` through `Fixtures.Kept`, which writes the failing input to `tests/Vista.Tests/obj/counterexamples/<property>.txt`; the folder is emptied before every property run, so it only ever holds the last run's failures. Tag each property `[Trait("Category", "Property")]`.
 
-**Mutation-test a feature once, in its final review.** When every task of a plan is done, run `make mutate SINCE=<the plan's base commit>`. Each surviving mutant in the changed code gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach. Property tests are left out, since their random inputs would change a mutant's result from run to run.
+**Mutation-test and soak a feature once, in its final review.** When every task of a plan is done, run `make soak`, which runs the properties 20 times since a counterexample can take several runs to turn up, and `make mutate SINCE=<the plan's base commit>`, which lists the survivors on changed lines. Each one gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach. Property tests are left out, since their random inputs would change a mutant's result from run to run.
 
 **Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) that reproduces it, with its expected number of snaps. A bug smaller than the step floors in `Fixtures.cs` still gets a case, as something to watch in game, and an example test pins it. Run `make regression-scene` and commit the rewritten file with the case.
 
@@ -69,6 +69,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
     make verify            # Format, lint, test and check coverage: must pass before every commit
     make format            # Format with CSharpier (print width 120)
     make lint              # Build the plugin and tests with analyzer warnings as errors
+    make soak              # Run the property tests 20 times, stopping at a failure; RUNS=<n> for another count
     make mutate            # Mutation-test Core with Stryker; SINCE=<commit> for changes since it
     make regression-scene  # Rewrite tests/scenes/Vista - Camera Regression.json from its cases
     make build             # Debug plugin build; sets DALAMUD_HOME

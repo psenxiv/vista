@@ -1,4 +1,4 @@
-.PHONY: help build test format lint verify mutate regression-scene package bump testing release
+.PHONY: help build test format lint verify soak mutate regression-scene package bump testing release
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -17,6 +17,9 @@ lint: ## Build the plugin and tests with analyzer warnings as errors
 
 verify: ## Format, lint, test and check coverage: run before every commit
 	@scripts/verify.sh
+
+soak: ## Run the property tests many times, stopping at a failure; RUNS=<n> for other than 20
+	@scripts/soak.sh $(RUNS)
 
 mutate: ## Mutation-test Core with Stryker; SINCE=<commit> for changes since it
 	@scripts/mutate.sh $(SINCE)

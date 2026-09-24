@@ -3,6 +3,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$ROOT/src/Vista.Plugin/Vista.Plugin.csproj"
+# Where a failing property writes its input (Fixtures.CounterexampleFolder), emptied before each property run.
+COUNTEREXAMPLES="$ROOT/tests/Vista.Tests/obj/counterexamples"
 
 # Prints a message to stderr and stops.
 fail() {

@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using CsCheck;
 using Vista.Core.Camera;
 using Vista.Core.Editing;
@@ -13,6 +14,29 @@ namespace Vista.Tests;
 /// <summary>Control points, tracks and assertions shared across the test suite.</summary>
 internal static class Fixtures
 {
+    /// <summary>The repository's root folder, found from the test run's own folder.</summary>
+    internal static string RepositoryRoot()
+    {
+        var folder = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(folder.FullName, "Vista.sln")))
+            folder = folder.Parent ?? throw new DirectoryNotFoundException("The test run isn't inside the repository.");
+        return folder.FullName;
+    }
+
+    /// <summary>Where each failing property's input is written, one file per property. Gitignored, and emptied at the start of every property run by scripts/verify.sh and scripts/soak.sh.</summary>
+    internal static string CounterexampleFolder =>
+        Path.Combine(RepositoryRoot(), "tests", "Vista.Tests", "obj", "counterexamples");
+
+    /// <summary><paramref name="print"/>, also writing what it prints to <see cref="CounterexampleFolder"/> under the calling property's name, so a failing input is kept until it's made an example test.</summary>
+    internal static Func<T, string> Kept<T>(Func<T, string> print, [CallerMemberName] string property = "") =>
+        input =>
+        {
+            var text = print(input);
+            Directory.CreateDirectory(CounterexampleFolder);
+            File.WriteAllText(Path.Combine(CounterexampleFolder, $"{property}.txt"), text);
+            return text;
+        };
+
     /// <summary>Radians in a degree.</summary>
     internal const float Deg = MathF.PI / 180f;
 

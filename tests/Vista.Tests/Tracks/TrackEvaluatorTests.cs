@@ -1000,7 +1000,7 @@ public class TrackEvaluatorTests
                     );
             },
             iter: 3000,
-            print: Print
+            print: Kept<Track>(Print)
         );
     }
 
@@ -1026,7 +1026,7 @@ public class TrackEvaluatorTests
                         );
                 },
                 iter: 1000,
-                print: Print
+                print: Kept<Track>(Print)
             );
     }
 
@@ -1064,7 +1064,7 @@ public class TrackEvaluatorTests
                 }
             },
             iter: 5000,
-            print: Print
+            print: Kept<Track>(Print)
         );
     }
 }
