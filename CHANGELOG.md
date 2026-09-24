@@ -4,9 +4,8 @@
 
 - Hide game UI when Live stays on or off between sessions.
 - Fixed a shimmer with Direction of travel while the camera holds still at a sharp turn.
-- The camera can look straight up or down, and turn upside down.
-- The free cam flies like a plane.
-- Direction of travel rides loops like a rollercoaster.
+- The camera can look in any direction, straight up, straight down and upside down, in Edit and in your shots.
+- Direction of travel turns upside down over a loop, like a rollercoaster.
 - Steep shots no longer flip the picture.
 
 ## 0.8.0.1

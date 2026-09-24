@@ -16,8 +16,6 @@ For **Watch Target** and **Follow Target**, click {icon:PencilAlt} beside the ch
 
 With **Direction of travel**, the menu also shows **Look ahead**: how far ahead along the path the camera looks, in seconds. The camera turns into corners before it reaches them. At 0 it faces straight along the path.
 
-Going over a loop with **Direction of travel** turns the camera upside down at the top, the way it would on a rollercoaster. It rights itself again on the way back down.
-
 ## Changing a point's aim
 
 With **Recorded aim**, change a point's aim with **Pitch** and **Yaw** in the [Point window](tracks-point-window.md), or with the gizmo's rotate rings.
