@@ -9,7 +9,8 @@ public static class RowFit
     /// <summary>Pixels a second the scroll moves.</summary>
     private const float Speed = 30f;
 
-    private const string Mark = "…";
+    // Three full stops: the game font has no ellipsis glyph.
+    private const string Mark = "...";
 
     /// <summary><paramref name="text"/> if it fits <paramref name="width"/>, else its longest start that fits with an ellipsis, as measured by <paramref name="measure"/>.</summary>
     public static string Ellipsis(string text, float width, Func<string, float> measure)

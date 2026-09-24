@@ -6,7 +6,7 @@
 - Drag the inner edge of the Hierarchy or the Playlist to make it wider or narrower. Vista remembers the widths, and the Hierarchy starts a little wider.
 - Closing the welcome screen goes straight on to choosing a save folder, then opens the Vista window.
 - You can close Vista Setup without choosing a folder. It comes back the next time you open Vista.
-- Long track and playlist names end in … and scroll when you hover over them.
+- Long track and playlist names end in ... and scroll when you hover over them.
 - Typing a number into a playlist entry's Repeats cell now works when it shows a dash or ∞, and clearing it makes the entry follow its track again.
 - Fixed a small shake with Direction of travel as the camera comes to a stop at a hold or the end of a track.
 
