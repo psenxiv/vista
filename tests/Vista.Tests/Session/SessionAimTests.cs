@@ -1,9 +1,6 @@
 using System.Numerics;
-using Vista.Core.Camera;
 using Vista.Core.Session;
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
-using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
 

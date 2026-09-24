@@ -6,7 +6,7 @@ namespace Vista.Tests.Session;
 
 public class EditHistoryTests
 {
-    private static EditSnapshot Snap(int? selected) => new(SceneEditing.New(), Guid.Empty, selected is { } s ? new Selection([s], [], []) : Selection.None);
+    private static EditSnapshot Snap(int? selected) => new(SceneEditing.New(), Guid.Empty, selected is { } s ? new SelectedItems([s], [], []) : SelectedItems.None);
 
     [Fact]
     public void UndoReturnsTheRecordedStateAndRedoReturnsTheCurrentOne()

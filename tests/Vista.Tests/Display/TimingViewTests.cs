@@ -1,5 +1,4 @@
 using Vista.Core.Display;
-using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;

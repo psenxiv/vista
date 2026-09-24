@@ -1,5 +1,4 @@
 using Vista.Core.Display;
-using Vista.Core.Editing;
 using Xunit;
 
 namespace Vista.Tests.Display;

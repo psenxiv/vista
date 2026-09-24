@@ -1,4 +1,3 @@
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 
