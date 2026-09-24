@@ -6,6 +6,12 @@ Create smooth, cinematic camera paths in FFXIV, organise them into scenes, and p
 
 Vista is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin. Open it with `/vista`.
 
+## Installing
+
+1. Type `/xlsettings` in chat and open the **Experimental** tab.
+2. Under **Custom Plugin Repositories**, paste `https://raw.githubusercontent.com/psenxiv/vista/main/repo.json` into the empty field, click **+**, and save.
+3. Type `/xlplugins`, search for Vista and install it.
+
 ## About this project
 
 Vista is a personal project. I had a specific camera tool in mind for myself and a few friends, and I wanted to use it now rather than in a few months. It's open to the community, but it isn't built for the community. If you find it useful, awesome. Just know that there is no long-term roadmap or vision beyond the features I have planned and that friends ask for.
