@@ -28,9 +28,9 @@ Go longer only for something a reader cannot infer: a non-obvious unit, a constr
 
 - `src/Vista.Core`: pure logic. Never references Dalamud or FFXIVClientStructs and never uses `unsafe`; the project file enforces both.
 - `src/Vista.Plugin`: Dalamud, hooks, ImGui. The only place with `unsafe`.
+- `tests/Vista.Tests`: references Core only.
 
 Namespaces match folders. Never name a namespace, or a member that code reaches as a simple name, after a type or namespace in use beside it: a `Vista.Plugin.Camera` namespace would shadow FFXIVClientStructs' `Camera`, a `Path` namespace `System.IO.Path`, and a `Game` member the `Vista.Plugin.Game` namespace. That's why the folders are `Tracks/Aiming` rather than `Aim` (a `Track` property) and `Tracks/Spline` rather than `Path`.
-- `tests/Vista.Tests`: references Core only.
 
 All three target .NET 10, because Dalamud 15 is built against net10.0.
 
