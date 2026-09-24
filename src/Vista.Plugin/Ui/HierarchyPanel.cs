@@ -1,8 +1,9 @@
 using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
-using Vista.Core.Tracks;
 using Vista.Core.Session;
+using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;

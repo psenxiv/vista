@@ -2,6 +2,9 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Playback;
+using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Scenes;
 

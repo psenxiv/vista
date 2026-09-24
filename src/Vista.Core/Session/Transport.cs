@@ -1,5 +1,6 @@
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Playback;
 
 namespace Vista.Core.Session;
 

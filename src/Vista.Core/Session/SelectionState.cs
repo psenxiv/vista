@@ -2,6 +2,8 @@ using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Session;
 

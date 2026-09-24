@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Plugin.Game;
 

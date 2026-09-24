@@ -1,5 +1,8 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Spline;
+using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Tracks;
 

@@ -3,6 +3,9 @@ using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Playback;
+using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Session;
 
@@ -94,7 +97,7 @@ public sealed class SessionState
             : null;
 
     /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
-    public Orbit? FollowOrbit => Local is { Aim: AimMode.FollowTarget, Points.Count: 1 } local ? Tracks.FollowOrbit.Of(local.Points[0]) : null;
+    public Orbit? FollowOrbit => Local is { Aim: AimMode.FollowTarget, Points.Count: 1 } local ? Tracks.Aiming.FollowOrbit.Of(local.Points[0]) : null;
 
     // Modes
 
@@ -558,7 +561,7 @@ public sealed class SessionState
     {
         if (liveEditStart is null) return "No live edit is in progress.";
         if (Local is not { Aim: AimMode.FollowTarget, Points.Count: 1 } local) return "Only a Follow Target track with its point has an orbit.";
-        Local = TrackEditing.Replace(local, 0, Tracks.FollowOrbit.With(local.Points[0], orbit));
+        Local = TrackEditing.Replace(local, 0, Tracks.Aiming.FollowOrbit.With(local.Points[0], orbit));
         return null;
     }
 

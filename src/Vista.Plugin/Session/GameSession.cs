@@ -3,6 +3,8 @@ using Vista.Core.Camera;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Playback;
 using Vista.Plugin.Game;
 
 namespace Vista.Plugin.Session;

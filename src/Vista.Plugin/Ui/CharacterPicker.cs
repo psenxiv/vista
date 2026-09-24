@@ -1,5 +1,6 @@
 using Vista.Core.Session;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 

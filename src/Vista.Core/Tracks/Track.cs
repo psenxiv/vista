@@ -1,3 +1,6 @@
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Playback;
+using Vista.Core.Tracks.Timing;
 using System.Numerics;
 
 namespace Vista.Core.Tracks;
