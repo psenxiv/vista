@@ -99,6 +99,52 @@ public class SessionAnchorTests
     }
 
     [Fact]
+    public void AnchorsAreSelectedOnlyWhileEditingOnATrackThatExists()
+    {
+        var state = Editing();
+        Assert.Equal("There is no such track.", state.Selection.SelectTrackAnchor(Guid.NewGuid()));
+
+        state.Release();
+
+        Assert.Equal("Anchors can only be selected while editing.", state.Selection.SelectSceneAnchor());
+        Assert.Equal(
+            "Anchors can only be selected while editing.",
+            state.Selection.SelectTrackAnchor(state.EditedTrackId)
+        );
+        Assert.Null(state.Selection.Anchor);
+    }
+
+    [Fact]
+    public void SelectingAnAnchorEndsALiveEdit()
+    {
+        var state = Editing();
+        state.BeginLiveEdit();
+        Assert.Null(state.PreviewPoint(1, Point(25f)));
+
+        Assert.Null(state.Selection.SelectSceneAnchor());
+
+        Assert.Equal(
+            "No live edit is in progress.",
+            state.PreviewAnchor(new Anchor(new Vector3(12f, 1f, 0f), 0f), carry: true)
+        );
+        Near(new Vector3(25f, 5f, 0f), state.Track.Points[1].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void UndoingAnAnchorDragKeepsTheAnchorSelected()
+    {
+        var state = Editing();
+        state.Selection.SelectSceneAnchor();
+        state.BeginLiveEdit();
+        state.PreviewAnchor(new Anchor(new Vector3(12f, 1f, 0f), 0f), carry: true);
+        state.EndLiveEdit();
+
+        Assert.True(state.Undo());
+
+        Assert.Equal(AnchorKind.Scene, state.Selection.Anchor);
+    }
+
+    [Fact]
     public void MovingTheSceneAnchorCarriesThePointsAsOneUndoStep()
     {
         var state = Editing();

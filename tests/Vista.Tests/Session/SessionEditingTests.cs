@@ -217,12 +217,14 @@ public class SessionEditingTests
         Assert.Null(state.Selection.Point);
     }
 
-    [Fact]
-    public void SelectOutOfRangeClears()
+    [Theory]
+    [InlineData(3)] // one past the last of three points
+    [InlineData(5)]
+    public void SelectOutOfRangeClears(int index)
     {
         var state = Editing();
         state.Selection.Select(1);
-        state.Selection.Select(5);
+        state.Selection.Select(index);
         Assert.Null(state.Selection.Point);
     }
 

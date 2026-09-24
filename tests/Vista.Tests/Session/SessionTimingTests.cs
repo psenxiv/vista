@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
@@ -58,6 +59,95 @@ public class SessionTimingTests
         state.Selection.SelectLeg(2);
         state.Selection.Select(null);
         Assert.Equal(2, state.Selection.Leg);
+    }
+
+    [Fact]
+    public void DeselectingKeepsASelectedHoldEnd()
+    {
+        var state = Editing();
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
+
+        // The hold makes keys 0 and 1 for points 0 and 1, 2 for point 1's hold end, and 3 for point 2.
+        state.Selection.SelectKey(2);
+        state.Selection.Select(null);
+
+        Assert.Equal(2, state.Selection.Key);
+    }
+
+    [Fact]
+    public void AKeyOrLegPastTheEndSelectsNothing()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+
+        // Three points: keys 0 to 2 and legs 1 and 2.
+        state.Selection.SelectKey(3);
+        Assert.Null(state.Selection.Key);
+        Assert.Equal(1, state.Selection.Point);
+
+        state.Selection.SelectLeg(3);
+        Assert.Null(state.Selection.Leg);
+    }
+
+    [Fact]
+    public void ATimingChangeKeepsTheSelectedKey()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+
+        Assert.Null(state.SetTrackSpeed(4f));
+
+        Assert.Equal(1, state.Selection.Key);
+    }
+
+    [Fact]
+    public void UndoingToASelectionWithNoPointDropsThePointKey()
+    {
+        var state = Editing();
+        Assert.Null(state.AddToEnd(Point(30f)));
+        state.Selection.Select(1);
+
+        Assert.True(state.Undo());
+
+        Assert.Null(state.Selection.Point);
+        Assert.Null(state.Selection.Key);
+    }
+
+    [Fact]
+    public void ALegSelectedBesideAPointStaysWhenThePointsDoNotChange()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+        state.Selection.SelectLeg(2);
+
+        Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 8f)));
+
+        Assert.Equal((null, 2), (state.Selection.Key, state.Selection.Leg));
+        Assert.Equal(1, state.Selection.Point);
+    }
+
+    [Fact]
+    public void ALegStaysSelectedWhenAnEditLeavesThePointsEqual()
+    {
+        var state = Editing();
+        state.Selection.SelectLeg(2);
+
+        Assert.Null(state.ChangeTrack(t => t with { Points = t.Points.ToList() }));
+
+        Assert.Equal(2, state.Selection.Leg);
+    }
+
+    [Fact]
+    public void APointEditClearsALegSelectedBesideSeveralPoints()
+    {
+        var state = Editing();
+        state.Selection.Select(0);
+        state.Selection.ClickPoint(1, RowClick.Toggle);
+        state.Selection.SelectLeg(2);
+
+        Assert.Null(state.AddToEnd(Point(30f)));
+
+        Assert.Null(state.Selection.Leg);
     }
 
     [Fact]

@@ -185,6 +185,51 @@ public class SessionSelectionTests
     }
 
     [Fact]
+    public void ClickingAPointPastTheEndChangesNothing()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+
+        // Four points: 4 is one past the last.
+        state.Selection.ClickPoint(4, RowClick.Plain);
+
+        Assert.Equal([1], state.Selection.Points);
+    }
+
+    [Fact]
+    public void APlainClickOnAPointSelectsItOverTwoTracks()
+    {
+        var state = Editing();
+        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+
+        state.Selection.ClickPoint(2, RowClick.Plain);
+
+        Assert.Equal([2], state.Selection.Points);
+        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+    }
+
+    [Fact]
+    public void APlainClickOnTheEditedTrackSelectsOnlyIt()
+    {
+        var state = Editing();
+        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+
+        Assert.Null(state.Selection.ClickTrack(Track(state, 0), RowClick.Plain));
+
+        Assert.Equal(Track(state, 0), state.EditedTrackId);
+        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+    }
+
+    [Fact]
+    public void ClickingARowThatIsNotThereIsRefused()
+    {
+        var state = Editing();
+
+        Assert.Equal("There is no such track.", state.Selection.ClickTrack(Guid.NewGuid(), RowClick.Plain));
+        Assert.Equal("There is no such playlist entry.", state.Selection.ClickEntry(Guid.NewGuid(), RowClick.Plain));
+    }
+
+    [Fact]
     public void APlainClickOnAnEntryClearsThePoints()
     {
         var state = Editing();
@@ -236,7 +281,11 @@ public class SessionSelectionTests
             "Playlist entries can only be selected while editing.",
             state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle)
         );
+        state.Selection.SelectKey(2);
+        state.Selection.SelectLeg(2);
         Assert.Equal([0], state.Selection.Points);
+        Assert.Equal(0, state.Selection.Key);
+        Assert.Null(state.Selection.Leg);
     }
 
     [Fact]
@@ -471,6 +520,50 @@ public class SessionSelectionTests
         state.Selection.ClickPoint(3, RowClick.Range);
 
         Assert.Equal([2, 3], state.Selection.Points);
+    }
+
+    [Fact]
+    public void ShiftClickingATrackRangesFromTheLastCtrlClickedOne()
+    {
+        var state = Editing();
+        var first = state.EditedTrackId;
+        state.AddTrack();
+        state.SwitchTrack(first);
+        state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle);
+
+        state.Selection.ClickTrack(Track(state, 3), RowClick.Range);
+
+        // The range runs from Track 3, the last clicked, not from the edited Track 1, so Track 2 stays out.
+        Assert.Equal([Track(state, 0), Track(state, 2), Track(state, 3)], state.Selection.Tracks);
+    }
+
+    [Fact]
+    public void ShiftRangesFromTheLastClickedPointAfterAnEditThatKeepsIt()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+
+        Assert.Null(state.AddToEnd(Point(40f)));
+        state.Selection.ClickPoint(3, RowClick.Range);
+
+        Assert.Equal([1, 2, 3], state.Selection.Points);
+    }
+
+    [Fact]
+    public void AnEditThatLeavesTheLastClickedPointPastTheEndForgetsIt()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+        state.Selection.ClickPoint(3, RowClick.Toggle);
+        state.Selection.ClickPoint(3, RowClick.Toggle);
+
+        // Point 1 stays selected and 3 was clicked last; with 3 gone the track has three points, so 3 is past the end
+        // and forgotten, and adding a fourth point doesn't bring it back: Shift-clicking 2 only adds 2.
+        Assert.Null(state.ChangeTrack(t => TrackEditing.Delete(t, 3)));
+        Assert.Null(state.AddToEnd(Point(40f)));
+        state.Selection.ClickPoint(2, RowClick.Range);
+
+        Assert.Equal([1, 2], state.Selection.Points);
     }
 
     [Fact]

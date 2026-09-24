@@ -175,6 +175,21 @@ public class SessionLookAtTests
     }
 
     [Fact]
+    public void TheLookAtPointIsSelectedOnlyWhileEditingOnATrackThatExists()
+    {
+        var state = Looking();
+        Assert.Equal("There is no such track.", state.Selection.SelectLookAt(Guid.NewGuid()));
+
+        state.Release();
+
+        Assert.Equal(
+            "The Look At point can only be selected while editing.",
+            state.Selection.SelectLookAt(state.EditedTrackId)
+        );
+        Assert.Null(state.Selection.Anchor);
+    }
+
+    [Fact]
     public void SelectingAnotherTracksLookAtSwitchesToIt()
     {
         var state = Looking();
