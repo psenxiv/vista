@@ -1,7 +1,7 @@
-.PHONY: help build test format lint verify mutate package bump testing release
+.PHONY: help build test format lint verify mutate regression-scene package bump testing release
 
 help: ## List the targets
-	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-8s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
 
 build: ## Debug build for loading as a dev plugin
 	@scripts/build.sh
@@ -20,6 +20,9 @@ verify: ## Format, lint, test and check coverage: run before every commit
 
 mutate: ## Mutation-test Core with Stryker; SINCE=<commit> for changes since it
 	@scripts/mutate.sh $(SINCE)
+
+regression-scene: ## Rewrite the camera regression scene file from its cases
+	@scripts/regression-scene.sh
 
 package: ## Release build and latest.zip, as CI makes it
 	@scripts/package.sh

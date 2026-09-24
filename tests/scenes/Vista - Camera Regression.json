@@ -1,0 +1,1498 @@
+{
+  "format": 1,
+  "anchor": {
+    "position": {
+      "x": -94.725105,
+      "y": 44.562157,
+      "z": -10.473951
+    },
+    "yaw": 0
+  },
+  "anchorPlaced": true,
+  "playlistLoops": false,
+  "hidden": [],
+  "playlist": [
+    {
+      "id": "00000000-0000-0000-0002-000000000000",
+      "trackId": "00000000-0000-0000-0001-000000000000",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000001",
+      "trackId": "00000000-0000-0000-0001-000000000001",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000002",
+      "trackId": "00000000-0000-0000-0001-000000000002",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000003",
+      "trackId": "00000000-0000-0000-0001-000000000003",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000004",
+      "trackId": "00000000-0000-0000-0001-000000000004",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000005",
+      "trackId": "00000000-0000-0000-0001-000000000005",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000006",
+      "trackId": "00000000-0000-0000-0001-000000000006",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000007",
+      "trackId": "00000000-0000-0000-0001-000000000007",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000008",
+      "trackId": "00000000-0000-0000-0001-000000000008",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000009",
+      "trackId": "00000000-0000-0000-0001-000000000009",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000010",
+      "trackId": "00000000-0000-0000-0001-000000000010",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000011",
+      "trackId": "00000000-0000-0000-0001-000000000011",
+      "loops": null,
+      "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000012",
+      "trackId": "00000000-0000-0000-0001-000000000012",
+      "loops": null,
+      "transition": "Cut"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "00000000-0000-0000-0001-000000000000",
+      "name": "Gentle curve: smooth throughout",
+      "anchor": {
+        "position": {
+          "x": -45,
+          "y": 0,
+          "z": -45
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -10,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 1,
+            "z": -3
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000001",
+      "name": "Hold at a sharp turn, look ahead 0: still through the hold",
+      "anchor": {
+        "position": {
+          "x": -15,
+          "y": 0,
+          "z": -45
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -70
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -50
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -30
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -10
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 10
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0.26,
+            "y": 0,
+            "z": -5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 2,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000002",
+      "name": "Crane shot, look ahead 0: turns smoothly through straight up",
+      "anchor": {
+        "position": {
+          "x": 15,
+          "y": 0,
+          "z": -45
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 10
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000003",
+      "name": "Crane shot, look ahead 0.5: turns smoothly through straight up",
+      "anchor": {
+        "position": {
+          "x": 45,
+          "y": 0,
+          "z": -45
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 10
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000004",
+      "name": "Climb drifting across straight up: no flip",
+      "anchor": {
+        "position": {
+          "x": -45,
+          "y": 0,
+          "z": -15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0.4,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000005",
+      "name": "Sharp turn in a vertical plane: no flip",
+      "anchor": {
+        "position": {
+          "x": -15,
+          "y": 0,
+          "z": -15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 8,
+            "y": 5,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -7,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": -6,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000006",
+      "name": "Hold partway up a climb: yaw holds still",
+      "anchor": {
+        "position": {
+          "x": 15,
+          "y": 0,
+          "z": -15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 10
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": -10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 10,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 2,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000007",
+      "name": "Hairpin: turns smoothly",
+      "anchor": {
+        "position": {
+          "x": 45,
+          "y": 0,
+          "z": -15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": 7,
+            "y": 0,
+            "z": -2.5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 0,
+            "z": 2.5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000008",
+      "name": "Into and out of a hold: smooth",
+      "anchor": {
+        "position": {
+          "x": -45,
+          "y": 0,
+          "z": 15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -10,
+            "y": 0,
+            "z": 5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 0,
+            "z": 5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 2,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000009",
+      "name": "Easing into the last point: settles without a step",
+      "anchor": {
+        "position": {
+          "x": -15,
+          "y": 0,
+          "z": 15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -10,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -4
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 0,
+            "z": -2
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 1.5,
+          "inMode": "Flat",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000010",
+      "name": "Recorded aim with field of view and roll: no pop on arrival",
+      "anchor": {
+        "position": {
+          "x": 15,
+          "y": 0,
+          "z": 15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "AimKeys",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -10,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": -1.2,
+          "pitch": -0.1,
+          "fov": 0.7,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 1,
+            "z": -3
+          },
+          "yaw": -1.9,
+          "pitch": 0.1,
+          "fov": 1.1,
+          "roll": 0.25
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": -1.4,
+          "pitch": 0,
+          "fov": 0.6,
+          "roll": -0.15
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 2,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 1.5,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000011",
+      "name": "Straight doubleback: snaps round once",
+      "anchor": {
+        "position": {
+          "x": 45,
+          "y": 0,
+          "z": 15
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -3,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0.5
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000012",
+      "name": "Reversal, look ahead 0: snaps round once",
+      "anchor": {
+        "position": {
+          "x": -45,
+          "y": 0,
+          "z": 45
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 5,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -3,
+            "y": 0,
+            "z": 0
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 0
+    }
+  ]
+}
