@@ -97,44 +97,44 @@ internal sealed class CameraSession
     public PlaylistEntry? PlayingEntry => state.PlayingEntry;
 
     /// <summary>The scrub bar's length in seconds.</summary>
-    public double ScrubLength => state.ScrubLength;
+    public double ScrubLength => state.Transport.ScrubLength;
 
     /// <summary>A scene track in the world.</summary>
-    public Track WorldOf(Track local) => state.WorldOf(local);
+    public Track WorldOf(Track local) => state.World.WorldOf(local);
 
     /// <summary>A scene track as the editor shows it: a Follow track's point at its character where they stand now.</summary>
-    public Track Shown(Track local) => state.Shown(local);
+    public Track Shown(Track local) => state.World.Shown(local);
 
 
     /// <summary>True when a track in the world watches or follows a named character who isn't found nearby.</summary>
-    public bool TargetLost(Track world) => state.TargetLost(world);
+    public bool TargetLost(Track world) => state.World.TargetLost(world);
 
     /// <summary>The aim point on the character a Watch or Follow track in the world names, or null unless found.</summary>
-    public Vector3? TargetPoint(Track world) => state.TargetPoint(world);
+    public Vector3? TargetPoint(Track world) => state.World.TargetPoint(world);
 
     /// <summary>Where a track in the world points its camera, or null for a recorded or path aim.</summary>
-    public Vector3? AimPoint(Track world) => state.AimPoint(world);
+    public Vector3? AimPoint(Track world) => state.World.AimPoint(world);
 
     /// <summary>The selected anchor, or null.</summary>
-    public AnchorKind? SelectedAnchor => state.SelectedAnchor;
+    public AnchorKind? SelectedAnchor => state.Selection.Anchor;
 
     /// <summary>The selected anchor in the world, or null.</summary>
-    public Anchor? SelectedAnchorInWorld => state.SelectedAnchorInWorld;
+    public Anchor? SelectedAnchorInWorld => state.Selection.AnchorInWorld;
 
     /// <summary>Selects the scene anchor. Returns why it was refused, or null.</summary>
-    public string? SelectSceneAnchor() => state.SelectSceneAnchor();
+    public string? SelectSceneAnchor() => state.Selection.SelectSceneAnchor();
 
     /// <summary>Edits a track and selects its anchor, leaving the camera where it is. Returns why it was refused, or null.</summary>
-    public string? SelectTrackAnchor(Guid id) => state.SelectTrackAnchor(id);
+    public string? SelectTrackAnchor(Guid id) => state.Selection.SelectTrackAnchor(id);
 
     /// <summary>During a live edit, moves the selected anchor. Returns why it was refused, or null.</summary>
     public string? PreviewAnchor(Anchor world, bool carry) => state.PreviewAnchor(world, carry);
 
     /// <summary>Edits a track and selects its Look At point. Returns why it was refused, or null.</summary>
-    public string? SelectLookAt(Guid id) => state.SelectLookAt(id);
+    public string? SelectLookAt(Guid id) => state.Selection.SelectLookAt(id);
 
     /// <summary>The selected Look At point in the world, or null.</summary>
-    public Vector3? SelectedLookAtInWorld => state.SelectedLookAtInWorld;
+    public Vector3? SelectedLookAtInWorld => state.Selection.LookAtInWorld;
 
     /// <summary>During a live edit, moves the selected Look At point. Returns why it was refused, or null.</summary>
     public string? PreviewLookAt(Vector3 world) => state.PreviewLookAt(world);
@@ -151,12 +151,7 @@ internal sealed class CameraSession
     }
 
     /// <summary>Edits a track and selects one of its points, leaving the camera where it is. Returns why it was refused, or null.</summary>
-    public string? SelectPoint(Guid track, int index)
-    {
-        var refusal = state.SwitchTrack(track);
-        if (refusal is null) state.Select(index);
-        return refusal;
-    }
+    public string? SelectPoint(Guid track, int index) => state.SelectPoint(track, index);
 
     /// <summary>Read-only view of playback state. Check IsLive before IsPaused or IsFinished.</summary>
     public Director Director => state.Director;
@@ -168,7 +163,7 @@ internal sealed class CameraSession
     public void RefreshCharacters() => characters.Update(CharacterTable.Read());
 
     /// <summary>True while an Edit preview is playing.</summary>
-    public bool Previewing => state.Previewing;
+    public bool Previewing => state.Transport.Previewing;
 
     /// <summary>True while the plugin writes the camera.</summary>
     public bool OwnsCamera => owned;
@@ -268,7 +263,7 @@ internal sealed class CameraSession
     }
 
     /// <summary>Stops an Edit preview; the free-cam takes over from the frame shown on the next frame.</summary>
-    public void StopPreview() => state.StopPreview();
+    public void StopPreview() => state.Transport.StopPreview();
 
     /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back.</summary>
     public void Release(string reason, CameraMode to = CameraMode.Off)
@@ -297,43 +292,43 @@ internal sealed class CameraSession
     public string? ChangeTrack(Func<Track, Track> change) => state.ChangeTrack(change);
 
     /// <summary>The selected point's index when exactly one is selected, or null.</summary>
-    public int? Selected => state.Selected;
+    public int? Selected => state.Selection.Point;
 
     /// <summary>Selects only a point while editing; null or out of range clears every selection.</summary>
-    public void Select(int? index) => state.Select(index);
+    public void Select(int? index) => state.Selection.Select(index);
 
     /// <summary>The edited track's selected points, in order.</summary>
-    public IReadOnlyList<int> SelectedPoints => state.SelectedPoints;
+    public IReadOnlyList<int> SelectedPoints => state.Selection.Points;
 
     /// <summary>The edited track and any other selected tracks, in Hierarchy order.</summary>
-    public IReadOnlyList<Guid> SelectedTracks => state.SelectedTracks;
+    public IReadOnlyList<Guid> SelectedTracks => state.Selection.Tracks;
 
     /// <summary>The selected playlist entries, in playlist order.</summary>
-    public IReadOnlyList<Guid> SelectedEntries => state.SelectedEntries;
+    public IReadOnlyList<Guid> SelectedEntries => state.Selection.Entries;
 
     /// <summary>Applies a plain, Ctrl or Shift click to a point.</summary>
-    public void ClickPoint(int index, RowClick click) => state.ClickPoint(index, click);
+    public void ClickPoint(int index, RowClick click) => state.Selection.ClickPoint(index, click);
 
     /// <summary>Applies a plain, Ctrl or Shift click to a track. Returns why it was refused, or null.</summary>
-    public string? ClickTrack(Guid id, RowClick click) => state.ClickTrack(id, click);
+    public string? ClickTrack(Guid id, RowClick click) => state.Selection.ClickTrack(id, click);
 
     /// <summary>Applies a plain, Ctrl or Shift click to a playlist entry. Returns why it was refused, or null.</summary>
-    public string? ClickEntry(Guid id, RowClick click) => state.ClickEntry(id, click);
+    public string? ClickEntry(Guid id, RowClick click) => state.Selection.ClickEntry(id, click);
 
     /// <summary>The selected timing key's index, or null.</summary>
-    public int? SelectedKey => state.SelectedKey;
+    public int? SelectedKey => state.Selection.Key;
 
     /// <summary>The selected leg, or null.</summary>
-    public int? SelectedLeg => state.SelectedLeg;
+    public int? SelectedLeg => state.Selection.Leg;
 
     /// <summary>Selects a timing key while editing; a point's key also selects its point.</summary>
-    public void SelectKey(int? key) => state.SelectKey(key);
+    public void SelectKey(int? key) => state.Selection.SelectKey(key);
 
     /// <summary>Selects a leg while editing, leaving the point selection alone.</summary>
-    public void SelectLeg(int? leg) => state.SelectLeg(leg);
+    public void SelectLeg(int? leg) => state.Selection.SelectLeg(leg);
 
     /// <summary>The evaluator for the edited track.</summary>
-    public TrackEvaluator Evaluator => state.Evaluator;
+    public TrackEvaluator Evaluator => state.World.Evaluator;
 
     /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>
     public string? SetTrackSpeed(float speed) => state.SetTrackSpeed(speed);
@@ -398,31 +393,31 @@ internal sealed class CameraSession
     public double Duration => state.Duration;
 
     /// <summary>True while the scrub head is being dragged.</summary>
-    public bool Scrubbing => state.Scrubbing;
+    public bool Scrubbing => state.Transport.Scrubbing;
 
     /// <summary>Seconds under the scrub head.</summary>
-    public double ScrubHead => state.ScrubHead;
+    public double ScrubHead => state.Transport.ScrubHead;
 
     /// <summary>Starts dragging the scrub head; while editing the camera shows the scrubbed frame.</summary>
-    public void BeginScrub() => state.BeginScrub();
+    public void BeginScrub() => state.Transport.BeginScrub();
 
     /// <summary>Moves the scrub head; live, playback seeks there.</summary>
-    public void ScrubTo(double time) => state.ScrubTo(time);
+    public void ScrubTo(double time) => state.Transport.ScrubTo(time);
 
     /// <summary>Stops dragging the scrub head; while editing the free-cam flies on from the frame shown.</summary>
     public void FinishScrub()
     {
-        var fromEditing = state.Mode == CameraMode.Editing && state.Scrubbing;
-        state.EndScrub();
-        if (fromEditing && state.FrameAt(state.ScrubHead) is { } frame) FlyFrom(frame);
+        var fromEditing = state.Mode == CameraMode.Editing && state.Transport.Scrubbing;
+        state.Transport.EndScrub();
+        if (fromEditing && state.World.FrameAt(state.Transport.ScrubHead) is { } frame) FlyFrom(frame);
     }
 
     /// <summary>Puts the free-cam at point <paramref name="index"/> while editing, as a scrub release would.</summary>
     public void JumpToPoint(int index)
     {
         if (state.Mode != CameraMode.Editing || index < 0 || index >= state.Track.Points.Count) return;
-        state.ScrubTo(state.Evaluator.PointSeconds(index));
-        if (state.FrameAt(state.ScrubHead) is { } frame) FlyFrom(frame);
+        state.Transport.ScrubTo(state.World.Evaluator.PointSeconds(index));
+        if (state.World.FrameAt(state.Transport.ScrubHead) is { } frame) FlyFrom(frame);
     }
 
     /// <summary>True while editing with a step to undo.</summary>
@@ -483,14 +478,14 @@ internal sealed class CameraSession
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
         if (state.Mode != CameraMode.Editing) return "Points can only be added while editing.";
-        if (state.Scrubbing) return "Points cannot be added while scrubbing.";
+        if (state.Transport.Scrubbing) return "Points cannot be added while scrubbing.";
         return CameraPoint() is { } point ? edit(point) : "Cannot read the camera.";
     }
 
     /// <summary>The current camera as a control point, or the previewed frame while previewing; null when the camera can't be read.</summary>
     private ControlPoint? CameraPoint()
     {
-        if (state.Previewing && lastFrame is { } previewed)
+        if (state.Transport.Previewing && lastFrame is { } previewed)
         {
             var (previewYaw, previewPitch) = TrackAim.FromDirection(previewed.LookAt - previewed.Position);
             return new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewed.Roll);
@@ -523,19 +518,19 @@ internal sealed class CameraSession
     /// <summary>While editing: the preview's frame, the scrubbed frame, or the free-cam, handing the free-cam the last frame when a preview stops.</summary>
     private CameraState? EditingFrame(float dt)
     {
-        if (state.Previewing && FreeCam.HasFlightInput()) state.StopPreview();
-        var frame = state.AdvancePreview(dt);
+        if (state.Transport.Previewing && FreeCam.HasFlightInput()) state.Transport.StopPreview();
+        var frame = state.Transport.AdvancePreview(dt);
 
-        if (previewedLastFrame && !state.Previewing)
+        if (previewedLastFrame && !state.Transport.Previewing)
         {
             previewedLastFrame = false;
-            if ((frame ?? lastFrame ?? state.FrameAt(state.ScrubHead)) is { } last) FlyFrom(last);
+            if ((frame ?? lastFrame ?? state.World.FrameAt(state.Transport.ScrubHead)) is { } last) FlyFrom(last);
             return freeCam.Tick(dt);
         }
 
-        previewedLastFrame = state.Previewing;
+        previewedLastFrame = state.Transport.Previewing;
         if (frame is { } previewing) return previewing;
-        return state.Scrubbing && state.FrameAt(state.ScrubHead) is { } scrubbed ? scrubbed : freeCam.Tick(dt);
+        return state.Transport.Scrubbing && state.World.FrameAt(state.Transport.ScrubHead) is { } scrubbed ? scrubbed : freeCam.Tick(dt);
     }
 
     /// <summary>Carries out a play or restart outcome in game. <paramref name="previewRefusal"/> says a refusal is the edited track's, not the playlist's.</summary>
