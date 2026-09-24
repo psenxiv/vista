@@ -138,6 +138,71 @@ internal static class Fixtures
         Assert.Equal(want.Z, got.Z, precision);
     }
 
+    /// <summary>Seconds a channel's change is first measured over when looking for steps.</summary>
+    private const double StepWindow = 0.01;
+
+    /// <summary>Halvings of a window that changes more than its floor, each keeping the half that changes more.</summary>
+    private const int StepHalvings = 8;
+
+    /// <summary>The facing's step floor, 0.3°, as the distance between unit directions, 2·sin(θ/2), which is θ to within 1e-7 here.</summary>
+    internal const float FacingStepFloor = 0.3f * MathF.PI / 180f;
+
+    /// <summary>The position's step floor, in yalms.</summary>
+    internal const float PositionStepFloor = 0.05f;
+
+    /// <summary>The field of view's step floor, 0.1° in radians.</summary>
+    internal const float FovStepFloor = 0.1f * MathF.PI / 180f;
+
+    /// <summary>The roll's step floor, 0.1° in radians.</summary>
+    internal const float RollStepFloor = 0.1f * MathF.PI / 180f;
+
+    /// <summary>A sudden change in a channel: when it happens and how far it jumps.</summary>
+    internal readonly record struct Step(double Time, float Size);
+
+    /// <summary>Every step in <paramref name="sample"/> over its first <paramref name="duration"/> seconds, steps within 10 ms of each other counting once at the larger size.</summary>
+    internal static List<Step> Steps<T>(
+        Func<double, T> sample,
+        Func<T, T, float> distance,
+        float floor,
+        double duration
+    )
+    {
+        // A smooth change shrinks with the interval it's measured over; a step doesn't. Wherever the channel changes more
+        // than its floor in 10 ms, halve the interval 8 times, keeping the half that changes more: a smooth change falls to
+        // about 1/256 of what it was, a step stays whole. Anything above a quarter is a step.
+        var steps = new List<Step>();
+        var from = sample(0.0);
+        for (var i = 0; i * StepWindow < duration; i++)
+        {
+            var (a, b) = (i * StepWindow, Math.Min((i + 1) * StepWindow, duration));
+            var to = sample(b);
+            var change = distance(from, to);
+            if (change >= floor)
+            {
+                var (sa, sb) = (from, to);
+                for (var h = 0; h < StepHalvings; h++)
+                {
+                    var m = (a + b) / 2;
+                    var sm = sample(m);
+                    (a, b, sa, sb) = distance(sa, sm) >= distance(sm, sb) ? (a, m, sa, sm) : (m, b, sm, sb);
+                }
+
+                var left = distance(sa, sb);
+                if (left > change / 4)
+                {
+                    if (steps.Count > 0 && a - steps[^1].Time <= StepWindow)
+                        steps[^1] = steps[^1] with { Size = MathF.Max(steps[^1].Size, left) };
+                    else
+                        steps.Add(new Step(a, left));
+                }
+            }
+
+            from = to;
+        }
+
+        return steps;
+    }
+
     /// <summary>Asserts two vectors agree on every component within the given tolerance.</summary>
     internal static void Near(Vector3 expected, Vector3 actual, float tolerance)
     {

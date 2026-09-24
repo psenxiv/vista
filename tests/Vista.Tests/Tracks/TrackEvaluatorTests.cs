@@ -797,37 +797,21 @@ public class TrackEvaluatorTests
     [Trait("Category", "Property")]
     public void TheAimNeverSteps()
     {
-        // A smooth turn shrinks with the interval it's measured over; a step doesn't. Wherever the facing turns more
-        // than 0.3° in 10 ms, halve the interval 8 times, keeping the half that turns more: a smooth turn falls to
-        // about 1/256 of what it was, a step stays whole. Anything above a quarter is a step. The distance between
-        // unit directions is 2·sin(θ/2), close enough to θ at these angles.
         AnyPathTrack.Sample(
             track =>
             {
                 var evaluator = new TrackEvaluator(track);
                 var target = AimTracker.AimPoint(track, null);
-                float Turn(double a, double b) =>
-                    Vector3.Distance(Facing(evaluator, a, target), Facing(evaluator, b, target));
-
-                const double step = 0.01;
-                for (var t = 0.0; t + step <= evaluator.Duration; t += step)
-                {
-                    var turn = Turn(t, t + step);
-                    if (turn < 0.3f * Deg)
-                        continue;
-                    var (a, b) = (t, t + step);
-                    for (var i = 0; i < 8; i++)
-                    {
-                        var m = (a + b) / 2;
-                        (a, b) = Turn(a, m) >= Turn(m, b) ? (a, m) : (m, b);
-                    }
-
-                    var left = Turn(a, b);
-                    if (left > turn / 4)
-                        Assert.Fail(
-                            $"The aim steps {left / Deg:0.###}° in {(b - a) * 1000:0.###} ms at {a:0.######} s of {evaluator.Duration:0.###} s"
-                        );
-                }
+                var steps = Steps(
+                    t => Facing(evaluator, t, target),
+                    Vector3.Distance,
+                    FacingStepFloor,
+                    evaluator.Duration
+                );
+                if (steps.Count > 0)
+                    Assert.Fail(
+                        $"The aim steps {steps[0].Size / Deg:0.###}° at {steps[0].Time:0.######} s of {evaluator.Duration:0.###} s"
+                    );
             },
             iter: 3000,
             print: Print
