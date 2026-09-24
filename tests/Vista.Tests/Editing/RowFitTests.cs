@@ -5,7 +5,7 @@ namespace Vista.Tests.Editing;
 
 public class RowFitTests
 {
-    // Every character, the ellipsis included, measures 10 px.
+    // Every character measures 10 px, so the ellipsis, three full stops, measures 30.
     private static float Measure(string text) => text.Length * 10f;
 
     [Fact]
@@ -17,27 +17,27 @@ public class RowFitTests
     [Fact]
     public void ALongNameIsCutToTheLongestStartThatFitsWithTheEllipsis()
     {
-        // 100 px holds ten characters: nine of the name and the ellipsis.
-        Assert.Equal("Establish…", RowFit.Ellipsis("Establishing shot", 100f, Measure));
+        // 100 px holds ten characters: seven of the name and the ellipsis.
+        Assert.Equal("Establi...", RowFit.Ellipsis("Establishing shot", 100f, Measure));
     }
 
     [Fact]
     public void ACutDropsTheSpacesBeforeTheEllipsis()
     {
-        // 40 px holds "Ab c…" less one character, so the cut falls after "Ab ", whose space goes.
-        Assert.Equal("Ab…", RowFit.Ellipsis("Ab cdefgh", 40f, Measure));
+        // 60 px holds "Ab c..." less one character, so the cut falls after "Ab ", whose space goes.
+        Assert.Equal("Ab...", RowFit.Ellipsis("Ab cdefgh", 60f, Measure));
     }
 
     [Fact]
     public void ACutNeverSplitsASurrogatePair()
     {
-        // The emoji is two UTF-16 characters; 40 px would take "ab", its first half and the ellipsis.
-        Assert.Equal("ab…", RowFit.Ellipsis("ab😀cd", 40f, Measure));
+        // The emoji is two UTF-16 characters; 60 px would take "ab", its first half and the ellipsis.
+        Assert.Equal("ab...", RowFit.Ellipsis("ab😀cdef", 60f, Measure));
     }
 
     [Theory]
-    [InlineData(15f, "…")]
-    [InlineData(5f, "")]
+    [InlineData(35f, "...")]
+    [InlineData(25f, "")]
     public void TooNarrowForAnyOfTheNameLeavesTheEllipsisOrNothing(float width, string expected)
     {
         Assert.Equal(expected, RowFit.Ellipsis("Hello", width, Measure));
