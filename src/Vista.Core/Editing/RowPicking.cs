@@ -1,13 +1,5 @@
 namespace Vista.Core.Editing;
 
-/// <summary>How a list row was clicked: plain, with Ctrl, or with Shift.</summary>
-public enum RowClick
-{
-    Plain,
-    Toggle,
-    Range,
-}
-
 /// <summary>What a click on a list row does to the rows selected in that list.</summary>
 public static class RowPicking
 {

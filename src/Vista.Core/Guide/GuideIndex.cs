@@ -2,9 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace Vista.Core.Guide;
 
-/// <summary>A topic in the User Guide's tree: its title, its page's file, and its sub-topics.</summary>
-public sealed record GuideTopic(string Title, string File, IReadOnlyList<GuideTopic> Children);
-
 /// <summary>Reads the guide's index, a nested bullet list of links, into its topic tree.</summary>
 public static partial class GuideIndex
 {

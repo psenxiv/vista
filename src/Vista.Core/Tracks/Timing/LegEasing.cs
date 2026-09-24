@@ -1,16 +1,5 @@
 namespace Vista.Core.Tracks.Timing;
 
-/// <summary>A leg's easing preset, or Custom when its sides match none.</summary>
-public enum Easing
-{
-    Smooth,
-    Linear,
-    EaseIn,
-    EaseOut,
-    EaseInOut,
-    Custom,
-}
-
 /// <summary>Maps easing presets onto the two sides that bound a leg.</summary>
 public static class LegEasing
 {

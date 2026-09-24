@@ -2,18 +2,6 @@ using System.Numerics;
 
 namespace Vista.Core.Display;
 
-/// <summary>What a marker on screen stands for.</summary>
-public enum MarkerKind
-{
-    Point,
-    TrackAnchor,
-    SceneAnchor,
-    LookAt,
-}
-
-/// <summary>One marker on screen; <see cref="Screen"/> is null when off screen, and anchors and Look At points use point −1.</summary>
-public readonly record struct TrackMarker(Guid Track, int Point, Vector2? Screen, MarkerKind Kind = MarkerKind.Point);
-
 /// <summary>Finds which marker a click landed on when several tracks and their anchors are drawn.</summary>
 public static class TrackMarkerHitTest
 {

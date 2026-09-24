@@ -3,9 +3,6 @@ using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Core.Tracks.Playback;
 
-/// <summary>One playlist entry ready to play: its entry, its track in the world, and how many times (null follows the track).</summary>
-public sealed record PlaylistItem(Guid EntryId, Track Track, int? Loops);
-
 /// <summary>Plays playlist entries in turn with a cut between them, carrying time over; at the end holds the last frame, or wraps to the first entry when looping.</summary>
 public sealed class PlaylistPlayback : IPlayback
 {

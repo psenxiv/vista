@@ -3,17 +3,6 @@ using Vista.Core.Camera;
 
 namespace Vista.Core.Editing;
 
-/// <summary>What a finished click does to the selection.</summary>
-public enum ClickKind
-{
-    None,
-    Select,
-    Deselect,
-}
-
-/// <summary>A click's effect; <see cref="Index"/> is the marker for <see cref="ClickKind.Select"/>.</summary>
-public readonly record struct ClickOutcome(ClickKind Kind, int Index = -1);
-
 /// <summary>Tells a click from a drag and turns clicks on markers or empty space into selection changes.</summary>
 public sealed class ClickSelection
 {

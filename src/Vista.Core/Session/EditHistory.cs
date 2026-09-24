@@ -2,9 +2,6 @@ using Vista.Core.Scenes;
 
 namespace Vista.Core.Session;
 
-/// <summary>The scene, the edited track and the selection, as one undo step restores them.</summary>
-public readonly record struct EditSnapshot(Scene Scene, Guid Edited, SelectedItems Selection);
-
 /// <summary>Undo and redo stacks of edit snapshots, keeping the most recent <see cref="Capacity"/> undo steps.</summary>
 public sealed class EditHistory
 {

@@ -3,38 +3,6 @@ using System.Text.RegularExpressions;
 
 namespace Vista.Core.Guide;
 
-/// <summary>How a run of text is shown.</summary>
-public enum RunStyle
-{
-    Plain,
-    Bold,
-    Command,
-    Key,
-    Icon,
-    Link,
-}
-
-/// <summary>A stretch of text in one style: an icon's name for Icon, and a page file in <paramref name="Target"/> for Link.</summary>
-public readonly record struct Run(string Text, RunStyle Style, string? Target = null);
-
-/// <summary>One block of a guide page.</summary>
-public abstract record Block;
-
-public sealed record Heading(int Level, IReadOnlyList<Run> Runs) : Block;
-
-public sealed record Paragraph(IReadOnlyList<Run> Runs) : Block;
-
-public sealed record BulletList(IReadOnlyList<IReadOnlyList<Run>> Items) : Block;
-
-public sealed record NumberedList(IReadOnlyList<IReadOnlyList<Run>> Items) : Block;
-
-public sealed record Table(
-    IReadOnlyList<IReadOnlyList<Run>> Header,
-    IReadOnlyList<IReadOnlyList<IReadOnlyList<Run>>> Rows
-) : Block;
-
-public sealed record Divider : Block;
-
 /// <summary>Reads a guide page's Markdown into blocks, for the subset the User Guide draws; anything else is plain text.</summary>
 public static partial class GuideMarkdown
 {

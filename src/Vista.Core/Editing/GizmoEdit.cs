@@ -5,14 +5,6 @@ using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Core.Editing;
 
-/// <summary>One gimbal rotate ring; each changes one angle of a point.</summary>
-public enum GimbalRing
-{
-    Yaw,
-    Pitch,
-    Roll,
-}
-
 /// <summary>Turns a dragged gizmo matrix into the control point it describes.</summary>
 public static class GizmoEdit
 {

@@ -8,27 +8,6 @@ using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Session;
 
-/// <summary>How <see cref="SessionState.Edit"/> changed the mode.</summary>
-public enum EditOutcome
-{
-    Unchanged,
-    FromGame,
-    FromLive,
-}
-
-/// <summary>What <see cref="SessionState.Play"/>, <see cref="SessionState.Restart"/> or <see cref="SessionState.Cue"/> did.</summary>
-public enum PlayOutcome
-{
-    Refused,
-    ReHid,
-    Resumed,
-    Started,
-    StartedFromGame,
-    Cued,
-    CuedFromGame,
-    Previewed,
-}
-
 /// <summary>The mode, the Director, the scene and the edited track: the rules for moving between modes, and every edit as one undo step.</summary>
 public sealed class SessionState
 {
