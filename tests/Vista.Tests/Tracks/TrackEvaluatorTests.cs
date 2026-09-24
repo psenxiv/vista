@@ -712,6 +712,48 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void LookAtPassesStraightUnderItsPointWithoutFlipping()
+    {
+        // The camera runs along x from -10 to 30 under a Look At point at (0, 10, 0), reaching x = 0 at 5 s (10 yalms at 2
+        // a second). Looking up-and-ahead, the picture's top leans back along -x; carried through straight up it's exactly
+        // (-1, 0, 0) there. Past it, carried on it would be inverted, so it turns back upright at the capped rate.
+        var track = TrackEditing.SetLookAt(
+            Build([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt),
+            new Vector3(0f, 10f, 0f)
+        );
+        var evaluator = new TrackEvaluator(track);
+        CameraState FrameAt(double t) => evaluator.Evaluate(t, track.LookAt)!.Value;
+        var under = FrameAt(evaluator.PointSeconds(1));
+
+        Near(Vector3.UnitY, Vector3.Normalize(under.LookAt - under.Position), 1e-4f);
+        Near(-Vector3.UnitX, under.Up, 1e-3f);
+        Assert.InRange(Fixtures.LargestTwist(FrameAt, evaluator.Duration), 0f, PictureSpinLimit);
+        var end = FrameAt(evaluator.Duration);
+        Near(CameraRotation.Upright(end.LookAt - end.Position), end.Up, 1e-3f);
+    }
+
+    [Fact]
+    public void LookAtOrbitingItsPointStaysUpright()
+    {
+        // Circling 10 yalms out at 30° below a Look At point: carrying alone would tilt the picture on this cone, but
+        // settling keeps it exactly upright, as watching always looked.
+        var ring = Enumerable
+            .Range(0, 8)
+            .Select(i => Point(10f * MathF.Cos(i * MathF.PI / 4f), 0f, 10f * MathF.Sin(i * MathF.PI / 4f)));
+        var track = TrackEditing.SetLookAt(
+            Build(ring, AimMode.LookAt),
+            new Vector3(0f, 10f * MathF.Tan(30f * Deg), 0f)
+        );
+        var evaluator = new TrackEvaluator(track);
+
+        for (var t = evaluator.PointSeconds(1); t <= evaluator.PointSeconds(6); t += 0.25f)
+        {
+            var frame = evaluator.Evaluate(t, track.LookAt)!.Value;
+            Near(CameraRotation.Upright(frame.LookAt - frame.Position), frame.Up, 1e-3f);
+        }
+    }
+
+    [Fact]
     public void DirectionOfTravelWithNoDirectionKeepsTheFirstPointsAim()
     {
         // Every point coincides, so the path has no direction: (-sin 1.1 cos 0.2, sin -0.2, -cos 1.1 cos 0.2).

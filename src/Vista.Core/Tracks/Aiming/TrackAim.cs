@@ -7,9 +7,6 @@ namespace Vista.Core.Tracks.Aiming;
 /// <summary>Where a playing camera looks: the recorded aim at each point, or the direction of travel.</summary>
 public static class TrackAim
 {
-    /// <summary>Steepest pitch a path-tangent or aim-key look can reach, so it never gimbals straight up or down.</summary>
-    public const float PitchLimit = 89f * MathF.PI / 180f;
-
     /// <summary>Closer than this, in yalms, a target gives no aim.</summary>
     public const float MinTargetDistance = 0.1f;
 
@@ -36,7 +33,7 @@ public static class TrackAim
     }
 
     /// <summary>The pitch-clamped aim along <paramref name="direction"/>.</summary>
-    public static (float Yaw, float Pitch) Along(Vector3 direction) => ClampPitch(FromDirection(direction));
+    public static (float Yaw, float Pitch) Along(Vector3 direction) => FromDirection(direction);
 
     /// <summary><paramref name="direction"/>, or null when it's too short to give an aim.</summary>
     public static Vector3? Usable(Vector3 direction) =>
@@ -151,7 +148,4 @@ public static class TrackAim
 
         return best;
     }
-
-    private static (float Yaw, float Pitch) ClampPitch((float Yaw, float Pitch) aim) =>
-        (aim.Yaw, Math.Clamp(aim.Pitch, -PitchLimit, PitchLimit));
 }

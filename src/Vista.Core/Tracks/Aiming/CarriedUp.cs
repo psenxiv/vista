@@ -120,21 +120,21 @@ public sealed class CarriedUp
         );
     }
 
-    /// <summary>The up turned about unit <paramref name="forward"/> toward upright, or inverted when <paramref name="upsideDown"/>, for <paramref name="seconds"/>, fading within <see cref="PoleFade"/> of straight up or down.</summary>
+    /// <summary>The up turned about unit <paramref name="forward"/> toward upright, or inverted when <paramref name="upsideDown"/>, for <paramref name="seconds"/>.</summary>
     private static Vector3 SettleLevel(Vector3 up, Vector3 forward, float seconds, bool upsideDown)
+    {
+        var target = CameraRotation.Upright(forward);
+        return SettleToward(up, forward, upsideDown ? -target : target, seconds);
+    }
+
+    /// <summary>The up turned about unit <paramref name="forward"/> toward <paramref name="target"/> for <paramref name="seconds"/>, no faster than <see cref="SettleRate"/> and fading within <see cref="PoleFade"/> of straight up or down; a half turn goes the positive way.</summary>
+    public static Vector3 SettleToward(Vector3 up, Vector3 forward, Vector3 target, float seconds)
     {
         var fade = MathF.Min(MathF.Sqrt((forward.X * forward.X) + (forward.Z * forward.Z)) / PoleFade, 1f);
         if (fade <= 0f)
             return up;
-        var target = CameraRotation.Upright(forward);
-        return SettleToward(up, forward, upsideDown ? -target : target, seconds * fade);
-    }
-
-    /// <summary>The up turned about unit <paramref name="forward"/> toward <paramref name="target"/> for <paramref name="seconds"/>, no faster than <see cref="SettleRate"/>; a half turn goes the positive way.</summary>
-    public static Vector3 SettleToward(Vector3 up, Vector3 forward, Vector3 target, float seconds)
-    {
         var angle = MathF.Atan2(Vector3.Dot(Vector3.Cross(up, target), forward), Vector3.Dot(up, target));
-        var most = SettleRate * seconds;
+        var most = SettleRate * seconds * fade;
         var turn = Math.Clamp(angle, -most, most);
         return Square(Vector3.Transform(up, Quaternion.CreateFromAxisAngle(forward, turn)), forward);
     }

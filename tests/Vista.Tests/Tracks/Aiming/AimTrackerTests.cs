@@ -131,6 +131,38 @@ public class AimTrackerTests
     }
 
     [Fact]
+    public void WatchingACharacterPassingOverheadTurnsThePictureRoundWithoutFlipping()
+    {
+        // The guard crosses from x = -20 to 20 at 10 a second, their aim point 10 yalms up, straight over the camera at
+        // 2 s. The picture never turns more than the spin limit in a frame, and 2 s after the pass it's upright again.
+        var characters = new NearbyCharacters();
+        var tracker = new AimTracker(characters);
+        var track = Watching();
+        var evaluator = new TrackEvaluator(track);
+        CameraState? last = null;
+        CameraState frame = default;
+        for (var i = 0; i <= 240; i++)
+        {
+            characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f + (i / 6f), 10f - 1.3f, 0f))]);
+            frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
+            if (last is { } previous)
+                Assert.InRange(
+                    CameraRotation.Twist(
+                        previous.LookAt - previous.Position,
+                        previous.Up,
+                        frame.LookAt - frame.Position,
+                        frame.Up
+                    ),
+                    0f,
+                    PictureSpinLimit
+                );
+            last = frame;
+        }
+
+        Near(CameraRotation.Upright(frame.LookAt - frame.Position), frame.Up, 1e-3f);
+    }
+
+    [Fact]
     public void ATargetOnTheCameraKeepsTheLastGoodAim()
     {
         var tracker = new AimTracker(null);

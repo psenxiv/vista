@@ -49,15 +49,15 @@ public class TrackAimTests
     public void UnwrapAnglesOfEmptySequenceIsEmpty() => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
 
     [Fact]
-    public void AimAlongANearVerticalPathDirectionIsPitchClamped()
+    public void AimAlongAVerticalPathDirectionLooksStraightUp()
     {
         var points = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 2, 0), new Vector3(0, 3, 0) };
         var table = new ArcLengthTable(points);
 
         var (_, pitch) = TrackAim.Along(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
-        // Every point has x = z = 0, so the direction is exactly +y, pitch π/2 before the clamp takes it to the limit.
-        Assert.Equal(TrackAim.PitchLimit, pitch, 1e-6f);
+        // Every point has x = z = 0, so the direction is exactly +y: pitch π/2, with no cap.
+        Assert.Equal(MathF.PI / 2f, pitch, 1e-6f);
     }
 
     [Fact]
@@ -125,9 +125,10 @@ public class TrackAimTests
     }
 
     [Fact]
-    public void TowardClampsPitchAndGivesNoAimForATargetOnTheCamera()
+    public void TowardLooksStraightUpAtATargetOverheadAndGivesNoAimForOneOnTheCamera()
     {
-        Assert.Equal(TrackAim.PitchLimit, TrackAim.Toward(Vector3.Zero, new Vector3(0f, 10f, 0f))!.Value.Pitch, 5);
+        // The target is straight above, so the pitch is π/2, with no cap.
+        Assert.Equal(MathF.PI / 2f, TrackAim.Toward(Vector3.Zero, new Vector3(0f, 10f, 0f))!.Value.Pitch, 5);
         Assert.Null(TrackAim.Toward(Vector3.Zero, new Vector3(0.05f, 0f, 0f)));
     }
 

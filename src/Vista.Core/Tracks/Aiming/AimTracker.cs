@@ -13,6 +13,7 @@ public sealed class AimTracker
     private float? heldFacing;
     private float? easedYaw;
     private CameraState? lastFollow;
+    private (Vector3 Facing, Vector3 Up)? carried;
 
     /// <summary>A tracker finding watched or followed characters with <paramref name="targets"/>; with none, no character is ever found.</summary>
     public AimTracker(NearbyCharacters? targets) => this.targets = targets;
@@ -61,17 +62,23 @@ public sealed class AimTracker
         if (world.Aim == AimMode.WatchTarget && target is null)
             smoother.Seed(frame.LookAt);
         if (target is not { } at)
-            return frame;
+            return Carry(frame, dt, settle: false);
 
+        // A Look At track's up comes carried from the evaluator; a watched character moves live, so it's carried here.
+        var watching = world.Aim == AimMode.WatchTarget;
         if (TrackAim.Toward(frame.Position, at) is not null)
         {
             lastAim = TrackAim.FromDirection(frame.LookAt - frame.Position);
-            return frame;
+            return Carry(frame, dt, watching);
         }
 
-        return lastAim is { } aim
-            ? CameraState.FromAngles(frame.Position, aim.Yaw, aim.Pitch, frame.Roll, frame.Fov)
-            : frame;
+        return Carry(
+            lastAim is { } aim
+                ? CameraState.FromAngles(frame.Position, aim.Yaw, aim.Pitch, frame.Roll, frame.Fov)
+                : frame,
+            dt,
+            watching
+        );
     }
 
     /// <summary>Starts the smoothing afresh and forgets the last good aim, so the next frame lands on the character.</summary>
@@ -79,6 +86,7 @@ public sealed class AimTracker
     {
         smoother.Reset();
         lastAim = null;
+        carried = null;
         positionSmoother.Reset();
         heldFacing = null;
         easedYaw = null;
@@ -110,8 +118,25 @@ public sealed class AimTracker
         )
             (yaw, pitch) = aim;
 
-        lastFollow = CameraState.FromAngles(position, yaw, pitch, offset.Roll, offset.Fov);
+        lastFollow = Carry(
+            CameraState.FromAngles(position, yaw, pitch, offset.Roll, offset.Fov),
+            dt,
+            world.FollowLooks
+        );
         return lastFollow.Value;
+    }
+
+    /// <summary>A watching frame's up carried on from the last frame and settled toward its own upright up, so passing under or over the character turns the picture round rather than flipping it; other frames pass through and are remembered.</summary>
+    private CameraState Carry(CameraState frame, float dt, bool settle)
+    {
+        var facing = Vector3.Normalize(frame.LookAt - frame.Position);
+        if (settle && carried is { } last)
+            frame = frame with
+            {
+                Up = CarriedUp.SettleToward(CarriedUp.Carry(last.Facing, facing, last.Up), facing, frame.Up, dt),
+            };
+        carried = (facing, frame.Up);
+        return frame;
     }
 
     /// <summary>Eases the Follow yaw the short way round towards <paramref name="target"/>, with the smoother's time constant.</summary>
