@@ -593,6 +593,46 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelTurnsSmoothlyThroughAStretchShorterThanTheScanStep()
+    {
+        // A sharp turn in the plane z = 0: looking ahead, the aim sweeps down through the vertical at about 0.57° a
+        // millisecond, so it's within 1° of vertical for about 3.5 ms, less than the 10 ms scan step. Missed, the yaw
+        // flips half a turn at once: a step of 2 sin 1° ≈ 2°. Turned evenly, the half turn moves the facing π sin 1° ≈ 3.1°
+        // over those 3.5 ms, under 0.001° a microsecond; 0.01° allows ten times that.
+        var track = TrackEditing.SetSpeed(
+            Build([Point(18.772842f, 1.7956989f), Point(0f), Point(23f, -3.1298702f)], AimMode.PathTangent),
+            10.942029f
+        );
+        track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 1, 9.457632f), 2, 2.3922946f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 2, 1.1724138f), 1f));
+
+        var largest = 0f;
+        for (var t = 1.58; t < 1.61; t += 1e-6)
+            largest = MathF.Max(largest, Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + 1e-6)));
+        Assert.InRange(largest, 0f, 0.01f * Deg);
+    }
+
+    [Fact]
+    public void DirectionOfTravelHoldsItsYawThroughAHoldInsideAVerticalStretch()
+    {
+        // Point 2 is reached straight down from point 1 and holds, so the aim is vertical through the hold. The camera and
+        // the spot 2 s ahead both stay at point 2 until 2 s before the hold ends, so no distance is travelled and the yaw,
+        // turned with distance, stays where it arrived.
+        var track = TrackEditing.SetSpeed(
+            Build([Point(0f, 2f), Point(0f, 1f), Point(26f, 3.4449844f, 12.046512f)], AimMode.PathTangent),
+            18f
+        );
+        track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 1, 0.14192629f), 2, 7.279038f);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 2f), 1, 2.6378899f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 2f));
+        var arrive = evaluator.PointSeconds(1);
+        var still = evaluator.Keys[TrackEditing.PointKey(track, 1) + 1].Time - 2.0;
+
+        for (var i = 1; i <= 16; i++)
+            Assert.Equal(Facing(evaluator, arrive), Facing(evaluator, arrive + ((still - arrive) * i / 16)));
+    }
+
+    [Fact]
     public void DirectionOfTravelWithNoDirectionKeepsTheFirstPointsAim()
     {
         // Every point coincides, so the path has no direction: (-sin 1.1 cos 0.2, sin -0.2, -cos 1.1 cos 0.2).

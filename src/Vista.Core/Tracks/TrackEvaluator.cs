@@ -18,6 +18,9 @@ public sealed class TrackEvaluator
     /// <summary>Seconds between the samples that look for vertical stretches.</summary>
     private const double StretchScanStep = 0.01;
 
+    /// <summary>Seconds between the samples that look outward from a steep moment for the stretch the scan missed.</summary>
+    private const double StretchSearchStep = 0.0005;
+
     /// <summary>Times each vertical stretch's edge is halved, to about a millionth of the scan step.</summary>
     private const int CrossingHalvings = 20;
 
@@ -37,7 +40,7 @@ public sealed class TrackEvaluator
     private readonly TimedChannel? _fov;
     private readonly float _fovMin;
     private readonly float _fovMax;
-    private Stretch[]? _stretches;
+    private List<Stretch>? _stretches;
 
     /// <summary>A span where Direction of travel is steeper than the pitch limit, with the yaw at each edge; null where the track starts or ends inside it.</summary>
     private readonly record struct Stretch(double From, double To, float? FromYaw, float? ToYaw);
@@ -227,7 +230,7 @@ public sealed class TrackEvaluator
             return (_yaws[0], _pitches[0]);
 
         var aim = TrackAim.Along(direction);
-        return IsSteep(direction) && YawThroughVertical(time) is { } yaw ? (yaw, aim.Pitch) : aim;
+        return IsSteep(direction) ? (YawThroughVertical(time), aim.Pitch) : aim;
     }
 
     /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped: the look-ahead, else the path's own; null where the path has none.</summary>
@@ -248,32 +251,63 @@ public sealed class TrackEvaluator
     /// <summary>Whether Direction of travel at <paramref name="time"/> is steeper than the pitch limit.</summary>
     private bool IsSteep(double time) => TravelDirection(time) is { } direction && IsSteep(direction);
 
-    /// <summary>The yaw at <paramref name="time"/> inside a vertical stretch, turned evenly the short way between its edges; null outside every stretch found.</summary>
-    private float? YawThroughVertical(double time)
+    /// <summary>The yaw at steep <paramref name="time"/>, turned evenly with distance the short way between its stretch's edges.</summary>
+    private float YawThroughVertical(double time)
     {
         _stretches ??= FindStretches();
-        foreach (var stretch in _stretches)
+        var known = _stretches.FindIndex(s => Covers(s, time));
+        var stretch = known >= 0 ? _stretches[known] : StretchAround(time);
+
+        return (stretch.FromYaw, stretch.ToYaw) switch
         {
-            if (
-                (stretch.FromYaw is not null && time < stretch.From) || (stretch.ToYaw is not null && time > stretch.To)
-            )
-                continue;
+            ({ } start, { } end) => start + (Angles.Delta(start, end) * Travelled(stretch, time)),
+            ({ } start, null) => start,
+            (null, { } end) => end,
+            _ => _yaws[0],
+        };
+    }
 
-            return (stretch.FromYaw, stretch.ToYaw) switch
-            {
-                ({ } start, { } end) => start
-                    + (Angles.Delta(start, end) * (float)((time - stretch.From) / (stretch.To - stretch.From))),
-                ({ } start, null) => start,
-                (null, { } end) => end,
-                _ => _yaws[0],
-            };
+    /// <summary>Whether <paramref name="time"/> falls inside <paramref name="stretch"/>, which runs to the track's start or end on a side with no edge yaw.</summary>
+    private static bool Covers(Stretch stretch, double time) =>
+        (stretch.FromYaw is null || time >= stretch.From) && (stretch.ToYaw is null || time <= stretch.To);
+
+    /// <summary>How far through <paramref name="stretch"/> <paramref name="time"/> is, by distance along the path, or by time where it covers none.</summary>
+    private float Travelled(Stretch stretch, double time)
+    {
+        var from = DistanceAt(stretch.From);
+        var to = DistanceAt(stretch.To);
+        if (to != from)
+            return (DistanceAt(time) - from) / (to - from);
+        return stretch.To > stretch.From ? (float)((time - stretch.From) / (stretch.To - stretch.From)) : 0f;
+    }
+
+    /// <summary>The stretch around steep <paramref name="time"/> that the scan missed, searched for outward and kept.</summary>
+    private Stretch StretchAround(double time)
+    {
+        var from = Edge(time, -StretchSearchStep);
+        var to = Edge(time, StretchSearchStep);
+        var stretch = new Stretch(from.Time, to.Time, from.Yaw, to.Yaw);
+        _stretches!.Add(stretch);
+        return stretch;
+    }
+
+    /// <summary>The edge of the stretch around steep <paramref name="time"/>, stepping by <paramref name="step"/> until the aim isn't steep, with its yaw; null yaw where the track starts or ends first.</summary>
+    private (double Time, float? Yaw) Edge(double time, double step)
+    {
+        var inside = time;
+        while (true)
+        {
+            var outside = Math.Clamp(inside + step, 0.0, Duration);
+            if (!IsSteep(outside))
+                return Crossing(outside, inside);
+            if (outside == inside)
+                return (outside, null);
+            inside = outside;
         }
-
-        return null;
     }
 
     /// <summary>Every vertical stretch in the track, sampled every <see cref="StretchScanStep"/> and at the end.</summary>
-    private Stretch[] FindStretches()
+    private List<Stretch> FindStretches()
     {
         var stretches = new List<Stretch>();
         var samples = (int)Math.Ceiling(Duration / StretchScanStep);
@@ -297,7 +331,7 @@ public sealed class TrackEvaluator
 
         if (opened is { } last)
             stretches.Add(new Stretch(last.Time, Duration, last.Yaw, null));
-        return stretches.ToArray();
+        return stretches;
     }
 
     /// <summary>The time within a hair of the vertical between <paramref name="outside"/> and steep <paramref name="inside"/>, on the outside, with its yaw.</summary>
