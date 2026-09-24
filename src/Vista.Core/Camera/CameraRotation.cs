@@ -12,12 +12,13 @@ public static class CameraRotation
     private const float DegenerateLength = 1e-6f;
 
     /// <summary>The rotation taking local forward (0,0,-1) to <paramref name="yaw"/>/<paramref name="pitch"/>'s facing, and local up (0,1,0) to that facing's upright up, rolled about the forward by <paramref name="roll"/>.</summary>
+    /// <remarks>Composed from the three turns, so a quaternion's sign follows its angles: yaw π and −π give opposite signs, and a blend between unwrapped angles turns the way they do.</remarks>
     public static Quaternion FromAngles(float yaw, float pitch, float roll)
     {
-        var forward = Direction(yaw, pitch);
-        var upright = UprightUp(yaw, pitch);
-        var up = roll == 0f ? upright : Vector3.Transform(upright, Quaternion.CreateFromAxisAngle(forward, roll));
-        return FromForwardAndUp(forward, up);
+        var yawTurn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
+        var pitchTurn = Quaternion.CreateFromAxisAngle(Vector3.UnitX, pitch);
+        var rollTurn = Quaternion.CreateFromAxisAngle(new Vector3(0f, 0f, -1f), roll);
+        return Quaternion.Concatenate(Quaternion.Concatenate(rollTurn, pitchTurn), yawTurn);
     }
 
     /// <summary>The inverse of <see cref="FromAngles"/>: pitch in [-pi/2, pi/2], yaw and roll in (-pi, pi].</summary>
@@ -25,7 +26,8 @@ public static class CameraRotation
     {
         var forward = Forward(rotation);
         var up = Up(rotation);
-        var pitch = MathF.Asin(Math.Clamp(forward.Y, -1f, 1f));
+        // Against the horizontal components, not asin(y): asin loses precision near straight up or down.
+        var pitch = MathF.Atan2(forward.Y, MathF.Sqrt((forward.X * forward.X) + (forward.Z * forward.Z)));
 
         if (MathF.Abs(forward.Y) > ParallelDot)
         {
@@ -70,13 +72,6 @@ public static class CameraRotation
         var carried = Vector3.Transform(upA, MinimalRotation(forwardA, forwardB));
         var dot = Math.Clamp(Vector3.Dot(Vector3.Normalize(carried), Vector3.Normalize(upB)), -1f, 1f);
         return MathF.Acos(dot);
-    }
-
-    /// <summary>Unit view direction for yaw and pitch, matching <see cref="FreeCamMotion"/>'s convention.</summary>
-    private static Vector3 Direction(float yaw, float pitch)
-    {
-        var cosPitch = MathF.Cos(pitch);
-        return new Vector3(-MathF.Sin(yaw) * cosPitch, MathF.Sin(pitch), -MathF.Cos(yaw) * cosPitch);
     }
 
     /// <summary>The unrolled upright up at yaw and pitch: the pitch-derivative of <see cref="Direction"/>, defined at the poles too.</summary>

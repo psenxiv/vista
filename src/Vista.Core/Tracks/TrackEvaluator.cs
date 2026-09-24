@@ -34,8 +34,7 @@ public sealed class TrackEvaluator
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
-    private readonly TimedChannel? _yaw;
-    private readonly TimedChannel? _pitch;
+    private readonly TimedRotation? _rotation;
     private readonly TimedChannel? _roll;
     private readonly TimedChannel? _fov;
     private readonly float _fovMin;
@@ -84,9 +83,13 @@ public sealed class TrackEvaluator
         var depart = arrive
             .Select((at, i) => track.Timing[i].Hold > 0f ? _keys[TrackEditing.PointKey(track, i) + 1].Time : at)
             .ToArray();
-        _yaw = new TimedChannel(_yaws, arrive, depart);
-        _pitch = new TimedChannel(_pitches, arrive, depart);
-        _roll = new TimedChannel(TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray()), arrive, depart);
+        var rolls = TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray());
+        _rotation = new TimedRotation(
+            _yaws.Select((yaw, i) => CameraRotation.FromAngles(yaw, _pitches[i], rolls[i])).ToArray(),
+            arrive,
+            depart
+        );
+        _roll = new TimedChannel(rolls, arrive, depart);
         _fov = new TimedChannel(fovs, arrive, depart);
     }
 
@@ -133,15 +136,14 @@ public sealed class TrackEvaluator
         }
 
         var (cameraPosition, segment, fraction) = PlaceAt(time);
-
-        var (yaw, pitch) =
-            Toward(cameraPosition, target)
-            ?? (_track.Aim == AimMode.PathTangent ? Travel(time, cameraPosition, segment, fraction) : AimKeys(time));
-
         var fov = Math.Clamp(_fov!.At(time), _fovMin, _fovMax);
-        var roll = _roll!.At(time);
+        var aim =
+            Toward(cameraPosition, target)
+            ?? (_track.Aim == AimMode.PathTangent ? Travel(time, cameraPosition, segment, fraction) : null);
 
-        return CameraState.FromAngles(cameraPosition, yaw, pitch, roll, fov);
+        return aim is { } turned
+            ? CameraState.FromAngles(cameraPosition, turned.Yaw, turned.Pitch, _roll!.At(time), fov)
+            : CameraState.FromRotation(cameraPosition, _rotation!.At(time), fov);
     }
 
     /// <summary>The aim at <paramref name="target"/> from <paramref name="from"/>, or null with no target or one on the camera.</summary>
@@ -214,9 +216,6 @@ public sealed class TrackEvaluator
 
         return (lo, Math.Clamp((distance - _distances[lo]) / _lengths[lo], 0f, 1f));
     }
-
-    private (float Yaw, float Pitch) AimKeys(double time) =>
-        (_yaw!.At(time), Math.Clamp(_pitch!.At(time), -TrackAim.PitchLimit, TrackAim.PitchLimit));
 
     /// <summary>The Direction of travel aim at <paramref name="time"/>, turning evenly through a vertical stretch.</summary>
     private (float Yaw, float Pitch) Travel(double time, Vector3 from, int segment, float fraction)
