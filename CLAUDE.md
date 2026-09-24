@@ -78,7 +78,7 @@ Never build the plugin with bare `dotnet build`: `DALAMUD_HOME` must be set. The
 
 ## Releases
 
-    make bump VERSION=X.Y.Z.N   # set and commit the version
+    make bump VERSION=X.Y.Z.N   # set the version, name the pending changelog section, and commit
     make testing                # ship it to opted-in testers (test-vX.Y.Z.N)
     make release                # ship it to everyone (prod-vX.Y.Z.N)
 
@@ -86,7 +86,7 @@ Releases run from `.github/workflows/release.yml` when a `test-v*` or `prod-v*` 
 
 Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z, up by one for every shipped build. A test build that holds up is promoted by releasing the same version, and the workflow reuses its zip if the code hasn't changed since. A fix after a test build is the next N.
 
-`CHANGELOG.md` has a `## X.Y.Z.N` section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. The next release's section is marked `## X.Y.Z.N - CANDIDATE`. When a change a player would notice lands on `main`, add its bullet to the candidate in the same commit; if there's none, start one at the top with the next version. Never add to a section without the mark: it has shipped. `make release` drops the mark as it ships. Show the section to the user before shipping. The workflow uses it for the release notes and `repo.json`, and `make testing` / `make release` refuse a version without one.
+`CHANGELOG.md` has a `## X.Y.Z.N` section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. The pending section is headed literally `## X.Y.Z.N`. When a change a player would notice lands on `main`, add its bullet there in the same commit, starting it at the top if there isn't one. A section with a real version has been bumped for shipping; never add to it. `make bump` gives the pending section its version. Show the section to the user before shipping. The workflow uses it for the release notes and `repo.json`, and `make testing` / `make release` refuse a version without one.
 
 ## In-game checks
 
