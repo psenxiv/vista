@@ -344,6 +344,7 @@ public class TrackEvaluatorTests
 
         Along(Vector3.UnitX, Facing(evaluator, 1.0), 1e-3f);
         Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration - 0.1), 1e-3f);
+        Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration), 1e-3f);
     }
 
     [Fact]
@@ -393,14 +394,30 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void LookingAheadHoldsStillThroughAHoldUntilTheSpotAheadMovesOn()
+    public void LookingAheadTurnsSmoothlyIntoAndOutOfAHold()
     {
-        // Point 2 holds for 2 s with the default 0.5 s look ahead, so the spot ahead sits on it from arriving until 1.5 s later.
+        // Point 2 holds for 2 s. Leaving it, the turn peaks near 20 deg/s, 0.02° a millisecond; snapping between the path's
+        // own direction and the spot ahead at 0.1 yalm stepped 1.7° at once. 0.1° allows the turn five times over.
         var track = TrackEditing.SetHold(Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent), 1, 2f);
         var evaluator = new TrackEvaluator(track);
         var arrive = evaluator.PointSeconds(1);
 
-        Along(Facing(evaluator, arrive), Facing(evaluator, arrive + 1.4), 1e-5f);
+        for (var t = arrive - 0.5; t < arrive + 2.5; t += 1e-3)
+        {
+            // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
+            Assert.InRange(Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + 1e-3)), 0f, 0.1f * Deg);
+        }
+    }
+
+    [Fact]
+    public void LookingAheadAcrossAHairpinFacesTheSpotAhead()
+    {
+        // The path turns back 0.2 yalm from itself. At 1.5 s the spot 2 s on is 4 yalms further along the path, so the
+        // camera faces straight at it, where the camera will be at 3.5 s, though it's under a yalm away across the gap.
+        var track = TrackEditing.SetLookAhead(Build([Point(0f), Point(5f), Point(5f, z: 0.2f), Point(0f, z: 0.2f)], AimMode.PathTangent), 2f);
+        var evaluator = new TrackEvaluator(track);
+
+        AimsAt(evaluator.Evaluate(3.5)!.Value.Position, evaluator.Evaluate(1.5)!.Value, 4);
     }
 
     [Fact]
