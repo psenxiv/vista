@@ -26,6 +26,6 @@ Every point row has the points menu, so you can use it on one point too. **Move 
 
 ## Dragging
 
-Drag a selected row to move the whole selection. The rows move together and keep their order. Drag several tracks onto the Playlist to add them all.
+Drag a selected row to move the whole selection. The rows move together and keep their order. Drag several tracks onto the Playlist to add them all. Hold the rows near the top or bottom of a list to scroll it.
 
 Drag points onto a track in the Hierarchy to move them to the end of that track. Drop them on **New track**, the space below the tracks, to move them into a new track. The points stay where they are in the world, and Vista then edits the track they moved to.

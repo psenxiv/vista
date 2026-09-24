@@ -87,6 +87,7 @@ internal sealed class HierarchyPanel
             for (var i = 0; i < scene.Tracks.Count; i++)
                 DrawRow(scene, scene.Tracks[i], i, edited, selected, editing);
             DrawSpace(scene, editing);
+            DragRows.ScrollNearEdges(DragRows.Track, DragRows.Point);
         }
 
         ImGui.EndChild();

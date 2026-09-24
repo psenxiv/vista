@@ -98,6 +98,7 @@ internal sealed class PlaylistPanel
             if (editing && ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain)
                 session.Selection.Select(null);
             DropTarget(scene, scene.Playlist.Count, editing);
+            DragRows.ScrollNearEdges(DragRows.Entry, DragRows.Track);
         }
 
         ImGui.EndChild();

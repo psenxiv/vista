@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
@@ -58,6 +59,22 @@ internal static unsafe class DragRows
     {
         var payload = ImGui.GetDragDropPayload();
         return !payload.IsNull && payload.IsDataType(type);
+    }
+
+    /// <summary>Inside a list's child window: while a row of one of <paramref name="types"/> is dragged over it near its top or bottom, scrolls it that way.</summary>
+    public static void ScrollNearEdges(params string[] types)
+    {
+        if (!types.Any(Dragging))
+            return;
+        var (corner, size, mouse) = (ImGui.GetWindowPos(), ImGui.GetWindowSize(), ImGui.GetMousePos());
+        if (mouse.X < corner.X || mouse.X > corner.X + size.X)
+            return;
+        var row = ImGui.GetFrameHeightWithSpacing();
+        var rows = EdgeScroll.RowsPerSecond(mouse.Y, corner.Y, corner.Y + size.Y, row);
+        if (rows != 0f)
+            ImGui.SetScrollY(
+                Math.Clamp(ImGui.GetScrollY() + (rows * row * ImGui.GetIO().DeltaTime), 0f, ImGui.GetScrollMaxY())
+            );
     }
 
     /// <summary>The click just made on a row: Shift for a range, Ctrl to add or remove, otherwise plain.</summary>

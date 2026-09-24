@@ -737,6 +737,7 @@ internal sealed class TrackEditorWindow : Window
             }
 
             DrawPointSpace(track, editing);
+            DragRows.ScrollNearEdges(DragRows.Point);
         }
 
         ImGui.EndChild();
