@@ -4,113 +4,100 @@ FFXIV Dalamud plugin: camera tracks, organised into scenes and played back live.
 
 ## Requirements
 
-**Requirements come from the spec, not from reasoning about the use case.** Background explains motivation and does not generate requirements. If the spec is ambiguous, ask. Do not resolve ambiguity by adding a feature.
+**Requirements come from the spec, not from reasoning about the use case.** Background explains motivation; it doesn't create requirements. If the spec is ambiguous, ask rather than adding a feature.
 
-**Verify Dalamud and FFXIVClientStructs APIs against source before use.** Do not rely on recall, and do not infer an API's behaviour from how Cammy or Hypostasis used it, since both may predate the current API level.
+**Verify Dalamud and FFXIVClientStructs APIs against their source before use.** Don't rely on recall, or on how other plugins use an API, since they may predate the current API level. Read the source at the version Vista builds against, from a local clone. If there isn't one, ask the user before cloning it.
 
 ## Writing
 
-**Never hard-wrap prose in document files.** Each paragraph or list item is one line; let the editor flow it. Unwrap any wrapped paragraph in a file you are editing.
+**Never hard-wrap prose in document files.** One line per paragraph or list item. Unwrap any wrapped paragraph in a file you edit.
 
-**Code comments.** Keep doc comments to one line. State what a thing is or what a method does, plainly. No architectural essays, no restating the code, no explaining why a design is good; that belongs in the spec.
+**Code comments.** Doc comments are one line saying plainly what a thing is or does. No essays, no restating the code, no defending the design; that belongs in the spec.
 
     /// <summary>Where the camera is, what it looks at, and its field of view.</summary>
 
-Go longer only for something a reader cannot infer: a non-obvious unit, a constraint that will bite, a workaround for a game bug. Rare. Inline comments follow the same rule. Most code should not need one.
+Go longer only for what a reader can't infer, such as a non-obvious unit, a constraint that will bite, or a game-bug workaround. Inline comments follow the same rule; most code needs none.
 
-**Commits.** One line: conventional prefix, lowercase, no trailing period. Say what changed, then stop. No body, no rationale, no co-author trailers. Reasoning belongs in the spec or the plan, not in git.
+**Commits.** One line: conventional prefix, lowercase, no trailing period. Say what changed, then stop. No body, no rationale, no co-author trailers.
 
-    feat(bootstrap) setup initial project
     fix(camera) stop hook deadlocking on load
-    docs(spec) record fov probe result
 
 ## Structure
 
-- `src/Vista.Core`: pure logic. Never references Dalamud or FFXIVClientStructs and never uses `unsafe`; the project file enforces both.
-- `src/Vista.Plugin`: Dalamud, hooks, ImGui. The only place with `unsafe`.
+- `src/Vista.Core`: pure logic. No Dalamud, no FFXIVClientStructs, no `unsafe`; the project file enforces this.
+- `src/Vista.Plugin`: Dalamud, hooks and ImGui. The only place with `unsafe`.
 - `tests/Vista.Tests`: references Core only.
 
-Namespaces match folders. Never name a namespace, or a member that code reaches as a simple name, after a type or namespace in use beside it: a `Vista.Plugin.Camera` namespace would shadow FFXIVClientStructs' `Camera`, a `Path` namespace `System.IO.Path`, and a `Game` member the `Vista.Plugin.Game` namespace. That's why the folders are `Tracks/Aiming` rather than `Aim` (a `Track` property) and `Tracks/Spline` rather than `Path`.
+Namespaces match folders. Never name a namespace, or a member reached by its simple name, after a type or namespace used beside it: a `Camera` namespace would shadow FFXIVClientStructs' `Camera`.
 
-All three target .NET 10, because Dalamud 15 is built against net10.0.
+Everything targets .NET 10, as Dalamud does.
 
 ## Tests
 
-**Derive expected values. Never compute one by calling the code under test.** `Assert.Equal(PlaybackClock.ShotTime(d, 10, 5), playback.ShotTime)` asserts `f(x) == f(x)`. Work the number out from the maths or the documented semantics, write it as a literal, and put the derivation in a comment. That comment counts as something a reader cannot infer; it is not licence to comment freely. If you cannot derive it, leave the assertion alone and say so.
+**Derive expected values; never compute them with the code under test.** `Assert.Equal(f(x), result)` proves nothing. Work the number out from the maths or the documented behaviour, write it as a literal, and show the derivation in a comment. If you can't derive it, say so. Round trips are the exception, since the round trip is the property.
 
-Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid because the round trip itself is the property being pinned.
+**Pin the value, with an explicit tolerance.** Where the answer is computable, assert it; sign, range, finiteness and null checks are only for values that genuinely aren't determined. Write float tolerances at the assertion.
 
-**Pin the value, with an explicit tolerance.** Where the answer is computable, assert it. `Assert.True(x > 0)`, `InRange`, `IsFinite` and `NotNull` are for values that genuinely are not determined; a test that only checks a sign is blind to an inverted one. For floats, write the tolerance at the assertion rather than inheriting it from a file-local helper.
+**Test a behaviour once, at the layer that owns it.** Grep the other test directories before adding one.
 
-**Test a behaviour where it lives.** Pin it once, at the layer that owns it. A `SessionState` test that re-checks what `SceneEditing` already proves adds a second place to edit and no cover. Before adding a test, grep the behaviour's name across the other test directories.
+**Property tests (CsCheck) are for invariants over any valid input**, such as continuity and round trips. They add to derived examples and never replace them. Generators build inputs through the same editing calls the UI makes. A failure is a real counterexample: never rerun for a pass; fix the cause and keep the case as an example test. Pass each property's `print` through `Fixtures.Kept` and tag it `[Trait("Category", "Property")]`.
 
-**Property tests (CsCheck) are for invariants that must hold for any valid input**, such as continuity, round trips and permutations. They add to derived examples and never replace them, and a property that only checks a sign or finiteness doesn't count. Generators build inputs through the editing calls the UI makes and state their assumptions. CsCheck seeds each run randomly, so a failure is a real counterexample: never rerun to get a pass; fix the cause and keep the failing case as an example test. Pass each property's `print` through `Fixtures.Kept`, which writes the failing input to `tests/Vista.Tests/obj/counterexamples/<property>.txt`; the folder is emptied before every property run, so it only ever holds the last run's failures. Tag each property `[Trait("Category", "Property")]`.
+**Soak and mutation-test a feature once, in its final review:** `make soak`, then `make mutate SINCE=<plan's base commit>`. Each survivor gets a test or a line in the plan saying why it changes nothing. There's no score to reach.
 
-**Mutation-test and soak a feature once, in its final review.** When every task of a plan is done, run `make soak`, which runs the properties 20 times since a counterexample can take several runs to turn up, and `make mutate SINCE=<the plan's base commit>`, which lists the survivors on changed lines. Each one gets a test, or a line in the plan saying why it changes nothing, such as `<` to `<=` between continuous floats. Never in a single task's review or in `make verify`, and there's no score to reach. Property tests are left out, since their random inputs would change a mutant's result from run to run.
+**Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) with its expected number of snaps. Run `make regression-scene` and commit the rewritten file with it.
 
-**Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) that reproduces it, with its expected number of snaps. A bug smaller than the step floors in `Fixtures.cs` still gets a case, as something to watch in game, and an example test pins it. Run `make regression-scene` and commit the rewritten file with the case.
-
-**Shared fixtures live in a fixtures file per test area**, with anything used across areas in `tests/Vista.Tests/Fixtures.cs`. A helper needed by a second file moves there rather than being copied.
+**Shared fixtures** live in a fixtures file per test area, or `tests/Vista.Tests/Fixtures.cs` when used across areas. Move a helper there rather than copying it.
 
 ## Keeping the code honest
 
-**One owner per constant.** A limit, a default or a list of enum values is declared once and referenced everywhere else. If the Plugin needs a Core list, make the Core one public rather than copying it.
+**One owner per constant.** Declare a limit, default or list once and reference it everywhere else, making it public if another project needs it.
 
-**Do not introduce an interface unless it has two implementations, a test double, or crosses the Core/Dalamud boundary.** That boundary is where the types change, not where the `interface` keyword appears. `Func<Vector3, float?> groundBelow` crosses it because `Ground.Below` needs `BGCollisionModule`. A Core interface whose only implementation is also in Core crosses nothing. Apply the same test to each member: an interface can be justified while one of its members is not.
+**No interface without two implementations, a test double, or a crossing of the Core/Dalamud boundary.** The boundary is where game types appear, not where the `interface` keyword does. Judge each member the same way.
 
-**Code without a production caller does not survive the phase that introduced it.** Tests do not count as a caller. Landing Core capability ahead of the UI that consumes it is fine if the commit message names the phase that will use it. Anything still uncalled when that phase closes is deleted, with an entry in `FEATURES.md` if the idea is still wanted. Exceptions that only look dead: Dalamud `Window` overrides (`OnClose`, `PreOpenCheck`, `PreDraw`), command handlers, and `IDisposable`.
+**Code with no production caller doesn't outlive the phase that added it.** Tests don't count. Core may land ahead of its UI if the commit names the phase that will use it; whatever is still uncalled when that phase closes is deleted, with a `FEATURES.md` entry if the idea is still wanted. Framework entry points (window overrides, command handlers, `Dispose`) only look dead.
 
-**Superseding a design means deleting the old path in the same change.** When a commit replaces one way of doing something, grep the old name across `src/`; if the only remaining hits are its declaration and tests, it goes in the same commit. Precedent: `feat(tracks) play playlists and drop snap shots` deleted `SnapPoint.cs`.
+**Replacing a design deletes the old one in the same change.** Grep the old name across `src/`; if only its declaration and tests remain, it goes.
 
-**`Vista.Plugin` has no tests, so keep it thin.** If a decision can be asserted without ImGui and without the game running, it belongs in `Vista.Core` and gets a test. What stays in the plugin is drawing, hooking and input. If the plugin must hold a decision, say so in the commit and expect it on the next in-game checklist.
+**Keep `Vista.Plugin` thin; it has no tests.** A decision that can be asserted without ImGui or the game belongs in Core with a test. The plugin draws, hooks and handles input. If it must hold a decision, say so in the commit and put it on the next in-game checklist.
 
 ## Build
 
-    make verify            # Format, lint, test and check coverage: must pass before every commit
-    make format            # Format with CSharpier (print width 120)
-    make lint              # Build the plugin and tests with analyzer warnings as errors
-    make soak              # Run the property tests 20 times, stopping at a failure; RUNS=<n> for another count
-    make mutate            # Mutation-test Core with Stryker; SINCE=<commit> for changes since it
-    make regression-scene  # Rewrite tests/scenes/Vista - Camera Regression.json from its cases
-    make checks            # Serve the in-game checklist page at localhost:3000; PORT=<n> for another
-    make build             # Debug plugin build; sets DALAMUD_HOME
+    make verify            # Format, lint, test and check coverage
+    make build             # Debug plugin build
     make test              # Core tests
-    make package           # Release build and latest.zip, as CI makes it
+    make help              # Every other target
 
-**Run `make verify` before every commit, and commit only when it passes.** It formats the code, so commit what it formatted. It also fails if Core's line coverage falls below the floor, `Threshold` in `tests/Vista.Tests/Vista.Tests.csproj`. Cover new code with tests rather than lowering the floor. `make testing` and `make release` run it in check mode and refuse unformatted code.
+**Run `make verify` before every commit, and commit only when it passes.** Commit what it formatted. If coverage falls below the floor, add tests rather than lowering it.
 
-The lint is .NET's recommended analyzers plus Meziantou.Analyzer, with the rules set in `.editorconfig`. Turn a rule off there, with a comment saying why, rather than with `#pragma` in the code.
-
-Never build the plugin with bare `dotnet build`: `DALAMUD_HOME` must be set. The commands live in `scripts/`. Formatting-only commits go in `.git-blame-ignore-revs`.
+Turn lint rules off in `.editorconfig` with a comment saying why, never with `#pragma`. Never build with bare `dotnet build`; the scripts set `DALAMUD_HOME`. Formatting-only commits go in `.git-blame-ignore-revs`.
 
 ## Releases
 
-    make bump VERSION=X.Y.Z.N   # set the version, name the pending changelog section, and commit
-    make testing                # ship it to opted-in testers (test-vX.Y.Z.N)
-    make release                # ship it to everyone (prod-vX.Y.Z.N)
+    make bump VERSION=X.Y.Z.N   # Set the version and name the pending changelog section
+    make testing                # Ship to opted-in testers (test-vX.Y.Z.N)
+    make release                # Ship to everyone (prod-vX.Y.Z.N)
 
-Releases run from `.github/workflows/release.yml` when a `test-v*` or `prod-v*` tag is pushed. Only the user pushes tags.
+Pushing a tag runs the release workflow. Only the user pushes tags.
 
-Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z, up by one for every shipped build. A test build that holds up is promoted by releasing the same version, and the workflow reuses its zip if the code hasn't changed since. A fix after a test build is the next N.
+Versions are SemVer's `X.Y.Z` plus `N`, which goes up by one for every shipped build of that `X.Y.Z`. A test build that holds up is promoted by releasing the same version.
 
-`CHANGELOG.md` has a `## X.Y.Z.N` section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. The pending section is headed literally `## X.Y.Z.N`. When a change a player would notice lands on `main`, add its bullet there in the same commit, starting it at the top if there isn't one. A section with a real version has been bumped for shipping; never add to it. `make bump` gives the pending section its version. Show the section to the user before shipping. The workflow uses it for the release notes and `repo.json`, and `make testing` / `make release` refuse a version without one.
+`CHANGELOG.md` has a section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. When a change a player would notice lands on `main`, add a bullet to the pending section, headed literally `## X.Y.Z.N`, in the same commit. Never add to a section with a real version. Show the section to the user before shipping.
 
 ## In-game checks
 
-In-game verification is the user's. For big work, write a JSON checklist in `tests/in-game/cases/` (gitignored, never committed), named for the work (`phase-4.json`), and list it in `cases/manifest.json`. `tests/in-game/README.md` gives the format; leave the page's own files alone. Never overwrite a checklist that has not been run: several can be pending, each with its own progress. The user sends back the results JSON; delete the checklist once its results are in.
+In-game verification is the user's. For big work, write a checklist in `tests/in-game/cases/` (gitignored) and list it in `cases/manifest.json`; `tests/in-game/README.md` gives the format. Never overwrite one that hasn't been run. Delete it once its results are in.
 
-The checklist for any change to aim, timing or paths includes one pass of the camera regression scene: copy the latest `tests/scenes/Vista - Camera Regression.json` into the save folder's `vistaxiv/scenes/`, play its playlist in Live, and note any track that doesn't do what its name says. Point at the scene rather than repeating its cases.
+A checklist for any change to aim, timing or paths includes one pass of the camera regression scene (`tests/scenes/Vista - Camera Regression.json`), copied into the save folder's `vistaxiv/scenes/` and played in Live. Point at the scene rather than repeating its cases.
 
-Read game logs from `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
+Game logs: `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
 ## User Guide
 
-The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `GUIDES.md` before writing or changing any page**; it sets the voice, length and formatting.
+The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `GUIDES.md` before writing or changing any page.**
 
-When a change adds, removes or changes something a user can see or do, update the guide pages that describe it in the same change. If a key changes, update `hotkeys.md` and the README's keys table together.
+When a change affects what a user can see or do, update the guide in the same change. If a key changes, update `hotkeys.md` and the README's keys table together.
 
 ## Docs
 
-- Design: `docs/superpowers/specs/` (local only; `docs/` is gitignored, so never commit to it)
-- Plans: `docs/superpowers/plans/` (local only)
-- Feature ideas: `FEATURES.md`. A heading and two or three sentences each; research and reasoning go in the spec.
+- Specs and plans: `docs/superpowers/specs/` and `docs/superpowers/plans/`. `docs/` is gitignored; never commit it.
+- Feature ideas: `FEATURES.md`, a heading and two or three sentences each.
