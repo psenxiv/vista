@@ -1,7 +1,8 @@
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Playback;
 using Xunit;
 
-namespace Vista.Tests.Tracks;
+namespace Vista.Tests.Tracks.Playback;
 
 public class PlaybackClockTests
 {

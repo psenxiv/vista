@@ -1,9 +1,11 @@
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
-namespace Vista.Tests.Editing;
+namespace Vista.Tests.Display;
 
 public class TurnHeatTests
 {

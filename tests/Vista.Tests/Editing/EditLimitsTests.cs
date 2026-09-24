@@ -1,5 +1,6 @@
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Xunit;
 
 namespace Vista.Tests.Editing;

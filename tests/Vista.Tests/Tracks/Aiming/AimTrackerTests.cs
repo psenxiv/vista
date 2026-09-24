@@ -1,10 +1,11 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
-namespace Vista.Tests.Tracks;
+namespace Vista.Tests.Tracks.Aiming;
 
 public class AimTrackerTests
 {

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
 

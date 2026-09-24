@@ -1,5 +1,6 @@
 using Vista.Core.Session;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
 

@@ -1,9 +1,10 @@
 using System.Linq;
 using System.Numerics;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Spline;
 using Xunit;
 
-namespace Vista.Tests.Tracks;
+namespace Vista.Tests.Tracks.Spline;
 
 public class ArcLengthTableTests
 {

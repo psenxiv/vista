@@ -2,7 +2,7 @@ using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Xunit;
 
-namespace Vista.Tests.Session;
+namespace Vista.Tests.Scenes;
 
 public class SaveDebounceTests
 {

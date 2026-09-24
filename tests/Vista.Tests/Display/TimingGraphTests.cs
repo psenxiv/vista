@@ -1,9 +1,11 @@
 using System.Numerics;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Timing;
 using Xunit;
 
-namespace Vista.Tests.Editing;
+namespace Vista.Tests.Display;
 
 public class TimingGraphTests
 {

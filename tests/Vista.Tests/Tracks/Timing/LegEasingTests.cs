@@ -1,9 +1,10 @@
 using System.Linq;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
-namespace Vista.Tests.Tracks;
+namespace Vista.Tests.Tracks.Timing;
 
 public class LegEasingTests
 {

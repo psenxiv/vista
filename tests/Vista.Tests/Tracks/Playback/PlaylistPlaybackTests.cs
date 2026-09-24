@@ -1,10 +1,12 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
-namespace Vista.Tests.Tracks;
+namespace Vista.Tests.Tracks.Playback;
 
 public class PlaylistPlaybackTests
 {

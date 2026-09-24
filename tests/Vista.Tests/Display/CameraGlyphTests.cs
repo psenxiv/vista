@@ -1,9 +1,10 @@
 using System.Numerics;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
-namespace Vista.Tests.Editing;
+namespace Vista.Tests.Display;
 
 public class CameraGlyphTests
 {
