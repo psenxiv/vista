@@ -1,166 +1,95 @@
 # Vista
 
-FFXIV Dalamud plugin: camera tracks and a live switchboard.
+FFXIV Dalamud plugin: camera tracks, organised into scenes and played back live.
 
 ## Requirements
 
-**Requirements come from the spec, not from reasoning about the use case.**
-Background explains motivation and does not generate requirements. If the spec
-is ambiguous, ask. Do not resolve ambiguity by adding a feature.
+**Requirements come from the spec, not from reasoning about the use case.** Background explains motivation and does not generate requirements. If the spec is ambiguous, ask. Do not resolve ambiguity by adding a feature.
 
-**Verify Dalamud and FFXIVClientStructs APIs against source before use.** Do
-not rely on recall, and do not infer an API's behaviour from how Cammy or
-Hypostasis used it, since both may predate the current API level.
+**Verify Dalamud and FFXIVClientStructs APIs against source before use.** Do not rely on recall, and do not infer an API's behaviour from how Cammy or Hypostasis used it, since both may predate the current API level.
 
-## Comments
+## Writing
 
-Keep doc comments to one line. State what a thing is or what a method does,
-plainly. No architectural essays, no restating the code, no explaining why a
-design is good — that belongs in the spec.
+**Never hard-wrap prose in document files.** Each paragraph or list item is one line; let the editor flow it. Unwrap any wrapped paragraph in a file you are editing.
+
+**Code comments.** Keep doc comments to one line. State what a thing is or what a method does, plainly. No architectural essays, no restating the code, no explaining why a design is good; that belongs in the spec.
 
     /// <summary>Where the camera is, what it looks at, and its field of view.</summary>
 
-Go longer only for something a reader cannot infer: a non-obvious unit, a
-constraint that will bite, a workaround for a game bug. Rare.
+Go longer only for something a reader cannot infer: a non-obvious unit, a constraint that will bite, a workaround for a game bug. Rare. Inline comments follow the same rule. Most code should not need one.
 
-Inline comments follow the same rule. Most code should not need one.
-
-## Commits
-
-One line. Conventional prefix, lowercase, no trailing period.
+**Commits.** One line: conventional prefix, lowercase, no trailing period. Say what changed, then stop. No body, no rationale, no co-author trailers. Reasoning belongs in the spec or the plan, not in git.
 
     feat(bootstrap) setup initial project
     fix(camera) stop hook deadlocking on load
     docs(spec) record fov probe result
 
-Write them simply: say what changed, stop. No body paragraphs, no
-rationale, no co-author trailers. Reasoning belongs in the spec or the plan,
-not in git.
-
 ## Structure
 
-- `src/Vista.Core` — pure logic. Must never reference Dalamud or
-  FFXIVClientStructs, and must not use `unsafe`. Enforced by the project file.
-- `src/Vista.Plugin` — Dalamud, hooks, ImGui. The only place with
-  `unsafe`. Never create a `Vista.Plugin.Camera` namespace: it shadows
-  FFXIVClientStructs' `Camera`.
-- `tests/Vista.Tests` — references Core only.
+- `src/Vista.Core`: pure logic. Never references Dalamud or FFXIVClientStructs and never uses `unsafe`; the project file enforces both.
+- `src/Vista.Plugin`: Dalamud, hooks, ImGui. The only place with `unsafe`. Never create a `Vista.Plugin.Camera` namespace: it shadows FFXIVClientStructs' `Camera`.
+- `tests/Vista.Tests`: references Core only.
 
-All three target .NET 10, because Dalamud 15.0.3.5 is built against net10.0.
+All three target .NET 10, because Dalamud 15 is built against net10.0.
 
 ## Tests
 
-**Derive expected values. Never compute one by calling the code under test.**
-`Assert.Equal(PlaybackClock.ShotTime(d, 10, 5), playback.ShotTime)` asserts
-`f(x) == f(x)`. Work the number out from the maths or the documented semantics,
-write it as a literal, and put the derivation in a comment. That comment is the "something a
-reader cannot infer" the Comments section allows, not licence to comment freely. If you cannot
-derive it, leave the assertion alone and say so.
+**Derive expected values. Never compute one by calling the code under test.** `Assert.Equal(PlaybackClock.ShotTime(d, 10, 5), playback.ShotTime)` asserts `f(x) == f(x)`. Work the number out from the maths or the documented semantics, write it as a literal, and put the derivation in a comment. That comment counts as something a reader cannot infer; it is not licence to comment freely. If you cannot derive it, leave the assertion alone and say so.
 
-Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is a
-valid test even though both sides call the code under test, because the
-property being pinned is the round trip itself.
+Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid because the round trip itself is the property being pinned.
 
-**Pin the value, with an explicit tolerance.** Where the answer is computable,
-assert it. `Assert.True(x > 0)`, `InRange`, `IsFinite` and `NotNull` are for
-values that genuinely are not determined; a test that only checks a sign is
-blind to an inverted one. For floats, write the tolerance at the assertion
-rather than inheriting it from a file-local helper, so a reader can see how
-strict the test is without scrolling.
+**Pin the value, with an explicit tolerance.** Where the answer is computable, assert it. `Assert.True(x > 0)`, `InRange`, `IsFinite` and `NotNull` are for values that genuinely are not determined; a test that only checks a sign is blind to an inverted one. For floats, write the tolerance at the assertion rather than inheriting it from a file-local helper.
 
-**Test a behaviour where it lives.** Pin it once, at the layer that owns it. A
-`SessionState` test that re-checks what `SceneEditing` already proves adds a
-second place to edit and no cover. Before adding a test, grep the behaviour's
-name across the other test directories.
+**Test a behaviour where it lives.** Pin it once, at the layer that owns it. A `SessionState` test that re-checks what `SceneEditing` already proves adds a second place to edit and no cover. Before adding a test, grep the behaviour's name across the other test directories.
 
-**Shared fixtures live in a fixtures file, one per test area, with anything
-used across areas in `tests/Vista.Tests/Fixtures.cs`.** A helper needed by a
-second file moves there rather than being copied. Two helpers with one name and
-different behaviour is worse than none.
+**Shared fixtures live in a fixtures file per test area**, with anything used across areas in `tests/Vista.Tests/Fixtures.cs`. A helper needed by a second file moves there rather than being copied.
 
 ## Keeping the code honest
 
-**One owner per constant.** A limit, a default or a list of enum values is
-declared once and referenced everywhere else. If the Plugin needs a Core list,
-make the Core one public rather than copying it. Two declarations of the same
-value is a bug waiting for someone to change one of them.
+**One owner per constant.** A limit, a default or a list of enum values is declared once and referenced everywhere else. If the Plugin needs a Core list, make the Core one public rather than copying it.
 
-**Do not introduce an interface unless it has two implementations, a test
-double, or crosses the Core/Dalamud boundary.** That boundary is where the
-types change, not where the `interface` keyword appears. `Func<Vector3, float?>
-groundBelow` crosses it because `Ground.Below` needs `BGCollisionModule`. A
-Core interface whose only implementation is also in Core crosses nothing. Apply
-the same test to each member: an interface can be justified while one of its
-members is not.
+**Do not introduce an interface unless it has two implementations, a test double, or crosses the Core/Dalamud boundary.** That boundary is where the types change, not where the `interface` keyword appears. `Func<Vector3, float?> groundBelow` crosses it because `Ground.Below` needs `BGCollisionModule`. A Core interface whose only implementation is also in Core crosses nothing. Apply the same test to each member: an interface can be justified while one of its members is not.
 
-**Code without a production caller does not survive the phase that introduced
-it.** Tests do not count as a caller. Landing Core capability ahead of the UI
-that consumes it is fine, if the commit message names the phase that will use
-it. Anything still uncalled when that phase closes is deleted or moved to
-`FEATURES.md`. Exceptions that only look dead: Dalamud `Window` overrides
-(`OnClose`, `PreOpenCheck`, `PreDraw`), command handlers, and `IDisposable`.
+**Code without a production caller does not survive the phase that introduced it.** Tests do not count as a caller. Landing Core capability ahead of the UI that consumes it is fine if the commit message names the phase that will use it. Anything still uncalled when that phase closes is deleted, with an entry in `FEATURES.md` if the idea is still wanted. Exceptions that only look dead: Dalamud `Window` overrides (`OnClose`, `PreOpenCheck`, `PreDraw`), command handlers, and `IDisposable`.
 
-**Superseding a design means deleting the old path in the same change.** Two
-ways to do one thing is the state every finding in this repo's review came
-from. When a commit replaces one way of doing something, grep the old name
-across `src/`; if the only remaining hits are its declaration and tests, it
-goes in the same commit. Precedent: `feat(tracks) play playlists and drop snap
-shots` deleted `SnapPoint.cs` in the commit that superseded it.
+**Superseding a design means deleting the old path in the same change.** When a commit replaces one way of doing something, grep the old name across `src/`; if the only remaining hits are its declaration and tests, it goes in the same commit. Precedent: `feat(tracks) play playlists and drop snap shots` deleted `SnapPoint.cs`.
 
-**`Vista.Plugin` has no tests, so keep it thin.** If a decision can be asserted
-without ImGui and without the game running, it belongs in `Vista.Core` and gets
-a test. What stays in the plugin is drawing, hooking and input. If the plugin
-must hold a decision, say so in the commit and expect it on the next in-game
-checklist.
+**`Vista.Plugin` has no tests, so keep it thin.** If a decision can be asserted without ImGui and without the game running, it belongs in `Vista.Core` and gets a test. What stays in the plugin is drawing, hooking and input. If the plugin must hold a decision, say so in the commit and expect it on the next in-game checklist.
 
-## Build and test
+## Build
 
     make build      # Debug plugin build; sets DALAMUD_HOME
     make test       # Core tests
     make package    # Release build and latest.zip, as CI makes it
+
+Never build the plugin with bare `dotnet build`: `DALAMUD_HOME` must be set. The commands live in `scripts/`.
+
+## Releases
+
     make bump VERSION=X.Y.Z.N   # set and commit the version
     make testing                # ship it to opted-in testers (test-vX.Y.Z.N)
     make release                # ship it to everyone (prod-vX.Y.Z.N)
 
-The commands live in `scripts/`. Never build the plugin with bare `dotnet build` —
-`DALAMUD_HOME` must be set. Releases run from `.github/workflows/release.yml` when a `test-v*` or
-`prod-v*` tag is pushed; only the user pushes tags.
+Releases run from `.github/workflows/release.yml` when a `test-v*` or `prod-v*` tag is pushed. Only the user pushes tags.
 
-Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z (1, 2, …),
-up by one for every shipped build. A test build that holds up is promoted by releasing the same
-version: the workflow reuses its zip. A fix after a test build is the next N.
+Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z, up by one for every shipped build. A test build that holds up is promoted by releasing the same version, and the workflow reuses its zip. A fix after a test build is the next N.
 
-Before shipping a build, add a `## X.Y.Z.N` section to `CHANGELOG.md`, newest first: a few short
-bullets for players, in `GUIDES.md`'s voice, and show it to the user first. The workflow uses it for
-the GitHub release notes and `repo.json`, and `make testing` / `make release` refuse a version
-without one.
+`CHANGELOG.md` has a `## X.Y.Z.N` section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. When a change a player would notice lands on `main`, add its bullet to the section at the top in the same commit, starting the section if there isn't one. Show the section to the user before shipping. The workflow uses it for the release notes and `repo.json`, and `make testing` / `make release` refuse a version without one.
 
-Keep that section going between releases: when a change a player would notice lands on `main`, add
-its bullet to the next version's `## X.Y.Z.N` section at the top, starting the section if there
-isn't one, in the same commit. Don't leave it for release time.
+## In-game checks
 
-In-game verification is the user's. Read results from
-`~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
+In-game verification is the user's. For big work, write a JSON checklist in `scripts/checks/` (gitignored, never committed), named for the work (`phase-4.json`), and list it in `manifest.json`. The folder's `README.md` gives the format; leave the page's own files alone. Never overwrite a checklist that has not been run: several can be pending, each with its own progress. The user sends back the results JSON; delete the checklist once its results are in.
 
-A checklist of in-game checks goes in `scripts/checks/`, which is gitignored, so never commit one: add a file named for the work
-(`phase-4.json`), list it in `manifest.json`, and leave the page's own files alone. The folder's
-`README.md` gives the checklist format. Never overwrite a
-checklist that has not been run — several can be pending, and the page keeps each one's progress
-separately. Don't write a Markdown checklist. The user serves the folder themselves and sends
-back the results JSON it downloads. Delete a checklist once its results are in.
+Read game logs from `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
 ## User Guide
 
-The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `GUIDES.md` before
-writing or changing any page**; it sets the voice, length and formatting.
+The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `GUIDES.md` before writing or changing any page**; it sets the voice, length and formatting.
 
-When a change adds, removes or changes something a user can see or do, update the guide pages that
-describe it in the same change. If a key changes, update `hotkeys.md` and the README's keys table
-together.
+When a change adds, removes or changes something a user can see or do, update the guide pages that describe it in the same change. If a key changes, update `hotkeys.md` and the README's keys table together.
 
 ## Docs
 
-- User Guide writing rules: `GUIDES.md`
 - Design: `docs/superpowers/specs/` (local only; `docs/` is gitignored, so never commit to it)
 - Plans: `docs/superpowers/plans/` (local only)
-- Deferred features: `FEATURES.md`. Only features actually agreed as deferred.
+- Feature ideas: `FEATURES.md`. A heading and two or three sentences each; research and reasoning go in the spec.

@@ -34,10 +34,14 @@ public sealed class Plugin : IDalamudPlugin
     internal static MovementLock Movement { get; private set; } = null!;
     internal static CameraSession Session { get; private set; } = null!;
 
+    private readonly SceneFiles sceneFiles;
+    private readonly PendingField fields;
+    private readonly EditorKeys editorKeys = new();
+    private readonly PointGizmo pointGizmo = new();
+    private readonly EditorLayer editorLayer;
+
     private readonly WindowSystem windows = new("Vista");
-    private float wheel;
-    private bool escapeWasDown;
-    private static bool blockEscape;
+    private readonly SetupWindow setupWindow;
     private readonly TrackEditorWindow trackEditor;
     private readonly PointWindow pointWindow;
     private readonly TimingWindow timingWindow;
@@ -45,36 +49,33 @@ public sealed class Plugin : IDalamudPlugin
     private readonly GuideWindow guideWindow;
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
-    private readonly PendingField fields;
-    private readonly EditorKeys editorKeys = new();
-    private readonly PointGizmo pointGizmo = new();
-    private readonly EditorLayer editorLayer;
-    private readonly SceneFiles sceneFiles;
-    private readonly SetupWindow setupWindow;
+
+    private float wheel;
+    private bool escapeWasDown;
+    private static bool blockEscape;
 
     public Plugin()
     {
-        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
-        {
-            HelpMessage = "/vista opens the editor"
-        });
-
         var config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
         Movement = new MovementLock();
         Session = new CameraSession(Movement);
         sceneFiles = new SceneFiles(config, Session);
-        setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
-        sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
-        if (sceneFiles.Lost) setupWindow.IsOpen = true;
-        editorLayer = new EditorLayer(Session, pointGizmo);
         fields = new PendingField(() => Session.Mode == CameraMode.Editing);
+        editorLayer = new EditorLayer(Session, pointGizmo);
+
+        setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
         pointWindow = new PointWindow(Session, pointGizmo);
         timingWindow = new TimingWindow(Session);
         cameraWindow = new CameraWindow(Session);
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(Session);
         followTargetWindow = new FollowTargetWindow(Session);
-        trackEditor = new TrackEditorWindow(Session, config, fields, timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow, sceneFiles, setupWindow);
+        trackEditor = new TrackEditorWindow(
+            Session, config, fields,
+            timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow,
+            sceneFiles, setupWindow);
+
         windows.AddWindow(trackEditor);
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
@@ -84,14 +85,22 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(followTargetWindow);
         windows.AddWindow(new WelcomeWindow(config, OpenTrackEditor));
         windows.AddWindow(setupWindow);
-        PluginInterface.UiBuilder.Draw += OnDraw;
-        PluginInterface.UiBuilder.DisableGposeUiHide = true;
-        PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;
+
+        sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
+        if (sceneFiles.Lost) setupWindow.IsOpen = true;
+
         Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
         Input = new InputBlocker(() => Session.LocksInput, () => blockEscape);
 
+        PluginInterface.UiBuilder.DisableGposeUiHide = true;
+        PluginInterface.UiBuilder.Draw += OnDraw;
+        PluginInterface.UiBuilder.OpenMainUi += OpenTrackEditor;
         Framework.Update += OnFrameworkUpdate;
         ClientState.Logout += OnLogout;
+        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+        {
+            HelpMessage = "/vista opens the editor"
+        });
 
         Log.Information("Vista loaded. Build {Build}.", typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown");
     }
