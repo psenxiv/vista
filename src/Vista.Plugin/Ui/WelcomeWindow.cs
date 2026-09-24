@@ -6,7 +6,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui;
 
-/// <summary>The first-load greeting for testers; opens once per install and records itself as seen when closed.</summary>
+/// <summary>The first-load greeting for testers; opens once per install, records itself as seen when closed, and hands on to setting up.</summary>
 internal sealed class WelcomeWindow : Window
 {
     private const float Width = 420f;
@@ -21,11 +21,13 @@ internal sealed class WelcomeWindow : Window
     private const string Feedback = "If you find a bug or have an idea, please reach out on Discord";
 
     private readonly Configuration config;
+    private readonly Action continued;
 
-    public WelcomeWindow(Configuration config)
+    public WelcomeWindow(Configuration config, Action continued)
         : base("Welcome to Vista###vista-welcome", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.config = config;
+        this.continued = continued;
         RespectCloseHotkey = false;
         IsOpen = !config.WelcomeSeen;
     }
@@ -34,12 +36,13 @@ internal sealed class WelcomeWindow : Window
     public override void PreDraw()
         => ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
-    /// <summary>Ok and the close button both land here, so either one dismisses it for good.</summary>
+    /// <summary>Ok and the close button both land here, so either one dismisses it for good and moves on to Setup, or the Vista window once a folder is set.</summary>
     public override void OnClose()
     {
         if (config.WelcomeSeen) return;
         config.WelcomeSeen = true;
         config.Save();
+        continued();
     }
 
     public override void Draw()

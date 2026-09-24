@@ -82,7 +82,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(guideWindow);
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);
-        windows.AddWindow(new WelcomeWindow(config));
+        windows.AddWindow(new WelcomeWindow(config, OpenTrackEditor));
         windows.AddWindow(setupWindow);
         PluginInterface.UiBuilder.Draw += OnDraw;
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
