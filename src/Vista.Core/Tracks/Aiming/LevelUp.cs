@@ -180,13 +180,9 @@ public sealed class LevelUp
     /// <summary>The upright up facing unit <paramref name="forward"/>.</summary>
     private static Vector3 Level(Vector3 forward) => CameraRotation.Upright(forward);
 
-    /// <summary>The level way the up leans facing unit <paramref name="forward"/> at a passage toward <paramref name="pole"/> (1 up, -1 down), reversed when <paramref name="inverted"/>; facing level, it leans back from a climb.</summary>
-    private static Vector3 Level(Vector3 forward, bool inverted, float pole)
-    {
-        var up = Level(forward);
-        var lean = CameraRotation.Sideways(up) > 1e-6f ? Flat(up) : Flat(-pole * forward);
-        return inverted ? -lean : lean;
-    }
+    /// <summary>The level way the up leans facing unit <paramref name="forward"/> at a passage toward <paramref name="pole"/> (1 up, -1 down): back from a climb and ahead into a dive, reversed when <paramref name="inverted"/>.</summary>
+    private static Vector3 Level(Vector3 forward, bool inverted, float pole) =>
+        (inverted ? pole : -pole) * Flat(forward);
 
     /// <summary><paramref name="v"/>'s level part as a unit vector.</summary>
     private static Vector3 Flat(Vector3 v) => Vector3.Normalize(new Vector3(v.X, 0f, v.Z));
