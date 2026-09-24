@@ -7,6 +7,7 @@
 - The camera can look straight up, straight down or upside down, in Edit and in your shots.
 - Direction of travel turns upside down over a loop, like a rollercoaster.
 - The picture no longer flips when a shot goes straight up or down, or passes over or under what it's looking at. It turns round smoothly instead.
+- Fixed the turn colours from G sometimes showing the very end of a path as hot.
 
 ## 0.8.0.1
 

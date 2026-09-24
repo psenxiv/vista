@@ -43,6 +43,24 @@ public class TurnHeatTests
     }
 
     [Fact]
+    public void ItSamplesAtEvenStepsWhenTheTrackIsNoWholeNumberOfThem()
+    {
+        // 30.05 yalms at a steady 10 a second is 3.005 s: ceil(3.005 × 30) = 91 steps of 0.33022 yalms each, the last one
+        // too, rather than 90 of a thirtieth of a second and a 0.05-yalm sliver whose float noise would read as a whip.
+        var track = TrackEditing.Empty() with
+        {
+            Speed = 10f,
+        };
+        foreach (var x in new[] { 0f, 10f, 20f, 30.05f })
+            track = TrackEditing.Append(track, Point(x));
+        var samples = TurnHeat.Samples(new TrackEvaluator(track));
+
+        Assert.Equal(92, samples.Count);
+        for (var i = 1; i < samples.Count; i++)
+            Assert.Equal(30.05f / 91f, samples[i].Position.X - samples[i - 1].Position.X, 1e-3f);
+    }
+
+    [Fact]
     public void AStraightPathReadsAsZero()
     {
         var track = TrackEditing.Empty(AimMode.PathTangent) with { Speed = 10f };
