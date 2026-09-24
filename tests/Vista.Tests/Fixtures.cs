@@ -37,8 +37,8 @@ internal static class Fixtures
         (position, yaw, pitch, fov, roll) => new ControlPoint(position, yaw, pitch, fov, roll)
     );
 
-    /// <summary>The sharpest turn from one leg into the next in a generated track, since Direction of travel snaps round where a path runs straight back along itself, by design.</summary>
-    private const float SharpestGeneratedTurn = 179.9f * MathF.PI / 180f;
+    /// <summary>The sharpest turn from one leg into the next in a generated track: Direction of travel snaps round where a path runs back along itself, by design, and within a degree of that it whips round in milliseconds, where float noise reads as a step (a 179.48° turn did).</summary>
+    private const float SharpestGeneratedTurn = 179f * MathF.PI / 180f;
 
     /// <summary>Two to six points, each at least a yalm from the one before, and no leg turning back on the one before sharper than <see cref="SharpestGeneratedTurn"/>.</summary>
     private static readonly Gen<ControlPoint[]> AnyPoints = AnyPoint
