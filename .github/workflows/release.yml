@@ -40,10 +40,10 @@ jobs:
           if ([version]$version -le [version]$live.AssemblyVersion) { throw "$version isn't above the live release $($live.AssemblyVersion)." }
           if ($channel -eq 'test' -and [version]$version -le [version]$live.TestingAssemblyVersion) { throw "$version isn't above the live test build $($live.TestingAssemblyVersion)." }
 
-          # A release of code already shipped as a test build reuses that build. Publishing the test build only changes repo.json.
+          # A release whose build inputs are unchanged since its test build reuses that build.
           $promote = $false
           if ($channel -eq 'prod' -and (git tag --list "test-v$version")) {
-            git diff --quiet "test-v$version" HEAD -- . ':(exclude)repo.json'
+            git diff --quiet "test-v$version" HEAD -- src Directory.Build.props global.json
             if ($LASTEXITCODE -ne 0) { throw "test-v$version was built from different code." }
             $promote = $true
           }
