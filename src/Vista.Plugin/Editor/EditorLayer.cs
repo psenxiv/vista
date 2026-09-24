@@ -10,6 +10,7 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Game;
+using Vista.Plugin.Session;
 
 namespace Vista.Plugin.Editor;
 
@@ -27,6 +28,7 @@ internal sealed class EditorLayer
         | ImGuiWindowFlags.NoFocusOnAppearing
         | ImGuiWindowFlags.NoSavedSettings;
 
+    private readonly GameSession game;
     private readonly SessionState session;
     private readonly PointGizmo gizmo;
     private readonly AnchorGizmo anchorGizmo;
@@ -36,9 +38,10 @@ internal sealed class EditorLayer
     /// <summary>True while the edited track's path is drawn by how fast its camera turns.</summary>
     public bool Heat { get; set; }
 
-    public EditorLayer(SessionState session, PointGizmo gizmo)
+    public EditorLayer(GameSession game, PointGizmo gizmo)
     {
-        this.session = session;
+        this.game = game;
+        session = game.State;
         this.gizmo = gizmo;
         anchorGizmo = new AnchorGizmo(gizmo);
     }
@@ -137,7 +140,7 @@ internal sealed class EditorLayer
 
             // Dalamud hides presses from ImGui unless it wants the mouse, so read the button itself.
             var overUi = io.WantCaptureMouse && !ImGui.IsWindowHovered();
-            var look = CameraAccess.ReadAngles() ?? (0f, 0f);
+            var look = game.CameraAngles ?? (0f, 0f);
             Apply(
                 clicks.Update(
                     PhysicalKeys.IsDown(VirtualKey.LBUTTON),

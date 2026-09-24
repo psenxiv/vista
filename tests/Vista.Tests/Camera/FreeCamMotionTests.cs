@@ -1,27 +1,34 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Camera;
 
 public class FreeCamMotionTests
 {
+    // Measured in game: yaw 0 looks along -Z and yaw pi/2 along -X. At yaw 45 and pitch 30 degrees the facing is
+    // (-sin45 cos30, sin30, -cos45 cos30) = (-0.6123724, 0.5, -0.6123724), the upright up its pitch-derivative
+    // (sin45 sin30, cos30, cos45 sin30) = (0.3535534, 0.8660254, 0.3535534), and the right their cross product
+    // (0.7071068, 0, -0.7071068).
+    private static readonly Quaternion Yaw45Pitch30 = CameraRotation.FromAngles(45f * Deg, 30f * Deg, 0f);
+
     [Fact]
     public void NoInputDoesNotMove()
     {
         var start = new Vector3(10, 20, 30);
-        Assert.Equal(start, FreeCamMotion.Step(start, Vector3.Zero, 0f, 0f, 5f, 0.016f));
+        Assert.Equal(start, FreeCamMotion.Step(start, Vector3.Zero, Yaw45Pitch30, 5f, 0.016f));
     }
 
     [Fact]
     public void MotionIsFramerateIndependent()
     {
         var input = new Vector3(1, 0, 0);
-        var oneBigStep = FreeCamMotion.Step(Vector3.Zero, input, 0f, 0f, 5f, 0.1f);
+        var oneBigStep = FreeCamMotion.Step(Vector3.Zero, input, Quaternion.Identity, 5f, 0.1f);
 
         var accumulated = Vector3.Zero;
         for (var i = 0; i < 10; i++)
-            accumulated = FreeCamMotion.Step(accumulated, input, 0f, 0f, 5f, 0.01f);
+            accumulated = FreeCamMotion.Step(accumulated, input, Quaternion.Identity, 5f, 0.01f);
 
         Assert.True(
             Vector3.Distance(oneBigStep, accumulated) < 0.0001f,
@@ -34,36 +41,22 @@ public class FreeCamMotionTests
     {
         var input = new Vector3(1, 0, 0);
         // One second of full forward input at speed 1 and speed 2 travels exactly 1 and 2 units.
-        var slow = FreeCamMotion.Step(Vector3.Zero, input, 0f, 0f, 1f, 1f);
-        var fast = FreeCamMotion.Step(Vector3.Zero, input, 0f, 0f, 2f, 1f);
+        var slow = FreeCamMotion.Step(Vector3.Zero, input, Yaw45Pitch30, 1f, 1f);
+        var fast = FreeCamMotion.Step(Vector3.Zero, input, Yaw45Pitch30, 2f, 1f);
 
         Assert.Equal(1f, slow.Length(), 5);
         Assert.Equal(2f, fast.Length(), 5);
     }
 
-    [Fact]
-    public void UpInputMovesOnYOnly()
-    {
-        // Up input is world up, untouched by yaw or pitch: one second at speed 3 rises exactly 3.
-        var result = FreeCamMotion.Step(Vector3.Zero, new Vector3(0, 1, 0), 1.2f, 0.4f, 3f, 1f);
-
-        Assert.Equal(0f, result.X, 4);
-        Assert.Equal(0f, result.Z, 4);
-        Assert.Equal(3f, result.Y, 4);
-    }
-
-    // Measured in game: yaw 0 looks along -Z and yaw pi/2 along -X, so the view direction is
-    // (-sin yaw cos pitch, sin pitch, -cos yaw cos pitch) and the strafe axis is level at
-    // (cos yaw, 0, -sin yaw). At yaw 45 and pitch 30 degrees, one second at speed 1 moves
-    // (-0.6123724, 0.5, -0.6123724) forward and (0.7071068, 0, -0.7071068) right.
+    // One second at speed 1 moves one unit along the facing, the camera's up or its right, as derived above.
     [Theory]
     [InlineData(1f, 0f, 0f, -0.6123724f, 0.5f, -0.6123724f)]
     [InlineData(-1f, 0f, 0f, 0.6123724f, -0.5f, 0.6123724f)]
     [InlineData(0f, 0f, 1f, 0.7071068f, 0f, -0.7071068f)]
     [InlineData(0f, 0f, -1f, -0.7071068f, 0f, 0.7071068f)]
-    [InlineData(0f, 1f, 0f, 0f, 1f, 0f)]
-    [InlineData(0f, -1f, 0f, 0f, -1f, 0f)]
-    public void OneSecondOfInputMovesAlongTheHandComputedAxes(
+    [InlineData(0f, 1f, 0f, 0.3535534f, 0.8660254f, 0.3535534f)]
+    [InlineData(0f, -1f, 0f, -0.3535534f, -0.8660254f, -0.3535534f)]
+    public void OneSecondOfInputMovesAlongTheCamerasOwnAxes(
         float forward,
         float up,
         float right,
@@ -72,18 +65,95 @@ public class FreeCamMotionTests
         float z
     )
     {
-        var moved = FreeCamMotion.Step(
-            Vector3.Zero,
-            new Vector3(forward, up, right),
-            MathF.PI / 4f,
-            MathF.PI / 6f,
-            1f,
-            1f
-        );
+        var moved = FreeCamMotion.Step(Vector3.Zero, new Vector3(forward, up, right), Yaw45Pitch30, 1f, 1f);
 
         Assert.Equal(x, moved.X, 5);
         Assert.Equal(y, moved.Y, 5);
         Assert.Equal(z, moved.Z, 5);
+    }
+
+    [Fact]
+    public void UpInputUpsideDownMovesUpThePicture()
+    {
+        // Rolled half a turn about the facing (0,0,-1), the camera's up is world (0,-1,0): one second of up at speed 3 drops 3.
+        var moved = FreeCamMotion.Step(
+            Vector3.Zero,
+            new Vector3(0, 1, 0),
+            CameraRotation.FromAngles(0f, 0f, MathF.PI),
+            3f,
+            1f
+        );
+
+        Assert.Equal(0f, moved.X, 5);
+        Assert.Equal(-3f, moved.Y, 5);
+        Assert.Equal(0f, moved.Z, 5);
+    }
+
+    [Fact]
+    public void PitchingPastVerticalTurnsTheCameraOver()
+    {
+        // Pitching 100 degrees about the right (1,0,0) takes forward (0,0,-1) to (0, sin100, -cos100) = (0, 0.9848078, 0.1736482)
+        // and up (0,1,0) to (0, cos100, sin100) = (0, -0.1736482, 0.9848078): past vertical, the picture is upside down.
+        var rotation = FreeCamMotion.Turn(Quaternion.Identity, 0f, 100f * Deg);
+
+        var forward = CameraRotation.Forward(rotation);
+        var up = CameraRotation.Up(rotation);
+        Assert.Equal(0f, forward.X, 5);
+        Assert.Equal(0.9848078f, forward.Y, 5);
+        Assert.Equal(0.1736482f, forward.Z, 5);
+        Assert.Equal(0f, up.X, 5);
+        Assert.Equal(-0.1736482f, up.Y, 5);
+        Assert.Equal(0.9848078f, up.Z, 5);
+    }
+
+    [Fact]
+    public void YawingUnrolledMatchesTheGamesYaw()
+    {
+        // Yaw grows toward -X (measured in game), so 90 degrees from identity faces (-1,0,0) with the up unchanged.
+        var rotation = FreeCamMotion.Turn(Quaternion.Identity, 90f * Deg, 0f);
+
+        var forward = CameraRotation.Forward(rotation);
+        var up = CameraRotation.Up(rotation);
+        Assert.Equal(-1f, forward.X, 5);
+        Assert.Equal(0f, forward.Y, 5);
+        Assert.Equal(0f, forward.Z, 5);
+        Assert.Equal(0f, up.X, 5);
+        Assert.Equal(1f, up.Y, 5);
+        Assert.Equal(0f, up.Z, 5);
+    }
+
+    [Fact]
+    public void YawingUpsideDownTurnsAboutTheCamerasOwnUp()
+    {
+        // Pitched half a turn, the camera faces (0,0,1) with up (0,-1,0). Yawing 90 degrees about that up faces (-1,0,0),
+        // the picture's left as before; about world up it would face (1,0,0).
+        var inverted = FreeCamMotion.Turn(Quaternion.Identity, 0f, MathF.PI);
+        var rotation = FreeCamMotion.Turn(inverted, 90f * Deg, 0f);
+
+        var forward = CameraRotation.Forward(rotation);
+        var up = CameraRotation.Up(rotation);
+        Assert.Equal(-1f, forward.X, 5);
+        Assert.Equal(0f, forward.Y, 5);
+        Assert.Equal(0f, forward.Z, 5);
+        Assert.Equal(0f, up.X, 5);
+        Assert.Equal(-1f, up.Y, 5);
+        Assert.Equal(0f, up.Z, 5);
+    }
+
+    [Fact]
+    public void RollingRightTipsTheUpToTheRight()
+    {
+        // Rolling 90 degrees about the facing (0,0,-1) keeps the facing and takes up (0,1,0) to the right, (1,0,0).
+        var rotation = FreeCamMotion.Roll(Quaternion.Identity, 90f * Deg);
+
+        var forward = CameraRotation.Forward(rotation);
+        var up = CameraRotation.Up(rotation);
+        Assert.Equal(0f, forward.X, 5);
+        Assert.Equal(0f, forward.Y, 5);
+        Assert.Equal(-1f, forward.Z, 5);
+        Assert.Equal(1f, up.X, 5);
+        Assert.Equal(0f, up.Y, 5);
+        Assert.Equal(0f, up.Z, 5);
     }
 
     [Fact]
@@ -96,8 +166,7 @@ public class FreeCamMotionTests
     [Fact]
     public void LookAtUsesTheGameDirectionConvention()
     {
-        // Measured in game: yaw 0 looks along -Z, yaw pi/2 looks along -X. Ten units ahead at
-        // yaw 45 and pitch 30 degrees is therefore (-6.1237244, 5, -6.1237244).
+        // Ten units along the facing derived above: (-6.1237244, 5, -6.1237244).
         var ahead = FreeCamMotion.LookAtFrom(Vector3.Zero, MathF.PI / 4f, MathF.PI / 6f);
 
         Assert.Equal(-6.1237244f, ahead.X, 4);
@@ -106,43 +175,21 @@ public class FreeCamMotionTests
     }
 
     [Fact]
+    public void LookAtFromARotationSitsTenUnitsAlongItsFacing()
+    {
+        // Ten units along the facing derived above, from (1,2,3): (-5.1237244, 7, -3.1237244).
+        var ahead = FreeCamMotion.LookAtFrom(new Vector3(1, 2, 3), Yaw45Pitch30);
+
+        Assert.Equal(-5.1237244f, ahead.X, 4);
+        Assert.Equal(7f, ahead.Y, 4);
+        Assert.Equal(-3.1237244f, ahead.Z, 4);
+    }
+
+    [Fact]
     public void PitchUpRaisesTheLookAtTarget()
     {
         var level = FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0f);
         var raised = FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0.5f);
         Assert.True(raised.Y > level.Y);
-    }
-
-    [Fact]
-    public void RollLookChangesNothingUnrolled()
-    {
-        var (yaw, pitch) = FreeCamMotion.RollLook(0.3f, -0.2f, 0f);
-        Assert.Equal(0.3f, yaw, 6);
-        Assert.Equal(-0.2f, pitch, 6);
-    }
-
-    [Fact]
-    public void RolledRightAQuarterTurnADragRightLooksDown()
-    {
-        // Unrolled, a right turn lowers yaw (FreeCamMotion's convention); rolled right 90 degrees, screen right is world down.
-        var (yaw, pitch) = FreeCamMotion.RollLook(-0.1f, 0f, MathF.PI / 2f);
-        Assert.Equal(0f, yaw, 5);
-        Assert.Equal(-0.1f, pitch, 5);
-    }
-
-    [Fact]
-    public void RolledRightAQuarterTurnADragUpTurnsRight()
-    {
-        var (yaw, pitch) = FreeCamMotion.RollLook(0f, 0.1f, MathF.PI / 2f);
-        Assert.Equal(-0.1f, yaw, 5);
-        Assert.Equal(0f, pitch, 5);
-    }
-
-    [Fact]
-    public void UpsideDownADragRightTurnsLeft()
-    {
-        var (yaw, pitch) = FreeCamMotion.RollLook(-0.1f, 0f, MathF.PI);
-        Assert.Equal(0.1f, yaw, 5);
-        Assert.Equal(0f, pitch, 5);
     }
 }

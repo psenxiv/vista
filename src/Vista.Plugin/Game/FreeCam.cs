@@ -5,7 +5,7 @@ using Vista.Core.Editing;
 
 namespace Vista.Plugin.Game;
 
-/// <summary>Flies the camera with WASD and Q/E, and rolls it with Ctrl + Q/E. Mouse-look still steers.</summary>
+/// <summary>Flies the camera like a plane with WASD and Q/E along its own axes, and rolls it with Ctrl + Q/E. Mouse-look turns it about its own axes, with no limit.</summary>
 internal sealed class FreeCam
 {
     private const float BaseSpeed = 8f;
@@ -13,9 +13,9 @@ internal sealed class FreeCam
     private const float RollRate = MathF.PI / 3f;
 
     private Vector3 position;
-    private (float Yaw, float Pitch)? lastAngles;
+    private Quaternion rotation = Quaternion.Identity;
+    private (float Yaw, float Pitch)? written;
     private float fov;
-    private float roll;
 
     public bool Enabled { get; private set; }
 
@@ -26,11 +26,11 @@ internal sealed class FreeCam
         set => position = value;
     }
 
-    /// <summary>Current roll in radians, positive rolls right; wrapped to within half a turn.</summary>
-    public float Roll
+    /// <summary>Which way the camera faces and which way is up in its picture.</summary>
+    public Quaternion Rotation
     {
-        get => roll;
-        set => roll = EditLimits.Angle(value);
+        get => rotation;
+        set => rotation = Quaternion.Normalize(value);
     }
 
     /// <summary>Field of view in radians, clamped to the editor's range.</summary>
@@ -43,19 +43,16 @@ internal sealed class FreeCam
     /// <summary>The stepped speed setting; Shift still boosts on top.</summary>
     public FlySpeed Speed { get; } = new();
 
-    public void Enable(Vector3 startPosition, float startRoll, float startFov)
+    public void Enable(Vector3 startPosition, Quaternion startRotation, float startFov)
     {
         position = startPosition;
-        Roll = startRoll;
+        Rotation = startRotation;
         fov = startFov;
-        lastAngles = null;
+        written = null;
         Enabled = true;
     }
 
     public void Disable() => Enabled = false;
-
-    /// <summary>Forgets the last mouse-look angles, so an angle written from elsewhere is taken as-is rather than read as a mouse movement.</summary>
-    public void Resync() => lastAngles = null;
 
     /// <summary>True when a flight or roll key is held this frame, outside text fields.</summary>
     public static bool HasFlightInput() =>
@@ -68,39 +65,34 @@ internal sealed class FreeCam
 
         var typing = PhysicalKeys.IsTyping();
         if (!typing)
-            Roll += ReadRoll() * RollRate * deltaSeconds;
-        var (yaw, pitch) = LookAlongRoll(CameraAccess.ReadAngles() ?? (0f, 0f));
+            rotation = FreeCamMotion.Roll(rotation, ReadRoll() * RollRate * deltaSeconds);
+        Look();
         var input = typing ? Vector3.Zero : ReadInput();
         var speed = BaseSpeed * Speed.Multiplier * (Plugin.KeyState[VirtualKey.SHIFT] ? SprintMultiplier : 1f);
-        position = FreeCamMotion.Step(position, input, yaw, pitch, speed, deltaSeconds);
+        position = FreeCamMotion.Step(position, input, rotation, speed, deltaSeconds);
 
-        return CameraState.FromAngles(position, yaw, pitch, Roll, fov);
+        return new CameraState(
+            position,
+            FreeCamMotion.LookAtFrom(position, rotation),
+            CameraRotation.Up(rotation),
+            fov
+        );
     }
 
-    /// <summary>Re-applies this frame's mouse-look change along the rolled screen and writes it back; unrolled, the game's angles stand.</summary>
-    private (float Yaw, float Pitch) LookAlongRoll((float Yaw, float Pitch) read)
+    /// <summary>Turns by how far the mouse moved the game's angles since last written, then puts pitch back to 0 so it never reaches the game's limits.</summary>
+    private void Look()
     {
-        if (lastAngles is not { } last || Roll == 0f)
+        if (CameraAccess.ReadAngles() is not { } read)
+            return;
+
+        if (written is { } last)
         {
-            lastAngles = read;
-            return read;
+            var yawDelta = MathF.IEEERemainder(read.Yaw - last.Yaw, MathF.Tau);
+            rotation = FreeCamMotion.Turn(rotation, yawDelta, read.Pitch - last.Pitch);
         }
 
-        var yawDelta = MathF.IEEERemainder(read.Yaw - last.Yaw, MathF.Tau);
-        var pitchDelta = read.Pitch - last.Pitch;
-        if (yawDelta == 0f && pitchDelta == 0f)
-            return last;
-
-        var (turnYaw, turnPitch) = FreeCamMotion.RollLook(yawDelta, pitchDelta, Roll);
-        var (min, max) = CameraAccess.ReadPitchLimits() ?? (-MathF.PI / 2f, MathF.PI / 2f);
-        (float Yaw, float Pitch) result = (
-            Angles.Wrap(last.Yaw + turnYaw),
-            Math.Clamp(last.Pitch + turnPitch, min, max)
-        );
-
-        CameraAccess.WriteAngles(result.Yaw, result.Pitch);
-        lastAngles = result;
-        return result;
+        CameraAccess.WriteAngles(read.Yaw, 0f);
+        written = (read.Yaw, 0f);
     }
 
     private static Vector3 ReadInput()
@@ -128,7 +120,7 @@ internal sealed class FreeCam
         return new Vector3(forward, up, right);
     }
 
-    /// <summary>Ctrl + Q rolls left, Ctrl + E rolls right; without Ctrl, Q and E fly down and up.</summary>
+    /// <summary>Ctrl + Q rolls left, Ctrl + E rolls right; without Ctrl, Q and E fly down and up the picture.</summary>
     private static float ReadRoll() =>
         PhysicalKeys.IsDown(VirtualKey.CONTROL)
             ? (Plugin.KeyState[VirtualKey.E] ? 1f : 0f) - (Plugin.KeyState[VirtualKey.Q] ? 1f : 0f)

@@ -69,11 +69,11 @@ internal sealed class GameSession
         set => freeCam.Position = value;
     }
 
-    /// <summary>The free camera's roll in radians.</summary>
+    /// <summary>The free camera's roll in radians; setting it rolls about the facing, which stays put.</summary>
     public float CameraRoll
     {
-        get => freeCam.Roll;
-        set => freeCam.Roll = value;
+        get => CameraRotation.ToAngles(freeCam.Rotation).Roll;
+        set => freeCam.Rotation = FreeCamMotion.Roll(freeCam.Rotation, value - CameraRoll);
     }
 
     /// <summary>The field of view the camera is looking through, in radians.</summary>
@@ -86,15 +86,32 @@ internal sealed class GameSession
     /// <summary>The game's field of view from just before Vista took the camera, or null when Vista does not hold it.</summary>
     public float? TakeoverFov => snapshotBeforeTakeover?.Fov;
 
-    /// <summary>The camera's yaw and pitch, or null when the camera cannot be read.</summary>
-    public static (float Yaw, float Pitch)? CameraAngles => CameraAccess.ReadAngles();
-
-    /// <summary>Turns the camera, telling the free cam not to read it as a mouse movement.</summary>
-    public void TurnCamera(float yaw, float pitch)
+    /// <summary>The camera's yaw and pitch: the free cam's while it flies, otherwise the game's, or null when the game's cannot be read.</summary>
+    public (float Yaw, float Pitch)? CameraAngles
     {
-        CameraAccess.WriteAngles(yaw, pitch);
-        freeCam.Resync();
+        get
+        {
+            if (!freeCam.Enabled)
+                return CameraAccess.ReadAngles();
+            var (yaw, pitch, _) = CameraRotation.ToAngles(freeCam.Rotation);
+            return (yaw, pitch);
+        }
     }
+
+    /// <summary>Turns the free camera to face <paramref name="yaw"/> and <paramref name="pitch"/>, keeping its roll.</summary>
+    public void TurnCamera(float yaw, float pitch) =>
+        freeCam.Rotation = CameraRotation.FromAngles(yaw, pitch, CameraRoll);
+
+    /// <summary>Turns the free camera's picture upright about its facing.</summary>
+    public void LevelCameraRoll()
+    {
+        var forward = CameraRotation.Forward(freeCam.Rotation);
+        freeCam.Rotation = CameraRotation.FromBasis(forward, CameraRotation.Upright(forward));
+    }
+
+    /// <summary>Moves the free camera by (forward, up, right) along its own axes, as the fly keys do.</summary>
+    public void NudgeCamera(Vector3 input) =>
+        freeCam.Position = FreeCamMotion.Step(freeCam.Position, input, freeCam.Rotation, 1f, 1f);
 
     /// <summary>Starts free-cam: from Off or View at the game camera, from Live at the current frame. No-op while editing.</summary>
     public void EnterEdit()
@@ -113,7 +130,8 @@ internal sealed class GameSession
         {
             case EditOutcome.FromGame:
                 previewedLastFrame = false;
-                freeCam.Enable(start.Value.Position, 0f, start.Value.Fov);
+                var (yaw, pitch) = CameraAccess.ReadAngles() ?? (0f, 0f);
+                freeCam.Enable(start.Value.Position, CameraRotation.FromAngles(yaw, pitch, 0f), start.Value.Fov);
                 movement.Hold();
                 TakeCamera();
                 break;
@@ -260,17 +278,24 @@ internal sealed class GameSession
     {
         if (state.Transport.Previewing && lastFrame is { } previewed)
         {
-            var (previewYaw, previewPitch) = TrackAim.FromDirection(previewed.LookAt - previewed.Position);
-            return new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewed.Roll);
+            var (previewYaw, previewPitch, previewRoll) = CameraRotation.ToAngles(
+                CameraRotation.FromBasis(previewed.LookAt - previewed.Position, previewed.Up)
+            );
+            return new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewRoll);
         }
 
         var camera = CameraAccess.ReadState();
-        var angles = CameraAccess.ReadAngles();
-        if (camera is null || angles is null)
+        if (camera is null)
             return null;
+        if (freeCam.Enabled)
+        {
+            var (yaw, pitch, roll) = CameraRotation.ToAngles(freeCam.Rotation);
+            return new ControlPoint(camera.Value.Position, yaw, pitch, camera.Value.Fov, roll);
+        }
 
-        var (yaw, pitch) = angles.Value;
-        return new ControlPoint(camera.Value.Position, yaw, pitch, camera.Value.Fov, freeCam.Roll);
+        return CameraAccess.ReadAngles() is { } angles
+            ? new ControlPoint(camera.Value.Position, angles.Yaw, angles.Pitch, camera.Value.Fov)
+            : null;
     }
 
     /// <summary>While editing: the preview's frame, the scrubbed frame, or the free-cam, handing the free-cam the last frame when a preview stops.</summary>
@@ -346,13 +371,10 @@ internal sealed class GameSession
         owned = true;
     }
 
-    /// <summary>Puts the free-cam at <paramref name="frame"/>, keeping its aim by writing the game's yaw and pitch within its limits.</summary>
+    /// <summary>Puts the free-cam at <paramref name="frame"/>, facing its way with its up.</summary>
     private void FlyFrom(CameraState frame)
     {
         previewedLastFrame = false;
-        freeCam.Enable(frame.Position, frame.Roll, frame.Fov);
-        var (yaw, pitch) = TrackAim.FromDirection(frame.LookAt - frame.Position);
-        var (min, max) = CameraAccess.ReadPitchLimits() ?? (-MathF.PI / 2f, MathF.PI / 2f);
-        CameraAccess.WriteAngles(yaw, Math.Clamp(pitch, min, max));
+        freeCam.Enable(frame.Position, CameraRotation.FromBasis(frame.LookAt - frame.Position, frame.Up), frame.Fov);
     }
 }

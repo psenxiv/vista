@@ -83,7 +83,7 @@ public sealed class Plugin : IDalamudPlugin
         game = new GameSession(config, Movement);
         sceneFiles = new SceneFiles(config, game);
         fields = new PendingField(() => game.State.Mode == CameraMode.Editing);
-        editorLayer = new EditorLayer(game.State, pointGizmo);
+        editorLayer = new EditorLayer(game, pointGizmo);
 
         setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
         pointWindow = new PointWindow(game, pointGizmo);

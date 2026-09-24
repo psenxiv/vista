@@ -298,7 +298,7 @@ internal sealed class TrackEditorWindow : Window
         {
             AlignTo(CameraToolsStart(), gap);
             if (IconButton.Draw("level-roll", FontAwesomeIcon.RulerHorizontal, "Level camera roll"))
-                game.CameraRoll = 0f;
+                game.LevelCameraRoll();
             ImGui.SameLine();
             // Plain white when closed, not Toggle's dim, which reads as disabled.
             if (IconButton.Draw("camera", FontAwesomeIcon.Camera, "Camera", camera.IsOpen ? UiColours.Accent : null))

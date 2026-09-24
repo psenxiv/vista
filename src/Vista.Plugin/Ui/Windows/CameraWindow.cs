@@ -2,7 +2,6 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
-using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
@@ -46,17 +45,17 @@ internal sealed class CameraWindow : Window
             return;
 
         var position = game.CameraPosition;
-        var (yaw, pitch) = GameSession.CameraAngles ?? (0f, 0f);
+        var (yaw, pitch) = game.CameraAngles ?? (0f, 0f);
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
         if (mode == GizmoMode.MoveLocal)
-            DrawNudges(position, yaw, pitch);
+            DrawNudges();
         else
             DrawWorld(position);
 
         ImGui.TableNextRow();
         if (PoseGrid.Button("level-roll", FontAwesomeIcon.SyncAlt, "Level roll", enabled: true))
-            game.CameraRoll = 0f;
+            game.LevelCameraRoll();
         Field(
             "cam-pitch",
             "Pitch",
@@ -142,7 +141,7 @@ internal sealed class CameraWindow : Window
     }
 
     /// <summary>Right, Up and Forward, which read 0 and move the camera by what is dragged or typed, along the axes the fly keys use.</summary>
-    private void DrawNudges(Vector3 position, float yaw, float pitch)
+    private void DrawNudges()
     {
         // A drag reports this frame's movement from 0, and the field reads 0 again next frame.
         void Nudge(string id, string name, uint border, Func<float, Vector3> input) =>
@@ -156,11 +155,11 @@ internal sealed class CameraWindow : Window
                 v =>
                 {
                     if (float.IsFinite(v))
-                        game.CameraPosition = FreeCamMotion.Step(position, input(v), yaw, pitch, 1f, 1f);
+                        game.NudgeCamera(input(v));
                 }
             );
 
-        // FreeCamMotion's input is (forward, up, right).
+        // NudgeCamera's input is (forward, up, right).
         Nudge("cam-right", "Right", EditorColours.AxisX, v => new Vector3(0f, 0f, v));
         Nudge("cam-up", "Up", EditorColours.AxisY, v => new Vector3(0f, v, 0f));
         Nudge("cam-forward", "Forward", EditorColours.AxisZ, v => new Vector3(v, 0f, 0f));

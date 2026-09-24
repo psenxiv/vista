@@ -8,32 +8,41 @@ public static class FreeCamMotion
     /// <summary>Matches the range the game's own look-at target sits at, roughly 1.5 to 20.</summary>
     public const float LookAtDistance = 10f;
 
-    /// <summary>Advances a camera position by one frame of input.</summary>
+    /// <summary>Advances a camera position by one frame of input, along the camera's own facing, up and right.</summary>
     /// <param name="input">(forward, up, right), each in [-1, 1].</param>
-    /// <param name="yaw">Horizontal angle in radians, as the game reports DirH.</param>
-    /// <param name="pitch">Vertical angle in radians. Positive looks up.</param>
     /// <param name="speed">Units per second at full input.</param>
-    public static Vector3 Step(Vector3 position, Vector3 input, float yaw, float pitch, float speed, float deltaSeconds)
+    public static Vector3 Step(Vector3 position, Vector3 input, Quaternion rotation, float speed, float deltaSeconds)
     {
         if (input == Vector3.Zero)
             return position;
 
-        var move = (Direction(yaw, pitch) * input.X) + (Vector3.UnitY * input.Y) + (Right(yaw) * input.Z);
+        var move =
+            (CameraRotation.Forward(rotation) * input.X)
+            + (CameraRotation.Up(rotation) * input.Y)
+            + (Vector3.Transform(Vector3.UnitX, rotation) * input.Z);
 
         return position + (move * speed * deltaSeconds);
     }
 
-    /// <summary>Turns a mouse-look change in yaw and pitch so it follows the screen when the camera is rolled by <paramref name="roll"/> radians.</summary>
-    public static (float Yaw, float Pitch) RollLook(float yawDelta, float pitchDelta, float roll)
-    {
-        var cos = MathF.Cos(roll);
-        var sin = MathF.Sin(roll);
-        return ((yawDelta * cos) - (pitchDelta * sin), (yawDelta * sin) + (pitchDelta * cos));
-    }
+    /// <summary>Turns a rotation by radians of yaw about its own up, then pitch about its own right; signs follow the game's DirH and DirV.</summary>
+    public static Quaternion Turn(Quaternion rotation, float yawDelta, float pitchDelta) =>
+        Quaternion.Normalize(
+            rotation
+                * Quaternion.CreateFromAxisAngle(Vector3.UnitY, yawDelta)
+                * Quaternion.CreateFromAxisAngle(Vector3.UnitX, pitchDelta)
+        );
+
+    /// <summary>Rolls a rotation about its own facing by <paramref name="angle"/> radians, positive rolling right.</summary>
+    public static Quaternion Roll(Quaternion rotation, float angle) =>
+        Quaternion.Normalize(rotation * Quaternion.CreateFromAxisAngle(new Vector3(0f, 0f, -1f), angle));
 
     /// <summary>A point ahead of the camera along its facing.</summary>
     public static Vector3 LookAtFrom(Vector3 position, float yaw, float pitch) =>
         position + (Direction(yaw, pitch) * LookAtDistance);
+
+    /// <summary>A point ahead of the camera along the rotation's facing.</summary>
+    public static Vector3 LookAtFrom(Vector3 position, Quaternion rotation) =>
+        position + (CameraRotation.Forward(rotation) * LookAtDistance);
 
     /// <summary>Unit view direction. Sign convention measured in game, not assumed.</summary>
     private static Vector3 Direction(float yaw, float pitch)
@@ -41,7 +50,4 @@ public static class FreeCamMotion
         var cosPitch = MathF.Cos(pitch);
         return new Vector3(-MathF.Sin(yaw) * cosPitch, MathF.Sin(pitch), -MathF.Cos(yaw) * cosPitch);
     }
-
-    /// <summary>Horizontal strafe axis, so rising never drifts sideways.</summary>
-    private static Vector3 Right(float yaw) => new(MathF.Cos(yaw), 0f, -MathF.Sin(yaw));
 }

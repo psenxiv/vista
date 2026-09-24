@@ -50,14 +50,6 @@ internal static unsafe class CameraAccess
         camera->DirV = pitch;
     }
 
-    /// <summary>The lowest and highest pitch the game allows, in radians.</summary>
-    public static (float Min, float Max)? ReadPitchLimits()
-    {
-        if (!TryGetWorldCamera(out var camera))
-            return null;
-        return (camera->DirVMin, camera->DirVMax);
-    }
-
     /// <summary>Everything WriteState touches, so release can put it all back.</summary>
     public readonly record struct Snapshot(Vector3 Position, Vector3 LookAt, Vector3 Up, float Fov);
 
