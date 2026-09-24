@@ -15,7 +15,7 @@ format: ## Format the code with CSharpier
 lint: ## Build the plugin and tests with analyzer warnings as errors
 	@scripts/lint.sh
 
-verify: ## Format, lint and test: run before every commit
+verify: ## Format, lint, test and check coverage: run before every commit
 	@scripts/verify.sh
 
 mutate: ## Mutation-test Core with Stryker; SINCE=<commit> for changes since it

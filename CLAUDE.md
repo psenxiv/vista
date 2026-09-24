@@ -64,7 +64,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
 
 ## Build
 
-    make verify     # Format, lint and test: must pass before every commit
+    make verify     # Format, lint, test and check coverage: must pass before every commit
     make format     # Format with CSharpier (print width 120)
     make lint       # Build the plugin and tests with analyzer warnings as errors
     make mutate     # Mutation-test Core with Stryker; SINCE=<commit> for changes since it
@@ -72,7 +72,7 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
     make test       # Core tests
     make package    # Release build and latest.zip, as CI makes it
 
-**Run `make verify` before every commit, and commit only when it passes.** It formats the code, so commit what it formatted. `make testing` and `make release` run it in check mode and refuse unformatted code.
+**Run `make verify` before every commit, and commit only when it passes.** It formats the code, so commit what it formatted. It also fails if Core's line coverage falls below the floor, `Threshold` in `tests/Vista.Tests/Vista.Tests.csproj`. Cover new code with tests rather than lowering the floor. `make testing` and `make release` run it in check mode and refuse unformatted code.
 
 The lint is .NET's recommended analyzers plus Meziantou.Analyzer, with the rules set in `.editorconfig`. Turn a rule off there, with a comment saying why, rather than with `#pragma` in the code.
 
