@@ -1,3 +1,4 @@
+using CsCheck;
 using Vista.Core.Editing;
 using Xunit;
 
@@ -63,5 +64,51 @@ public class BlockMoveTests
     {
         Assert.Equal(0, BlockMove.NewIndex([2, 0, 1], 2));
         Assert.Equal(2, BlockMove.NewIndex([2, 0, 1], 1));
+    }
+
+    [Fact]
+    public void MovingRowsKeepsEveryRowAndMovesTheBlockBesideTheTarget()
+    {
+        var moves =
+            from count in Gen.Int[1, 12]
+            from moving in Gen.Int[0, count - 1].HashSet[1, count]
+            from grabbed in Gen.OneOfConst(moving.ToArray())
+            from target in Gen.Int[0, count - 1].Nullable()
+            select (count, moving, grabbed, target);
+
+        moves.Sample(
+            move =>
+            {
+                var (count, moving, grabbed, target) = move;
+                var order = BlockMove.Order(count, moving, grabbed, target);
+                if (target is { } inside && moving.Contains(inside))
+                {
+                    Assert.Null(order);
+                    return;
+                }
+
+                // Null when every row stays where it was.
+                order ??= Enumerable.Range(0, count).ToArray();
+                // Every row once.
+                Assert.Equal(Enumerable.Range(0, count), order.Order());
+                // The block is together and in its old order, and the other rows keep theirs.
+                var block = moving.Order().ToArray();
+                var start = Array.IndexOf(order, block[0]);
+                Assert.Equal(block, order.Skip(start).Take(block.Length));
+                Assert.Equal(
+                    Enumerable.Range(0, count).Where(i => !moving.Contains(i)),
+                    order.Where(i => !moving.Contains(i))
+                );
+                // Dropped at the end, at the end; on a row below the grabbed one, just after it; above, just before it.
+                var end = start + block.Length;
+                if (target is not { } t)
+                    Assert.Equal(count, end);
+                else if (t > grabbed)
+                    Assert.Equal(t, order[start - 1]);
+                else
+                    Assert.Equal(t, order[end]);
+            },
+            iter: 100_000
+        );
     }
 }

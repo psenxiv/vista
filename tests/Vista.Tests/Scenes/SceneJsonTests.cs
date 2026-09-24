@@ -1,4 +1,5 @@
 using System.Numerics;
+using CsCheck;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
@@ -264,4 +265,90 @@ public class SceneJsonTests
         old["tracks"]![0]!.AsObject().Remove("lookAhead");
         Assert.Equal(TrackEditing.DefaultLookAhead, SceneJson.Read(old.ToJsonString()).Tracks[0].LookAhead);
     }
+
+    private static readonly Gen<string> AnyName = Gen.String[Gen.Char[' ', '\uD7FF'], 1, 20]
+        .Where(s => !string.IsNullOrWhiteSpace(s));
+
+    /// <summary>A path track with every other setting random too, as a scene file holds it; a Follow Target track keeps only its first point, as the editor requires.</summary>
+    private static readonly Gen<Track> AnySavedTrack = Gen.Select(
+        AnyPathTrack,
+        Gen.Select(Gen.Guid, AnyName, Gen.Enum<AimMode>(), Gen.Enum<PlaybackDirection>(), Gen.Bool),
+        Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool, AnyPosition, Gen.Bool),
+        Gen.Select(AnyName.Null(), AnyName.Null(), Gen.Float[0f, TrackEditing.MaxAimHeight], Gen.Float[0f, 1f]),
+        Gen.Select(Gen.Bool, Gen.Bool),
+        (track, identity, places, target, follow) =>
+        {
+            var (id, name, aim, direction, loop) = identity;
+            var (anchor, yaw, anchorPlaced, lookAt, lookAtPlaced) = places;
+            if (aim == AimMode.FollowTarget)
+                track = TrackEditing.Delete(track, Enumerable.Range(1, track.Points.Count - 1).ToArray());
+            track = TrackEditing.SetAim(track, aim, track.Points[0]);
+            if (lookAtPlaced)
+                track = TrackEditing.SetLookAt(track, lookAt);
+            track = TrackEditing.SetDirection(track, direction);
+            track = TrackEditing.SetLoop(track, loop);
+            track = TrackEditing.SetTarget(track, target.Item1, target.Item2);
+            track = TrackEditing.SetAimHeight(track, target.Item3);
+            track = TrackEditing.SetSmoothing(track, target.Item4);
+            track = TrackEditing.SetFollowTurns(track, follow.Item1);
+            track = TrackEditing.SetFollowLooks(track, follow.Item2);
+            return track with { Id = id, Name = name, Anchor = new Anchor(anchor, yaw), AnchorPlaced = anchorPlaced };
+        }
+    );
+
+    /// <summary>One to four tracks, some hidden, a playlist of them with random repeats, and a random anchor.</summary>
+    private static readonly Gen<Scene> AnyScene = Gen.Select(
+        AnySavedTrack.Array[1, 4],
+        Gen.Select(Gen.Int[0, 3], Gen.Int[0, PlaylistEditing.MaxLoops], Gen.Guid).Array[0, 6],
+        Gen.Bool.Array[4],
+        Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool, Gen.Bool),
+        (tracks, entries, hidden, scene) =>
+            new Scene(
+                tracks,
+                tracks.Where((_, i) => hidden[i]).Select(t => t.Id).ToHashSet(),
+                entries
+                    .Select(e => new PlaylistEntry(
+                        e.Item3,
+                        tracks[e.Item1 % tracks.Length].Id,
+                        e.Item2 == 0 ? null : e.Item2
+                    ))
+                    .ToList(),
+                new Anchor(scene.Item1, scene.Item2),
+                scene.Item3,
+                scene.Item4
+            )
+    );
+
+    [Fact]
+    public void AnyValidSceneSurvivesSavingAndLoading() =>
+        AnyScene.Sample(
+            scene =>
+            {
+                var read = SceneJson.Read(SceneJson.Write(scene));
+
+                Assert.Equal(scene.Tracks.Count, read.Tracks.Count);
+                for (var i = 0; i < scene.Tracks.Count; i++)
+                {
+                    var (want, got) = (scene.Tracks[i], read.Tracks[i]);
+                    Assert.Equal(want.Points, got.Points);
+                    Assert.Equal(want.Timing, got.Timing);
+                    // Records compare lists by reference, so compare the rest with the lists swapped in.
+                    Assert.Equal(want, got with { Points = want.Points, Timing = want.Timing });
+                }
+
+                Assert.True(scene.Hidden.SetEquals(read.Hidden));
+                Assert.Equal(scene.Playlist, read.Playlist);
+                Assert.Equal(
+                    scene,
+                    read with
+                    {
+                        Tracks = scene.Tracks,
+                        Hidden = scene.Hidden,
+                        Playlist = scene.Playlist,
+                    }
+                );
+            },
+            iter: 3000,
+            print: SceneJson.Write
+        );
 }

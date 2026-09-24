@@ -1,5 +1,7 @@
 using System.Numerics;
+using CsCheck;
 using Vista.Core.Camera;
+using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Timing;
@@ -330,10 +332,10 @@ public class TrackEvaluatorTests
         Assert.Equal(FreeCamMotion.LookAtFrom(point.Position, 0.5f, 0.1f), state.LookAt);
     }
 
-    // The direction the camera faces at time t.
-    private static Vector3 Facing(TrackEvaluator evaluator, double t)
+    // The direction the camera faces at time t, aimed at target when given.
+    private static Vector3 Facing(TrackEvaluator evaluator, double t, Vector3? target = null)
     {
-        var frame = evaluator.Evaluate(t)!.Value;
+        var frame = evaluator.Evaluate(t, target)!.Value;
         return Vector3.Normalize(frame.LookAt - frame.Position);
     }
 
@@ -381,6 +383,19 @@ public class TrackEvaluatorTests
 
         Along(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle), 1e-3f);
         Along(Vector3.Normalize(new Vector3(10f, 0f, -10f)), Facing(new TrackEvaluator(track), middle), 1e-3f);
+    }
+
+    [Fact]
+    public void LookingAheadSnapsRoundWhereThePathRunsStraightBackAlongItself()
+    {
+        // Out to x = 10 and back to 5 at 2 yalms a second, the path turns round at 10 at 5 s: the camera is at 2t and
+        // the spot 1 s ahead at 20 − 2(t + 1). They pass at 4.5 s, so the facing flips from +x to −x there at once.
+        var evaluator = new TrackEvaluator(
+            TrackEditing.SetLookAhead(Build([Point(0f), Point(10f), Point(5f)], AimMode.PathTangent), 1f)
+        );
+
+        Along(Vector3.UnitX, Facing(evaluator, 4.49), 1e-3f);
+        Along(-Vector3.UnitX, Facing(evaluator, 4.51), 1e-3f);
     }
 
     [Theory]
@@ -644,5 +659,84 @@ public class TrackEvaluatorTests
         );
 
         Along(new Vector3(-0.87344255f, -0.19866933f, -0.44455440f), Facing(evaluator, 0.05), 1e-4f);
+    }
+
+    // A generated track as a scene file, so a failure prints something to paste into a test.
+    private static string Print(Track track) => SceneJson.Write(new Scene([track], new HashSet<Guid>(), []));
+
+    [Fact]
+    public void TheAimNeverSteps()
+    {
+        // A smooth turn shrinks with the interval it's measured over; a step doesn't. Wherever the facing turns more
+        // than 0.3° in 10 ms, halve the interval 8 times, keeping the half that turns more: a smooth turn falls to
+        // about 1/256 of what it was, a step stays whole. Anything above a quarter is a step. The distance between
+        // unit directions is 2·sin(θ/2), close enough to θ at these angles.
+        AnyPathTrack.Sample(
+            track =>
+            {
+                var evaluator = new TrackEvaluator(track);
+                var target = AimTracker.AimPoint(track, null);
+                float Turn(double a, double b) =>
+                    Vector3.Distance(Facing(evaluator, a, target), Facing(evaluator, b, target));
+
+                const double step = 0.01;
+                for (var t = 0.0; t + step <= evaluator.Duration; t += step)
+                {
+                    var turn = Turn(t, t + step);
+                    if (turn < 0.3f * Deg)
+                        continue;
+                    var (a, b) = (t, t + step);
+                    for (var i = 0; i < 8; i++)
+                    {
+                        var m = (a + b) / 2;
+                        (a, b) = Turn(a, m) >= Turn(m, b) ? (a, m) : (m, b);
+                    }
+
+                    var left = Turn(a, b);
+                    if (left > turn / 4)
+                        Assert.Fail(
+                            $"The aim steps {left / Deg:0.###}° in {(b - a) * 1000:0.###} ms at {a:0.######} s of {evaluator.Duration:0.###} s"
+                        );
+                }
+            },
+            iter: 3000,
+            print: Print
+        );
+    }
+
+    [Fact]
+    public void AHoldIsStill()
+    {
+        // Through a hold the camera stays exactly where it arrived, with the same field of view and roll. Its aim does
+        // too, except that Direction of travel starts turning once the look ahead reaches past the hold's end.
+        const int samples = 64;
+        AnyPathTrack.Sample(
+            track =>
+            {
+                var evaluator = new TrackEvaluator(track);
+                var target = AimTracker.AimPoint(track, null);
+                for (var point = 0; point < track.Points.Count; point++)
+                {
+                    if (TrackEditing.HoldSeconds(track, point) <= 0f)
+                        continue;
+                    double start = evaluator.PointSeconds(point);
+                    double end = evaluator.Keys[TrackEditing.PointKey(track, point) + 1].Time;
+                    var still = track.Aim == AimMode.PathTangent ? end - track.LookAhead : end;
+                    var arrived = evaluator.Evaluate(start, target)!.Value;
+                    for (var i = 0; i <= samples; i++)
+                    {
+                        var time = start + ((end - start) * i / samples);
+                        var frame = evaluator.Evaluate(time, target)!.Value;
+                        Assert.Equal(arrived.Position, frame.Position);
+                        Assert.Equal(arrived.Fov, frame.Fov);
+                        Assert.Equal(arrived.Roll, frame.Roll);
+                        if (time <= still)
+                            Assert.Equal(arrived.LookAt, frame.LookAt);
+                    }
+                }
+            },
+            iter: 5000,
+            print: Print
+        );
     }
 }
