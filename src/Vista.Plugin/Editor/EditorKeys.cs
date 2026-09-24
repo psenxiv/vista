@@ -14,8 +14,9 @@ internal sealed class EditorKeys
     private bool heatHeld;
 
     /// <summary>Reads the keys, acts on new presses and hides ours from the game. Call from Framework.Update.</summary>
-    public void Update(CameraSession session, PointGizmo gizmo, EditorLayer layer)
+    public void Update(GameSession game, PointGizmo gizmo, EditorLayer layer)
     {
+        var session = game.State;
         ToggleHeat(session, layer);
         if (session.Released || PhysicalKeys.IsTyping()) { Array.Clear(held); return; }
 
@@ -32,38 +33,39 @@ internal sealed class EditorKeys
             held[i] = down;
             if (!down) continue;
 
-            var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.SelectedPoints.Count > 0;
+            var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.Selection.Points.Count > 0;
             var ours = key == VirtualKey.SPACE || (editing && (key is VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes));
             if (ours) PhysicalKeys.Hide(key);
-            if (pressed && ours) Act(session, gizmo, key, ctrl, alt);
+            if (pressed && ours) Act(game, gizmo, key, ctrl, alt);
         }
     }
 
     /// <summary>G alone toggles turn heat in Edit, not while previewing, and in View; View leaves the key to the game too, since the game has the camera there.</summary>
-    private void ToggleHeat(CameraSession session, EditorLayer layer)
+    private void ToggleHeat(SessionState session, EditorLayer layer)
     {
         var mode = session.Mode;
         var modified = PhysicalKeys.IsDown(VirtualKey.CONTROL) || PhysicalKeys.IsDown(VirtualKey.SHIFT) || PhysicalKeys.IsDown(VirtualKey.MENU);
-        var shown = mode == CameraMode.View || (mode == CameraMode.Editing && !session.Previewing);
+        var shown = mode == CameraMode.View || (mode == CameraMode.Editing && !session.Transport.Previewing);
         var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
         if (down && !heatHeld) layer.Heat = !layer.Heat;
         heatHeld = down;
         if (down && mode == CameraMode.Editing) PhysicalKeys.Hide(VirtualKey.G);
     }
 
-    private static void Act(CameraSession session, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
+    private static void Act(GameSession game, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
     {
+        var session = game.State;
         var refusal = key switch
         {
-            VirtualKey.SPACE when ctrl => Restart(session),
-            VirtualKey.SPACE => Transport(session),
+            VirtualKey.SPACE when ctrl => Restart(game),
+            VirtualKey.SPACE => Transport(game),
             VirtualKey.OEM_3 when ctrl && alt => null,
-            VirtualKey.OEM_3 when ctrl => session.OverwriteSelected(),
-            VirtualKey.OEM_3 when alt => session.AddAfterSelected(),
-            VirtualKey.OEM_3 => session.AddToEnd(),
+            VirtualKey.OEM_3 when ctrl => game.OverwriteSelected(),
+            VirtualKey.OEM_3 when alt => game.AddAfterSelected(),
+            VirtualKey.OEM_3 => game.AddToEnd(),
             VirtualKey.Z => session.Undo() ? null : "Nothing to undo.",
             VirtualKey.Y => session.Redo() ? null : "Nothing to redo.",
-            VirtualKey.R when session.Selected is not null || session.SelectedAnchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
+            VirtualKey.R when session.Selection.Point is not null || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
             VirtualKey.DELETE or VirtualKey.BACK => session.DeleteSelected(),
             _ => null,
         };
@@ -72,16 +74,16 @@ internal sealed class EditorKeys
     }
 
     /// <summary>Space does what the Play button would: pauses a running shot, starts one otherwise.</summary>
-    private static string? Transport(CameraSession session)
+    private static string? Transport(GameSession game)
     {
-        if (session.IsPlaying) session.StopPlay();
-        else session.StartPlay();
+        if (game.State.IsPlaying) game.StopPlay();
+        else game.StartPlay();
         return null;
     }
 
-    private static string? Restart(CameraSession session)
+    private static string? Restart(GameSession game)
     {
-        session.RestartPlay();
+        game.RestartPlay();
         return null;
     }
 

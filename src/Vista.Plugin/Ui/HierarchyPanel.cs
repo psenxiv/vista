@@ -2,6 +2,7 @@ using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
+using Vista.Core.Session;
 using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -19,7 +20,8 @@ internal sealed class HierarchyPanel
     /// <summary>What the name prompt is naming.</summary>
     private enum Naming { NewScene, RenameScene, DuplicateScene, SavePreset }
 
-    private readonly CameraSession session;
+    private readonly GameSession game;
+    private readonly SessionState session;
     private readonly SceneFiles files;
     private Guid? renaming;
     private string renameText = string.Empty;
@@ -36,9 +38,10 @@ internal sealed class HierarchyPanel
     private (bool Preset, string Name)? deleting;
     private bool openDelete;
 
-    public HierarchyPanel(CameraSession session, SceneFiles files)
+    public HierarchyPanel(GameSession game, SceneFiles files)
     {
-        this.session = session;
+        this.game = game;
+        session = game.State;
         this.files = files;
     }
 
@@ -52,7 +55,7 @@ internal sealed class HierarchyPanel
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
-        if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.SelectSceneAnchor());
+        if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor")) Report(session.Selection.SelectSceneAnchor());
         ImGui.EndDisabled();
         CentreInLastSlot(FontAwesomeIcon.Plus);
         if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track")) ImGui.OpenPopup("add-track-menu");
@@ -67,7 +70,7 @@ internal sealed class HierarchyPanel
         ImGui.BeginDisabled(!editing);
         if (ImGui.BeginChild("tracks", new Vector2(0f, 0f)))
         {
-            var selected = session.SelectedTracks;
+            var selected = session.Selection.Tracks;
             for (var i = 0; i < scene.Tracks.Count; i++) DrawRow(scene, scene.Tracks[i], i, edited, selected, editing);
             DrawSpace(scene, editing);
         }
@@ -243,7 +246,7 @@ internal sealed class HierarchyPanel
         var follows = track.Aim == AimMode.FollowTarget;
         ImGui.BeginDisabled(!track.AnchorPlaced || follows);
         var anchorTip = follows ? "Follow Target tracks move with their character" : "Select track anchor";
-        if (IconButton.RowAction("anchor", FontAwesomeIcon.Anchor, anchorTip, rowHovered)) Report(session.SelectTrackAnchor(track.Id));
+        if (IconButton.RowAction("anchor", FontAwesomeIcon.Anchor, anchorTip, rowHovered)) Report(session.Selection.SelectTrackAnchor(track.Id));
         ImGui.EndDisabled();
         var eye = hidden ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye;
         CentreInLastSlot(eye);
@@ -271,9 +274,9 @@ internal sealed class HierarchyPanel
         var picked = selected.Contains(track.Id);
         var group = picked && selected.Count >= 2;
         if (ImGui.Selectable("##name", picked, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
-            Report(session.ClickTrack(track.Id, DragRows.Click()));
+            Report(session.Selection.ClickTrack(track.Id, DragRows.Click()));
         RowText.Draw(track.Id, track.Name, nameWidth);
-        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(session.FlyToFirstPoint(track.Id));
+        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) Report(game.FlyToFirstPoint(track.Id));
 
         if (editing && ImGui.BeginDragDropSource())
         {
@@ -335,7 +338,7 @@ internal sealed class HierarchyPanel
         var top = ImGui.GetCursorScreenPos();
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, height));
         if (!editing) return;
-        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Select(null);
+        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Selection.Select(null);
 
         if (DragRows.Dragging(DragRows.Point))
         {

@@ -3,7 +3,6 @@ using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Game;
-using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Game.ClientState.Keys;
 
@@ -30,7 +29,7 @@ internal sealed class AnchorGizmo
     public bool Hot { get; private set; }
 
     /// <summary>Ends a drag in progress, keeping what it moved, for leaving editing mode.</summary>
-    public void Cancel(CameraSession session)
+    public void Cancel(SessionState session)
     {
         if (dragStart is not null) session.EndLiveEdit();
         dragStart = null;
@@ -38,9 +37,9 @@ internal sealed class AnchorGizmo
     }
 
     /// <summary>Draws the gizmo on the selected anchor into the current window. Call inside the editor window.</summary>
-    public void Draw(EditorView view, CameraSession session)
+    public void Draw(EditorView view, SessionState session)
     {
-        if (dragStart is not null && (session.SelectedAnchor != dragKind || session.EditedTrackId != dragTrack))
+        if (dragStart is not null && (session.Selection.Anchor != dragKind || session.EditedTrackId != dragTrack))
         {
             session.EndLiveEdit();
             dragStart = null;
@@ -48,7 +47,7 @@ internal sealed class AnchorGizmo
             Gizmo.Reset();
         }
 
-        if (session.SelectedAnchor is not { } kind || Shown(session, kind) is not { } anchor)
+        if (session.Selection.Anchor is not { } kind || Shown(session, kind) is not { } anchor)
         {
             Hot = false;
             dragStart = null;
@@ -113,9 +112,9 @@ internal sealed class AnchorGizmo
     }
 
     /// <summary>The selected anchor in the world, or the Look At point as an anchor with no yaw.</summary>
-    private static Anchor? Shown(CameraSession session, AnchorKind kind)
+    private static Anchor? Shown(SessionState session, AnchorKind kind)
     {
-        if (kind != AnchorKind.LookAt) return session.SelectedAnchorInWorld;
-        return session.SelectedLookAtInWorld is { } point ? new Anchor(point, 0f) : null;
+        if (kind != AnchorKind.LookAt) return session.Selection.AnchorInWorld;
+        return session.Selection.LookAtInWorld is { } point ? new Anchor(point, 0f) : null;
     }
 }

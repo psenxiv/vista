@@ -1,3 +1,4 @@
+using Vista.Core.Session;
 using System.Diagnostics;
 using Vista.Core.Scenes;
 
@@ -9,15 +10,17 @@ internal sealed class SceneFiles
     private const string DemoResource = "Vista.Demo.";
 
     private readonly Configuration config;
-    private readonly CameraSession session;
+    private readonly GameSession game;
+    private readonly SessionState session;
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private SceneLibrary? library;
     private string? tickRefusal;
 
-    public SceneFiles(Configuration config, CameraSession session)
+    public SceneFiles(Configuration config, GameSession game)
     {
         this.config = config;
-        this.session = session;
+        this.game = game;
+        session = game.State;
         if (config.SaveFolder is { } parent && Directory.Exists(SceneFolder.RootFor(parent))) Use(parent, config.LastScene);
     }
 
@@ -86,7 +89,7 @@ internal sealed class SceneFiles
     }
 
     /// <summary>Saves track <paramref name="trackId"/> as the preset <paramref name="name"/>, replacing one of that name.</summary>
-    public string? SavePreset(string name, Guid trackId) => Files(folder => folder.SavePreset(name.Trim(), session.PresetOf(trackId)));
+    public string? SavePreset(string name, Guid trackId) => Files(folder => folder.SavePreset(name.Trim(), Vista.Core.Scenes.Presets.From(session.Scene, trackId)));
 
     /// <summary>Adds the preset <paramref name="name"/> to the scene under the camera.</summary>
     public string? AddPreset(string name)
@@ -95,7 +98,7 @@ internal sealed class SceneFiles
         Preset preset;
         try { preset = l.Folder.LoadPreset(name); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException) { return Report($"Could not open preset {name}: {e.Message}"); }
-        return session.AddPreset(preset);
+        return game.AddPreset(preset);
     }
 
     public string? DeletePreset(string name) => Files(folder => folder.DeletePreset(name));

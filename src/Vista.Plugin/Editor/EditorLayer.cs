@@ -4,7 +4,6 @@ using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Game;
-using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Game.ClientState.Keys;
@@ -21,7 +20,7 @@ internal sealed class EditorLayer
         | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoBringToFrontOnFocus
         | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoSavedSettings;
 
-    private readonly CameraSession session;
+    private readonly SessionState session;
     private readonly PointGizmo gizmo;
     private readonly AnchorGizmo anchorGizmo;
     private readonly Overlay overlay = new();
@@ -30,7 +29,7 @@ internal sealed class EditorLayer
     /// <summary>True while the edited track's path is drawn by how fast its camera turns.</summary>
     public bool Heat { get; set; }
 
-    public EditorLayer(CameraSession session, PointGizmo gizmo)
+    public EditorLayer(SessionState session, PointGizmo gizmo)
     {
         this.session = session;
         this.gizmo = gizmo;
@@ -40,11 +39,11 @@ internal sealed class EditorLayer
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
     {
-        var editing = session.Mode == CameraMode.Editing && !session.Previewing;
+        var editing = session.Mode == CameraMode.Editing && !session.Transport.Previewing;
         if (!editing) { clicks.Reset(); gizmo.Cancel(); anchorGizmo.Cancel(session); }
         if (!editing && session.Mode != CameraMode.View) return;
         if (EditorView.Read() is not { } view) return;
-        var selectedAnchor = editing ? session.SelectedAnchor : null;
+        var selectedAnchor = editing ? session.Selection.Anchor : null;
 
         var scene = session.Scene;
         var edited = session.EditedTrackId;
@@ -54,9 +53,9 @@ internal sealed class EditorLayer
         foreach (var other in scene.Tracks)
         {
             if (other.Id == edited || scene.Hidden.Contains(other.Id)) continue;
-            var otherWorld = session.Shown(other);
-            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, [], edited: false, session.AimPoint(otherWorld)));
-            if (session.TargetPoint(otherWorld) is { } otherTarget) overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
+            var otherWorld = session.World.Shown(other);
+            AddMarkers(markers, other.Id, overlay.Draw(view, otherWorld, [], edited: false, session.World.AimPoint(otherWorld)));
+            if (session.World.TargetPoint(otherWorld) is { } otherTarget) overlay.DrawTargetMarker(view, otherTarget, FirstPosition(otherWorld), edited: false);
             if (other is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
                 markers.Add(new TrackMarker(other.Id, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, other), FirstPosition(otherWorld), edited: false, selected: false, other.Name), MarkerKind.TrackAnchor));
             if (other is { Aim: AimMode.LookAt, LookAtPlaced: true })
@@ -66,7 +65,7 @@ internal sealed class EditorLayer
         var track = editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
             ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
             : session.Track;
-        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.SelectedPoints : [], edited: true, session.AimPoint(track), Heat));
+        AddMarkers(markers, edited, overlay.Draw(view, track, editing ? session.Selection.Points : [], edited: true, session.World.AimPoint(track), Heat));
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
 
         var editedLocal = SceneEditing.Get(scene, edited);
@@ -74,7 +73,7 @@ internal sealed class EditorLayer
             markers.Add(new TrackMarker(edited, -1, overlay.DrawTrackAnchor(view, SceneGeometry.WorldAnchor(scene, editedLocal), FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.Track, editedLocal.Name), MarkerKind.TrackAnchor));
         if (editedLocal is { Aim: AimMode.LookAt, LookAtPlaced: true })
             markers.Add(new TrackMarker(edited, -1, overlay.DrawLookAt(view, track.LookAt, FirstPosition(track), edited: true, selected: selectedAnchor == AnchorKind.LookAt), MarkerKind.LookAt));
-        if (session.TargetPoint(track) is { } target) overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
+        if (session.World.TargetPoint(track) is { } target) overlay.DrawTargetMarker(view, target, FirstPosition(track), edited: true);
         if (scene.AnchorPlaced)
             markers.Add(new TrackMarker(Guid.Empty, -1, overlay.DrawSceneAnchor(view, scene.Anchor, selectedAnchor == AnchorKind.Scene), MarkerKind.SceneAnchor));
         if (!editing) return;
@@ -113,7 +112,7 @@ internal sealed class EditorLayer
         if (click != RowClick.Plain)
         {
             if (outcome.Kind == ClickKind.Select && outcome.Index < markers.Count && markers[outcome.Index] is { Kind: MarkerKind.Point } point && point.Track == session.EditedTrackId)
-                session.ClickPoint(point.Point, click);
+                session.Selection.ClickPoint(point.Point, click);
             return;
         }
 
@@ -123,23 +122,23 @@ internal sealed class EditorLayer
                 var hit = markers[outcome.Index];
                 var refusal = hit.Kind switch
                 {
-                    MarkerKind.SceneAnchor => session.SelectSceneAnchor(),
-                    MarkerKind.TrackAnchor => session.SelectTrackAnchor(hit.Track),
-                    MarkerKind.LookAt => session.SelectLookAt(hit.Track),
+                    MarkerKind.SceneAnchor => session.Selection.SelectSceneAnchor(),
+                    MarkerKind.TrackAnchor => session.Selection.SelectTrackAnchor(hit.Track),
+                    MarkerKind.LookAt => session.Selection.SelectLookAt(hit.Track),
                     _ when hit.Track == session.EditedTrackId => Select(hit.Point),
                     _ => session.SelectPoint(hit.Track, hit.Point),
                 };
                 Report(refusal);
                 break;
             case ClickKind.Deselect:
-                session.Select(null);
+                session.Selection.Select(null);
                 break;
         }
     }
 
     private string? Select(int point)
     {
-        session.Select(point);
+        session.Selection.Select(point);
         return null;
     }
 

@@ -1,7 +1,6 @@
 using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
-using Vista.Plugin.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
@@ -15,7 +14,8 @@ internal abstract class TargetWindow : Window
     protected const float ListWidth = 260f;
     protected const float FieldWidth = 70f;
 
-    protected readonly CameraSession session;
+    protected readonly SessionState session;
+    private readonly NearbyCharacters characters;
     private readonly AimMode aim;
     private readonly string aimHeightId;
     private string search = string.Empty;
@@ -25,10 +25,11 @@ internal abstract class TargetWindow : Window
     /// <summary>True while a drag field of this window is held; shared so a close ends whichever one it is.</summary>
     protected bool dragging;
 
-    protected TargetWindow(CameraSession session, string name, AimMode aim, string aimHeightId)
+    protected TargetWindow(SessionState session, NearbyCharacters characters, string name, AimMode aim, string aimHeightId)
         : base(name, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
         this.session = session;
+        this.characters = characters;
         this.aim = aim;
         this.aimHeightId = aimHeightId;
         RespectCloseHotkey = false;
@@ -64,7 +65,7 @@ internal abstract class TargetWindow : Window
             .Push(ImGuiCol.HeaderActive, UiColours.AccentAt(0.55f));
 
         ImGui.BeginDisabled(session.Mode != CameraMode.Editing);
-        Report(CharacterPicker.Draw(session, ref search, ListWidth));
+        Report(CharacterPicker.Draw(session, characters, ref search, ListWidth));
         DrawAboveAimHeight();
         DrawAimHeight();
         DrawSmoothing();

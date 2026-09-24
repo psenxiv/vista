@@ -1,5 +1,5 @@
+using Vista.Core.Session;
 using Dalamud.Bindings.ImGui;
-using Vista.Plugin.Session;
 
 namespace Vista.Plugin.Ui;
 
@@ -7,7 +7,7 @@ namespace Vista.Plugin.Ui;
 internal static class LiveDrag
 {
     /// <summary>Handles the item just drawn; <paramref name="dragging"/> stays true until it lets go, so a closing window can end it.</summary>
-    public static void Handle(CameraSession session, bool changed, Action preview, ref bool dragging)
+    public static void Handle(SessionState session, bool changed, Action preview, ref bool dragging)
     {
         if (ImGui.IsItemActivated())
         {
@@ -22,7 +22,7 @@ internal static class LiveDrag
     }
 
     /// <summary>Ends a drag a closed window never saw let go.</summary>
-    public static void End(CameraSession session, ref bool dragging)
+    public static void End(SessionState session, ref bool dragging)
     {
         if (!dragging) return;
         dragging = false;

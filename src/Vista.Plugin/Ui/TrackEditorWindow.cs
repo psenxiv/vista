@@ -56,7 +56,8 @@ internal sealed class TrackEditorWindow : Window
     private static readonly PendingField.Range LookAheadRange = new(0.01f, 0f, TrackEditing.MaxLookAhead);
     private const string LookAheadId = "look-ahead";
 
-    private readonly CameraSession session;
+    private readonly GameSession game;
+    private readonly SessionState session;
     private readonly Configuration config;
     private bool aimMenuOpen;
     private readonly PendingField fields;
@@ -81,10 +82,11 @@ internal sealed class TrackEditorWindow : Window
     private float? loopX;
     private float? trashRight;
 
-    public TrackEditorWindow(CameraSession session, Configuration config, PendingField fields, TimingWindow timing, CameraWindow camera, GuideWindow guide, WatchTargetWindow watchTarget, FollowTargetWindow followTarget, SceneFiles files, SetupWindow setup)
+    public TrackEditorWindow(GameSession game, Configuration config, PendingField fields, TimingWindow timing, CameraWindow camera, GuideWindow guide, WatchTargetWindow watchTarget, FollowTargetWindow followTarget, SceneFiles files, SetupWindow setup)
         : base("Vista###vista-track-editor")
     {
-        this.session = session;
+        this.game = game;
+        session = game.State;
         this.config = config;
         config.HierarchyWidth = PanelWidth.Clamp(config.HierarchyWidth);
         config.PlaylistWidth = PanelWidth.Clamp(config.PlaylistWidth);
@@ -95,7 +97,7 @@ internal sealed class TrackEditorWindow : Window
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
         this.setup = setup;
-        hierarchy = new HierarchyPanel(session, files);
+        hierarchy = new HierarchyPanel(game, files);
         playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
         SizeCondition = ImGuiCond.FirstUseEver;
@@ -228,7 +230,7 @@ internal sealed class TrackEditorWindow : Window
         if (editing)
         {
             AlignTo(CameraToolsStart(), gap);
-            if (IconButton.Draw("level-roll", FontAwesomeIcon.RulerHorizontal, "Level camera roll")) session.CameraRoll = 0f;
+            if (IconButton.Draw("level-roll", FontAwesomeIcon.RulerHorizontal, "Level camera roll")) game.CameraRoll = 0f;
             ImGui.SameLine();
             // Plain white when closed, not Toggle's dim, which reads as disabled.
             if (IconButton.Draw("camera", FontAwesomeIcon.Camera, "Camera", camera.IsOpen ? UiColours.Accent : null)) camera.Toggle();
@@ -245,8 +247,8 @@ internal sealed class TrackEditorWindow : Window
             ImGui.SameLine();
         }
 
-        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, session.HideUiInLive, "Hide game UI when Live"))
-            session.HideUiInLive = !session.HideUiInLive;
+        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, game.HideUiInLive, "Hide game UI when Live"))
+            game.HideUiInLive = !game.HideUiInLive;
 
         // A new folder loads a scene, which Live refuses.
         ImGui.SameLine();
@@ -291,7 +293,7 @@ internal sealed class TrackEditorWindow : Window
     private void DrawFlySpeed()
     {
         ImGui.SetNextItemWidth(SpeedWidth);
-        var speed = session.Speed;
+        var speed = game.Speed;
         var step = speed.Index;
         if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x")) speed.Set(step);
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Fly speed");
@@ -305,15 +307,15 @@ internal sealed class TrackEditorWindow : Window
         if (IconButton.Draw("play-pause", playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, playing ? "Pause" : "Play"))
         {
             fields.Commit();
-            if (playing) session.StopPlay();
-            else session.StartPlay();
+            if (playing) game.StopPlay();
+            else game.StartPlay();
         }
 
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(session.Released || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive));
-        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); session.RestartPlay(); }
+        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart")) { fields.Commit(); game.RestartPlay(); }
         ImGui.EndDisabled();
         ImGui.SameLine();
     }
@@ -325,11 +327,11 @@ internal sealed class TrackEditorWindow : Window
         ImGui.SetNextItemWidth(ModeWidth);
         if (!ImGui.BeginCombo("##mode", ModeNames[current])) return;
 
-        if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); session.Release("window"); }
-        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); session.Release("window", CameraMode.View); }
-        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); session.EnterEdit(); }
+        if (ImGui.Selectable(ModeNames[0], current == 0) && current != 0) { fields.Commit(); game.Release("window"); }
+        if (ImGui.Selectable(ModeNames[1], current == 1) && current != 1) { fields.Commit(); game.Release("window", CameraMode.View); }
+        if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2) { fields.Commit(); game.EnterEdit(); }
         ImGui.BeginDisabled(!session.CanGoLive);
-        if (ImGui.Selectable(ModeNames[3], current == 3) && current != 3) { fields.Commit(); session.CueLive(); }
+        if (ImGui.Selectable(ModeNames[3], current == 3) && current != 3) { fields.Commit(); game.CueLive(); }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !session.CanGoLive) ImGui.SetTooltip("Add a track with points to the playlist");
         ImGui.EndDisabled();
         ImGui.EndCombo();
@@ -414,7 +416,7 @@ internal sealed class TrackEditorWindow : Window
                     continue;
             }
 
-            if (ImGui.Selectable(Aims[i].Name, i == aim) && i != aim) Report(session.SetAim(Aims[i].Mode));
+            if (ImGui.Selectable(Aims[i].Name, i == aim) && i != aim) Report(game.SetAim(Aims[i].Mode));
             if (i == aim && Aims[i].Mode == AimMode.PathTangent) DrawLookAhead(track);
         }
 
@@ -439,7 +441,7 @@ internal sealed class TrackEditorWindow : Window
     private (uint? Colour, string Tooltip) TargetState(Track track, string mode, string? lost)
     {
         if (track.TargetName is not { } name) return (UiColours.Red, $"{mode}: choose a character");
-        return session.TargetLost(track) ? (UiColours.Red, lost is null ? $"{name} (Not found)" : $"{name} (Not found): {lost}") : (UiColours.Accent, $"{mode}: {name}");
+        return session.World.TargetLost(track) ? (UiColours.Red, lost is null ? $"{name} (Not found)" : $"{name} (Not found): {lost}") : (UiColours.Accent, $"{mode}: {name}");
     }
 
     /// <summary>A character mode's aim menu entry, which opens its dialog when the track switches into it, and on the current mode a pencil that reopens it; disabled with <paramref name="refusal"/> as its tooltip.</summary>
@@ -462,7 +464,7 @@ internal sealed class TrackEditorWindow : Window
 
         if (!chosen)
         {
-            Report(session.SetAim(mode));
+            Report(game.SetAim(mode));
             if (session.Track.Aim == mode) open();
         }
         else if (edit)
@@ -485,23 +487,23 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>A plus icon that appends a point, and a caret opening the insert menu.</summary>
     private void DrawAddButton()
     {
-        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, "Add point")) Report(session.AddToEnd());
+        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, "Add point")) Report(game.AddToEnd());
         ImGui.SameLine(0f, 0f);
         if (IconButton.Draw("add-menu", FontAwesomeIcon.CaretDown, "More ways to add")) ImGui.OpenPopup("add-menu");
         if (!ImGui.BeginPopup("add-menu")) return;
 
-        var selected = session.Selected is not null;
+        var selected = session.Selection.Point is not null;
         var ticked = false;
-        if (ImGui.MenuItem("Add to end", "Backtick", ref ticked)) Report(session.AddToEnd());
-        if (ImGui.MenuItem("Add after selected", "Alt + Backtick", ref ticked, selected)) Report(session.AddAfterSelected());
-        if (ImGui.MenuItem("Overwrite selected", "Ctrl + Backtick", ref ticked, selected)) Report(session.OverwriteSelected());
+        if (ImGui.MenuItem("Add to end", "Backtick", ref ticked)) Report(game.AddToEnd());
+        if (ImGui.MenuItem("Add after selected", "Alt + Backtick", ref ticked, selected)) Report(game.AddAfterSelected());
+        if (ImGui.MenuItem("Overwrite selected", "Ctrl + Backtick", ref ticked, selected)) Report(game.OverwriteSelected());
         ImGui.EndPopup();
     }
 
     private void DrawPoints(bool editing)
     {
         var track = session.Track;
-        var evaluator = session.Evaluator;
+        var evaluator = session.World.Evaluator;
         var footer = ImGui.GetFrameHeightWithSpacing() + (ImGui.GetStyle().ItemSpacing.Y * 2f);
         if (ImGui.BeginChild("points", new Vector2(0f, -footer)))
         {
@@ -516,7 +518,7 @@ internal sealed class TrackEditorWindow : Window
                 ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
 
-                var selected = session.SelectedPoints;
+                var selected = session.Selection.Points;
                 for (var i = 0; i < track.Points.Count; i++) DrawPointRow(track, evaluator, i, selected, editing);
                 ImGui.EndTable();
             }
@@ -540,10 +542,10 @@ internal sealed class TrackEditorWindow : Window
         var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
         var picked = selected.Contains(index);
         var group = picked && selected.Count >= 2;
-        if (ImGui.Selectable($"##row{index}", picked, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.ClickPoint(index, DragRows.Click());
+        if (ImGui.Selectable($"##row{index}", picked, rowFlags, new Vector2(0f, ImGui.GetFrameHeight()))) session.Selection.ClickPoint(index, DragRows.Click());
         var rowHovered = editing && IconButton.RowHovered(
             new Vector2(ImGui.GetItemRectMin().X, top), new Vector2(ImGui.GetItemRectMax().X, top + ImGui.GetFrameHeight() + (CellPadding.Y * 2f)));
-        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) session.JumpToPoint(index);
+        if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) game.JumpToPoint(index);
         if (editing && ImGui.BeginDragDropSource())
         {
             DragRows.Carry(DragRows.Point, index, group, group ? $"{selected.Count} points" : $"Point {index + 1}");
@@ -603,15 +605,15 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>Play/Pause and Restart, then the scrub bar showing current and total time.</summary>
     private void DrawScrubRow()
     {
-        var duration = (float)session.ScrubLength;
-        var head = (float)session.ScrubHead;
+        var duration = (float)session.Transport.ScrubLength;
+        var head = (float)session.Transport.ScrubHead;
 
         DrawTransport();
         ImGui.BeginDisabled(session.Released || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
         var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
-        if (ImGui.IsItemActivated()) { fields.Commit(); session.BeginScrub(); scrubbing = session.Scrubbing; }
-        if (moved || ImGui.IsItemActivated()) session.ScrubTo(head);
+        if (ImGui.IsItemActivated()) { fields.Commit(); session.Transport.BeginScrub(); scrubbing = session.Transport.Scrubbing; }
+        if (moved || ImGui.IsItemActivated()) session.Transport.ScrubTo(head);
         // A window that stops drawing mid-drag never reports the slider deactivating, so any idle frame ends the scrub too.
         if (ImGui.IsItemDeactivated() || !ImGui.IsItemActive()) EndScrub();
         ImGui.EndDisabled();
@@ -700,7 +702,7 @@ internal sealed class TrackEditorWindow : Window
     {
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight())));
         if (!editing) return;
-        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Select(null);
+        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Selection.Select(null);
         if (track.Points.Count > 0) DropTarget(null, editing);
     }
 
@@ -709,7 +711,7 @@ internal sealed class TrackEditorWindow : Window
     {
         if (!scrubbing) return;
         scrubbing = false;
-        session.FinishScrub();
+        game.FinishScrub();
     }
 
     /// <summary>Moves the cursor so an item of <paramref name="width"/> ends at the right edge.</summary>

@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
-using Vista.Plugin.Session;
+using Vista.Core.Session;
 using Dalamud.Bindings.ImGuizmo;
 
 namespace Vista.Plugin.Editor;
@@ -55,11 +55,11 @@ internal sealed class PointGizmo
     }
 
     /// <summary>Draws the gizmo on the selected point into the current window. Call inside the editor window.</summary>
-    public void Draw(EditorView view, CameraSession session)
+    public void Draw(EditorView view, SessionState session)
     {
-        if (Dragging && (!ReferenceEquals(session.StoredTrack, dragTrack) || session.Selected != dragIndex)) Abandon();
+        if (Dragging && (!ReferenceEquals(session.StoredTrack, dragTrack) || session.Selection.Point != dragIndex)) Abandon();
 
-        if (session.Selected is not { } index || index >= session.Track.Points.Count)
+        if (session.Selection.Point is not { } index || index >= session.Track.Points.Count)
         {
             Hot = false;
             Preview = null;

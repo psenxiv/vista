@@ -3,7 +3,7 @@ using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
-using Vista.Plugin.Session;
+using Vista.Core.Session;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
@@ -16,7 +16,7 @@ internal sealed class PlaylistPanel
 {
     private const float LoopWidth = 44f;
 
-    private readonly CameraSession session;
+    private readonly SessionState session;
 
     // A repeat count being dragged, applied when the field is let go.
     private (Guid Id, int Value)? loopsDrag;
@@ -28,7 +28,7 @@ internal sealed class PlaylistPanel
     private float wheelCarry;
     private bool loopsHovered;
 
-    public PlaylistPanel(CameraSession session) => this.session = session;
+    public PlaylistPanel(SessionState session) => this.session = session;
 
     /// <summary>The header with its loop and add buttons, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
@@ -73,7 +73,7 @@ internal sealed class PlaylistPanel
         if (ImGui.BeginChild("entries", new Vector2(0f, 0f)))
         {
             var held = false;
-            var selected = session.SelectedEntries;
+            var selected = session.Selection.Entries;
             for (var i = 0; i < scene.Playlist.Count; i++)
             {
                 DrawRow(scene, scene.Playlist[i], i, held, playing?.Id, selected, editing);
@@ -82,7 +82,7 @@ internal sealed class PlaylistPanel
 
             // The space under the rows takes dropped rows at the end, and a click there clears the selection.
             ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight())));
-            if (editing && ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Select(null);
+            if (editing && ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain) session.Selection.Select(null);
             DropTarget(scene, scene.Playlist.Count, editing);
         }
 
@@ -100,7 +100,7 @@ internal sealed class PlaylistPanel
         var remove = IconButton.Width(FontAwesomeIcon.Times);
         var gap = ImGui.GetStyle().ItemSpacing.X;
         var track = SceneEditing.Get(scene, entry.TrackId);
-        var lost = session.TargetLost(session.WorldOf(track));
+        var lost = session.World.TargetLost(session.World.WorldOf(track));
         var warning = lost ? IconButton.WarningWidth() + gap : 0f;
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f) - warning);
         var name = track.Name;
@@ -108,7 +108,7 @@ internal sealed class PlaylistPanel
         var picked = selected.Contains(entry.Id);
         var group = picked && selected.Count >= 2;
         if (ImGui.Selectable("##entry", editing ? picked : entry.Id == playing, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
-            Report(session.ClickEntry(entry.Id, DragRows.Click()));
+            Report(session.Selection.ClickEntry(entry.Id, DragRows.Click()));
         RowText.Draw(entry.Id, $"{index + 1}  {name}", nameWidth);
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X, ImGui.GetItemRectMax().Y);

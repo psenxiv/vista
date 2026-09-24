@@ -1,6 +1,6 @@
 using Vista.Core.Tracks;
 using Vista.Plugin.Editor;
-using Vista.Plugin.Session;
+using Vista.Core.Session;
 using Dalamud.Bindings.ImGui;
 
 using static Vista.Plugin.Ui.Refusal;
@@ -9,8 +9,8 @@ namespace Vista.Plugin.Ui;
 /// <summary>The edited track's Follow Target settings: the character to follow, how the camera turns and aims, its aim height and smoothing.</summary>
 internal sealed class FollowTargetWindow : TargetWindow
 {
-    public FollowTargetWindow(CameraSession session)
-        : base(session, "Follow Target###vista-follow-target", AimMode.FollowTarget, "follow-aim-height")
+    public FollowTargetWindow(SessionState session, NearbyCharacters characters)
+        : base(session, characters, "Follow Target###vista-follow-target", AimMode.FollowTarget, "follow-aim-height")
     {
     }
 

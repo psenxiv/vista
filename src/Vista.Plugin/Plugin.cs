@@ -32,8 +32,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static CameraController Camera { get; private set; } = null!;
     internal static InputBlocker Input { get; private set; } = null!;
     internal static MovementLock Movement { get; private set; } = null!;
-    internal static CameraSession Session { get; private set; } = null!;
 
+    private readonly GameSession game;
     private readonly SceneFiles sceneFiles;
     private readonly PendingField fields;
     private readonly EditorKeys editorKeys = new();
@@ -59,20 +59,20 @@ public sealed class Plugin : IDalamudPlugin
         var config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         Movement = new MovementLock();
-        Session = new CameraSession(config, Movement);
-        sceneFiles = new SceneFiles(config, Session);
-        fields = new PendingField(() => Session.Mode == CameraMode.Editing);
-        editorLayer = new EditorLayer(Session, pointGizmo);
+        game = new GameSession(config, Movement);
+        sceneFiles = new SceneFiles(config, game);
+        fields = new PendingField(() => game.State.Mode == CameraMode.Editing);
+        editorLayer = new EditorLayer(game.State, pointGizmo);
 
         setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
-        pointWindow = new PointWindow(Session, pointGizmo);
-        timingWindow = new TimingWindow(Session);
-        cameraWindow = new CameraWindow(Session);
+        pointWindow = new PointWindow(game, pointGizmo);
+        timingWindow = new TimingWindow(game);
+        cameraWindow = new CameraWindow(game);
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
-        watchTargetWindow = new WatchTargetWindow(Session);
-        followTargetWindow = new FollowTargetWindow(Session);
+        watchTargetWindow = new WatchTargetWindow(game.State, game.Characters);
+        followTargetWindow = new FollowTargetWindow(game.State, game.Characters);
         trackEditor = new TrackEditorWindow(
-            Session, config, fields,
+            game, config, fields,
             timingWindow, cameraWindow, guideWindow, watchTargetWindow, followTargetWindow,
             sceneFiles, setupWindow);
 
@@ -89,8 +89,8 @@ public sealed class Plugin : IDalamudPlugin
         sceneFiles.SetupNeeded += () => setupWindow.IsOpen = true;
         if (sceneFiles.Lost) setupWindow.IsOpen = true;
 
-        Camera = new CameraController(() => Session.Frame((float)Framework.UpdateDelta.TotalSeconds));
-        Input = new InputBlocker(() => Session.LocksInput, () => blockEscape);
+        Camera = new CameraController(() => game.Frame((float)Framework.UpdateDelta.TotalSeconds));
+        Input = new InputBlocker(() => game.State.LocksInput, () => blockEscape);
 
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -114,7 +114,7 @@ public sealed class Plugin : IDalamudPlugin
                 OpenTrackEditor();
                 break;
             case "release":
-                Session.Release("command");
+                game.Release("command");
                 break;
             default:
                 Log.Information("[vista] unknown verb '{Verb}'.", verb);
@@ -129,28 +129,28 @@ public sealed class Plugin : IDalamudPlugin
 
         if (Camera.Faulted)
         {
-            Session.Release("hook error");
+            game.Release("hook error");
             Camera.ClearFault();
         }
 
         sceneFiles.Tick();
-        editorKeys.Update(Session, pointGizmo, editorLayer);
-        Session.RefreshCharacters();
+        editorKeys.Update(game, pointGizmo, editorLayer);
+        game.RefreshCharacters();
 
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
         // Escape is released, so it does not also open the system menu.
         var escape = KeyState[VirtualKey.ESCAPE];
-        if (escape && !escapeWasDown && Session.Mode == CameraMode.Live) GameUi.Restore();
+        if (escape && !escapeWasDown && game.State.Mode == CameraMode.Live) GameUi.Restore();
         escapeWasDown = escape;
         blockEscape = GameUi.HiddenByUs || (blockEscape && escape);
 
-        if (!Session.OwnsCamera) return;
+        if (!game.OwnsCamera) return;
 
         // Covers every transition: a teleport, an aethernet hop, a cutscene, a duty starting.
         if (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51])
         {
-            Session.Release("area transition");
+            game.Release("area transition");
             return;
         }
 
@@ -170,14 +170,14 @@ public sealed class Plugin : IDalamudPlugin
     private void OnDraw()
     {
         var io = ImGui.GetIO();
-        if (Session.Mode == CameraMode.Editing && !io.WantCaptureMouse)
+        if (game.State.Mode == CameraMode.Editing && !io.WantCaptureMouse)
         {
             wheel += io.MouseWheel;
             var steps = (int)wheel;
             if (steps != 0)
             {
-                Session.StopPreview();
-                Session.Speed.Step(steps);
+                game.State.Transport.StopPreview();
+                game.Speed.Step(steps);
                 wheel -= steps;
             }
         }
@@ -191,7 +191,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnLogout(int type, int code)
-        => Session.Release("logout");
+        => game.Release("logout");
 
     public void Dispose()
     {
@@ -202,7 +202,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update -= OnFrameworkUpdate;
         ClientState.Logout -= OnLogout;
         sceneFiles?.SaveNow();
-        Session?.Release("plugin unload");
+        game?.Release("plugin unload");
         Movement?.Dispose();
         Input?.Dispose();
         Camera?.Dispose();

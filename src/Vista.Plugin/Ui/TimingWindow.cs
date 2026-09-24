@@ -39,7 +39,8 @@ internal sealed class TimingWindow : Window
     private const int YalmTicks = 6;
     private const float InView = 1e-4f;
 
-    private readonly CameraSession session;
+    private readonly GameSession game;
+    private readonly SessionState session;
     private readonly List<Vector2?> keyScreens = [];
     private readonly List<(KeySide Side, Vector2 End)> handleEnds = [];
     private bool scrubbing;
@@ -49,10 +50,11 @@ internal sealed class TimingWindow : Window
     private Guid viewTrack;
     private (float StartX, TimingView Start)? pan;
 
-    public TimingWindow(CameraSession session)
+    public TimingWindow(GameSession game)
         : base("Timing###vista-timing")
     {
-        this.session = session;
+        this.game = game;
+        session = game.State;
         RespectCloseHotkey = false;
         // The wheel zooms the graph; it must never scroll the window as well.
         Flags |= ImGuiWindowFlags.NoScrollWithMouse;
@@ -89,10 +91,10 @@ internal sealed class TimingWindow : Window
             return;
         }
 
-        var distance = session.Evaluator.TotalDistance;
+        var distance = session.World.Evaluator.TotalDistance;
         var duration = (float)session.Duration;
         var shown = UpdateView(duration);
-        var (distanceFrom, distanceTo) = view is null ? (0f, distance) : shown.Distances(session.Evaluator);
+        var (distanceFrom, distanceTo) = view is null ? (0f, distance) : shown.Distances(session.World.Evaluator);
         var yalmStep = Ticks.Step(distanceTo - distanceFrom, YalmTicks);
         // Sized for any label up to the whole path, so zooming never shifts the plot sideways.
         var rightInset = ImGui.CalcTextSize($"{distance:0.00} y").X + 6f;
@@ -164,7 +166,7 @@ internal sealed class TimingWindow : Window
     private void DrawKeyControls(int key)
     {
         var role = TrackEditing.RoleOf(session.Track, key);
-        ImGui.TextUnformatted($"Key: {session.Evaluator.Keys[key].Time:0.00} s");
+        ImGui.TextUnformatted($"Key: {session.World.Evaluator.Keys[key].Time:0.00} s");
 
         ImGui.BeginDisabled(!Editing);
         ImGui.SameLine();
@@ -185,8 +187,8 @@ internal sealed class TimingWindow : Window
     private void UpdateKeyScreens(TimingGraph graph)
     {
         keyScreens.Clear();
-        foreach (var key in session.Evaluator.Keys)
-            keyScreens.Add(InViewTime(graph, key.Time) ? graph.ToScreen(key.Time, session.Evaluator.DistanceOf(key.Position)) : null);
+        foreach (var key in session.World.Evaluator.Keys)
+            keyScreens.Add(InViewTime(graph, key.Time) ? graph.ToScreen(key.Time, session.World.Evaluator.DistanceOf(key.Position)) : null);
     }
 
     /// <summary>Works out where the selected key's handles end this frame, while editing.</summary>
@@ -197,7 +199,7 @@ internal sealed class TimingWindow : Window
         foreach (var side in Sides)
         {
             if (!TimingEditing.HasHandle(session.Track, key, side)) continue;
-            handleEnds.Add((side, graph.HandleEnd(at, side, session.Evaluator.SideSlope(key, side), HandleLength)));
+            handleEnds.Add((side, graph.HandleEnd(at, side, session.World.Evaluator.SideSlope(key, side), HandleLength)));
         }
     }
 
@@ -210,7 +212,7 @@ internal sealed class TimingWindow : Window
         var text = ImGui.GetColorU32(ImGuiCol.Text);
         for (var i = 0; i < session.Track.Points.Count; i++)
         {
-            var along = session.Evaluator.DistanceOf(i);
+            var along = session.World.Evaluator.DistanceOf(i);
             if (along < graph.DistanceFrom - InView || along > graph.DistanceTo + InView) continue;
             var y = graph.ToScreen(0f, along).Y;
             list.AddLine(new Vector2(graph.Origin.X, y), new Vector2(right, y), EditorColours.GraphGrid);
@@ -283,8 +285,8 @@ internal sealed class TimingWindow : Window
     private void DrawPlayhead(ImDrawListPtr list, TimingGraph graph, float stripBottom)
     {
         if (session.Mode == CameraMode.Live && session.PlayingEntry?.TrackId != session.EditedTrackId) return;
-        if (!InViewTime(graph, (float)session.ScrubHead)) return;
-        var x = graph.ToScreen((float)session.ScrubHead, 0f).X;
+        if (!InViewTime(graph, (float)session.Transport.ScrubHead)) return;
+        var x = graph.ToScreen((float)session.Transport.ScrubHead, 0f).X;
         list.AddLine(new Vector2(x, graph.Origin.Y), new Vector2(x, stripBottom), EditorColours.Playhead);
     }
 
@@ -334,8 +336,8 @@ internal sealed class TimingWindow : Window
         if (!PlotContains(graph, mouse)) return;
 
         var t = graph.TimeAt(mouse.X);
-        var d = session.Evaluator.DistanceAt(t);
-        var speed = session.Evaluator.SlopeAt(t);
+        var d = session.World.Evaluator.DistanceAt(t);
+        var speed = session.World.Evaluator.SlopeAt(t);
         list.AddCircleFilled(graph.ToScreen(t, d), HoverRadius, EditorColours.Playhead);
         ImGui.SetTooltip($"{t:0.00} s  ·  {d:0.0} y  ·  {speed:0.00} y/s");
     }
@@ -345,7 +347,7 @@ internal sealed class TimingWindow : Window
     {
         if (scrubbing)
         {
-            if (ImGui.IsItemActive()) session.ScrubTo(graph.TimeAt(ImGui.GetMousePos().X));
+            if (ImGui.IsItemActive()) session.Transport.ScrubTo(graph.TimeAt(ImGui.GetMousePos().X));
             else EndScrub();
         }
 
@@ -382,7 +384,7 @@ internal sealed class TimingWindow : Window
     private bool ClickKey(TimingGraph graph, Vector2 mouse)
     {
         if (MarkerHitTest.Nearest(keyScreens, mouse, KeyHitRadius) is not { } key) return false;
-        session.SelectKey(key);
+        session.Selection.SelectKey(key);
         if (keyScreens[key] is { } at) BeginDrag(new Drag(key, null, at, graph, ImGui.GetIO().KeyCtrl));
         return true;
     }
@@ -394,8 +396,8 @@ internal sealed class TimingWindow : Window
 
         var time = graph.TimeAt(mouse.X);
         if (MathF.Abs(CurvePoint(graph, time).Y - mouse.Y) > CurveHitDistance) return false;
-        if (session.Evaluator.LegAt(time) is not { } leg) return false;
-        session.SelectLeg(leg);
+        if (session.World.Evaluator.LegAt(time) is not { } leg) return false;
+        session.Selection.SelectLeg(leg);
         return true;
     }
 
@@ -403,7 +405,7 @@ internal sealed class TimingWindow : Window
     private void RightClickKey(Vector2 mouse)
     {
         if (!Editing || drag is not null || MarkerHitTest.Nearest(keyScreens, mouse, KeyHitRadius) is not { } key) return;
-        session.SelectKey(key);
+        session.Selection.SelectKey(key);
 
         var track = session.Track;
         var hasHandle = TimingEditing.HasHandle(track, key, KeySide.In) || TimingEditing.HasHandle(track, key, KeySide.Out);
@@ -416,7 +418,7 @@ internal sealed class TimingWindow : Window
     private void DrawKeyPopup()
     {
         if (!ImGui.BeginPopup(KeyPopup)) return;
-        if (!Editing || popupKey is not { } key || key != session.SelectedKey || key >= TrackEditing.KeyCount(session.Track))
+        if (!Editing || popupKey is not { } key || key != session.Selection.Key || key >= TrackEditing.KeyCount(session.Track))
         {
             ImGui.CloseCurrentPopup();
             ImGui.EndPopup();
@@ -480,9 +482,9 @@ internal sealed class TimingWindow : Window
     private void ClickTimeAxis(TimingGraph graph, Vector2 mouse, float stripBottom)
     {
         if (mouse.Y < graph.Origin.Y + graph.Size.Y || mouse.Y > stripBottom) return;
-        session.BeginScrub();
-        session.ScrubTo(graph.TimeAt(mouse.X));
-        scrubbing = session.Scrubbing;
+        session.Transport.BeginScrub();
+        session.Transport.ScrubTo(graph.TimeAt(mouse.X));
+        scrubbing = session.Transport.Scrubbing;
     }
 
     /// <summary>The view for this frame: whole for a new track or one that no longer needs zooming, else kept within the shot.</summary>
@@ -522,10 +524,10 @@ internal sealed class TimingWindow : Window
     {
         if (!scrubbing) return;
         scrubbing = false;
-        session.FinishScrub();
+        game.FinishScrub();
     }
 
-    private Vector2 CurvePoint(TimingGraph graph, float time) => graph.ToScreen(time, session.Evaluator.DistanceAt(time));
+    private Vector2 CurvePoint(TimingGraph graph, float time) => graph.ToScreen(time, session.World.Evaluator.DistanceAt(time));
 
     /// <summary>The time under pixel column <paramref name="x"/>, running on past the shot's end so the last key can lengthen it.</summary>
     private static float DragTime(TimingGraph graph, float x) => graph.TimeAtOpenEnded(x);
@@ -555,18 +557,18 @@ internal sealed class TimingWindow : Window
 
     /// <summary>The selected key's index, or null when none is selected or it is out of range.</summary>
     private int? SelectedKeyIndex()
-        => session.SelectedKey is { } key && key < TrackEditing.KeyCount(session.Track) ? key : null;
+        => session.Selection.Key is { } key && key < TrackEditing.KeyCount(session.Track) ? key : null;
 
     /// <summary>The selected leg, or null when none is selected or it is out of range.</summary>
     private int? SelectedLegIndex()
-        => session.SelectedLeg is { } leg && leg >= 1 && leg < session.Track.Points.Count ? leg : null;
+        => session.Selection.Leg is { } leg && leg >= 1 && leg < session.Track.Points.Count ? leg : null;
 
     /// <summary>The selected leg's start and end times, or null.</summary>
     private (float Start, float End)? SelectedLegSpan()
     {
         if (SelectedLegIndex() is not { } leg) return null;
         var track = session.Track;
-        var keys = session.Evaluator.Keys;
+        var keys = session.World.Evaluator.Keys;
         return (keys[TrackEditing.LegStartKey(track, leg)].Time, keys[TrackEditing.LegEndKey(track, leg)].Time);
     }
 

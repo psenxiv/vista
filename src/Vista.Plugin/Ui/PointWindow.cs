@@ -14,7 +14,8 @@ namespace Vista.Plugin.Ui;
 /// <summary>The selected point's, anchor's or Look At point's number fields and gizmo mode; shown only while one is selected in editing mode.</summary>
 internal sealed class PointWindow : Window
 {
-    private readonly CameraSession session;
+    private readonly GameSession game;
+    private readonly SessionState session;
     private readonly PointGizmo gizmo;
     private (int? Point, AnchorKind? Anchor, Guid Track) shown;
     private float gridWidth;
@@ -22,10 +23,11 @@ internal sealed class PointWindow : Window
     private bool dragging;
     private bool openedLastFrame;
 
-    public PointWindow(CameraSession session, PointGizmo gizmo)
+    public PointWindow(GameSession game, PointGizmo gizmo)
         : base("Point###vista-point", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse)
     {
-        this.session = session;
+        this.game = game;
+        session = game.State;
         this.gizmo = gizmo;
         RespectCloseHotkey = false;
     }
@@ -34,12 +36,12 @@ internal sealed class PointWindow : Window
     public override void PreOpenCheck()
     {
         var editing = session.Mode == CameraMode.Editing;
-        var now = (editing ? session.Selected : null, editing ? session.SelectedAnchor : null, session.EditedTrackId);
+        var now = (editing ? session.Selection.Point : null, editing ? session.Selection.Anchor : null, session.EditedTrackId);
 
         // Only the close button clears IsOpen behind our back: open last frame, same selection, now shut.
         if (openedLastFrame && !IsOpen && now == shown)
         {
-            session.Select(null);
+            session.Selection.Select(null);
             now = (null, null, now.Item3);
         }
 
@@ -65,17 +67,17 @@ internal sealed class PointWindow : Window
         Anchor? anchor = null;
         Vector3? lookAt = null;
         var index = -1;
-        if (session.SelectedAnchor == AnchorKind.LookAt)
+        if (session.Selection.Anchor == AnchorKind.LookAt)
         {
-            if (session.SelectedLookAtInWorld is not { } point) return;
+            if (session.Selection.LookAtInWorld is not { } point) return;
             lookAt = point;
         }
-        else if (session.SelectedAnchor is not null)
+        else if (session.Selection.Anchor is not null)
         {
-            if (session.SelectedAnchorInWorld is not { } a) return;
+            if (session.Selection.AnchorInWorld is not { } a) return;
             anchor = a;
         }
-        else if (session.Selected is { } i && i < session.Track.Points.Count) index = i;
+        else if (session.Selection.Point is { } i && i < session.Track.Points.Count) index = i;
         else return;
 
         using var style = PoseGrid.Style();
@@ -132,7 +134,7 @@ internal sealed class PointWindow : Window
         if (PoseGrid.Button("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view", enabled: true))
         {
             session.BeginLiveEdit();
-            _ = session.PreviewPoint(index, session.Track.Points[index] with { Fov = EditLimits.Fov(session.CameraFov) });
+            _ = session.PreviewPoint(index, session.Track.Points[index] with { Fov = EditLimits.Fov(game.CameraFov) });
             session.EndLiveEdit();
         }
 
@@ -198,7 +200,7 @@ internal sealed class PointWindow : Window
         var changed = PoseGrid.Field(id, name, border, ref edited, speed, format);
         LiveDrag.Handle(session, changed, () =>
         {
-            if (session.SelectedAnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
+            if (session.Selection.AnchorInWorld is { } current) _ = session.PreviewAnchor(set(current, edited), carry: true);
         }, ref dragging);
     }
 
@@ -209,7 +211,7 @@ internal sealed class PointWindow : Window
         var changed = PoseGrid.Field(id, name, border, ref edited, PoseGrid.PositionSpeed, "%.2f");
         LiveDrag.Handle(session, changed, () =>
         {
-            if (session.SelectedLookAtInWorld is { } current) _ = session.PreviewLookAt(set(current, edited));
+            if (session.Selection.LookAtInWorld is { } current) _ = session.PreviewLookAt(set(current, edited));
         }, ref dragging);
     }
 }

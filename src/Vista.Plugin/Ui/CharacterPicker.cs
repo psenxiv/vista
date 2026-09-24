@@ -1,4 +1,5 @@
-using Vista.Plugin.Session;
+using Vista.Core.Session;
+using Vista.Core.Tracks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 
@@ -7,8 +8,8 @@ namespace Vista.Plugin.Ui;
 /// <summary>The drop-down naming the edited track's character; it opens on a search box and the characters loaded nearby, by name, once each.</summary>
 internal static class CharacterPicker
 {
-    /// <summary>Draws the drop-down <paramref name="width"/> wide. Returns why choosing a character was refused, or null.</summary>
-    public static string? Draw(CameraSession session, ref string search, float width)
+    /// <summary>Draws the drop-down <paramref name="width"/> wide, listing <paramref name="characters"/>. Returns why choosing a character was refused, or null.</summary>
+    public static string? Draw(SessionState session, NearbyCharacters characters, ref string search, float width)
     {
         var track = session.Track;
         var chosen = track.TargetName is { } name ? $"{name} · {track.TargetWorld ?? "NPC"}" : "Choose a character";
@@ -25,7 +26,7 @@ internal static class CharacterPicker
         ImGui.InputTextWithHint("##search", "Search", ref search, 64);
 
         var filter = search.Trim();
-        var listed = session.Characters.All
+        var listed = characters.All
             .Where(c => filter.Length == 0 || c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
             .DistinctBy(c => (c.Name, c.World))
             .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
