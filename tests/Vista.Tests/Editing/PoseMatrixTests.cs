@@ -1,6 +1,5 @@
 using System.Numerics;
 using Vista.Core.Editing;
-using Vista.Core.Tracks.Aiming;
 using Xunit;
 
 namespace Vista.Tests.Editing;
@@ -61,16 +60,36 @@ public class PoseMatrixTests
         MathF.IEEERemainder(expected - actual, MathF.Tau);
 
     [Fact]
-    public void ToPoseIgnoresScaleAndClampsPitch()
+    public void ToPoseIgnoresScale()
     {
         var scaled = Matrix4x4.CreateScale(3f) * PoseMatrix.From(Vector3.Zero, 0.5f, 0.2f, 0.1f);
         var (_, yaw, pitch, roll) = PoseMatrix.ToPose(scaled);
         Assert.Equal(0.5f, yaw, 4);
         Assert.Equal(0.2f, pitch, 4);
         Assert.Equal(0.1f, roll, 4);
+    }
 
-        // Straight up is pi / 2, past the clamp, so ToPose returns the limit itself rather than merely something below it.
-        var straightUp = PoseMatrix.From(Vector3.Zero, 0f, 1.5707963f, 0f);
-        Assert.Equal(TrackAim.PitchLimit, PoseMatrix.ToPose(straightUp).Pitch);
+    [Fact]
+    public void ToPoseReachesStraightUpWithNoClamp()
+    {
+        // Straight up is pi / 2 exactly; no 89 degree cap holds it back, and ToAngles' pole case returns roll 0.
+        var straightUp = PoseMatrix.From(Vector3.Zero, 0.7f, MathF.PI / 2f, 0f);
+        var (_, yaw, pitch, roll) = PoseMatrix.ToPose(straightUp);
+        Assert.Equal(0.7f, yaw, 4);
+        Assert.Equal(MathF.PI / 2f, pitch, 5);
+        Assert.Equal(0f, roll, 4);
+    }
+
+    [Fact]
+    public void ToPoseInvertsFromNearVertical()
+    {
+        // 1.55 rad (88.8 degrees) sits close to the pole, comfortably inside the new pi / 2 range, with no clamp to round it off.
+        var position = new Vector3(-5f, 7f, 11f);
+        var (p, y, pi, r) = PoseMatrix.ToPose(PoseMatrix.From(position, 0.6f, 1.55f, 3f));
+
+        Assert.Equal(position, p);
+        Assert.Equal(0.6f, y, 4);
+        Assert.Equal(1.55f, pi, 4);
+        Assert.Equal(3f, r, 4);
     }
 }

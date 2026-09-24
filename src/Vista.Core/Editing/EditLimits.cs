@@ -1,6 +1,5 @@
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Core.Editing;
 
@@ -29,9 +28,12 @@ public static class EditLimits
     public static float Hold(float seconds) =>
         float.IsFinite(seconds) ? Math.Clamp(seconds, 0f, TrackEditing.MaxSeconds) : 0f;
 
-    /// <summary>A pitch in radians within the gizmo's limit; not a number becomes 0.</summary>
+    /// <summary>Steepest pitch a point, the gizmo or the Point window can reach: straight up or down.</summary>
+    public const float PitchLimit = MathF.PI / 2f;
+
+    /// <summary>A pitch in radians, within ±90°; not a number becomes 0.</summary>
     public static float Pitch(float radians) =>
-        float.IsFinite(radians) ? Math.Clamp(radians, -TrackAim.PitchLimit, TrackAim.PitchLimit) : 0f;
+        float.IsFinite(radians) ? Math.Clamp(radians, -PitchLimit, PitchLimit) : 0f;
 
     /// <summary>A yaw or roll in radians wrapped to within half a turn; not a number becomes 0.</summary>
     public static float Angle(float radians) => float.IsFinite(radians) ? Angles.Wrap(radians) : 0f;

@@ -32,7 +32,7 @@ public static class GizmoEdit
             };
     }
 
-    /// <summary>The point with one angle taken from its dragged ring frame, or <paramref name="original"/> itself when it did not turn.</summary>
+    /// <summary>The point turned by its dragged ring frame — yaw or roll alone, or all three for pitch, since going over the top turns them together — or <paramref name="original"/> itself when it did not turn.</summary>
     public static ControlPoint Rotate(ControlPoint original, GimbalRing ring, Matrix4x4 dragged)
     {
         var forward = -new Vector3(dragged.M31, dragged.M32, dragged.M33);
@@ -43,13 +43,18 @@ public static class GizmoEdit
                 return Same(yaw, original.Yaw) ? original : original with { Yaw = yaw };
 
             case GimbalRing.Pitch:
-                var level = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, original.Yaw, 0f));
-                var pitch = Math.Clamp(
-                    MathF.Atan2(forward.Y, Vector3.Dot(forward, level)),
-                    -TrackAim.PitchLimit,
-                    TrackAim.PitchLimit
-                );
-                return Same(pitch, original.Pitch) ? original : original with { Pitch = pitch };
+                // The ring frame carries roll 0; re-roll its dragged up by the original roll before reading
+                // the angles back, so a drag past vertical goes over the top instead of clamping.
+                var ringUp = new Vector3(dragged.M21, dragged.M22, dragged.M23);
+                var rolledUp = Vector3.Transform(ringUp, Quaternion.CreateFromAxisAngle(forward, original.Roll));
+                var (pitchYaw, pitch, pitchRoll) = CameraRotation.ToAngles(CameraRotation.FromBasis(forward, rolledUp));
+                var turned = original with
+                {
+                    Yaw = Same(pitchYaw, original.Yaw) ? original.Yaw : pitchYaw,
+                    Pitch = Same(pitch, original.Pitch) ? original.Pitch : pitch,
+                    Roll = Same(pitchRoll, original.Roll) ? original.Roll : pitchRoll,
+                };
+                return turned == original ? original : turned;
 
             default:
                 var roll = PoseMatrix.ToPose(dragged).Roll;

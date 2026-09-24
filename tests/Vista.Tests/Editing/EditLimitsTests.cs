@@ -1,5 +1,4 @@
 using Vista.Core.Editing;
-using Vista.Core.Tracks.Aiming;
 using Xunit;
 
 namespace Vista.Tests.Editing;
@@ -43,10 +42,11 @@ public class EditLimitsTests
         Assert.Equal(expected, EditLimits.ShotDuration(input));
 
     [Fact]
-    public void PitchClampsToTheGizmoLimit()
+    public void PitchClampsToAQuarterTurn()
     {
-        Assert.Equal(TrackAim.PitchLimit, EditLimits.Pitch(2f));
-        Assert.Equal(-TrackAim.PitchLimit, EditLimits.Pitch(-2f));
+        // pi / 2 radians: straight up or down, with no 89 degree cap.
+        Assert.Equal(1.5707964f, EditLimits.Pitch(2f));
+        Assert.Equal(-1.5707964f, EditLimits.Pitch(-2f));
         Assert.Equal(0.3f, EditLimits.Pitch(0.3f));
         Assert.Equal(0f, EditLimits.Pitch(float.NaN));
     }

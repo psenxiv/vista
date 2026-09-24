@@ -1,7 +1,7 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 using Xunit;
 
 namespace Vista.Tests.Editing;
@@ -64,14 +64,25 @@ public class GizmoEditTests
     }
 
     [Fact]
-    public void ThePitchRingStopsAtThePitchLimit()
+    public void ThePitchRingGoesOverTheTopPastVertical()
     {
-        // pitch + phi, so +2 rad takes 0.3 to 2.3 and -2 rad takes it to -1.7; each clamps to its own end.
-        var up = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(2f));
-        var down = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(-2f));
+        var original = new ControlPoint(new Vector3(4f, -1f, 2f), 0f, 80f * MathF.PI / 180f, 0.4f);
+        var dragged = Turn(
+            GizmoEdit.RingFrame(original, GimbalRing.Pitch),
+            Matrix4x4.CreateRotationX(20f * MathF.PI / 180f)
+        );
+        var edited = GizmoEdit.Rotate(original, GimbalRing.Pitch, dragged);
 
-        Assert.Equal(TrackAim.PitchLimit, GizmoEdit.Rotate(Original, GimbalRing.Pitch, up).Pitch, 4);
-        Assert.Equal(-TrackAim.PitchLimit, GizmoEdit.Rotate(Original, GimbalRing.Pitch, down).Pitch, 4);
+        // 80 deg + 20 deg = 100 deg, past vertical: ToAngles normalises it to the mirror image,
+        // pitch back at 80 deg with yaw and roll each turned by a half turn.
+        Assert.Equal(80f * MathF.PI / 180f, edited.Pitch, 4);
+        Assert.Equal(MathF.PI, MathF.Abs(Delta(edited.Yaw, original.Yaw)), 3);
+        Assert.Equal(MathF.PI, MathF.Abs(Delta(edited.Roll, original.Roll)), 3);
+
+        // The picture itself is unchanged: the edited angles' forward matches the dragged matrix's forward.
+        var draggedForward = -new Vector3(dragged.M31, dragged.M32, dragged.M33);
+        var editedForward = CameraRotation.Forward(CameraRotation.FromAngles(edited.Yaw, edited.Pitch, edited.Roll));
+        Assert.True(Vector3.Distance(draggedForward, editedForward) < 1e-4f);
     }
 
     [Fact]
