@@ -143,7 +143,8 @@ In-game verification is the user's. Read results from
 `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
 A checklist of in-game checks goes in `scripts/checks/`, which is gitignored, so never commit one: add a file named for the work
-(`phase-4.json`), list it in `manifest.json`, and leave `index.html` alone. Never overwrite a
+(`phase-4.json`), list it in `manifest.json`, and leave the page's own files alone. The folder's
+`README.md` gives the checklist format. Never overwrite a
 checklist that has not been run — several can be pending, and the page keeps each one's progress
 separately. Don't write a Markdown checklist. The user serves the folder themselves and sends
 back the results JSON it downloads. Delete a checklist once its results are in.
