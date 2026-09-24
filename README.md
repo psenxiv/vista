@@ -6,6 +6,12 @@ Create smooth, cinematic camera paths in FFXIV, organise them into scenes, and p
 
 Vista is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin. Open it with `/vista`.
 
+## About this project
+
+Vista is a personal project. I had a specific camera tool in mind for myself and a few friends, and I wanted to use it now rather than in a few months. It's open to the community, but it isn't built for the community. If you find it useful, awesome. Just know that there is no long-term roadmap or vision beyond the features I have planned and that friends ask for.
+
+It's also built with heavy use of AI coding tools. I'm a software engineer, so I've tried to do it sensibly: I design it, review it and test it in game, and every change goes through a written spec and automated tests. If that's not your thing, fair enough, no hard feelings.
+
 ## What it does
 
 - **Tracks.** Fly a free camera and drop points to lay out a path. Set each leg's timing, holds and
