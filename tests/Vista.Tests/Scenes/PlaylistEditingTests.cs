@@ -63,6 +63,28 @@ public class PlaylistEditingTests
         Assert.Throws<ArgumentException>(() => PlaylistEditing.Reorder(b, [0, 0]));
     }
 
+    [Theory]
+    [InlineData("3", 3)]
+    [InlineData(" 12 ", 12)]
+    [InlineData("500", PlaylistEditing.MaxLoops)]
+    [InlineData("", null)]
+    [InlineData("   ", null)]
+    [InlineData("0", null)]
+    [InlineData("-4", null)]
+    public void ATypedCountSetsClampsOrClears(string text, int? expected)
+    {
+        Assert.True(PlaylistEditing.ParseLoops(text, out var loops));
+        Assert.Equal(expected, loops);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("1.5")]
+    public void TypingSomethingOtherThanAWholeNumberChangesNothing(string text)
+    {
+        Assert.False(PlaylistEditing.ParseLoops(text, out _));
+    }
+
     [Fact]
     public void SetLoopsClampsAndClears()
     {
