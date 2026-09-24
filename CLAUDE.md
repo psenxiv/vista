@@ -60,11 +60,15 @@ Round trips are the exception: `Assert.Equal(scene, Load(Save(scene)))` is valid
 
 ## Build
 
+    make verify     # Format, build with warnings as errors, and test: must pass before every commit
+    make format     # Format with CSharpier (print width 120)
     make build      # Debug plugin build; sets DALAMUD_HOME
     make test       # Core tests
     make package    # Release build and latest.zip, as CI makes it
 
-Never build the plugin with bare `dotnet build`: `DALAMUD_HOME` must be set. The commands live in `scripts/`.
+**Run `make verify` before every commit, and commit only when it passes.** It formats the code, so commit what it formatted. `make testing` and `make release` run it in check mode and refuse unformatted code.
+
+Never build the plugin with bare `dotnet build`: `DALAMUD_HOME` must be set. The commands live in `scripts/`. Formatting-only commits go in `.git-blame-ignore-revs`.
 
 ## Releases
 
