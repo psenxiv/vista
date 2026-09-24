@@ -1,3 +1,4 @@
+using System.Globalization;
 using Vista.Core.Editing;
 
 namespace Vista.Core.Scenes;
@@ -31,6 +32,17 @@ public static class PlaylistEditing
     {
         var entries = BlockMove.Apply(scene.Playlist, order);
         return entries.SequenceEqual(scene.Playlist) ? scene : scene with { Playlist = entries };
+    }
+
+    /// <summary>Reads a typed repeat count: blank, 0 or less gives null (follow the track), above <see cref="MaxLoops"/> gives it; false when <paramref name="text"/> isn't a whole number.</summary>
+    public static bool ParseLoops(string text, out int? loops)
+    {
+        loops = null;
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0) return true;
+        if (!long.TryParse(trimmed, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var count)) return false;
+        loops = count <= 0 ? null : (int)Math.Min(count, MaxLoops);
+        return true;
     }
 
     /// <summary>Sets how many times an entry plays, 1 to <see cref="MaxLoops"/>, or null to follow its track.</summary>

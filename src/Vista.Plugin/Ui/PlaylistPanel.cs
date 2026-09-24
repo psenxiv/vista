@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
@@ -17,8 +18,11 @@ internal sealed class PlaylistPanel
 
     private readonly CameraSession session;
 
-    // A repeat count being dragged or typed, applied when the field is let go.
+    // A repeat count being dragged, applied when the field is let go.
     private (Guid Id, int Value)? loopsDrag;
+
+    // A repeat count being typed, and whether its field still needs focus.
+    private (Guid Id, string Text, bool Focus)? loopsTyping;
 
     // Wheel travel over the loop cells not yet taken as a step, so a trackpad steps once per notch.
     private float wheelCarry;
@@ -33,6 +37,7 @@ internal sealed class PlaylistPanel
         var scene = session.Scene;
         var playing = session.PlayingEntry;
         if (loopsDrag is { } drag && (!editing || PlaylistEditing.IndexOf(scene, drag.Id) < 0)) loopsDrag = null;
+        if (loopsTyping is { } typed && (!editing || PlaylistEditing.IndexOf(scene, typed.Id) < 0)) loopsTyping = null;
         loopsHovered = false;
 
         ImGui.AlignTextToFramePadding();
@@ -138,9 +143,15 @@ internal sealed class PlaylistPanel
         if (IconButton.RowAction("remove", FontAwesomeIcon.Times, "Remove from playlist", rowHovered, danger: true)) Report(session.RemoveFromPlaylist([entry.Id]));
     }
 
-    /// <summary>The repeat count as a drag field: 1 up, or 0 to follow the track, shown as ∞ when that holds the playlist or — when it plays once. Double-click to type, wheel to step; a drag applies when let go.</summary>
+    /// <summary>The repeat count as a drag field: 1 up, or 0 to follow the track, shown as ∞ when that holds the playlist or — when it plays once. Double-click or Ctrl + click to type, wheel to step; a drag applies when let go.</summary>
     private void DrawLoops(Scene scene, PlaylistEntry entry, bool editing)
     {
+        if (loopsTyping is { } typing && typing.Id == entry.Id)
+        {
+            DrawLoopsText(entry, typing);
+            return;
+        }
+
         var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
         var value = loopsDrag is { } drag && drag.Id == entry.Id ? drag.Value : entry.Loops ?? 0;
         var format = value > 0 ? "%d" : holds ? "∞" : "—";
@@ -149,9 +160,17 @@ internal sealed class PlaylistPanel
         ImGui.SetNextItemWidth(LoopWidth);
         bool changed;
         using (ImRaii.PushColor(ImGuiCol.Text, colour))
-            changed = ImGui.DragInt("##loops", ref value, 0.1f, 0, PlaylistEditing.MaxLoops, format, ImGuiSliderFlags.AlwaysClamp);
+            changed = ImGui.DragInt("##loops", ref value, 0.1f, 0, PlaylistEditing.MaxLoops, format, ImGuiSliderFlags.AlwaysClamp | ImGuiSliderFlags.NoInput);
         if (changed) loopsDrag = (entry.Id, value);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Repeats");
+
+        // ImGui's own typing reads the text through the display format, which has no number when it shows — or ∞.
+        if (editing && ImGui.IsItemHovered() && (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) || (ImGui.IsItemClicked() && ImGui.GetIO().KeyCtrl)))
+        {
+            loopsDrag = null;
+            loopsTyping = (entry.Id, entry.Loops?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, true);
+            return;
+        }
         if (loopsDrag is { } done && done.Id == entry.Id && !ImGui.IsItemActive())
         {
             loopsDrag = null;
@@ -162,6 +181,25 @@ internal sealed class PlaylistPanel
         if (!editing || !ImGui.IsItemHovered()) return;
         loopsHovered = true;
         StepLoops(entry);
+    }
+
+    /// <summary>The repeat count as text: Enter or clicking away applies it, blank or 0 follows the track, Escape cancels.</summary>
+    private void DrawLoopsText(PlaylistEntry entry, (Guid Id, string Text, bool Focus) typing)
+    {
+        if (typing.Focus) ImGui.SetKeyboardFocusHere();
+        var text = typing.Text;
+        ImGui.SetNextItemWidth(LoopWidth);
+        var entered = ImGui.InputText("##loops-text", ref text, 8, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.CharsDecimal);
+        loopsTyping = (entry.Id, text, false);
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            loopsTyping = null;
+            return;
+        }
+
+        if (!entered && !ImGui.IsItemDeactivated()) return;
+        loopsTyping = null;
+        if (PlaylistEditing.ParseLoops(text, out var loops) && loops != entry.Loops) Report(session.SetEntryLoops(entry.Id, loops));
     }
 
     /// <summary>Each whole notch of the mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>
