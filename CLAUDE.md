@@ -81,9 +81,9 @@ Never build the plugin with bare `dotnet build`: `DALAMUD_HOME` must be set. The
 
 Releases run from `.github/workflows/release.yml` when a `test-v*` or `prod-v*` tag is pushed. Only the user pushes tags.
 
-Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z, up by one for every shipped build. A test build that holds up is promoted by releasing the same version, and the workflow reuses its zip. A fix after a test build is the next N.
+Versions are `X.Y.Z.N`: SemVer's major, minor and patch, then N, the build of that X.Y.Z, up by one for every shipped build. A test build that holds up is promoted by releasing the same version, and the workflow reuses its zip if the code hasn't changed since. A fix after a test build is the next N.
 
-`CHANGELOG.md` has a `## X.Y.Z.N` section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. When a change a player would notice lands on `main`, add its bullet to the section at the top in the same commit, starting the section if there isn't one. Show the section to the user before shipping. The workflow uses it for the release notes and `repo.json`, and `make testing` / `make release` refuse a version without one.
+`CHANGELOG.md` has a `## X.Y.Z.N` section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. The next release's section is marked `## X.Y.Z.N - CANDIDATE`. When a change a player would notice lands on `main`, add its bullet to the candidate in the same commit; if there's none, start one at the top with the next version. Never add to a section without the mark: it has shipped. `make release` drops the mark as it ships. Show the section to the user before shipping. The workflow uses it for the release notes and `repo.json`, and `make testing` / `make release` refuse a version without one.
 
 ## In-game checks
 

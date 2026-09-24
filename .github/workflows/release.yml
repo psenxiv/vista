@@ -40,10 +40,11 @@ jobs:
           if ([version]$version -le [version]$live.AssemblyVersion) { throw "$version isn't above the live release $($live.AssemblyVersion)." }
           if ($channel -eq 'test' -and [version]$version -le [version]$live.TestingAssemblyVersion) { throw "$version isn't above the live test build $($live.TestingAssemblyVersion)." }
 
-          # A release on a commit already shipped as a test build reuses that build.
+          # A release of code already shipped as a test build reuses that build. Publishing and shipping only change repo.json and CHANGELOG.md.
           $promote = $false
           if ($channel -eq 'prod' -and (git tag --list "test-v$version")) {
-            if ((git rev-list -n 1 "test-v$version") -ne (git rev-parse HEAD)) { throw "test-v$version is on a different commit." }
+            git diff --quiet "test-v$version" HEAD -- . ':(exclude)repo.json' ':(exclude)CHANGELOG.md'
+            if ($LASTEXITCODE -ne 0) { throw "test-v$version was built from different code." }
             $promote = $true
           }
 
@@ -56,6 +57,7 @@ jobs:
           $version = '${{ steps.tag.outputs.version }}'
           $lines = Get-Content CHANGELOG.md
           $start = [array]::IndexOf($lines, "## $version")
+          if ($start -lt 0) { $start = [array]::IndexOf($lines, "## $version - CANDIDATE") }
           if ($start -lt 0) { throw "CHANGELOG.md has no section for $version." }
           $body = for ($i = $start + 1; $i -lt $lines.Count -and -not $lines[$i].StartsWith('## '); $i++) { $lines[$i] }
           ($body -join "`n").Trim() | Set-Content notes.md -Encoding utf8NoBOM

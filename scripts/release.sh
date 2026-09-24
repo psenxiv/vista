@@ -12,12 +12,18 @@ git fetch -q origin main --tags
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main isn't in step with origin/main; push or pull first." >&2; exit 1; }
 v="$(version)"
 [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version must be X.Y.Z.N, got $v; run make bump." >&2; exit 1; }
-grep -qx "## $v" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section." >&2; exit 1; }
+candidate="## $v - CANDIDATE"
+grep -qx -e "## $v" -e "$candidate" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section." >&2; exit 1; }
 tag="$channel-v$v"
 git rev-parse -q --verify "refs/tags/$tag" >/dev/null && { echo "Tag $tag already exists." >&2; exit 1; }
 "$ROOT/scripts/verify.sh" --check
 read -r -p "Push $tag and publish it? [y/N] " answer
 [ "$answer" = "y" ] || { echo "Stopped."; exit 1; }
+if [ "$channel" = prod ] && grep -qx "$candidate" CHANGELOG.md; then
+  sed -i '' "s/^$candidate\$/## $v/" CHANGELOG.md
+  git commit -q -m "chore(release) ship $v" CHANGELOG.md
+  git push -q origin main
+fi
 git tag "$tag"
 git push origin "$tag"
 echo "Pushed $tag. Watch it at https://github.com/psenxiv/vista/actions"

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.1.1
+## 0.8.1.1 - CANDIDATE
 
 - Hide game UI when Live stays on or off between sessions.
 
