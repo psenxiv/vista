@@ -55,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static MovementLock Movement { get; private set; } = null!;
 
     private readonly GameSession game;
+    private readonly Faults faults;
     private readonly SceneFiles sceneFiles;
     private readonly PendingField fields;
     private readonly EditorKeys editorKeys = new();
@@ -81,6 +82,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Movement = new MovementLock();
         game = new GameSession(config, Movement);
+        faults = new Faults(() => game.State.Mode);
         sceneFiles = new SceneFiles(config, game);
         fields = new PendingField(() => game.State.Mode == CameraMode.Editing);
         editorLayer = new EditorLayer(game, pointGizmo);
@@ -119,8 +121,8 @@ public sealed class Plugin : IDalamudPlugin
         if (sceneFiles.Lost)
             setupWindow.IsOpen = true;
 
-        Camera = new CameraController(() => game.Frame((float)Framework.UpdateDelta.TotalSeconds));
-        Input = new InputBlocker(() => game.State.LocksInput, () => blockEscape);
+        Camera = new CameraController(() => game.Frame((float)Framework.UpdateDelta.TotalSeconds), faults);
+        Input = new InputBlocker(() => game.State.LocksInput, () => blockEscape, faults);
 
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -157,10 +159,10 @@ public sealed class Plugin : IDalamudPlugin
         Camera.TryInstallHook();
         Input.SyncHookState();
 
-        if (Camera.Faulted)
+        while (faults.TryTake(out var fault))
         {
-            game.Release("hook error");
-            Camera.ClearFault();
+            game.Release($"fault in {fault.Where}");
+            game.State.ReportFault(fault.Where);
         }
 
         sceneFiles.Tick();

@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 
@@ -36,11 +37,13 @@ internal sealed unsafe class InputBlocker : IDisposable
 
     private readonly Func<bool> shouldBlock;
     private readonly Func<bool> shouldBlockEscape;
+    private readonly Faults faults;
 
-    public InputBlocker(Func<bool> shouldBlock, Func<bool> shouldBlockEscape)
+    public InputBlocker(Func<bool> shouldBlock, Func<bool> shouldBlockEscape, Faults faults)
     {
         this.shouldBlock = shouldBlock;
         this.shouldBlockEscape = shouldBlockEscape;
+        this.faults = faults;
 
         longPressHook = Hook(InputData.MemberFunctionPointers.IsInputIdHeld, LongPressDetour, "IsInputIdHeld");
         pressedHook = Hook(InputData.MemberFunctionPointers.IsInputIdPressed, PressedDetour, "IsInputIdPressed");
@@ -100,13 +103,39 @@ internal sealed unsafe class InputBlocker : IDisposable
         // Always call through, then discard. Skipping the original could leave the
         // wheel delta unconsumed for the next reader.
         var value = mouseWheelHook!.Original();
-        return shouldBlock() ? (sbyte)0 : value;
+        if (faults.Any)
+            return value;
+        try
+        {
+            return shouldBlock() ? (sbyte)0 : value;
+        }
+        catch (Exception ex)
+        {
+            faults.Record("mouse wheel hook", ex);
+            return value;
+        }
     }
 
-    private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id) =>
-        shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()))
-            ? (byte)0
-            : hook.Original(self, id);
+    private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
+    {
+        if (faults.Any)
+            return hook.Original(self, id);
+        try
+        {
+            if (Blocks(id))
+                return 0;
+        }
+        catch (Exception ex)
+        {
+            faults.Record("input query hooks", ex);
+        }
+
+        return hook.Original(self, id);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool Blocks(InputId id) =>
+        shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()));
 
     /// <summary>Enables the hooks only while they can do something. Call every frame.</summary>
     public void SyncHookState()
