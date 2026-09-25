@@ -83,6 +83,15 @@ jobs:
         if: steps.tag.outputs.promote == 'false'
         run: dotnet build src/Vista.Plugin/Vista.Plugin.csproj -c Release
 
+      # The self-test is for developer builds only; any trace of it, as a name (UTF-8) or a string literal (UTF-16), means Debug-only code reached Release.
+      - name: Check no self-test code shipped
+        if: steps.tag.outputs.promote == 'false'
+        run: |
+          foreach ($dll in 'Vista.dll', 'Vista.Core.dll') {
+            $text = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes("src/Vista.Plugin/bin/Release/$dll"))
+            if ($text -match 's\x00?e\x00?l\x00?f\x00?t\x00?e\x00?s\x00?t') { throw "$dll contains self-test code; it must stay inside #if DEBUG." }
+          }
+
       - name: Find the package
         id: package
         env:
