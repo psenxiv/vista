@@ -4,7 +4,7 @@
     "Name": "Vista",
     "InternalName": "Vista",
     "AssemblyVersion": "0.9.0.1",
-    "TestingAssemblyVersion": "0.9.0.1",
+    "TestingAssemblyVersion": "0.10.0.1",
     "IsTestingExclusive": false,
     "Punchline": "Camera tracks for cinematic shots.",
     "Description": "Create smooth, cinematic camera paths in FFXIV, organise them into scenes, and play them back live.",
@@ -23,9 +23,9 @@
     "IconUrl": "https://raw.githubusercontent.com/psenxiv/vista/main/images/icon.png",
     "DownloadLinkInstall": "https://github.com/psenxiv/vista/releases/download/prod-v0.9.0.1/latest.zip",
     "DownloadLinkUpdate": "https://github.com/psenxiv/vista/releases/download/prod-v0.9.0.1/latest.zip",
-    "DownloadLinkTesting": "https://github.com/psenxiv/vista/releases/download/prod-v0.9.0.1/latest.zip",
-    "LastUpdate": 1790271068,
+    "DownloadLinkTesting": "https://github.com/psenxiv/vista/releases/download/test-v0.10.0.1/latest.zip",
+    "LastUpdate": 1790315979,
     "TestingDalamudApiLevel": 15,
-    "TestingChangelog": "- Hide game UI when Live stays on or off between sessions.\n- Fixed a shimmer with Direction of travel while the camera holds still at a sharp turn.\n- The camera can look straight up, straight down or upside down, in Edit and in your shots.\n- Direction of travel turns upside down over a loop, like a rollercoaster.\n- The picture no longer flips when a shot goes straight up or down, or passes over or under what it's looking at. It turns round smoothly instead.\n- Fixed the turn colours from G sometimes showing the very end of a path as hot.\n- Dragging rows near the top or bottom of a list scrolls it."
+    "TestingChangelog": "- If something goes wrong inside Vista, or a game update breaks part of it, Vista gives the camera back and stops until you reload it, instead of risking a crash.\n- Fixed dragging a key up to the end of its hold sometimes removing the hold.\n- New tracks, copies and tracks placed from a preset no longer share a name with an existing track.\n- Error messages say what failed, such as deleting a scene, instead of always saying it couldn't save.\n- Fixed Direction of travel facing the wrong way for a moment as a shot starts, when its path comes back to where it began within the look ahead.\n- Times show to a hundredth of a second everywhere, and the Follow Target angle to a tenth of a degree, so a number reads the same in every window.\n- When Vista can't do something you asked, it now tells you why.\n- A point recorded with a field of view under 5° or over 120° now plays at 5° or 120°, the range the Point window allows."
   }
 ]
