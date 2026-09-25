@@ -134,15 +134,15 @@ public sealed class TimingCurve
         for (var i = 0; i < keys.Count; i++)
         {
             if (!Enum.IsDefined(keys[i].InMode) || !Enum.IsDefined(keys[i].OutMode))
-                throw new ArgumentException($"timing key {i} has an unknown tangent mode");
+                throw new ArgumentException($"Timing key {i} has an unknown tangent mode.");
             if (!float.IsFinite(keys[i].InTangent) || !float.IsFinite(keys[i].OutTangent))
-                throw new ArgumentException($"timing key {i} has a non-finite tangent");
+                throw new ArgumentException($"Timing key {i} has a non-finite tangent.");
             if (i == 0)
                 continue;
             if (keys[i].Time <= keys[i - 1].Time)
-                throw new ArgumentException("timing keys must have strictly increasing times");
+                throw new ArgumentException("Timing keys must have strictly increasing times.");
             if (keys[i].Position < keys[i - 1].Position)
-                throw new ArgumentException("timing key positions must not decrease");
+                throw new ArgumentException("Timing key positions must not decrease.");
         }
     }
 

@@ -50,7 +50,7 @@ public class TimingCurveTests
     {
         var keys = new[] { Key(0f, 0f), Key(0f, 1f) };
         var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
-        Assert.Equal("timing keys must have strictly increasing times", ex.Message);
+        Assert.Equal("Timing keys must have strictly increasing times.", ex.Message);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class TimingCurveTests
     {
         var keys = new[] { Key(0f, 0f, (TangentMode)99), Key(1f, 1f) };
         var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
-        Assert.Equal("timing key 0 has an unknown tangent mode", ex.Message);
+        Assert.Equal("Timing key 0 has an unknown tangent mode.", ex.Message);
     }
 
     [Fact]

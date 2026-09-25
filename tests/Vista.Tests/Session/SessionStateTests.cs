@@ -256,7 +256,11 @@ public class SessionStateTests
         var state = EditingWithTrack();
         var before = state.Track;
 
-        Assert.Contains("leg index", state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 1f)));
+        // Two points make one leg, leg 1.
+        Assert.Equal(
+            "Leg index must be 1..1 for a 2-point track.",
+            state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 1f))
+        );
         Assert.Same(before, state.Track);
     }
 

@@ -8,7 +8,7 @@ public static class TimingEditing
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
         if (mode == TangentMode.Manual)
-            throw new ArgumentException("a key's mode can't be set to Manual directly");
+            throw new ArgumentException("A key's mode can't be set to Manual directly.");
 
         var timing = track.Timing[point];
         if (role == KeyRole.Point)
@@ -64,7 +64,7 @@ public static class TimingEditing
     public static Track RemoveHold(Track track, int key)
     {
         if (TrackEditing.RoleOf(track, key) != KeyRole.HoldEnd)
-            throw new ArgumentException("only a hold end can remove its hold");
+            throw new ArgumentException("Only a hold end can remove its hold.");
         return TrackEditing.SetHold(track, TrackEditing.PointOf(track, key), 0f);
     }
 

@@ -51,10 +51,10 @@ public static class TrackEditing
     public const string NameStem = "Track";
 
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
-    public const string FollowHasOnePoint = "A Follow Target track has one point";
+    public const string FollowHasOnePoint = "A Follow Target track has one point.";
 
     /// <summary>Why a track with several points can't aim with Follow Target.</summary>
-    private const string FollowNeedsOnePoint = "Follow Target needs a track with one point";
+    private const string FollowNeedsOnePoint = "Follow Target needs a track with one point.";
 
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
     public static Track Empty(AimMode aim = AimMode.AimKeys, string name = NameStem + " 1") =>
@@ -81,7 +81,7 @@ public static class TrackEditing
     /// <summary>Index of point <paramref name="point"/>'s key.</summary>
     public static int PointKey(Track track, int point)
     {
-        ValidatePointIndex(track, point, "point");
+        ValidatePointIndex(track, point, "Point");
         var key = 0;
         for (var p = 0; p < point; p++)
             key += track.Timing[p].Hold > 0f ? 2 : 1;
@@ -146,7 +146,7 @@ public static class TrackEditing
     /// <summary>Point <paramref name="point"/>'s hold, in seconds.</summary>
     public static float HoldSeconds(Track track, int point)
     {
-        ValidatePointIndex(track, point, "hold");
+        ValidatePointIndex(track, point, "Hold");
         return track.Timing[point].Hold;
     }
 
@@ -161,7 +161,7 @@ public static class TrackEditing
     /// <summary>Inserts a point after point <paramref name="index"/>, both halves keeping the split leg's speed and pin; after the last point it appends.</summary>
     public static Track InsertAfter(Track track, int index, ControlPoint point)
     {
-        ValidatePointIndex(track, index, "insert");
+        ValidatePointIndex(track, index, "Insert");
         if (index == track.Points.Count - 1)
             return Append(track, point);
 
@@ -180,7 +180,7 @@ public static class TrackEditing
     /// <summary>Removes point <paramref name="index"/>: a middle point's legs merge at the first leg's speed, an end point's leg goes.</summary>
     public static Track Delete(Track track, int index)
     {
-        ValidatePointIndex(track, index, "delete");
+        ValidatePointIndex(track, index, "Delete");
         var n = track.Points.Count;
         if (n == 1)
             return track with { Points = [], Timing = [] };
@@ -233,7 +233,7 @@ public static class TrackEditing
     /// <summary>Replaces point <paramref name="index"/>, keeping its timing.</summary>
     public static Track Replace(Track track, int index, ControlPoint point)
     {
-        ValidatePointIndex(track, index, "replace");
+        ValidatePointIndex(track, index, "Replace");
         if (Equals(track.Points[index], point))
             return track;
 
@@ -244,7 +244,7 @@ public static class TrackEditing
     /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it.</summary>
     public static Track SetHold(Track track, int index, float seconds)
     {
-        ValidatePointIndex(track, index, "hold");
+        ValidatePointIndex(track, index, "Hold");
         if (float.IsNaN(seconds))
             return track;
         var clamped = Math.Clamp(seconds, 0f, MaxSeconds);
@@ -436,18 +436,18 @@ public static class TrackEditing
     {
         var n = track.Points.Count;
         if (n < 2)
-            throw new ArgumentOutOfRangeException(null, "this track has no legs");
+            throw new ArgumentOutOfRangeException(null, "This track has no legs.");
         if (index < 1 || index > n - 1)
-            throw new ArgumentOutOfRangeException(null, $"leg index must be 1..{n - 1} for a {n}-point track");
+            throw new ArgumentOutOfRangeException(null, $"Leg index must be 1..{n - 1} for a {n}-point track.");
     }
 
     internal static void ValidatePointIndex(Track track, int index, string what)
     {
         var n = track.Points.Count;
         if (n == 0)
-            throw new ArgumentOutOfRangeException(null, "this track has no points");
+            throw new ArgumentOutOfRangeException(null, "This track has no points.");
         if (index < 0 || index > n - 1)
-            throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track");
+            throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track.");
     }
 
     private static float ClampSpeed(float speed) => Math.Clamp(speed, MinSpeed, MaxSpeed);
@@ -456,7 +456,7 @@ public static class TrackEditing
     {
         var count = KeyCount(track);
         if (key < 0 || key >= count)
-            throw new ArgumentOutOfRangeException(null, $"key index must be 0..{count - 1}");
+            throw new ArgumentOutOfRangeException(null, $"Key index must be 0..{count - 1}.");
 
         var first = 0;
         for (var p = 0; ; p++)

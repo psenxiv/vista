@@ -22,7 +22,10 @@ public class TimingEditingTests
     {
         var track = TimingEditing.SetKeyMode(Build3PointTrack(), 1, TangentMode.Linear);
         Assert.Equal((TangentMode.Linear, TangentMode.Linear), (track.Timing[1].InMode, track.Timing[1].OutMode));
-        Assert.Throws<ArgumentException>(() => TimingEditing.SetKeyMode(track, 1, TangentMode.Manual));
+        Assert.Equal(
+            "A key's mode can't be set to Manual directly.",
+            Assert.Throws<ArgumentException>(() => TimingEditing.SetKeyMode(track, 1, TangentMode.Manual)).Message
+        );
     }
 
     [Fact]

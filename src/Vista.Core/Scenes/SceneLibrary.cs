@@ -101,7 +101,7 @@ public sealed class SceneLibrary
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return $"Could not save {CurrentName}: {e.Message}";
+            return $"Could not delete {CurrentName}: {e.Message}";
         }
 
         CurrentName = string.Empty;
@@ -119,7 +119,7 @@ public sealed class SceneLibrary
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return $"Could not save {CurrentName}: {e.Message}";
+            return $"Could not create the save folder: {e.Message}";
         }
 
         return CurrentName.Length == 0 ? null : Save(CurrentName, scene());

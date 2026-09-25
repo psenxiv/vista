@@ -292,7 +292,7 @@ public sealed class SceneLibraryTests : IDisposable
         library.Open("Dawn");
         Directory.Delete(temp.Scenes, recursive: true);
 
-        Assert.StartsWith("Could not save Dawn:", library.Delete());
+        Assert.StartsWith("Could not delete Dawn:", library.Delete());
         Assert.Equal("Dawn", library.CurrentName);
     }
 
@@ -374,6 +374,18 @@ public sealed class SceneLibraryTests : IDisposable
         Assert.Null(library.NameRefusal("DAWN", renaming: true));
         Assert.Equal("A scene with that name exists.", library.NameRefusal("Broken", renaming: true));
         Assert.Null(library.NameRefusal("Dusk"));
+    }
+
+    [Fact]
+    public void RecreatingIsRefusedWhenAFileHasTheFoldersName()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        Directory.Delete(temp.Folder.Root, recursive: true);
+        File.WriteAllText(temp.Folder.Root, "");
+
+        Assert.StartsWith("Could not create the save folder:", library.Recreate());
+        Assert.Equal("Dawn", library.CurrentName);
     }
 
     [Fact]

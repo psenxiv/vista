@@ -466,7 +466,7 @@ internal sealed class TrackEditorWindow : Window
             game.CueLive();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !session.CanGoLive)
-            ImGui.SetTooltip(session.Stopped ? SessionState.StopMessage : "Add a track with points to the playlist");
+            ImGui.SetTooltip(session.Stopped ? SessionState.StopMessage : "Add a track with points to the playlist.");
         ImGui.EndDisabled();
         ImGui.EndCombo();
     }

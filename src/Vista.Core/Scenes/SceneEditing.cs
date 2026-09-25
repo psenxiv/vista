@@ -132,6 +132,7 @@ public static class SceneEditing
 
     private static IEnumerable<string> Names(Scene scene) => scene.Tracks.Select(t => t.Name);
 
-    private static int Require(Scene scene, Guid id) =>
+    /// <summary>The index of track <paramref name="id"/>, refusing an unknown one.</summary>
+    public static int Require(Scene scene, Guid id) =>
         IndexOf(scene, id) is var index and >= 0 ? index : throw new ArgumentException("There is no such track.");
 }

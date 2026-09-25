@@ -13,7 +13,7 @@ public sealed class SelectionState
 {
     private const string SceneAnchorUnplaced = "The scene anchor is placed with the scene's first point.";
     private const string TrackAnchorUnplaced = "A track's anchor is placed with its first point.";
-    private const string FollowAnchorHidden = "A Follow Target track's anchor is hidden";
+    private const string FollowAnchorHidden = "A Follow Target track's anchor is hidden.";
     private const string LookAtUnused = "The Look At point is used only while the track aims at it.";
 
     private readonly SessionState session;

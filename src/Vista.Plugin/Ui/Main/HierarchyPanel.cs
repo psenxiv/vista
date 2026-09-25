@@ -246,7 +246,7 @@ internal sealed class HierarchyPanel
         var (_, refusal, replaces) = check;
         // Always a line here, blank when the name is fine, so the buttons don't jump as you type.
         using (ImRaii.PushColor(ImGuiCol.Text, refusal is not null ? UiColours.Red : UiColours.Muted()))
-            ImGui.TextUnformatted(refusal ?? (replaces ? $"A preset called {nameText.Trim()} exists" : " "));
+            ImGui.TextUnformatted(refusal ?? (replaces ? $"A preset called {nameText.Trim()} exists." : " "));
 
         ImGui.BeginDisabled(refusal is not null);
         var ok = ImGui.Button(replaces ? "Replace" : "Ok", new Vector2(127f, 0f)) || (entered && refusal is null);

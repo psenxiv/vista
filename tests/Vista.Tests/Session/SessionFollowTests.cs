@@ -39,14 +39,14 @@ public class SessionFollowTests
     public void FollowTargetIsRefusedForATrackWithMoreThanOnePoint()
     {
         var (state, _) = EditingWith(points: 2);
-        Assert.Equal("Follow Target needs a track with one point", state.SetAim(AimMode.FollowTarget, Camera));
+        Assert.Equal("Follow Target needs a track with one point.", state.SetAim(AimMode.FollowTarget, Camera));
     }
 
     [Fact]
     public void ASecondPointIsRefusedUnderFollowTarget()
     {
         var (state, _) = FollowingGuard();
-        Assert.Equal("A Follow Target track has one point", state.AddToEnd(Camera));
+        Assert.Equal("A Follow Target track has one point.", state.AddToEnd(Camera));
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class SessionFollowTests
     {
         var (state, _) = FollowingGuard();
         Assert.Equal(
-            "A Follow Target track's anchor is hidden",
+            "A Follow Target track's anchor is hidden.",
             state.Selection.SelectTrackAnchor(state.EditedTrackId)
         );
         Assert.Null(state.Selection.Anchor);
@@ -78,11 +78,11 @@ public class SessionFollowTests
     {
         var (state, characters) = EditingWith(points: 0);
         state.SetAim(AimMode.FollowTarget, Camera);
-        Assert.Equal("Choose a character to follow", state.AddToEnd(Camera));
+        Assert.Equal("Choose a character to follow.", state.AddToEnd(Camera));
 
         state.SetTarget("Guard", null);
         characters.Update([]);
-        Assert.Equal("Character not found", state.AddToEnd(Camera));
+        Assert.Equal("Character not found.", state.AddToEnd(Camera));
     }
 
     [Fact]

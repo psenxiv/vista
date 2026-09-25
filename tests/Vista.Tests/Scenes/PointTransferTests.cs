@@ -209,7 +209,7 @@ public class PointTransferTests
         var refused = Assert.Throws<ArgumentException>(() =>
             PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[1].Id, NoGround)
         );
-        Assert.Equal("A Follow Target track has one point", refused.Message);
+        Assert.Equal("A Follow Target track has one point.", refused.Message);
     }
 
     [Fact]

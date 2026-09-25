@@ -192,6 +192,16 @@ public class SessionSceneTests
     }
 
     [Fact]
+    public void MovingAnUnknownTrackSaysThereIsNoSuchTrack()
+    {
+        var state = Editing();
+        var first = state.Scene.Tracks[0].Id;
+
+        Assert.Equal("There is no such track.", state.MoveTracks([Guid.NewGuid()], first, null));
+        Assert.Equal("There is no such track.", state.MoveTracks([first], first, Guid.NewGuid()));
+    }
+
+    [Fact]
     public void TheEditedTrackCannotBeHiddenButOthersCan()
     {
         var state = Editing();
