@@ -7,6 +7,9 @@ public static class PlaybackClock
     public static double CycleLength(PlaybackDirection direction, double length) =>
         direction == PlaybackDirection.PingPong ? 2.0 * Math.Max(length, 0.0) : Math.Max(length, 0.0);
 
+    /// <summary><paramref name="clock"/> wrapped into a cycle <paramref name="cycle"/> seconds long; 0 for a cycle with no length.</summary>
+    public static double Wrap(double clock, double cycle) => cycle > 0.0 ? clock % cycle : 0.0;
+
     /// <summary>Where the camera is in the shot at <paramref name="clock"/>, which is clamped to the cycle.</summary>
     public static double ShotTime(PlaybackDirection direction, double length, double clock)
     {

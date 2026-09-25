@@ -8,6 +8,9 @@ public readonly record struct TimingView(float From, float To)
     /// <summary>The shortest stretch the graph zooms to.</summary>
     public const float MinSpan = 0.2f;
 
+    /// <summary>Yalms the curve must cover across the view for it to count as moving.</summary>
+    private const float FlatDistance = 1e-3f;
+
     public float Span => To - From;
 
     public static TimingView Whole(float duration) => new(0f, MathF.Max(duration, 0f));
@@ -26,7 +29,7 @@ public readonly record struct TimingView(float From, float To)
         if (!float.IsFinite(factor) || factor <= 0f || !float.IsFinite(anchor))
             return this;
         var span = Math.Clamp(Span * factor, MathF.Min(MinSpan, MathF.Max(duration, 0f)), MathF.Max(duration, 0f));
-        var fraction = Span > 0f ? Math.Clamp((anchor - From) / Span, 0f, 1f) : 0.5f;
+        var fraction = Fraction.Between(anchor, From, To, 0.5f);
         return Place(anchor - (fraction * span), span, duration);
     }
 
@@ -42,7 +45,7 @@ public readonly record struct TimingView(float From, float To)
     {
         var from = evaluator.DistanceAt(From);
         var to = evaluator.DistanceAt(To);
-        if (to - from >= 1e-3f)
+        if (to - from >= FlatDistance)
             return (from, to);
         var middle = (from + to) / 2f;
         return (middle - 0.5f, middle + 0.5f);

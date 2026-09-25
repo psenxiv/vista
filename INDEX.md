@@ -51,7 +51,9 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Scalars and curves
 
-- `Tracks/Timing/Hermite`: the cubic Hermite basis.
+- `Tracks/Fraction`: clamping to [0, 1], and how far a value lies along a span, with the answer for an empty span given by the caller.
+- `Tracks/Timing/Hermite`: the cubic Hermite basis, its slope, and smoothstep.
+- `Tracks/Aiming/AimSmoother`: the share of the way an eased value moves in a frame at a smoothing, and easing a position with it.
 - `Tracks/Search`: the binary search over an ascending array that curves and tables use to find their interval.
 - `Tracks/Spline/CatmullRom` and `ArcLengthTable`: the path through points, its derivative, and walking it by distance.
 
@@ -77,7 +79,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Hit tests
 
-- `Display/MarkerHitTest` and `TrackMarkerHitTest`: the marker nearest a click within a radius.
+- `Display/MarkerHitTest`: the item nearest a click within a radius, with ties to the earlier or the later; `TrackMarkerHitTest` ranks the kinds of track marker on it.
 
 ### Timing
 
@@ -86,7 +88,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Playback clock
 
-- `Tracks/Playback/PlaybackClock`: a cycle's length, and mapping a playback clock to a shot time and back.
+- `Tracks/Playback/PlaybackClock`: a cycle's length, wrapping a clock into its cycle, and mapping a playback clock to a shot time and back.
 
 ### UI widgets
 

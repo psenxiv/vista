@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Tracks.Aiming;
 
@@ -151,14 +152,18 @@ public sealed class LevelUp
         if (passage.End is { } end && time >= times[end])
             return passage.InvertedAfter ? -Level(forward) : Level(forward);
 
-        var span = (passage.End is { } last ? turned[last] : turned[^1]) - turned[passage.Start];
-        var share = span > 0f ? Math.Clamp((Turned(time, forward) - turned[passage.Start]) / span, 0f, 1f) : 0f;
+        var share = Fraction.Between(
+            Turned(time, forward),
+            turned[passage.Start],
+            passage.End is { } last ? turned[last] : turned[^1],
+            0f
+        );
         if (share <= 0f && passage.FromLevel)
             return passage.InvertedBefore ? -Level(forward) : Level(forward);
 
         // Eased at both ends, so the picture starts and stops turning gently. Any level lean squared to a steep facing is an
         // up for it: squared to the facing it leans from, it's that facing's level up exactly.
-        var eased = share * share * (3f - (2f * share));
+        var eased = Hermite.Smoothstep(share);
         var lean = Vector3.Transform(passage.From, Quaternion.CreateFromAxisAngle(Vector3.UnitY, passage.Turn * eased));
         return CameraRotation.SquareUp(lean, forward);
     }

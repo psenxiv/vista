@@ -35,26 +35,20 @@ public sealed class TimedRotation
         if (time >= arrive[n - 1])
             return rotations[n - 1];
 
-        for (var leg = 1; leg < n; leg++)
-        {
-            if (time >= arrive[leg])
-                continue;
-            var start = depart[leg - 1];
-            if (time <= start)
-                return rotations[leg - 1];
-            var span = arrive[leg] - start;
-            var u = (float)((time - start) / span);
-            var from = rates[leg - 1] * span;
-            var to = rates[leg] * span;
-            var turned = new Vector3(
-                Hermite.At(0f, turns[leg].X, from.X, to.X, u),
-                Hermite.At(0f, turns[leg].Y, from.Y, to.Y, u),
-                Hermite.At(0f, turns[leg].Z, from.Z, to.Z, u)
-            );
-            return Quaternion.Normalize(Quaternion.Concatenate(rotations[leg - 1], Exp(turned)));
-        }
-
-        return rotations[n - 1];
+        var leg = Search.LastAtOrBelow(arrive, time, 0, n - 1) + 1;
+        var start = depart[leg - 1];
+        if (time <= start)
+            return rotations[leg - 1];
+        var span = arrive[leg] - start;
+        var u = (float)((time - start) / span);
+        var from = rates[leg - 1] * span;
+        var to = rates[leg] * span;
+        var turned = new Vector3(
+            Hermite.At(0f, turns[leg].X, from.X, to.X, u),
+            Hermite.At(0f, turns[leg].Y, from.Y, to.Y, u),
+            Hermite.At(0f, turns[leg].Z, from.Z, to.Z, u)
+        );
+        return Quaternion.Normalize(Quaternion.Concatenate(rotations[leg - 1], Exp(turned)));
     }
 
     /// <summary>Leg <paramref name="leg"/>'s turn as a world rotation vector (axis times angle), the short way round; zero for the first point, which no leg reaches.</summary>

@@ -46,7 +46,7 @@ public static class TurnHeat
     }
 
     /// <summary>Where <paramref name="degreesPerSecond"/> falls on the scale: 0 at rest, <see cref="Warm"/> halfway, 1 at <see cref="Hot"/> and above.</summary>
-    public static float Level(float degreesPerSecond) => Math.Clamp(degreesPerSecond / Hot, 0f, 1f);
+    public static float Level(float degreesPerSecond) => Fraction.Clamp(degreesPerSecond / Hot);
 
     /// <summary>True when the aim point appeared, went, or moved more than <see cref="TargetStep"/> yalms.</summary>
     public static bool TargetMoved(Vector3? before, Vector3? now) =>

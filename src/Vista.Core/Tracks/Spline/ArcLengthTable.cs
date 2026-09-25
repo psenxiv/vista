@@ -61,7 +61,7 @@ public sealed class ArcLengthTable
         if (length <= 0f)
             return fraction;
 
-        var target = Math.Clamp(fraction, 0f, 1f) * length;
+        var target = Fraction.Clamp(fraction) * length;
 
         var lo = Search.LastAtOrBelow(samples, target, 0, samples.Length - 1);
         var hi = lo + 1;

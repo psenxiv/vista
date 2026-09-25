@@ -140,11 +140,9 @@ public sealed class PlaylistPlayback : IPlayback
         get
         {
             var cycle = Cycle;
-            if (cycle <= 0)
-                return 0;
-            if (!double.IsInfinity(Total) && clock >= Total)
+            if (cycle > 0 && !double.IsInfinity(Total) && clock >= Total)
                 return cycle;
-            return clock % cycle;
+            return PlaybackClock.Wrap(clock, cycle);
         }
     }
 }

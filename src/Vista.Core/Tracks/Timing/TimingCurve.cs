@@ -163,14 +163,8 @@ public sealed class TimingCurve
         var k = FindInterval(time);
         var span = _keys[k + 1].Time - _keys[k].Time;
         var t = (float)((time - _keys[k].Time) / span);
-        var t2 = t * t;
         var m0 = _outTangent[k] * span;
         var m1 = _inTangent[k + 1] * span;
-        var d =
-            (((6f * t2) - (6f * t)) * _keys[k].Position)
-            + (((3f * t2) - (4f * t) + 1f) * m0)
-            + (((-6f * t2) + (6f * t)) * _keys[k + 1].Position)
-            + (((3f * t2) - (2f * t)) * m1);
-        return d / span;
+        return Hermite.Slope(_keys[k].Position, _keys[k + 1].Position, m0, m1, t) / span;
     }
 }

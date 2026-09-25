@@ -212,7 +212,7 @@ public sealed class TrackEvaluator
 
         var lo = Search.LastAtOrBelow(_distances, distance, 0, _lengths.Length);
 
-        return (lo, Math.Clamp((distance - _distances[lo]) / _lengths[lo], 0f, 1f));
+        return (lo, Fraction.Clamp((distance - _distances[lo]) / _lengths[lo]));
     }
 
     /// <summary>The Direction of travel frame at <paramref name="time"/>: facing along the path or its look ahead, with up level (upright, or inverted over a loop) and the track's roll on top.</summary>

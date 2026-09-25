@@ -13,6 +13,25 @@ public class AimSmootherTests
     private static readonly float HalfSecondAtFull = 10f * (1f - MathF.Exp(-1f));
 
     [Fact]
+    public void TheFactorClosesOneTimeConstantAsOneOverE()
+    {
+        // At smoothing 1 the time constant is 0.5 s, so half a second closes 1 − e^−1 = 0.63212 of the gap; at smoothing
+        // 0.5 the same half second is two time constants, 1 − e^−2 = 0.86466. Smoothing above 1 counts as 1.
+        Assert.Equal(0.63212f, AimSmoother.Factor(0.5f, 1f), 1e-5f);
+        Assert.Equal(0.86466f, AimSmoother.Factor(0.5f, 0.5f), 1e-5f);
+        Assert.Equal(0.63212f, AimSmoother.Factor(0.5f, 3f), 1e-5f);
+    }
+
+    [Fact]
+    public void TheFactorIsWholeWithNoSmoothingAndNothingWithNoTime()
+    {
+        Assert.Equal(1f, AimSmoother.Factor(0.1f, 0f));
+        Assert.Equal(1f, AimSmoother.Factor(0.1f, -1f));
+        Assert.Equal(0f, AimSmoother.Factor(0f, 1f));
+        Assert.Equal(0f, AimSmoother.Factor(-1f, 0f));
+    }
+
+    [Fact]
     public void TheFirstStepLandsOnTheTarget() => Assert.Equal(Target, new AimSmoother().Step(Target, 1f / 60f, 1f));
 
     [Fact]

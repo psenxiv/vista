@@ -19,12 +19,19 @@ public sealed class AimSmoother
             return target;
         }
 
-        if (dt <= 0f)
-            return from;
-        var timeConstant = Math.Clamp(smoothing, 0f, 1f) * SecondsPerSmoothing;
-        var next = timeConstant <= 0f ? target : Vector3.Lerp(from, target, 1f - MathF.Exp(-dt / timeConstant));
+        var factor = Factor(dt, smoothing);
+        var next = factor == 1f ? target : Vector3.Lerp(from, target, factor);
         current = next;
         return next;
+    }
+
+    /// <summary>The share of the way to its target an eased value moves in <paramref name="dt"/> seconds at <paramref name="smoothing"/>: 1 at smoothing 0, 0 with no time.</summary>
+    public static float Factor(float dt, float smoothing)
+    {
+        if (dt <= 0f)
+            return 0f;
+        var timeConstant = Fraction.Clamp(smoothing) * SecondsPerSmoothing;
+        return timeConstant <= 0f ? 1f : 1f - MathF.Exp(-dt / timeConstant);
     }
 
     /// <summary>Sets where the next step eases from.</summary>

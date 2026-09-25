@@ -8,6 +8,15 @@ public class PlaybackClockTests
     private const double L = 10.0;
 
     [Theory]
+    // 25 s into a 10 s cycle is 5 s into its third pass; a cycle of no length stays at 0.
+    [InlineData(25.0, 10.0, 5.0)]
+    [InlineData(10.0, 10.0, 0.0)]
+    [InlineData(3.0, 10.0, 3.0)]
+    [InlineData(3.0, 0.0, 0.0)]
+    public void WrapPutsAClockIntoItsCycle(double clock, double cycle, double expected) =>
+        Assert.Equal(expected, PlaybackClock.Wrap(clock, cycle), 1e-12);
+
+    [Theory]
     [InlineData(PlaybackDirection.Forward, 10.0)]
     [InlineData(PlaybackDirection.Reverse, 10.0)]
     [InlineData(PlaybackDirection.PingPong, 20.0)]

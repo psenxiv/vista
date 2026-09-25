@@ -36,7 +36,7 @@ public sealed class TrackPlayback : IPlayback
 
         if (_track.Loop)
         {
-            _clock = cycle > 0.0 ? next % cycle : 0.0;
+            _clock = PlaybackClock.Wrap(next, cycle);
         }
         else if (next >= cycle)
         {
@@ -70,7 +70,7 @@ public sealed class TrackPlayback : IPlayback
 
         if (_track.Loop)
         {
-            _clock = cycle > 0.0 ? clock % cycle : 0.0;
+            _clock = PlaybackClock.Wrap(clock, cycle);
             return;
         }
 

@@ -39,21 +39,5 @@ public static class TrackMarkerHitTest
         float radius,
         Func<TrackMarker, bool> include,
         bool laterWinsTie
-    )
-    {
-        int? best = null;
-        var bestDistance = radius * radius;
-        for (var i = 0; i < markers.Count; i++)
-        {
-            if (!include(markers[i]) || markers[i].Screen is not { } at)
-                continue;
-            var distance = Vector2.DistanceSquared(at, cursor);
-            if (distance > bestDistance || (distance == bestDistance && best is not null && !laterWinsTie))
-                continue;
-            best = i;
-            bestDistance = distance;
-        }
-
-        return best;
-    }
+    ) => MarkerHitTest.Nearest(markers, m => include(m) ? m.Screen : null, cursor, radius, laterWinsTie);
 }

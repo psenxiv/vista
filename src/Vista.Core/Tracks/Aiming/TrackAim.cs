@@ -75,7 +75,7 @@ public static class TrackAim
         for (var i = 0; i < segmentCount; i++)
             cumulative[i + 1] = cumulative[i] + table.SegmentLength(i);
 
-        var queryPosition = cumulative[segment] + (Math.Clamp(fraction, 0f, 1f) * table.SegmentLength(segment));
+        var queryPosition = cumulative[segment] + (Fraction.Clamp(fraction) * table.SegmentLength(segment));
 
         var bestDistance = float.PositiveInfinity;
         Vector3? best = null;

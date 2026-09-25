@@ -333,7 +333,7 @@ public static class TrackEditing
     {
         if (!float.IsFinite(smoothing))
             return track;
-        var clamped = Math.Clamp(smoothing, 0f, 1f);
+        var clamped = Fraction.Clamp(smoothing);
         return clamped == track.Smoothing ? track : track with { Smoothing = clamped };
     }
 

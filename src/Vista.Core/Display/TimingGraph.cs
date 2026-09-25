@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Display;
@@ -21,8 +22,11 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
     /// <summary>The distance at the plot's top edge; the whole path unless zoomed.</summary>
     public float DistanceTo { get; init; } = Distance;
 
-    private float TimeRange => MathF.Max(TimeTo - TimeFrom, 1e-3f);
-    private float DistanceRange => MathF.Max(DistanceTo - DistanceFrom, 1e-3f);
+    /// <summary>The narrowest span, in seconds or yalms, an axis is divided by, so a collapsed view never divides by zero.</summary>
+    private const float MinRange = 1e-3f;
+
+    private float TimeRange => MathF.Max(TimeTo - TimeFrom, MinRange);
+    private float DistanceRange => MathF.Max(DistanceTo - DistanceFrom, MinRange);
 
     /// <summary>The times of ticks <paramref name="step"/> seconds apart across the view.</summary>
     public IReadOnlyList<float> TickTimes(float step)
@@ -64,14 +68,14 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
         );
 
     /// <summary>The time under pixel column <paramref name="x"/>, clamped to the view.</summary>
-    public float TimeAt(float x) => TimeFrom + (Math.Clamp((x - Origin.X) / Size.X, 0f, 1f) * (TimeTo - TimeFrom));
+    public float TimeAt(float x) => TimeFrom + (Fraction.Clamp((x - Origin.X) / Size.X) * (TimeTo - TimeFrom));
 
     /// <summary>The time under pixel column <paramref name="x"/>, clamped at the view's start but not its end, so a key dragged past the plot can lengthen the shot.</summary>
     public float TimeAtOpenEnded(float x) => TimeFrom + (MathF.Max((x - Origin.X) / Size.X, 0f) * (TimeTo - TimeFrom));
 
     /// <summary>The distance under pixel row <paramref name="y"/>, clamped to the view.</summary>
     public float DistanceAt(float y) =>
-        DistanceFrom + (Math.Clamp((Origin.Y + Size.Y - y) / Size.Y, 0f, 1f) * (DistanceTo - DistanceFrom));
+        DistanceFrom + (Fraction.Clamp((Origin.Y + Size.Y - y) / Size.Y) * (DistanceTo - DistanceFrom));
 
     /// <summary>The end of a handle <paramref name="length"/> pixels long leaving <paramref name="key"/> at <paramref name="slope"/> distance per second.</summary>
     public Vector2 HandleEnd(Vector2 key, KeySide side, float slope, float length)

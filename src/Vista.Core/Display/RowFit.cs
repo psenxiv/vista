@@ -1,3 +1,5 @@
+using Vista.Core.Tracks.Playback;
+
 namespace Vista.Core.Display;
 
 /// <summary>Fits a list row's name to its width: cut with an ellipsis at rest, scrolled while hovered.</summary>
@@ -41,7 +43,7 @@ public static class RowFit
             return 0f;
 
         var travel = overflow / Speed;
-        var t = seconds % ((2.0 * Pause) + (2.0 * travel));
+        var t = PlaybackClock.Wrap(seconds, (2.0 * Pause) + (2.0 * travel));
         if (t < Pause)
             return 0f;
         if (t < Pause + travel)

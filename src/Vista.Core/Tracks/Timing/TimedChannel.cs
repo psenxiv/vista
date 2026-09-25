@@ -31,19 +31,13 @@ public sealed class TimedChannel
         if (time >= arrive[n - 1])
             return values[n - 1];
 
-        for (var leg = 1; leg < n; leg++)
-        {
-            if (time >= arrive[leg])
-                continue;
-            var start = depart[leg - 1];
-            if (time <= start)
-                return values[leg - 1];
-            var span = arrive[leg] - start;
-            var u = (float)((time - start) / span);
-            return Hermite.At(values[leg - 1], values[leg], slopes[leg - 1] * span, slopes[leg] * span, u);
-        }
-
-        return values[n - 1];
+        var leg = Search.LastAtOrBelow(arrive, time, 0, n - 1) + 1;
+        var start = depart[leg - 1];
+        if (time <= start)
+            return values[leg - 1];
+        var span = arrive[leg] - start;
+        var u = (float)((time - start) / span);
+        return Hermite.At(values[leg - 1], values[leg], slopes[leg - 1] * span, slopes[leg] * span, u);
     }
 
     /// <summary>Point <paramref name="i"/>'s slope per second: 0 through a hold, half the one-sided slope at an end, and the time-weighted Catmull-Rom slope between.</summary>
