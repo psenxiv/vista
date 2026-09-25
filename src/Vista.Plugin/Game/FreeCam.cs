@@ -37,7 +37,7 @@ internal sealed class FreeCam
     public float Fov
     {
         get => fov;
-        set => fov = EditLimits.Fov(value);
+        set => fov = EditLimits.Fov(value, fov);
     }
 
     /// <summary>The stepped speed setting; Shift still boosts on top.</summary>

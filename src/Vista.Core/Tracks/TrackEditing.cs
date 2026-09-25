@@ -26,6 +26,9 @@ public static class TrackEditing
     /// <summary>The longest leg or hold, in seconds.</summary>
     public const float MaxSeconds = 600f;
 
+    /// <summary>The shortest shot, in seconds.</summary>
+    public const float MinShotSeconds = 0.2f;
+
     /// <summary>The longest shot, in seconds.</summary>
     public const float MaxShotSeconds = 3600f;
 
@@ -241,11 +244,11 @@ public static class TrackEditing
         return track with { Points = points };
     }
 
-    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it.</summary>
+    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it. Unchanged when not finite.</summary>
     public static Track SetHold(Track track, int index, float seconds)
     {
         ValidatePointIndex(track, index, "Hold");
-        if (float.IsNaN(seconds))
+        if (!float.IsFinite(seconds))
             return track;
         var clamped = Math.Clamp(seconds, 0f, MaxSeconds);
         if (clamped < MinKeyGap)
@@ -342,22 +345,22 @@ public static class TrackEditing
     public static Track SetFollowLooks(Track track, bool looks) =>
         track.FollowLooks == looks ? track : track with { FollowLooks = looks };
 
-    /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
+    /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>; unchanged when not finite.</summary>
     public static Track SetSpeed(Track track, float speed)
     {
-        if (float.IsNaN(speed))
+        if (!float.IsFinite(speed))
             return track;
         var clamped = ClampSpeed(speed);
         return clamped == track.Speed ? track : track with { Speed = clamped };
     }
 
-    /// <summary>Sets the track speed so the shot, holds included, takes <paramref name="seconds"/> as near as the ranges allow; unchanged when every leg is pinned.</summary>
+    /// <summary>Sets the track speed so the shot, holds included, takes <paramref name="seconds"/>, clamped to <see cref="MinShotSeconds"/> to <see cref="MaxShotSeconds"/>, as near as the ranges allow; unchanged when not finite or every leg is pinned.</summary>
     public static Track SetDuration(Track track, float seconds)
     {
-        if (float.IsNaN(seconds) || AllPinned(track))
+        if (!float.IsFinite(seconds) || AllPinned(track))
             return track;
 
-        var target = MathF.Min(seconds, MaxShotSeconds);
+        var target = Math.Clamp(seconds, MinShotSeconds, MaxShotSeconds);
         var lengths = LegLengths(track);
         var fixedSeconds = track.Timing.Sum(t => (double)t.Hold);
         for (var leg = 1; leg < lengths.Length; leg++)
@@ -397,20 +400,20 @@ public static class TrackEditing
         return SetSpeed(track, (float)Math.Exp((low + high) / 2.0));
     }
 
-    /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
+    /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>; unchanged when not finite.</summary>
     public static Track SetLegSpeed(Track track, int leg, float speed)
     {
         ValidateLegIndex(track, leg);
-        if (float.IsNaN(speed))
+        if (!float.IsFinite(speed))
             return track;
         return WithTiming(track, leg, track.Timing[leg] with { LegSpeed = ClampSpeed(speed) });
     }
 
-    /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>, clamped to the leg range.</summary>
+    /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>, clamped to the leg range; unchanged when not finite.</summary>
     public static Track SetLegDuration(Track track, int leg, float seconds)
     {
         ValidateLegIndex(track, leg);
-        if (float.IsNaN(seconds))
+        if (!float.IsFinite(seconds))
             return track;
         return SetLegSpeed(track, leg, LegLengths(track)[leg] / Math.Clamp(seconds, MinLegSeconds, MaxSeconds));
     }

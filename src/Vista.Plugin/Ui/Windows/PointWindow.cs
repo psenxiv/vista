@@ -169,17 +169,17 @@ internal sealed class PointWindow : Window
             Angles.Degrees(point.Pitch),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (p, v) => p with { Pitch = EditLimits.Pitch(Angles.Radians(v)) }
+            (p, v) => p with { Pitch = EditLimits.Pitch(Angles.Radians(v), p.Pitch) }
         );
         PointField(
             $"yaw{index}",
             "Yaw",
             EditorColours.AxisY,
             index,
-            Angles.Degrees(EditLimits.Angle(point.Yaw)),
+            Angles.Degrees(Angles.Wrap(point.Yaw)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (p, v) => p with { Yaw = EditLimits.Angle(Angles.Radians(v)) }
+            (p, v) => p with { Yaw = EditLimits.Angle(Angles.Radians(v), p.Yaw) }
         );
         ImGui.EndDisabled();
         PointField(
@@ -187,10 +187,10 @@ internal sealed class PointWindow : Window
             "Roll",
             EditorColours.AxisZ,
             index,
-            Angles.Degrees(EditLimits.Angle(point.Roll)),
+            Angles.Degrees(Angles.Wrap(point.Roll)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (p, v) => p with { Roll = EditLimits.Angle(Angles.Radians(v)) }
+            (p, v) => p with { Roll = EditLimits.Angle(Angles.Radians(v), p.Roll) }
         );
 
         ImGui.TableNextRow();
@@ -198,7 +198,13 @@ internal sealed class PointWindow : Window
         if (PoseGrid.Button("reset-fov", FontAwesomeIcon.History, "Reset to the camera's field of view", enabled: true))
         {
             session.BeginLiveEdit();
-            _ = session.PreviewPoint(index, session.Track.Points[index] with { Fov = EditLimits.Fov(game.CameraFov) });
+            _ = session.PreviewPoint(
+                index,
+                session.Track.Points[index] with
+                {
+                    Fov = EditLimits.Fov(game.CameraFov, point.Fov),
+                }
+            );
             session.EndLiveEdit();
         }
 
@@ -210,7 +216,7 @@ internal sealed class PointWindow : Window
             Angles.Degrees(point.Fov),
             PoseGrid.FovSpeed,
             "%.1f°",
-            (p, v) => p with { Fov = EditLimits.Fov(Angles.Radians(v)) }
+            (p, v) => p with { Fov = EditLimits.Fov(Angles.Radians(v), p.Fov) }
         );
     }
 
@@ -241,10 +247,10 @@ internal sealed class PointWindow : Window
             "anchor-yaw",
             "Yaw",
             EditorColours.AxisY,
-            Angles.Degrees(EditLimits.Angle(anchor.Yaw)),
+            Angles.Degrees(Angles.Wrap(anchor.Yaw)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (a, v) => a with { Yaw = EditLimits.Angle(Angles.Radians(v)) }
+            (a, v) => a with { Yaw = EditLimits.Angle(Angles.Radians(v), a.Yaw) }
         );
         PoseGrid.Missing("anchor-roll", "Roll", EditorColours.AxisZ);
 

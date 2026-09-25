@@ -64,16 +64,16 @@ internal sealed class CameraWindow : Window
             Angles.Degrees(pitch),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            v => game.TurnCamera(yaw, EditLimits.Pitch(Angles.Radians(v)))
+            v => game.TurnCamera(yaw, EditLimits.Pitch(Angles.Radians(v), pitch))
         );
         Field(
             "cam-yaw",
             "Yaw",
             EditorColours.AxisY,
-            Angles.Degrees(EditLimits.Angle(yaw)),
+            Angles.Degrees(Angles.Wrap(yaw)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            v => game.TurnCamera(EditLimits.Angle(Angles.Radians(v)), pitch)
+            v => game.TurnCamera(EditLimits.Angle(Angles.Radians(v), yaw), pitch)
         );
         Field(
             "cam-roll",
@@ -82,7 +82,7 @@ internal sealed class CameraWindow : Window
             Angles.Degrees(game.CameraRoll),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            v => game.CameraRoll = EditLimits.Angle(Angles.Radians(v))
+            v => game.CameraRoll = EditLimits.Angle(Angles.Radians(v), game.CameraRoll)
         );
 
         ImGui.TableNextRow();
@@ -103,7 +103,7 @@ internal sealed class CameraWindow : Window
             Angles.Degrees(game.CameraFov),
             PoseGrid.FovSpeed,
             "%.1f°",
-            v => game.CameraFov = EditLimits.Fov(Angles.Radians(v))
+            v => game.CameraFov = EditLimits.Fov(Angles.Radians(v), game.CameraFov)
         );
 
         gridWidth = PoseGrid.EndGrid();

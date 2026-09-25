@@ -540,19 +540,17 @@ public sealed class SessionState
         : null;
 
     /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>
-    public string? SetTrackSpeed(float speed) => ApplyTiming(t => TrackEditing.SetSpeed(t, EditLimits.Speed(speed)));
+    public string? SetTrackSpeed(float speed) => ApplyTiming(t => TrackEditing.SetSpeed(t, speed));
 
     /// <summary>Sets the track's speed so the shot takes about <paramref name="seconds"/>. Returns why it was refused, or null.</summary>
-    public string? SetTrackDuration(float seconds) =>
-        ApplyTiming(t => TrackEditing.SetDuration(t, EditLimits.ShotDuration(seconds)));
+    public string? SetTrackDuration(float seconds) => ApplyTiming(t => TrackEditing.SetDuration(t, seconds));
 
     /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>. Returns why it was refused, or null.</summary>
     public string? SetLegDuration(int leg, float seconds) =>
-        ApplyTiming(t => TrackEditing.SetLegDuration(t, leg, EditLimits.Leg(seconds)));
+        ApplyTiming(t => TrackEditing.SetLegDuration(t, leg, seconds));
 
     /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>. Returns why it was refused, or null.</summary>
-    public string? SetLegSpeed(int leg, float speed) =>
-        ApplyTiming(t => TrackEditing.SetLegSpeed(t, leg, EditLimits.Speed(speed)));
+    public string? SetLegSpeed(int leg, float speed) => ApplyTiming(t => TrackEditing.SetLegSpeed(t, leg, speed));
 
     /// <summary>Unpins leg <paramref name="leg"/> so it follows the track speed again. Returns why it was refused, or null.</summary>
     public string? ResetLeg(int leg) => ApplyTiming(t => TrackEditing.ResetLeg(t, leg));

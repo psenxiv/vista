@@ -203,15 +203,26 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void SetLegDurationIgnoresNaNAndClampsInfinity()
+    public void SetLegDurationClampsALongLegToTheLongest()
+    {
+        // 9999 s is past MaxSeconds, 600 s.
+        var track = Build3PointTrack();
+        Assert.Equal(600f, LegSeconds(TrackEditing.SetLegDuration(track, 1, 9999f), 1), 1);
+    }
+
+    [Theory]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    [InlineData(float.NegativeInfinity)]
+    public void ATimingValueThatIsNotFiniteChangesNothing(float value)
     {
         var track = Build3PointTrack();
-        Assert.Same(track, TrackEditing.SetLegDuration(track, 1, float.NaN));
-        Assert.Equal(
-            TrackEditing.MaxSeconds,
-            LegSeconds(TrackEditing.SetLegDuration(track, 1, float.PositiveInfinity), 1),
-            1
-        );
+
+        Assert.Same(track, TrackEditing.SetSpeed(track, value));
+        Assert.Same(track, TrackEditing.SetDuration(track, value));
+        Assert.Same(track, TrackEditing.SetLegSpeed(track, 1, value));
+        Assert.Same(track, TrackEditing.SetLegDuration(track, 1, value));
+        Assert.Same(track, TrackEditing.SetHold(track, 1, value));
     }
 
     [Fact]
@@ -265,14 +276,11 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void SetHoldIgnoresNaNAndClampsInfinity()
+    public void SetHoldClampsALongHoldToTheLongest()
     {
+        // 9999 s is past MaxSeconds, 600 s.
         var track = Build3PointTrack();
-        Assert.Same(track, TrackEditing.SetHold(track, 1, float.NaN));
-        Assert.Equal(
-            TrackEditing.MaxSeconds,
-            TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, float.PositiveInfinity), 1)
-        );
+        Assert.Equal(600f, TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, 9999f), 1));
     }
 
     [Fact]

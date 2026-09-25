@@ -57,7 +57,7 @@ internal sealed class TrackEditorWindow : Window
     private static readonly PendingField.Range SpeedRange = new(0.05f, TrackEditing.MinSpeed, TrackEditing.MaxSpeed);
     private static readonly PendingField.Range ShotRange = new(
         0.1f,
-        EditLimits.MinShotSeconds,
+        TrackEditing.MinShotSeconds,
         TrackEditing.MaxShotSeconds
     );
     private static readonly PendingField.Range LegRange = new(
@@ -821,7 +821,7 @@ internal sealed class TrackEditorWindow : Window
             "%.1f",
             FieldWidth,
             HoldRange,
-            v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, EditLimits.Hold(v))))
+            v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, v)))
         );
 
         ImGui.TableNextColumn();
