@@ -13,7 +13,6 @@ using Vista.Plugin.Editor;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Main;
-using Vista.Plugin.Ui.Widgets;
 using Vista.Plugin.Ui.Windows;
 #if DEBUG
 using Vista.Plugin.SelfTest;
@@ -80,7 +79,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly GameSession game;
     private readonly Faults faults;
     private readonly SceneFiles sceneFiles;
-    private readonly PendingField fields;
+    private readonly PendingEdit<float> fields;
     private readonly EditorKeys editorKeys = new();
     private readonly PointGizmo pointGizmo = new();
     private readonly EditorLayer editorLayer;
@@ -112,7 +111,7 @@ public sealed class Plugin : IDalamudPlugin
         faults = new Faults(() => game.State.Mode);
         Input = new InputBlocker(() => game.LocksInput, () => blockEscape, faults);
         sceneFiles = new SceneFiles(config, game);
-        fields = new PendingField(() => game.State.Mode == CameraMode.Editing);
+        fields = new PendingEdit<float>(() => game.State.Mode == CameraMode.Editing);
         editorLayer = new EditorLayer(game, pointGizmo);
 
         setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);

@@ -39,62 +39,63 @@ internal sealed class FollowTargetWindow : TargetWindow
     {
         var orbit = session.FollowOrbit;
         var current = orbit ?? default;
-        var width = (ListWidth - (ImGui.GetStyle().ItemSpacing.X * 2f)) / 3f;
+        var width = (Layout.DialogWidth - (ImGui.GetStyle().ItemSpacing.X * 2f)) / 3f;
         ImGui.BeginDisabled(orbit is null);
 
-        var distance = current.Distance;
-        var changed = BorderedField.Draw(
+        OrbitField(
             "orbit-distance",
             "Distance",
             EditorColours.AxisX,
-            ref distance,
+            current.Distance,
             0.05f,
             Units.YalmsField,
-            width
+            width,
+            distance => current with { Distance = distance }
         );
-        LiveDrag.Handle(
-            session,
-            changed,
-            () => _ = session.PreviewFollowOrbit(current with { Distance = distance }),
-            ref dragging
-        );
-
         ImGui.SameLine();
-        var height = current.Height;
-        changed = BorderedField.Draw(
+        OrbitField(
             "orbit-height",
             "Height",
             EditorColours.AxisY,
-            ref height,
+            current.Height,
             0.05f,
             Units.YalmsField,
-            width
+            width,
+            height => current with { Height = height }
         );
-        LiveDrag.Handle(
-            session,
-            changed,
-            () => _ = session.PreviewFollowOrbit(current with { Height = height }),
-            ref dragging
-        );
-
         ImGui.SameLine();
-        var degrees = Angles.Degrees(current.Angle);
-        changed = BorderedField.Draw(
+        OrbitField(
             "orbit-angle",
             "Angle",
             EditorColours.AxisZ,
-            ref degrees,
+            Angles.Degrees(current.Angle),
             0.5f,
             Units.DegreesField,
-            width
-        );
-        LiveDrag.Handle(
-            session,
-            changed,
-            () => _ = session.PreviewFollowOrbit(current with { Angle = Angles.Radians(degrees) }),
-            ref dragging
+            width,
+            degrees => current with { Angle = Angles.Radians(degrees) }
         );
 
         ImGui.EndDisabled();
+    }
+
+    /// <summary>One orbit field, dragged live as one undo step, previewing the orbit <paramref name="set"/> makes of its value.</summary>
+    private void OrbitField(
+        string id,
+        string name,
+        uint border,
+        float value,
+        float speed,
+        string format,
+        float width,
+        Func<float, Orbit> set
+    )
+    {
+        LiveDrag.Field(
+            session,
+            value,
+            (ref float edited) => BorderedField.Draw(id, name, border, ref edited, speed, format, width),
+            edited => _ = session.PreviewFollowOrbit(set(edited)),
+            ref dragging
+        );
     }
 }

@@ -9,7 +9,6 @@ namespace Vista.Plugin.Ui.Widgets;
 /// <summary>The layout the Point and Camera windows share: gizmo and clipboard buttons, then position, rotation and field-of-view rows, each led by its icon.</summary>
 internal static class PoseGrid
 {
-    public const float FieldWidth = 70f;
     public const float PositionSpeed = 0.02f;
     public const float AngleSpeed = 0.25f;
     public const float FovSpeed = 0.1f;
@@ -34,7 +33,7 @@ internal static class PoseGrid
     /// <summary>The spacing both windows draw the header and grid with.</summary>
     public static IDisposable Style() =>
         ImRaii
-            .PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(8f, 7f))
+            .PushStyle(ImGuiStyleVar.ItemSpacing, Layout.Spacing)
             .Push(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
 
     /// <summary>The move and rotate buttons for <paramref name="mode"/>, then copy, paste and delete right-aligned over the grid; the clipboard buttons that cannot act are disabled.</summary>
@@ -64,12 +63,7 @@ internal static class PoseGrid
         ImGui.EndDisabled();
 
         // Right-align to last frame's grid, whose width is its columns' own, not the window's.
-        var gap = ImGui.GetStyle().ItemSpacing.X;
-        var icons =
-            IconButton.Width(FontAwesomeIcon.Copy)
-            + IconButton.Width(FontAwesomeIcon.Paste)
-            + IconButton.Width(FontAwesomeIcon.Trash)
-            + (gap * 2f);
+        var icons = IconButton.RowWidth(FontAwesomeIcon.Copy, FontAwesomeIcon.Paste, FontAwesomeIcon.Trash);
         ImGui.SameLine();
         ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), ImGui.GetStyle().WindowPadding.X + gridWidth - icons));
 
@@ -108,11 +102,8 @@ internal static class PoseGrid
         ImGui.TableNextColumn();
         ImGui.AlignTextToFramePadding();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetStyle().FramePadding.X);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-            ImGui.TextUnformatted(icon.ToIconString());
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip(name);
+        IconButton.Glyph(icon, UiColours.Muted());
+        Tooltip.OnHover(name);
     }
 
     /// <summary>A row's action in the first column, in place of its label.</summary>
@@ -129,7 +120,7 @@ internal static class PoseGrid
     public static bool Field(string id, string name, uint? border, ref float value, float speed, string format)
     {
         ImGui.TableNextColumn();
-        return BorderedField.Draw(id, name, border, ref value, speed, format, FieldWidth);
+        return BorderedField.Draw(id, name, border, ref value, speed, format, Layout.FieldWidth);
     }
 
     /// <summary>A disabled field showing "—", for what the selection does not have.</summary>

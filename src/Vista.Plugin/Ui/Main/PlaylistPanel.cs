@@ -19,8 +19,8 @@ internal sealed class PlaylistPanel
 
     private readonly SessionState session;
 
-    // A repeat count being dragged, applied when the field is let go.
-    private (Guid Id, int Value)? loopsDrag;
+    // A repeat count being dragged, applied when the field is let go; its field is the entry's id.
+    private readonly PendingEdit<int> loopsDrag;
 
     // A repeat count being typed, and whether its field still needs focus.
     private (Guid Id, string Text, bool Focus)? loopsTyping;
@@ -29,7 +29,11 @@ internal sealed class PlaylistPanel
     private readonly WheelSteps wheel = new();
     private bool loopsHovered;
 
-    public PlaylistPanel(SessionState session) => this.session = session;
+    public PlaylistPanel(SessionState session)
+    {
+        this.session = session;
+        loopsDrag = new PendingEdit<int>(() => session.Mode == CameraMode.Editing);
+    }
 
     /// <summary>The header with its loop and add buttons, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
@@ -37,8 +41,8 @@ internal sealed class PlaylistPanel
         // Rows can remove or reorder entries, so every row reads this snapshot.
         var scene = session.Scene;
         var playing = session.PlayingEntry;
-        if (loopsDrag is { } drag && (!editing || PlaylistEditing.IndexOf(scene, drag.Id) < 0))
-            loopsDrag = null;
+        if (loopsDrag.HeldBy is { } dragged && (!editing || PlaylistEditing.IndexOf(scene, Guid.Parse(dragged)) < 0))
+            loopsDrag.Clear();
         if (loopsTyping is { } typed && (!editing || PlaylistEditing.IndexOf(scene, typed.Id) < 0))
             loopsTyping = null;
         loopsHovered = false;
@@ -53,12 +57,8 @@ internal sealed class PlaylistPanel
             ImGui.TextUnformatted(header);
 
         ImGui.BeginDisabled(!editing);
-        var buttons =
-            IconButton.Width(FontAwesomeIcon.Repeat)
-            + IconButton.Width(FontAwesomeIcon.Plus)
-            + ImGui.GetStyle().ItemSpacing.X;
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
+        Layout.RightAlign(IconButton.RowWidth(FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus));
         if (IconButton.Toggle("playlist-loop", FontAwesomeIcon.Repeat, scene.PlaylistLoops, "Loop playlist"))
             Report(session.SetPlaylistLoops(!scene.PlaylistLoops));
         ImGui.SameLine();
@@ -90,15 +90,8 @@ internal sealed class PlaylistPanel
                 held |= PlaylistEditing.HoldsPlaylist(scene, scene.Playlist[i]);
             }
 
-            // The space under the rows takes dropped rows at the end, and a click there clears the selection.
-            ImGui.Dummy(
-                new Vector2(
-                    ImGui.GetContentRegionAvail().X,
-                    MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight())
-                )
-            );
-            if (editing && ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain)
-                session.Selection.Select(null);
+            // The space under the rows takes dropped rows at the end.
+            DragRows.Space(session, editing);
             DropTarget(scene, scene.Playlist.Count, editing);
             DragRows.ScrollNearEdges(DragRows.Entry, DragRows.Track);
         }
@@ -127,7 +120,7 @@ internal sealed class PlaylistPanel
         var gap = ImGui.GetStyle().ItemSpacing.X;
         var track = SceneEditing.Get(scene, entry.TrackId);
         var lost = session.World.TargetLost(session.World.WorldOf(track));
-        var warning = lost ? IconButton.WarningWidth() + gap : 0f;
+        var warning = lost ? IconButton.GlyphWidth(IconButton.WarningIcon) + gap : 0f;
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LoopWidth - remove - (gap * 2f) - warning);
         var name = track.Name;
         var rowStart = ImGui.GetCursorPosX();
@@ -143,29 +136,15 @@ internal sealed class PlaylistPanel
         )
             Report(session.Selection.ClickEntry(entry.Id, DragRows.Click()));
         RowText.Draw(entry.Id, FormattableString.Invariant($"{index + 1}  {name}"), nameWidth);
-        var rowMin = ImGui.GetItemRectMin();
-        var rowMax = new Vector2(
-            ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X,
-            ImGui.GetItemRectMax().Y
-        );
-        var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
+        var rowHovered = editing && IconButton.RowHovered(ImGui.GetItemRectMin(), ImGui.GetItemRectMax().Y);
 
-        if (editing && ImGui.BeginDragDropSource())
-        {
-            DragRows.Carry(
-                DragRows.Entry,
-                index,
-                group,
-                group ? FormattableString.Invariant($"{selected.Count} rows") : name
-            );
-            ImGui.EndDragDropSource();
-        }
+        if (editing)
+            DragRows.Source(DragRows.Entry, index, group, selected.Count, "rows", name);
 
         DropTarget(scene, index, editing);
         if (editing && group && ImGui.BeginPopupContextItem("entry-menu"))
         {
-            var ticked = false;
-            if (ImGui.MenuItem("Remove from playlist", string.Empty, ref ticked))
+            if (Menu.Item("Remove from playlist"))
                 Report(session.RemoveFromPlaylist(selected));
             ImGui.EndPopup();
         }
@@ -198,7 +177,39 @@ internal sealed class PlaylistPanel
         }
 
         var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
-        var value = loopsDrag is { } drag && drag.Id == entry.Id ? drag.Value : entry.Loops ?? 0;
+        loopsDrag.Draw(
+            entry.Id.ToString(),
+            entry.Loops ?? 0,
+            (ref int value) => DrawLoopCount(ref value, holds),
+            loops => Report(session.SetEntryLoops(entry.Id, loops > 0 ? loops : null))
+        );
+        Tooltip.OnHover("Repeats");
+
+        // ImGui's own typing reads the text through the display format, which has no number when it shows — or ∞.
+        if (
+            editing
+            && ImGui.IsItemHovered()
+            && (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) || (ImGui.IsItemClicked() && ImGui.GetIO().KeyCtrl))
+        )
+        {
+            loopsDrag.Clear();
+            if (loopsTyping is { } open)
+                ApplyTyped(scene, open.Id, open.Text);
+            loopsTyping = (entry.Id, entry.Loops?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, true);
+            return;
+        }
+
+        if (editing)
+            ImGuiP.SetItemUsingMouseWheel();
+        if (!editing || !ImGui.IsItemHovered())
+            return;
+        loopsHovered = true;
+        StepLoops(entry);
+    }
+
+    /// <summary>The repeat count's drag field showing <paramref name="value"/>: amber, or dimmed when the entry plays once; true when dragged.</summary>
+    private static bool DrawLoopCount(ref int value, bool holds)
+    {
         var repeats = PlaylistEditing.RepeatsOf(value, holds);
         var format = repeats switch
         {
@@ -209,9 +220,8 @@ internal sealed class PlaylistPanel
         var colour = repeats == Repeats.Once ? UiColours.Dim() : UiColours.Amber;
 
         ImGui.SetNextItemWidth(LoopWidth);
-        bool changed;
         using (ImRaii.PushColor(ImGuiCol.Text, colour))
-            changed = ImGui.DragInt(
+            return ImGui.DragInt(
                 "##loops",
                 ref value,
                 0.1f,
@@ -220,36 +230,6 @@ internal sealed class PlaylistPanel
                 format,
                 ImGuiSliderFlags.AlwaysClamp | ImGuiSliderFlags.NoInput
             );
-        if (changed)
-            loopsDrag = (entry.Id, value);
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Repeats");
-
-        // ImGui's own typing reads the text through the display format, which has no number when it shows — or ∞.
-        if (
-            editing
-            && ImGui.IsItemHovered()
-            && (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) || (ImGui.IsItemClicked() && ImGui.GetIO().KeyCtrl))
-        )
-        {
-            loopsDrag = null;
-            if (loopsTyping is { } open)
-                ApplyTyped(scene, open.Id, open.Text);
-            loopsTyping = (entry.Id, entry.Loops?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, true);
-            return;
-        }
-        if (loopsDrag is { } done && done.Id == entry.Id && !ImGui.IsItemActive())
-        {
-            loopsDrag = null;
-            Report(session.SetEntryLoops(entry.Id, done.Value > 0 ? done.Value : null));
-        }
-
-        if (editing)
-            ImGuiP.SetItemUsingMouseWheel();
-        if (!editing || !ImGui.IsItemHovered())
-            return;
-        loopsHovered = true;
-        StepLoops(entry);
     }
 
     /// <summary>The repeat count as text: Enter or clicking away applies it, blank or 0 follows the track, Escape cancels.</summary>

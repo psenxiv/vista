@@ -14,7 +14,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
 - `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, tick spacing, row text fitting, edge scrolling and panel widths.
-- `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, and wheel notches.
+- `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Scenes`: scenes, playlists and presets as data, their edits and names, their place in the world, and their files.
 - `SelfTest`: the rules that decide whether each `/vista selftest` check passed, and its report lines.
@@ -83,6 +83,10 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 - `Display/MarkerHitTest`: the item nearest a click within a radius, with ties to the earlier or the later; `TrackMarkerHitTest` ranks the kinds of track marker on it.
 
+### Field edits
+
+- `Editing/PendingEdit`: a field's changed value, held while the field is held and applied once it's let go, only if it changed and can still apply.
+
 ### Timing
 
 - `Tracks/TrackEditing`: which timing key is a point or a hold end, and the keys a leg runs between.
@@ -94,20 +98,29 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### UI widgets
 
-- `Ui/Widgets/IconButton`: frameless icon buttons with tooltips, toggles, row actions, row hover, the not-found warning, and icon widths.
+- `Ui/Widgets/IconButton`: frameless icon buttons with tooltips, toggles, window toggles, row actions, row hover, icons drawn as text, the not-found warning, and icon and row widths.
+- `Ui/Widgets/Layout`: the spacing and field and dialog widths the windows share, right-aligning, centring a window as it appears, and minimum window sizes.
+- `Ui/Widgets/WindowStyle`: a window's spacing, popup style and selected-row colours, or the popup style alone.
+- `Ui/Widgets/Tooltip` and `Menu`: a tooltip on the item just drawn, shown even while disabled, and a menu item.
 - `Ui/Widgets/PoseGrid`: the Point and Camera windows' shared layout and fields.
-- `Ui/Widgets/BorderedField`, `PendingField`, `LiveDrag` and `TextEdit`: a bordered number field, a field applied on release, a field previewed live as one undo step, and text edited in place.
-- `Ui/Widgets/DragRows` and `RowText`: dragging list rows and reading their click, and a row's fitted name.
-- `Ui/Widgets/PopupStyle`, `CharacterPicker` and `Refusal`: the popup style, the character drop-down, and logging a refusal.
+- `Ui/Widgets/BorderedField`, `PendingField`, `LiveDrag` and `TextEdit`: a bordered number field, a field drawn for a `PendingEdit`, a field previewed live as one undo step, and text edited in place; with `FieldDraw`, `PendingField` and `LiveDrag` run a field the caller draws.
+- `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name.
+- `Ui/Widgets/CharacterPicker` and `Refusal`: the character drop-down, and logging a refusal.
 
 ### Colours
 
-- `Ui/Widgets/UiColours`: the Vista window's colours.
+- `Ui/Widgets/UiColours`: the Vista window's colours, selected rows included.
 - `Editor/EditorColours`: the overlay's colours.
 
 ### Gizmos
 
-- `Editor/Gizmo`: the ImGuizmo calls the point and anchor gizmos share.
+- `Editor/Gizmo`: the ImGuizmo setup and calls the point and anchor gizmos share, and waiting out a drag one of them dropped.
+- `Editor/Overlay`: the line thicknesses the overlay and the Timing window's key rings draw with.
+
+### Play and scrub
+
+- `Session/GameSession` (plugin): starting, pausing and restarting playback, and Play/Pause as one toggle.
+- `Session/Scrubber` (plugin): a scrub one control began, which only that control ends.
 
 ### Files
 

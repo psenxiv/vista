@@ -202,6 +202,15 @@ internal sealed class GameSession
             Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
     }
 
+    /// <summary>What Play/Pause does: stops a running shot or preview, starts one otherwise.</summary>
+    public void TogglePlay()
+    {
+        if (state.IsPlaying)
+            StopPlay();
+        else
+            StartPlay();
+    }
+
     /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back. Every step is attempted, whatever the others do.</summary>
     public void Release(string reason, CameraMode to = CameraMode.Off)
     {

@@ -22,8 +22,7 @@ internal static class BorderedField
         using (ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f, border is not null))
         using (ImRaii.PushColor(ImGuiCol.Border, border ?? 0u, border is not null))
             changed = ImGui.DragFloat($"##{id}", ref value, speed, 0f, 0f, format);
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip(name);
+        Tooltip.OnHover(name);
         return changed;
     }
 }

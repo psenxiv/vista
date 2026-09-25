@@ -20,11 +20,8 @@ internal sealed class CameraWindow : Window
     private GizmoMode mode = GizmoMode.Move;
 
     public CameraWindow(GameSession game)
-        : base("Camera###vista-camera")
-    {
+        : base("Camera###vista-camera", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse) =>
         this.game = game;
-        Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
-    }
 
     /// <summary>Open only while editing, since the free camera exists only then.</summary>
     public override bool DrawConditions() => game.State.Mode == CameraMode.Editing;

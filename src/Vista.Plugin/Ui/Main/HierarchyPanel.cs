@@ -19,6 +19,9 @@ internal sealed class HierarchyPanel
     private const string NamePopup = "Name###vista-name";
     private const string DeletePopup = "Delete###vista-delete";
 
+    /// <summary>The width of each of a prompt's two buttons.</summary>
+    private const float PromptButtonWidth = 127f;
+
     /// <summary>The name fields' buffer, a little past the longest name so a longer one can be typed and refused.</summary>
     private const int NameBuffer = SceneNames.MaxLength + 8;
 
@@ -60,13 +63,13 @@ internal sealed class HierarchyPanel
     public void Draw(bool editing)
     {
         ImGui.BeginDisabled(!editing);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + LastSlot() + ImGui.GetStyle().ItemSpacing.X;
+        var buttons = IconButton.RowWidth(IconButton.Width(FontAwesomeIcon.Anchor), LastSlot());
         ImGui.SetNextItemWidth(
             MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons - ImGui.GetStyle().ItemSpacing.X)
         );
         DrawSelector();
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons));
+        Layout.RightAlign(buttons);
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor"))
             Report(session.Selection.SelectSceneAnchor());
@@ -153,26 +156,21 @@ internal sealed class HierarchyPanel
         if (ImGui.IsWindowAppearing())
             presets = files.PresetNames();
 
-        var ticked = false;
-        if (ImGui.MenuItem("Empty track", string.Empty, ref ticked))
+        if (Menu.Item("Empty track"))
             Report(session.AddTrack());
         if (ImGui.BeginMenu("From preset"))
         {
             if (presets.Count == 0)
-            {
-                ImGui.BeginDisabled();
-                ImGui.MenuItem("No presets", string.Empty, ref ticked);
-                ImGui.EndDisabled();
-            }
+                Menu.Item("No presets", enabled: false);
 
             foreach (var name in presets)
             {
                 using var id = ImRaii.PushId(name);
-                if (ImGui.MenuItem(name, string.Empty, ref ticked))
+                if (Menu.Item(name))
                     Report(files.AddPreset(name));
                 if (ImGui.BeginPopupContextItem("preset-menu"))
                 {
-                    if (ImGui.MenuItem("Delete", string.Empty, ref ticked))
+                    if (Menu.Item("Delete"))
                     {
                         deleting = (true, name);
                         openDelete = true;
@@ -182,7 +180,7 @@ internal sealed class HierarchyPanel
             }
 
             ImGui.Separator();
-            if (ImGui.MenuItem("Open folder", string.Empty, ref ticked))
+            if (Menu.Item("Open folder"))
                 files.OpenFolder(presets: true);
             ImGui.EndMenu();
         }
@@ -202,14 +200,8 @@ internal sealed class HierarchyPanel
     /// <summary>The name prompt: Ok stays disabled while the name can't be used and says why; a preset's existing name turns Ok into Replace.</summary>
     private void DrawNamePrompt()
     {
-        if (!ImGui.BeginPopupModal(NamePopup, ImGuiWindowFlags.AlwaysAutoResize))
+        if (!BeginPrompt(NamePopup, naming is not null) || naming is not { } what)
             return;
-        if (naming is not { } what)
-        {
-            ImGui.CloseCurrentPopup();
-            ImGui.EndPopup();
-            return;
-        }
 
         ImGui.TextUnformatted(
             what switch
@@ -225,7 +217,7 @@ internal sealed class HierarchyPanel
             ImGui.SetKeyboardFocusHere();
             focusName = false;
         }
-        ImGui.SetNextItemWidth(260f);
+        ImGui.SetNextItemWidth(Layout.DialogWidth);
         var entered = ImGui.InputText(
             "##name",
             ref nameText,
@@ -249,10 +241,12 @@ internal sealed class HierarchyPanel
             ImGui.TextUnformatted(refusal ?? (replaces ? $"A preset called {nameText.Trim()} exists." : " "));
 
         ImGui.BeginDisabled(refusal is not null);
-        var ok = ImGui.Button(replaces ? "Replace" : "Ok", new Vector2(127f, 0f)) || (entered && refusal is null);
+        var ok =
+            ImGui.Button(replaces ? "Replace" : "Ok", new Vector2(PromptButtonWidth, 0f))
+            || (entered && refusal is null);
         ImGui.EndDisabled();
         ImGui.SameLine();
-        if (ImGui.Button("Cancel", new Vector2(127f, 0f)) || ImGui.IsKeyPressed(ImGuiKey.Escape))
+        if (Cancelled())
         {
             naming = null;
             ImGui.CloseCurrentPopup();
@@ -280,17 +274,11 @@ internal sealed class HierarchyPanel
     /// <summary>"Delete name? This can't be undone." for a scene or a preset.</summary>
     private void DrawDeleteConfirm()
     {
-        if (!ImGui.BeginPopupModal(DeletePopup, ImGuiWindowFlags.AlwaysAutoResize))
+        if (!BeginPrompt(DeletePopup, deleting is not null) || deleting is not { } target)
             return;
-        if (deleting is not { } target)
-        {
-            ImGui.CloseCurrentPopup();
-            ImGui.EndPopup();
-            return;
-        }
 
         ImGui.TextUnformatted($"Delete {target.Name}? This can't be undone.");
-        if (ImGui.Button("Delete", new Vector2(127f, 0f)))
+        if (ImGui.Button("Delete", new Vector2(PromptButtonWidth, 0f)))
         {
             Report(target.Preset ? files.DeletePreset(target.Name) : files.Delete());
             deleting = null;
@@ -298,7 +286,7 @@ internal sealed class HierarchyPanel
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Cancel", new Vector2(127f, 0f)) || ImGui.IsKeyPressed(ImGuiKey.Escape))
+        if (Cancelled())
         {
             deleting = null;
             ImGui.CloseCurrentPopup();
@@ -306,20 +294,34 @@ internal sealed class HierarchyPanel
         ImGui.EndPopup();
     }
 
+    /// <summary>Begins prompt <paramref name="popup"/>; true while it's open and has something to ask, otherwise it closes.</summary>
+    private static bool BeginPrompt(string popup, bool asking)
+    {
+        if (!ImGui.BeginPopupModal(popup, ImGuiWindowFlags.AlwaysAutoResize))
+            return false;
+        if (asking)
+            return true;
+        ImGui.CloseCurrentPopup();
+        ImGui.EndPopup();
+        return false;
+    }
+
+    /// <summary>A prompt's Cancel button; true when it or Escape is pressed.</summary>
+    private static bool Cancelled() =>
+        ImGui.Button("Cancel", new Vector2(PromptButtonWidth, 0f)) || ImGui.IsKeyPressed(ImGuiKey.Escape);
+
     /// <summary>The name, then the anchor button and the eye, shown on hover (a hidden track's eye always): click edits the track, double-click flies to its first point, right-click opens the menu, drag reorders.</summary>
     private void DrawRow(Scene scene, Track track, int index, Guid edited, IReadOnlyList<Guid> selected, bool editing)
     {
         using var id = ImRaii.PushId(track.Id.ToString());
         var isEdited = track.Id == edited;
         var hidden = scene.Hidden.Contains(track.Id);
-        var buttons = IconButton.Width(FontAwesomeIcon.Anchor) + LastSlot() + (ImGui.GetStyle().ItemSpacing.X * 2f);
+        // The name's gap before the buttons, then the buttons.
+        var buttons =
+            ImGui.GetStyle().ItemSpacing.X + IconButton.RowWidth(IconButton.Width(FontAwesomeIcon.Anchor), LastSlot());
         var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons);
         var rowMin = ImGui.GetCursorScreenPos();
-        var rowMax = new Vector2(
-            ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X,
-            rowMin.Y + ImGui.GetFrameHeight()
-        );
-        var rowHovered = editing && IconButton.RowHovered(rowMin, rowMax);
+        var rowHovered = editing && IconButton.RowHovered(rowMin, rowMin.Y + ImGui.GetFrameHeight());
 
         var rowStart = ImGui.GetCursorPosX();
         if (renaming == track.Id)
@@ -384,16 +386,8 @@ internal sealed class HierarchyPanel
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
             Report(game.FlyToFirstPoint(track.Id));
 
-        if (editing && ImGui.BeginDragDropSource())
-        {
-            DragRows.Carry(
-                DragRows.Track,
-                index,
-                group,
-                group ? FormattableString.Invariant($"{selected.Count} tracks") : track.Name
-            );
-            ImGui.EndDragDropSource();
-        }
+        if (editing)
+            DragRows.Source(DragRows.Track, index, group, selected.Count, "tracks", track.Name);
 
         if (editing && ImGui.BeginDragDropTarget())
         {
@@ -424,55 +418,49 @@ internal sealed class HierarchyPanel
     /// <summary>One track's menu: rename, duplicate, add to the playlist, save as a preset or delete it.</summary>
     private void DrawTrackMenu(Scene scene, Track track)
     {
-        var ticked = false;
-        if (ImGui.MenuItem("Rename", string.Empty, ref ticked))
+        if (Menu.Item("Rename"))
             StartRename(track);
-        if (ImGui.MenuItem("Duplicate", string.Empty, ref ticked))
+        if (Menu.Item("Duplicate"))
             Report(session.DuplicateTrack(track.Id));
-        if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked))
+        if (Menu.Item("Add to playlist"))
             Report(session.AddToPlaylist([track.Id]));
-        if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, Presets.CanSave(track)))
+        if (Menu.Item("Save as preset", Presets.CanSave(track)))
         {
             presets = files.PresetNames();
             presetTrack = track.Id;
             AskName(Naming.SavePreset, track.Name);
         }
 
-        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, SceneEditing.CanDelete(scene, [track.Id])))
+        if (Menu.Item("Delete", SceneEditing.CanDelete(scene, [track.Id])))
             Report(session.DeleteTracks([track.Id]));
     }
 
     /// <summary>The menu for several selected tracks: add them to the playlist, show, hide or delete them.</summary>
     private void DrawGroupMenu(Scene scene, IReadOnlyList<Guid> selected)
     {
-        var ticked = false;
         var edited = session.EditedTrackId;
-        if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked))
+        if (Menu.Item("Add to playlist"))
             Report(session.AddToPlaylist(selected));
-        if (ImGui.MenuItem("Show", string.Empty, ref ticked, SceneEditing.CanShow(scene, selected)))
+        if (Menu.Item("Show", SceneEditing.CanShow(scene, selected)))
             Report(session.SetTracksHidden(selected, false));
-        if (ImGui.MenuItem("Hide", string.Empty, ref ticked, SceneEditing.CanHide(scene, selected, edited)))
+        if (Menu.Item("Hide", SceneEditing.CanHide(scene, selected, edited)))
             Report(session.SetTracksHidden(selected, true));
-        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, SceneEditing.CanDelete(scene, selected)))
+        if (Menu.Item("Delete", SceneEditing.CanDelete(scene, selected)))
             Report(session.DeleteTracks(selected));
     }
 
     /// <summary>The space under the tracks: at least a row tall, it takes dropped tracks at the end and dropped points as a new track, and a click there clears the selection.</summary>
     private void DrawSpace(Scene scene, bool editing)
     {
-        var height = MathF.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetFrameHeight());
-        var top = ImGui.GetCursorScreenPos();
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, height));
+        DragRows.Space(session, editing);
         if (!editing)
             return;
-        if (ImGui.IsItemClicked() && DragRows.Click() == RowClick.Plain)
-            session.Selection.Select(null);
 
         if (DragRows.Dragging(DragRows.Point))
         {
             // Where a new track would go, in the row just under the last track.
             var at =
-                top
+                ImGui.GetItemRectMin()
                 + new Vector2(
                     ImGui.GetStyle().FramePadding.X * 2f,
                     (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) * 0.5f

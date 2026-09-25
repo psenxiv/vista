@@ -73,10 +73,7 @@ internal sealed class PointGizmo
         }
 
         var point = session.Track.Points[index];
-        ImGuizmo.SetDrawlist();
-        ImGuizmo.SetOrthographic(false);
-        ImGuizmo.SetRect(view.Origin.X, view.Origin.Y, view.Size.X, view.Size.Y);
-        ImGuizmo.AllowAxisFlip(false);
+        Gizmo.Begin(view);
 
         var (usingNow, over, ring) =
             Mode != GizmoMode.Rotate
@@ -88,12 +85,8 @@ internal sealed class PointGizmo
                 );
         Hot = usingNow || over;
 
-        if (waitForRelease)
-        {
-            if (!usingNow)
-                waitForRelease = false;
+        if (Gizmo.StillHeld(ref waitForRelease, usingNow))
             return;
-        }
 
         if (usingNow)
         {
@@ -102,8 +95,7 @@ internal sealed class PointGizmo
                 // A ring drag already under way when we saw it has no known ring; wait it out.
                 if (Mode == GizmoMode.Rotate && ring is null)
                 {
-                    waitForRelease = true;
-                    Gizmo.Reset();
+                    Gizmo.Drop(ref waitForRelease);
                     return;
                 }
                 dragStart = point;
@@ -186,11 +178,10 @@ internal sealed class PointGizmo
     {
         if (!Dragging)
             return;
-        waitForRelease = true;
         dragStart = null;
         dragRing = null;
         dragTrack = null;
         Preview = null;
-        Gizmo.Reset();
+        Gizmo.Drop(ref waitForRelease);
     }
 }
