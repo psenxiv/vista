@@ -158,6 +158,26 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void ACopysNameMayReachTheLongestNameButNoFurther()
+    {
+        static Scene Holding(string name)
+        {
+            var scene = SceneEditing.New();
+            return SceneEditing.Rename(scene, scene.Tracks[0].Id, name);
+        }
+
+        // A 59-character name gives "name copy", 59 + 5 = 64 characters, the longest allowed.
+        var fits = Holding(new string('a', 59));
+        var (scene, copy) = SceneEditing.Duplicate(fits, fits.Tracks[0].Id);
+        Assert.Equal($"{new string('a', 59)} copy", SceneEditing.Get(scene, copy).Name);
+
+        // A 60-character name would give 60 + 5 = 65 characters.
+        var over = Holding(new string('a', 60));
+        var refused = Assert.Throws<ArgumentException>(() => SceneEditing.Duplicate(over, over.Tracks[0].Id));
+        Assert.Equal("The copy's name would be too long. Shorten the track's name first.", refused.Message);
+    }
+
+    [Fact]
     public void DeleteRemovesTheTrackAndNamesTheOneTakingItsPlace()
     {
         var scene = Three();

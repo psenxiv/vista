@@ -86,18 +86,20 @@ public static class SceneNames
         }
     }
 
-    /// <summary>"name copy", then "name copy 2", "name copy 3", …, the first not taken.</summary>
-    public static string CopyOf(string name, IEnumerable<string> existing)
+    /// <summary><paramref name="name"/> if it is not taken, else the first of "name 2", "name 3", … that is not.</summary>
+    public static string Numbered(string name, IEnumerable<string> existing)
     {
         var names = existing.ToList();
-        var copy = $"{name} copy";
-        if (!Taken(copy, names))
-            return copy;
+        if (!Taken(name, names))
+            return name;
         for (var n = 2; ; n++)
         {
-            var candidate = $"{copy} {n}";
+            var candidate = $"{name} {n}";
             if (!Taken(candidate, names))
                 return candidate;
         }
     }
+
+    /// <summary>"name copy", then "name copy 2", "name copy 3", …, the first not taken.</summary>
+    public static string CopyOf(string name, IEnumerable<string> existing) => Numbered($"{name} copy", existing);
 }

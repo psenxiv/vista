@@ -4,7 +4,7 @@
 
 - If something goes wrong inside Vista, or a game update breaks part of it, Vista gives the camera back and stops until you reload it, instead of risking a crash.
 - Fixed dragging a key up to the end of its hold sometimes removing the hold.
-- New tracks and copies no longer share a name with an existing track.
+- New tracks, copies and tracks placed from a preset no longer share a name with an existing track.
 - Error messages say what failed, such as deleting a scene, instead of always saying it couldn't save.
 - Fixed Direction of travel facing the wrong way for a moment as a shot starts, when its path comes back to where it began within the look ahead.
 
