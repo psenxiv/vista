@@ -2,6 +2,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
@@ -60,28 +61,28 @@ internal sealed class CameraWindow : Window
             "cam-pitch",
             "Pitch",
             EditorColours.AxisX,
-            PoseGrid.Degrees(pitch),
+            Angles.Degrees(pitch),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            v => game.TurnCamera(yaw, EditLimits.Pitch(PoseGrid.Radians(v)))
+            v => game.TurnCamera(yaw, EditLimits.Pitch(Angles.Radians(v)))
         );
         Field(
             "cam-yaw",
             "Yaw",
             EditorColours.AxisY,
-            PoseGrid.Degrees(EditLimits.Angle(yaw)),
+            Angles.Degrees(EditLimits.Angle(yaw)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            v => game.TurnCamera(EditLimits.Angle(PoseGrid.Radians(v)), pitch)
+            v => game.TurnCamera(EditLimits.Angle(Angles.Radians(v)), pitch)
         );
         Field(
             "cam-roll",
             "Roll",
             EditorColours.AxisZ,
-            PoseGrid.Degrees(game.CameraRoll),
+            Angles.Degrees(game.CameraRoll),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            v => game.CameraRoll = EditLimits.Angle(PoseGrid.Radians(v))
+            v => game.CameraRoll = EditLimits.Angle(Angles.Radians(v))
         );
 
         ImGui.TableNextRow();
@@ -99,10 +100,10 @@ internal sealed class CameraWindow : Window
             "cam-fov",
             "FoV",
             null,
-            PoseGrid.Degrees(game.CameraFov),
+            Angles.Degrees(game.CameraFov),
             PoseGrid.FovSpeed,
             "%.1f°",
-            v => game.CameraFov = EditLimits.Fov(PoseGrid.Radians(v))
+            v => game.CameraFov = EditLimits.Fov(Angles.Radians(v))
         );
 
         gridWidth = PoseGrid.EndGrid();

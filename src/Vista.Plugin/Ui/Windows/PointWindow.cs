@@ -2,6 +2,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -125,20 +126,8 @@ internal sealed class PointWindow : Window
             case PoseGrid.Clip.Copy when point is { } source:
                 copied = source;
                 break;
-            case PoseGrid.Clip.Paste when copied is { } c && pointIndex is { } target && point is { } p:
-                Report(
-                    session.ReplacePoint(
-                        target,
-                        p with
-                        {
-                            Position = c.Position,
-                            Yaw = c.Yaw,
-                            Pitch = c.Pitch,
-                            Roll = c.Roll,
-                            Fov = c.Fov,
-                        }
-                    )
-                );
+            case PoseGrid.Clip.Paste when copied is { } c && pointIndex is { } target && point is not null:
+                Report(session.ReplacePoint(target, c));
                 break;
             case PoseGrid.Clip.Delete when pointIndex is not null:
                 Report(session.DeleteSelected());
@@ -192,20 +181,20 @@ internal sealed class PointWindow : Window
             "Pitch",
             EditorColours.AxisX,
             index,
-            PoseGrid.Degrees(point.Pitch),
+            Angles.Degrees(point.Pitch),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (p, v) => p with { Pitch = EditLimits.Pitch(PoseGrid.Radians(v)) }
+            (p, v) => p with { Pitch = EditLimits.Pitch(Angles.Radians(v)) }
         );
         PointField(
             $"yaw{index}",
             "Yaw",
             EditorColours.AxisY,
             index,
-            PoseGrid.Degrees(EditLimits.Angle(point.Yaw)),
+            Angles.Degrees(EditLimits.Angle(point.Yaw)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (p, v) => p with { Yaw = EditLimits.Angle(PoseGrid.Radians(v)) }
+            (p, v) => p with { Yaw = EditLimits.Angle(Angles.Radians(v)) }
         );
         ImGui.EndDisabled();
         PointField(
@@ -213,10 +202,10 @@ internal sealed class PointWindow : Window
             "Roll",
             EditorColours.AxisZ,
             index,
-            PoseGrid.Degrees(EditLimits.Angle(point.Roll)),
+            Angles.Degrees(EditLimits.Angle(point.Roll)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (p, v) => p with { Roll = EditLimits.Angle(PoseGrid.Radians(v)) }
+            (p, v) => p with { Roll = EditLimits.Angle(Angles.Radians(v)) }
         );
 
         ImGui.TableNextRow();
@@ -233,10 +222,10 @@ internal sealed class PointWindow : Window
             "FoV",
             null,
             index,
-            PoseGrid.Degrees(point.Fov),
+            Angles.Degrees(point.Fov),
             PoseGrid.FovSpeed,
             "%.1f°",
-            (p, v) => p with { Fov = EditLimits.Fov(PoseGrid.Radians(v)) }
+            (p, v) => p with { Fov = EditLimits.Fov(Angles.Radians(v)) }
         );
     }
 
@@ -280,10 +269,10 @@ internal sealed class PointWindow : Window
             "anchor-yaw",
             "Yaw",
             EditorColours.AxisY,
-            PoseGrid.Degrees(EditLimits.Angle(anchor.Yaw)),
+            Angles.Degrees(EditLimits.Angle(anchor.Yaw)),
             PoseGrid.AngleSpeed,
             "%.1f°",
-            (a, v) => a with { Yaw = EditLimits.Angle(PoseGrid.Radians(v)) }
+            (a, v) => a with { Yaw = EditLimits.Angle(Angles.Radians(v)) }
         );
         PoseGrid.Missing("anchor-roll", "Roll", EditorColours.AxisZ);
 

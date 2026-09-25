@@ -3,6 +3,12 @@ namespace Vista.Core.Camera;
 /// <summary>Bringing an angle back into range, in the two conventions the camera uses.</summary>
 public static class Angles
 {
+    /// <summary>Radians in degrees.</summary>
+    public static float Degrees(float radians) => radians * 180f / MathF.PI;
+
+    /// <summary>Degrees in radians.</summary>
+    public static float Radians(float degrees) => degrees * MathF.PI / 180f;
+
     /// <summary>The angle wrapped to within half a turn of zero.</summary>
     public static float Wrap(float angle) => MathF.IEEERemainder(angle, MathF.Tau);
 

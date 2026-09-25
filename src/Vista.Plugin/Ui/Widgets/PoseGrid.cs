@@ -132,8 +132,4 @@ internal static class PoseGrid
         _ = Field(id, name, border, ref none, 0f, "—");
         ImGui.EndDisabled();
     }
-
-    public static float Degrees(float radians) => radians * 180f / MathF.PI;
-
-    public static float Radians(float degrees) => degrees * MathF.PI / 180f;
 }

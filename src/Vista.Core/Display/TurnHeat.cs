@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Tracks;
 
 namespace Vista.Core.Display;
@@ -37,7 +38,7 @@ public static class TurnHeat
             var frame = evaluator.Evaluate(time, target)!.Value;
             var look = Vector3.Normalize(frame.LookAt - frame.Position);
             var rate = before is { } b
-                ? (float)(MathF.Acos(Math.Clamp(Vector3.Dot(b, look), -1f, 1f)) * 180f / MathF.PI / span)
+                ? (float)(Angles.Degrees(MathF.Acos(Math.Clamp(Vector3.Dot(b, look), -1f, 1f))) / span)
                 : 0f;
             samples[i] = new Sample(frame.Position, rate);
             before = look;

@@ -275,21 +275,13 @@ internal sealed class GameSession
     private ControlPoint? CameraPoint()
     {
         if (state.Transport.Previewing && lastFrame is { } previewed)
-        {
-            var (previewYaw, previewPitch, previewRoll) = CameraRotation.ToAngles(
-                CameraRotation.FromBasis(previewed.LookAt - previewed.Position, previewed.Up)
-            );
-            return new ControlPoint(previewed.Position, previewYaw, previewPitch, previewed.Fov, previewRoll);
-        }
+            return ControlPoint.FromFrame(previewed);
 
         var camera = CameraAccess.ReadState();
         if (camera is null)
             return null;
         if (freeCam.Enabled)
-        {
-            var (yaw, pitch, roll) = CameraRotation.ToAngles(freeCam.Rotation);
-            return new ControlPoint(camera.Value.Position, yaw, pitch, camera.Value.Fov, roll);
-        }
+            return ControlPoint.FromRotation(camera.Value.Position, freeCam.Rotation, camera.Value.Fov);
 
         return CameraAccess.ReadAngles() is { } angles
             ? new ControlPoint(camera.Value.Position, angles.Yaw, angles.Pitch, camera.Value.Fov)

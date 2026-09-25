@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Vista.Core.Camera;
 using Vista.Core.Session;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Editor;
@@ -68,12 +69,12 @@ internal sealed class FollowTargetWindow : TargetWindow
         );
 
         ImGui.SameLine();
-        var degrees = current.Angle * 180f / MathF.PI;
+        var degrees = Angles.Degrees(current.Angle);
         changed = BorderedField.Draw("orbit-angle", "Angle", EditorColours.AxisZ, ref degrees, 0.5f, "%.0f°", width);
         LiveDrag.Handle(
             session,
             changed,
-            () => _ = session.PreviewFollowOrbit(current with { Angle = degrees * MathF.PI / 180f }),
+            () => _ = session.PreviewFollowOrbit(current with { Angle = Angles.Radians(degrees) }),
             ref dragging
         );
 
