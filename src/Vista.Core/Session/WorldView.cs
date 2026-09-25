@@ -14,8 +14,7 @@ public sealed class WorldView
     private readonly AimTracker scrubAim;
     private readonly Dictionary<Guid, (Track Local, Anchor Scene, Track World)> worlds = new();
     private readonly Dictionary<Guid, (Track World, Anchor Frame, Track Shown)> shown = new();
-    private Track? evaluatedTrack;
-    private TrackEvaluator? evaluator;
+    private readonly EvaluatorCache evaluator = new();
 
     internal WorldView(SessionState session, NearbyCharacters? aimTargets)
     {
@@ -57,20 +56,7 @@ public sealed class WorldView
     }
 
     /// <summary>The evaluator for the edited track, rebuilt when the track changes.</summary>
-    public TrackEvaluator Evaluator
-    {
-        get
-        {
-            var world = WorldOf(session.StoredTrack);
-            if (!ReferenceEquals(evaluatedTrack, world))
-            {
-                evaluator = new TrackEvaluator(world);
-                evaluatedTrack = world;
-            }
-
-            return evaluator!;
-        }
-    }
+    public TrackEvaluator Evaluator => evaluator.For(WorldOf(session.StoredTrack));
 
     /// <summary>The edited track's frame at <paramref name="time"/> seconds, aimed at its target where it is now, or null with no points.</summary>
     public CameraState? FrameAt(double time)

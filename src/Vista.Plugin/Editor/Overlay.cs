@@ -54,7 +54,7 @@ internal sealed class Overlay
         var labels = new Vector2?[track.Points.Count];
         for (var i = 0; i < track.Points.Count; i++)
         {
-            var (forward, up, fov) = CameraGlyph.Pose(track, i, aimPoint, () => EvaluatorFor(track, cache));
+            var (forward, up, fov) = CameraGlyph.Pose(track, i, aimPoint, () => cache.Evaluator.For(track));
             var glyph = CameraGlyph.Build(track.Points[i].Position, forward, up, fov, aspect, GlyphDepth);
             DrawGlyph(list, view, glyph, selected.Contains(i), palette);
             labels[i] = view.ToScreen(track.Points[i].Position);
@@ -268,7 +268,7 @@ internal sealed class Overlay
         Palette palette
     )
     {
-        var evaluator = EvaluatorFor(track, cache);
+        var evaluator = cache.Evaluator.For(track);
         // A watched character moves every frame, so its heat is redrawn only once it has moved a little.
         if (!ReferenceEquals(cache.HeatTrack, track) || TurnHeat.TargetMoved(cache.HeatTarget, aimPoint))
         {
@@ -302,18 +302,6 @@ internal sealed class Overlay
                     PathThickness
                 );
         }
-    }
-
-    /// <summary>The cached evaluator for <paramref name="track"/>, rebuilt when the track changes.</summary>
-    private static TrackEvaluator EvaluatorFor(Track track, TrackCache cache)
-    {
-        if (!ReferenceEquals(cache.EvaluatedTrack, track))
-        {
-            cache.Evaluator = new TrackEvaluator(track);
-            cache.EvaluatedTrack = track;
-        }
-
-        return cache.Evaluator!;
     }
 
     private static void DrawGlyph(
@@ -393,8 +381,7 @@ internal sealed class Overlay
     {
         public IReadOnlyList<ControlPoint>? SampledPoints;
         public IReadOnlyList<Vector3> Samples = [];
-        public Track? EvaluatedTrack;
-        public TrackEvaluator? Evaluator;
+        public readonly EvaluatorCache Evaluator = new();
         public IReadOnlyList<TurnHeat.Sample> Heat = [];
         public Track? HeatTrack;
         public Vector3? HeatTarget;

@@ -7,6 +7,7 @@
 - New tracks and copies no longer share a name with an existing track.
 - Error messages say what failed, such as deleting a scene, instead of always saying it couldn't save.
 - Fixed Direction of travel facing the wrong way for a moment as a shot starts, when its path comes back to where it began within the look ahead.
+- Times show to a hundredth of a second everywhere, and the Follow Target angle to a tenth of a degree, so a number reads the same in every window.
 
 ## 0.9.0.1
 

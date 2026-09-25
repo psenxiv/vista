@@ -76,7 +76,7 @@ public sealed class SceneLibrary
         {
             Folder.RenameScene(CurrentName, trimmed);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return $"Could not save {trimmed}: {e.Message}";
         }
@@ -99,7 +99,7 @@ public sealed class SceneLibrary
         {
             Folder.DeleteScene(CurrentName);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return $"Could not delete {CurrentName}: {e.Message}";
         }
@@ -117,7 +117,7 @@ public sealed class SceneLibrary
         {
             Folder.Create();
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return $"Could not create the save folder: {e.Message}";
         }
@@ -150,7 +150,7 @@ public sealed class SceneLibrary
         {
             read = Folder.LoadScene(name);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        catch (Exception e) when (SceneFolder.IsUnreadable(e))
         {
             return $"Could not open {name}: {e.Message}";
         }
@@ -175,7 +175,7 @@ public sealed class SceneLibrary
         {
             Folder.SaveScene(name, toSave);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return $"Could not save {name}: {e.Message}";
         }

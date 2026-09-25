@@ -1,3 +1,5 @@
+using Vista.Core.Editing;
+
 namespace Vista.Core.Tracks.Timing;
 
 /// <summary>Maps easing presets onto the two sides that bound a leg.</summary>
@@ -46,8 +48,15 @@ public static class LegEasing
         if (Read(track, leg) == easing)
             return track;
 
-        var timing = track.Timing.ToList();
-        timing[leg - 1] = timing[leg - 1] with { OutMode = outMode, OutTangent = 0f };
+        var timing = ListEdit.Replace(
+            track.Timing,
+            leg - 1,
+            track.Timing[leg - 1] with
+            {
+                OutMode = outMode,
+                OutTangent = 0f,
+            }
+        );
         timing[leg] = timing[leg] with { InMode = inMode, InTangent = 0f };
         return track with { Timing = timing };
     }

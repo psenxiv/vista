@@ -60,6 +60,31 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void TryGetFindsATrackOrSaysThereIsNone()
+    {
+        var scene = Three();
+
+        Assert.True(SceneEditing.TryGet(scene, scene.Tracks[1].Id, out var track));
+        Assert.Same(scene.Tracks[1], track);
+        Assert.False(SceneEditing.TryGet(scene, Guid.NewGuid(), out var none));
+        Assert.Null(none);
+    }
+
+    [Fact]
+    public void RequireAllRefusesWhenAnyTrackIsMissing()
+    {
+        var scene = Three();
+
+        SceneEditing.RequireAll(scene, scene.Tracks.Select(t => t.Id));
+        Assert.Equal(
+            SceneEditing.NoSuchTrack,
+            Assert
+                .Throws<ArgumentException>(() => SceneEditing.RequireAll(scene, [scene.Tracks[0].Id, Guid.NewGuid()]))
+                .Message
+        );
+    }
+
+    [Fact]
     public void ReplaceSwapsTheTrackWithTheSameId()
     {
         var scene = Three();

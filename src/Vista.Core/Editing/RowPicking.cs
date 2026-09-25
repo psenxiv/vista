@@ -58,13 +58,8 @@ public static class RowPicking
         : grabbed < rows.Count ? [rows[grabbed]]
         : [];
 
-    private static int IndexOf<T>(IReadOnlyList<T> order, T row)
-    {
-        for (var i = 0; i < order.Count; i++)
-            if (EqualityComparer<T>.Default.Equals(order[i], row))
-                return i;
-        return -1;
-    }
+    private static int IndexOf<T>(IReadOnlyList<T> order, T row) =>
+        ListEdit.IndexOf(order, r => EqualityComparer<T>.Default.Equals(r, row));
 
     private static T[] InOrder<T>(IReadOnlyList<T> order, HashSet<T> picked) => order.Where(picked.Contains).ToArray();
 }

@@ -2,6 +2,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Vista.Core.Display;
 using Vista.Core.Session;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Ui.Widgets;
@@ -98,7 +99,15 @@ internal abstract class TargetWindow : Window
     {
         Label("Aim height");
         var height = session.Track.AimHeight;
-        var changed = BorderedField.Draw(aimHeightId, "Aim height", null, ref height, 0.02f, "%.2f", FieldWidth);
+        var changed = BorderedField.Draw(
+            aimHeightId,
+            "Aim height",
+            null,
+            ref height,
+            0.02f,
+            Units.YalmsField,
+            FieldWidth
+        );
         // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
         LiveDrag.Handle(session, changed, () => _ = session.PreviewAimHeight(height), ref dragging);
     }

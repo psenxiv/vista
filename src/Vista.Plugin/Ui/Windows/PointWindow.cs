@@ -3,6 +3,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Vista.Core.Camera;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -87,7 +88,7 @@ internal sealed class PointWindow : Window
                 return;
             anchor = a;
         }
-        else if (session.Selection.Point is { } i && i < session.Track.Points.Count)
+        else if (session.Selection.Point is { } i && TrackEditing.IsPoint(session.Track, i))
             index = i;
         else
             return;
@@ -153,7 +154,7 @@ internal sealed class PointWindow : Window
                 index,
                 point.Position[at],
                 PoseGrid.PositionSpeed,
-                "%.2f",
+                Units.YalmsField,
                 (p, v) => p with { Position = EditLimits.Coordinate(p.Position, at, v) }
             );
         }
@@ -168,7 +169,7 @@ internal sealed class PointWindow : Window
             index,
             Angles.Degrees(point.Pitch),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             (p, v) => p with { Pitch = EditLimits.Pitch(Angles.Radians(v), p.Pitch) }
         );
         PointField(
@@ -176,9 +177,9 @@ internal sealed class PointWindow : Window
             "Yaw",
             EditorColours.AxisY,
             index,
-            Angles.Degrees(Angles.Wrap(point.Yaw)),
+            EditLimits.AngleDegrees(point.Yaw),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             (p, v) => p with { Yaw = EditLimits.Angle(Angles.Radians(v), p.Yaw) }
         );
         ImGui.EndDisabled();
@@ -187,9 +188,9 @@ internal sealed class PointWindow : Window
             "Roll",
             EditorColours.AxisZ,
             index,
-            Angles.Degrees(Angles.Wrap(point.Roll)),
+            EditLimits.AngleDegrees(point.Roll),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             (p, v) => p with { Roll = EditLimits.Angle(Angles.Radians(v), p.Roll) }
         );
 
@@ -215,7 +216,7 @@ internal sealed class PointWindow : Window
             index,
             Angles.Degrees(point.Fov),
             PoseGrid.FovSpeed,
-            "%.1f°",
+            Units.DegreesField,
             (p, v) => p with { Fov = EditLimits.Fov(Angles.Radians(v), p.Fov) }
         );
     }
@@ -235,7 +236,7 @@ internal sealed class PointWindow : Window
                 border,
                 anchor.Position[at],
                 PoseGrid.PositionSpeed,
-                "%.2f",
+                Units.YalmsField,
                 (a, v) => a with { Position = EditLimits.Coordinate(a.Position, at, v) }
             );
         }
@@ -247,9 +248,9 @@ internal sealed class PointWindow : Window
             "anchor-yaw",
             "Yaw",
             EditorColours.AxisY,
-            Angles.Degrees(Angles.Wrap(anchor.Yaw)),
+            EditLimits.AngleDegrees(anchor.Yaw),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             (a, v) => a with { Yaw = EditLimits.Angle(Angles.Radians(v), a.Yaw) }
         );
         PoseGrid.Missing("anchor-roll", "Roll", EditorColours.AxisZ);
@@ -312,7 +313,7 @@ internal sealed class PointWindow : Window
             changed,
             () =>
             {
-                if (index < session.Track.Points.Count)
+                if (TrackEditing.IsPoint(session.Track, index))
                     _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
             },
             ref dragging
@@ -348,7 +349,7 @@ internal sealed class PointWindow : Window
     private void LookAtField(string id, string name, uint border, float value, Func<Vector3, float, Vector3> set)
     {
         var edited = value;
-        var changed = PoseGrid.Field(id, name, border, ref edited, PoseGrid.PositionSpeed, "%.2f");
+        var changed = PoseGrid.Field(id, name, border, ref edited, PoseGrid.PositionSpeed, Units.YalmsField);
         LiveDrag.Handle(
             session,
             changed,

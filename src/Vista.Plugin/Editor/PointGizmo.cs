@@ -63,7 +63,7 @@ internal sealed class PointGizmo
         if (Dragging && (!ReferenceEquals(session.StoredTrack, dragTrack) || session.Selection.Point != dragIndex))
             Abandon();
 
-        if (session.Selection.Point is not { } index || index >= session.Track.Points.Count)
+        if (session.Selection.Point is not { } index || !TrackEditing.IsPoint(session.Track, index))
         {
             Hot = false;
             Preview = null;

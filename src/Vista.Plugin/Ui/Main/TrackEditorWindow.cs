@@ -524,7 +524,7 @@ internal sealed class TrackEditorWindow : Window
             FontAwesomeIcon.TachometerAlt,
             "track-speed",
             session.Track.Speed,
-            "%.2f",
+            Units.YalmsPerSecondField,
             SpeedRange,
             "Track speed",
             v => Report(session.SetTrackSpeed(v))
@@ -534,7 +534,7 @@ internal sealed class TrackEditorWindow : Window
             FontAwesomeIcon.Stopwatch,
             "track-duration",
             (float)session.Duration,
-            "%.1f s",
+            Units.SecondsField,
             ShotRange,
             "Track duration",
             v => Report(session.SetTrackDuration(v))
@@ -625,7 +625,7 @@ internal sealed class TrackEditorWindow : Window
         fields.Draw(
             LookAheadId,
             track.LookAhead,
-            "%.2f s",
+            Units.SecondsField,
             FieldWidth,
             LookAheadRange,
             v => Report(session.SetLookAhead(v))
@@ -819,7 +819,7 @@ internal sealed class TrackEditorWindow : Window
             fields.Draw(
                 $"leg{index}",
                 evaluator.LegSeconds(index),
-                "%.1f",
+                Units.SecondsNumber,
                 FieldWidth,
                 LegRange,
                 v => Report(session.SetLegDuration(index, v))
@@ -830,7 +830,7 @@ internal sealed class TrackEditorWindow : Window
             fields.Draw(
                 $"leg-speed{index}",
                 evaluator.LegLength(index) / evaluator.LegSeconds(index),
-                "%.2f",
+                Units.YalmsPerSecondField,
                 FieldWidth,
                 SpeedRange,
                 v => Report(session.SetLegSpeed(index, v))
@@ -840,7 +840,7 @@ internal sealed class TrackEditorWindow : Window
         fields.Draw(
             $"hold{index}",
             TrackEditing.HoldSeconds(track, index),
-            "%.1f",
+            Units.SecondsNumber,
             FieldWidth,
             HoldRange,
             v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, v)))
@@ -889,7 +889,7 @@ internal sealed class TrackEditorWindow : Window
             ref head,
             0f,
             MathF.Max(duration, 0.001f),
-            FormattableString.Invariant($"%.1f / {duration:0.0} s")
+            $"{Units.SecondsNumber} / {Units.Seconds(duration)}"
         );
         if (ImGui.IsItemActivated())
         {

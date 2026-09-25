@@ -9,26 +9,30 @@ public static class PlaylistEditing
     /// <summary>The most times an entry can play its track.</summary>
     public const int MaxLoops = 99;
 
-    /// <summary>Adds an entry for each of <paramref name="trackIds"/>, in that order, at <paramref name="index"/>, or at the end.</summary>
+    /// <summary>Why a playlist entry Id can't be used: no entry has it.</summary>
+    public const string NoSuchEntry = "There is no such playlist entry.";
+
+    /// <summary>Adds an entry for each of <paramref name="trackIds"/>, in that order, at <paramref name="index"/>, or at the end; an index past either end of the playlist adds at that end rather than being refused.</summary>
     public static Scene Add(Scene scene, IReadOnlyList<Guid> trackIds, int? index = null)
     {
-        foreach (var id in trackIds)
-            SceneEditing.Get(scene, id);
+        SceneEditing.RequireAll(scene, trackIds);
         if (trackIds.Count == 0)
             return scene;
-        var entries = scene.Playlist.ToList();
-        entries.InsertRange(
-            Math.Clamp(index ?? entries.Count, 0, entries.Count),
-            trackIds.Select(id => new PlaylistEntry(Guid.NewGuid(), id))
-        );
-        return scene with { Playlist = entries };
+        var count = scene.Playlist.Count;
+        return scene with
+        {
+            Playlist = ListEdit.InsertRange(
+                scene.Playlist,
+                Math.Clamp(index ?? count, 0, count),
+                trackIds.Select(id => new PlaylistEntry(Guid.NewGuid(), id))
+            ),
+        };
     }
 
     /// <summary>Removes entries <paramref name="entryIds"/>.</summary>
     public static Scene Remove(Scene scene, IReadOnlyCollection<Guid> entryIds)
     {
-        foreach (var id in entryIds)
-            Require(scene, id);
+        RequireAll(scene, entryIds);
         if (entryIds.Count == 0)
             return scene;
         return scene with { Playlist = scene.Playlist.Where(e => !entryIds.Contains(e.Id)).ToArray() };
@@ -61,9 +65,10 @@ public static class PlaylistEditing
         var clamped = loops is { } n ? Math.Clamp(n, 1, MaxLoops) : (int?)null;
         if (scene.Playlist[index].Loops == clamped)
             return scene;
-        var entries = scene.Playlist.ToArray();
-        entries[index] = entries[index] with { Loops = clamped };
-        return scene with { Playlist = entries };
+        return scene with
+        {
+            Playlist = ListEdit.Replace(scene.Playlist, index, scene.Playlist[index] with { Loops = clamped }),
+        };
     }
 
     /// <summary>How repeat count <paramref name="loops"/> reads; 0 follows the track: forever when that holds the playlist, else once.</summary>
@@ -83,13 +88,7 @@ public static class PlaylistEditing
         scene.PlaylistLoops == loops ? scene : scene with { PlaylistLoops = loops };
 
     /// <summary>The index of entry <paramref name="entryId"/>, or −1.</summary>
-    public static int IndexOf(Scene scene, Guid entryId)
-    {
-        for (var i = 0; i < scene.Playlist.Count; i++)
-            if (scene.Playlist[i].Id == entryId)
-                return i;
-        return -1;
-    }
+    public static int IndexOf(Scene scene, Guid entryId) => ListEdit.IndexOf(scene.Playlist, e => e.Id == entryId);
 
     /// <summary>True when an entry holds the playlist for good: no loop count and a looping track with points.</summary>
     public static bool HoldsPlaylist(Scene scene, PlaylistEntry entry) =>
@@ -101,7 +100,12 @@ public static class PlaylistEditing
 
     /// <summary>The index of entry <paramref name="entryId"/>, refusing an unknown one.</summary>
     public static int Require(Scene scene, Guid entryId) =>
-        IndexOf(scene, entryId) is var index and >= 0
-            ? index
-            : throw new ArgumentException("There is no such playlist entry.");
+        IndexOf(scene, entryId) is var index and >= 0 ? index : throw new ArgumentException(NoSuchEntry);
+
+    /// <summary>Refuses unless every one of entries <paramref name="entryIds"/> is in the playlist.</summary>
+    public static void RequireAll(Scene scene, IEnumerable<Guid> entryIds)
+    {
+        foreach (var id in entryIds)
+            Require(scene, id);
+    }
 }

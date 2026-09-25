@@ -7,6 +7,9 @@ namespace Vista.Plugin.Session;
 /// <summary>The save folder and the open scene's library, kept in step with the settings; asks for Setup when the folder is gone.</summary>
 internal sealed class SceneFiles
 {
+    /// <summary>Why a scene or preset action is refused before Setup has chosen a folder.</summary>
+    private const string NoFolder = "No save folder is chosen.";
+
     private const string DemoResource = "Vista.Demo.";
 
     private readonly Configuration config;
@@ -114,13 +117,13 @@ internal sealed class SceneFiles
     public string? AddPreset(string name)
     {
         if (library is not { } l)
-            return "No save folder is chosen.";
+            return NoFolder;
         Preset preset;
         try
         {
             preset = l.Folder.LoadPreset(name);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        catch (Exception e) when (SceneFolder.IsUnreadable(e))
         {
             return Report($"Could not add preset {name}: {e.Message}");
         }
@@ -147,7 +150,7 @@ internal sealed class SceneFiles
         {
             folder.Create();
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return Report($"Could not create {folder.Root}: {e.Message}");
         }
@@ -178,7 +181,7 @@ internal sealed class SceneFiles
                 using var reader = new StreamReader(assembly.GetManifestResourceStream(resource)!);
                 folder.AddScene(Path.GetFileNameWithoutExtension(resource[DemoResource.Length..]), reader.ReadToEnd());
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            catch (Exception e) when (SceneFolder.IsFileError(e))
             {
                 Report($"Could not add the demo scene: {e.Message}");
                 return;
@@ -192,7 +195,7 @@ internal sealed class SceneFiles
     private string? Run(Func<SceneLibrary, string?> action)
     {
         if (library is not { } l)
-            return "No save folder is chosen.";
+            return NoFolder;
         var refusal = Report(action(l));
         if (l.CurrentName.Length > 0 && config.LastScene != l.CurrentName)
         {
@@ -207,13 +210,13 @@ internal sealed class SceneFiles
     private string? Files(string doing, Action<SceneFolder> action)
     {
         if (library is not { } l)
-            return "No save folder is chosen.";
+            return NoFolder;
         try
         {
             action(l.Folder);
             return null;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return Report($"Could not {doing}: {e.Message}");
         }

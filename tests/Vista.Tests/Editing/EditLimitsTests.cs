@@ -27,6 +27,14 @@ public class EditLimitsTests
         Assert.Equal(expected, EditLimits.Angle(input, 0.7f), 4);
 
     [Fact]
+    public void AnAngleIsShownInDegreesWithinHalfATurn()
+    {
+        // 190° is −170° wrapped; 30° stays.
+        Assert.Equal(-170f, EditLimits.AngleDegrees(190f * Deg), 1e-3f);
+        Assert.Equal(30f, EditLimits.AngleDegrees(30f * Deg), 1e-4f);
+    }
+
+    [Fact]
     public void FovClampsToFiveToOneHundredAndTwentyDegrees()
     {
         Assert.Equal(5f * Deg, EditLimits.Fov(1f * Deg, 0.7f), 5);

@@ -80,7 +80,7 @@ internal sealed class EditorLayer
         }
 
         var track =
-            editing && gizmo.Preview is { } preview && preview.Index < session.Track.Points.Count
+            editing && gizmo.Preview is { } preview && TrackEditing.IsPoint(session.Track, preview.Index)
                 ? TrackEditing.Replace(session.Track, preview.Index, preview.Point)
                 : session.Track;
         AddMarkers(

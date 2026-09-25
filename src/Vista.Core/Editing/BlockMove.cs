@@ -37,11 +37,8 @@ public static class BlockMove
     }
 
     /// <summary>Where the row at <paramref name="old"/> went in <paramref name="order"/>.</summary>
-    public static int NewIndex(IReadOnlyList<int> order, int old)
-    {
-        for (var i = 0; i < order.Count; i++)
-            if (order[i] == old)
-                return i;
-        throw new ArgumentException("That row isn't in the order.");
-    }
+    public static int NewIndex(IReadOnlyList<int> order, int old) =>
+        ListEdit.IndexOf(order, i => i == old) is var index and >= 0
+            ? index
+            : throw new ArgumentException("That row isn't in the order.");
 }

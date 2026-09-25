@@ -168,15 +168,14 @@ public static class TrackEditing
         if (index == track.Points.Count - 1)
             return Append(track, point);
 
-        var points = track.Points.ToList();
-        points.Insert(index + 1, point);
-        var timing = track.Timing.ToList();
-        timing.Insert(index + 1, new PointTiming(LegSpeed: track.Timing[index + 1].LegSpeed));
-
         return track with
         {
-            Points = points,
-            Timing = timing,
+            Points = ListEdit.Insert(track.Points, index + 1, point),
+            Timing = ListEdit.Insert(
+                track.Timing,
+                index + 1,
+                new PointTiming(LegSpeed: track.Timing[index + 1].LegSpeed)
+            ),
         };
     }
 
@@ -237,11 +236,12 @@ public static class TrackEditing
     public static Track Replace(Track track, int index, ControlPoint point)
     {
         ValidatePointIndex(track, index, "Replace");
-        if (Equals(track.Points[index], point))
-            return track;
-
-        var points = new List<ControlPoint>(track.Points) { [index] = point };
-        return track with { Points = points };
+        return Equals(track.Points[index], point)
+            ? track
+            : track with
+            {
+                Points = ListEdit.Replace(track.Points, index, point),
+            };
     }
 
     /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it. Unchanged when not finite.</summary>
@@ -428,19 +428,29 @@ public static class TrackEditing
     /// <summary>The track with point <paramref name="index"/>'s timing replaced, or the same track when it is unchanged.</summary>
     internal static Track WithTiming(Track track, int index, PointTiming value)
     {
-        if (track.Timing[index] == value)
-            return track;
-        var timing = track.Timing.ToList();
-        timing[index] = value;
-        return track with { Timing = timing };
+        return track.Timing[index] == value
+            ? track
+            : track with
+            {
+                Timing = ListEdit.Replace(track.Timing, index, value),
+            };
     }
+
+    /// <summary>True when <paramref name="index"/> is one of the track's points.</summary>
+    public static bool IsPoint(Track track, int index) => index >= 0 && index < track.Points.Count;
+
+    /// <summary>True when <paramref name="leg"/> is one of the track's legs, 1 to one less than its points.</summary>
+    public static bool IsLeg(Track track, int leg) => leg >= 1 && leg < track.Points.Count;
+
+    /// <summary>True when <paramref name="key"/> is one of the track's timing keys.</summary>
+    public static bool IsKey(Track track, int key) => key >= 0 && key < KeyCount(track);
 
     internal static void ValidateLegIndex(Track track, int index)
     {
         var n = track.Points.Count;
         if (n < 2)
             throw new ArgumentOutOfRangeException(null, "This track has no legs.");
-        if (index < 1 || index > n - 1)
+        if (!IsLeg(track, index))
             throw new ArgumentOutOfRangeException(null, $"Leg index must be 1..{n - 1} for a {n}-point track.");
     }
 
@@ -449,7 +459,7 @@ public static class TrackEditing
         var n = track.Points.Count;
         if (n == 0)
             throw new ArgumentOutOfRangeException(null, "This track has no points.");
-        if (index < 0 || index > n - 1)
+        if (!IsPoint(track, index))
             throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track.");
     }
 
@@ -457,9 +467,8 @@ public static class TrackEditing
 
     private static (int Point, KeyRole Role) Locate(Track track, int key)
     {
-        var count = KeyCount(track);
-        if (key < 0 || key >= count)
-            throw new ArgumentOutOfRangeException(null, $"Key index must be 0..{count - 1}.");
+        if (!IsKey(track, key))
+            throw new ArgumentOutOfRangeException(null, $"Key index must be 0..{KeyCount(track) - 1}.");
 
         var first = 0;
         for (var p = 0; ; p++)

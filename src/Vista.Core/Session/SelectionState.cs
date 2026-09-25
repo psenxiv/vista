@@ -15,6 +15,7 @@ public sealed class SelectionState
     private const string TrackAnchorUnplaced = "A track's anchor is placed with its first point.";
     private const string FollowAnchorHidden = "A Follow Target track's anchor is hidden.";
     private const string LookAtUnused = "The Look At point is used only while the track aims at it.";
+    private const string AnchorsOnlyWhileEditing = "Anchors can only be selected while editing.";
 
     private readonly SessionState session;
     private SelectedItems selection = SelectedItems.None;
@@ -76,7 +77,7 @@ public sealed class SelectionState
     {
         if (session.Mode != CameraMode.Editing)
             return;
-        var point = index is { } i && i >= 0 && i < session.StoredTrack.Points.Count ? i : (int?)null;
+        var point = index is { } i && TrackEditing.IsPoint(session.StoredTrack, i) ? i : (int?)null;
         SelectAnchorless(new SelectedItems(point is { } p ? [p] : [], [], []));
         LastPoint = point;
     }
@@ -85,7 +86,7 @@ public sealed class SelectionState
     public void ClickPoint(int index, RowClick click)
     {
         var count = session.StoredTrack.Points.Count;
-        if (session.Mode != CameraMode.Editing || index < 0 || index >= count)
+        if (session.Mode != CameraMode.Editing || !TrackEditing.IsPoint(session.StoredTrack, index))
             return;
         if (click == RowClick.Plain)
         {
@@ -113,8 +114,8 @@ public sealed class SelectionState
         var scene = session.Scene;
         if (session.Mode != CameraMode.Editing)
             return "Tracks can only be selected while editing.";
-        if (SceneEditing.IndexOf(scene, id) < 0)
-            return "There is no such track.";
+        if (!SceneEditing.TryGet(scene, id, out _))
+            return SceneEditing.NoSuchTrack;
         if (click == RowClick.Plain)
         {
             if (session.SwitchTrack(id) is { } refusal)
@@ -148,7 +149,7 @@ public sealed class SelectionState
         if (session.Mode != CameraMode.Editing)
             return "Playlist entries can only be selected while editing.";
         if (PlaylistEditing.IndexOf(scene, id) < 0)
-            return "There is no such playlist entry.";
+            return PlaylistEditing.NoSuchEntry;
         if (click != RowClick.Plain && (selection.Points.Count >= 2 || Tracks.Count >= 2))
             return null;
 
@@ -204,7 +205,7 @@ public sealed class SelectionState
             return;
         var local = session.StoredTrack;
         Leg = null;
-        Key = key is { } k && k >= 0 && k < TrackEditing.KeyCount(local) ? k : null;
+        Key = key is { } k && TrackEditing.IsKey(local, k) ? k : null;
         if (Key is { } s && TrackEditing.RoleOf(local, s) == KeyRole.Point)
         {
             SelectAnchorless(new SelectedItems([TrackEditing.PointOf(local, s)], [], []));
@@ -218,14 +219,14 @@ public sealed class SelectionState
         if (session.Mode != CameraMode.Editing)
             return;
         Key = null;
-        Leg = leg is { } l && l >= 1 && l < session.StoredTrack.Points.Count ? l : null;
+        Leg = leg is { } l && TrackEditing.IsLeg(session.StoredTrack, l) ? l : null;
     }
 
     /// <summary>Selects the scene anchor, clearing any point. Returns why it was refused, or null.</summary>
     public string? SelectSceneAnchor()
     {
         if (session.Mode != CameraMode.Editing)
-            return "Anchors can only be selected while editing.";
+            return AnchorsOnlyWhileEditing;
         if (UnplacedRefusal(AnchorKind.Scene) is { } unplaced)
             return unplaced;
         SelectAnchor(AnchorKind.Scene);
@@ -236,10 +237,9 @@ public sealed class SelectionState
     public string? SelectTrackAnchor(Guid id)
     {
         if (session.Mode != CameraMode.Editing)
-            return "Anchors can only be selected while editing.";
-        if (SceneEditing.IndexOf(session.Scene, id) < 0)
-            return "There is no such track.";
-        var track = SceneEditing.Get(session.Scene, id);
+            return AnchorsOnlyWhileEditing;
+        if (!SceneEditing.TryGet(session.Scene, id, out var track))
+            return SceneEditing.NoSuchTrack;
         if (!track.ShowsAnchor)
             return track.Aim == AimMode.FollowTarget ? FollowAnchorHidden : TrackAnchorUnplaced;
         if (session.SwitchTrack(id) is { } refusal)
@@ -253,9 +253,9 @@ public sealed class SelectionState
     {
         if (session.Mode != CameraMode.Editing)
             return "The Look At point can only be selected while editing.";
-        if (SceneEditing.IndexOf(session.Scene, id) < 0)
-            return "There is no such track.";
-        if (!SceneEditing.Get(session.Scene, id).UsesLookAt)
+        if (!SceneEditing.TryGet(session.Scene, id, out var track))
+            return SceneEditing.NoSuchTrack;
+        if (!track.UsesLookAt)
             return LookAtUnused;
         if (session.SwitchTrack(id) is { } refusal)
             return refusal;
@@ -292,7 +292,7 @@ public sealed class SelectionState
     internal void AfterCommit(IReadOnlyList<int> points, Track edited)
     {
         selection = selection with { Points = points };
-        if (points.Count == 0 || LastPoint >= edited.Points.Count)
+        if (points.Count == 0 || (LastPoint is { } last && !TrackEditing.IsPoint(edited, last)))
             LastPoint = null;
         if (Anchor is { } kind && UnplacedRefusal(kind) is not null)
             Anchor = null;
@@ -302,9 +302,9 @@ public sealed class SelectionState
     internal void AfterTiming()
     {
         var local = session.StoredTrack;
-        if (Key is { } key && key >= TrackEditing.KeyCount(local))
+        if (Key is { } key && !TrackEditing.IsKey(local, key))
             Key = null;
-        if (Leg is { } leg && leg >= local.Points.Count)
+        if (Leg is { } leg && !TrackEditing.IsLeg(local, leg))
             Leg = null;
     }
 
@@ -344,9 +344,7 @@ public sealed class SelectionState
             Leg = null;
         if (
             Key is { } key
-            && (
-                Point is null || key >= TrackEditing.KeyCount(local) || TrackEditing.RoleOf(local, key) != KeyRole.Point
-            )
+            && (Point is null || !TrackEditing.IsKey(local, key) || TrackEditing.RoleOf(local, key) != KeyRole.Point)
         )
             Key = null;
         if (Point is not null && Leg is null)
@@ -396,7 +394,7 @@ public sealed class SelectionState
         }
         else if (
             Key is { } key
-            && (key >= TrackEditing.KeyCount(local) || TrackEditing.RoleOf(local, key) == KeyRole.Point)
+            && (!TrackEditing.IsKey(local, key) || TrackEditing.RoleOf(local, key) == KeyRole.Point)
         )
         {
             Key = null;

@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Vista.Core.Camera;
+using Vista.Core.Display;
 using Vista.Core.Session;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Editor;
@@ -48,7 +49,7 @@ internal sealed class FollowTargetWindow : TargetWindow
             EditorColours.AxisX,
             ref distance,
             0.05f,
-            "%.2f",
+            Units.YalmsField,
             width
         );
         LiveDrag.Handle(
@@ -60,7 +61,15 @@ internal sealed class FollowTargetWindow : TargetWindow
 
         ImGui.SameLine();
         var height = current.Height;
-        changed = BorderedField.Draw("orbit-height", "Height", EditorColours.AxisY, ref height, 0.05f, "%.2f", width);
+        changed = BorderedField.Draw(
+            "orbit-height",
+            "Height",
+            EditorColours.AxisY,
+            ref height,
+            0.05f,
+            Units.YalmsField,
+            width
+        );
         LiveDrag.Handle(
             session,
             changed,
@@ -70,7 +79,15 @@ internal sealed class FollowTargetWindow : TargetWindow
 
         ImGui.SameLine();
         var degrees = Angles.Degrees(current.Angle);
-        changed = BorderedField.Draw("orbit-angle", "Angle", EditorColours.AxisZ, ref degrees, 0.5f, "%.0f°", width);
+        changed = BorderedField.Draw(
+            "orbit-angle",
+            "Angle",
+            EditorColours.AxisZ,
+            ref degrees,
+            0.5f,
+            Units.DegreesField,
+            width
+        );
         LiveDrag.Handle(
             session,
             changed,

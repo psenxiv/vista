@@ -17,6 +17,20 @@ public class TrackEditingTests
     private static float Total(Track track) => (float)new TrackEvaluator(track).Duration;
 
     [Fact]
+    public void PointLegAndKeyIndicesAreCheckedAtBothEnds()
+    {
+        // Three points: points 0 to 2, legs 1 and 2, and with a hold on point 1, keys 0 to 3.
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+
+        Assert.Equal(
+            [false, true, true, true, false],
+            new[] { -1, 0, 1, 2, 3 }.Select(i => TrackEditing.IsPoint(track, i))
+        );
+        Assert.Equal([false, true, true, false], new[] { 0, 1, 2, 3 }.Select(i => TrackEditing.IsLeg(track, i)));
+        Assert.Equal([false, true, true, false], new[] { -1, 0, 3, 4 }.Select(i => TrackEditing.IsKey(track, i)));
+    }
+
+    [Fact]
     public void ANewTrackMovesAtFiveYalmsPerSecond() => Assert.Equal(5f, TrackEditing.Empty().Speed);
 
     [Fact]

@@ -15,6 +15,17 @@ public sealed class SceneFolderTests : IDisposable
     public void Dispose() => temp.Dispose();
 
     [Fact]
+    public void FileErrorsAreMissingLockedOrForbiddenFilesAndUnreadableAddsBadContent()
+    {
+        Assert.True(SceneFolder.IsFileError(new FileNotFoundException()));
+        Assert.True(SceneFolder.IsFileError(new UnauthorizedAccessException()));
+        Assert.False(SceneFolder.IsFileError(new InvalidDataException()));
+        Assert.True(SceneFolder.IsUnreadable(new InvalidDataException()));
+        Assert.True(SceneFolder.IsUnreadable(new IOException()));
+        Assert.False(SceneFolder.IsUnreadable(new ArgumentException()));
+    }
+
+    [Fact]
     public void TheRootIsVistaxivInsideTheParent()
     {
         Assert.Equal(Path.Combine("parent", "vistaxiv"), SceneFolder.RootFor("parent"));

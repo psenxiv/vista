@@ -3,6 +3,7 @@ using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
+using Vista.Core.Tracks;
 
 namespace Vista.Plugin.Ui.Widgets;
 
@@ -47,9 +48,11 @@ internal static unsafe class DragRows
             payload.Group
         );
 
-    /// <summary>The points a dropped point payload carries: the selection, or the grabbed point alone.</summary>
+    /// <summary>The points a dropped point payload carries: the selection, or the grabbed point alone while it is still in the track.</summary>
     public static IReadOnlyList<int> Points(SessionState session, Payload payload) =>
-        payload.Group ? session.Selection.Points : [payload.Grabbed];
+        payload.Group ? session.Selection.Points
+        : TrackEditing.IsPoint(session.Track, payload.Grabbed) ? [payload.Grabbed]
+        : [];
 
     /// <summary>The entries a dropped entry payload carries: the selection, or the grabbed entry alone.</summary>
     public static IReadOnlyList<Guid> Entries(SessionState session, Scene scene, Payload payload) =>

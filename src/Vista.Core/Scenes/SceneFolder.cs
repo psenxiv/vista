@@ -20,6 +20,12 @@ public sealed class SceneFolder
     /// <summary>The vistaxiv folder inside <paramref name="parent"/>.</summary>
     public static string RootFor(string parent) => Path.Combine(parent, FolderName);
 
+    /// <summary>True for the errors reading or writing a file can be expected to throw: missing, locked or forbidden.</summary>
+    public static bool IsFileError(Exception e) => e is IOException or UnauthorizedAccessException;
+
+    /// <summary>True for a file error, or a file that was read but isn't a scene or preset Vista can use.</summary>
+    public static bool IsUnreadable(Exception e) => e is InvalidDataException || IsFileError(e);
+
     /// <summary>The vistaxiv folder.</summary>
     public string Root { get; }
 
@@ -115,7 +121,7 @@ public sealed class SceneFolder
             var files = Directory.Exists(dir) ? Directory.GetFiles(dir) : [];
             return files.Where(f => string.Equals(Path.GetExtension(f), Extension, StringComparison.OrdinalIgnoreCase));
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (IsFileError(e))
         {
             unreadable?.Invoke(dir, e);
             return [];
@@ -132,7 +138,7 @@ public sealed class SceneFolder
                 read(File.ReadAllText(file));
                 names.Add(Path.GetFileNameWithoutExtension(file));
             }
-            catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
+            catch (Exception e) when (IsUnreadable(e))
             {
                 unreadable?.Invoke(file, e);
             }

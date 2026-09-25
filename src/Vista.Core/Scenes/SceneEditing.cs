@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
 
@@ -6,30 +7,36 @@ namespace Vista.Core.Scenes;
 /// <summary>Edits a scene's tracks: add, rename, duplicate, delete, reorder and hide.</summary>
 public static class SceneEditing
 {
+    /// <summary>Why a track Id can't be used: no track has it.</summary>
+    public const string NoSuchTrack = "There is no such track.";
+
     /// <summary>A scene holding one empty track, "Track 1".</summary>
     public static Scene New() => new([TrackEditing.Empty()], new HashSet<Guid>(), []);
 
     /// <summary>The index of track <paramref name="id"/>, or −1.</summary>
-    public static int IndexOf(Scene scene, Guid id)
-    {
-        for (var i = 0; i < scene.Tracks.Count; i++)
-            if (scene.Tracks[i].Id == id)
-                return i;
-        return -1;
-    }
+    public static int IndexOf(Scene scene, Guid id) => ListEdit.IndexOf(scene.Tracks, t => t.Id == id);
 
     /// <summary>Track <paramref name="id"/>.</summary>
     public static Track Get(Scene scene, Guid id) => scene.Tracks[Require(scene, id)];
+
+    /// <summary>Track <paramref name="id"/> in <paramref name="track"/>, or false when there is none.</summary>
+    public static bool TryGet(Scene scene, Guid id, [NotNullWhen(true)] out Track? track)
+    {
+        var index = IndexOf(scene, id);
+        track = index >= 0 ? scene.Tracks[index] : null;
+        return track is not null;
+    }
 
     /// <summary>Puts <paramref name="track"/> in place of the track with its Id.</summary>
     public static Scene Replace(Scene scene, Track track)
     {
         var index = Require(scene, track.Id);
-        if (ReferenceEquals(scene.Tracks[index], track))
-            return scene;
-        var tracks = scene.Tracks.ToArray();
-        tracks[index] = track;
-        return scene with { Tracks = tracks };
+        return ReferenceEquals(scene.Tracks[index], track)
+            ? scene
+            : scene with
+            {
+                Tracks = ListEdit.Replace(scene.Tracks, index, track),
+            };
     }
 
     /// <summary>Adds an empty track at the end, named the first "Track N" no other track has.</summary>
@@ -55,16 +62,13 @@ public static class SceneEditing
         var index = Require(scene, id);
         var original = scene.Tracks[index];
         var copy = original with { Id = Guid.NewGuid(), Name = SceneNames.CopyOf(original.Name, Names(scene)) };
-        var tracks = scene.Tracks.ToList();
-        tracks.Insert(index + 1, copy);
-        return (scene with { Tracks = tracks }, copy.Id);
+        return (scene with { Tracks = ListEdit.Insert(scene.Tracks, index + 1, copy) }, copy.Id);
     }
 
     /// <summary>Deletes tracks <paramref name="ids"/> and their playlist entries, refusing to delete every track; names the track to edit after: <paramref name="edited"/> if it stays, else the first remaining track after it, or the last.</summary>
     public static (Scene Scene, Guid Edited) Delete(Scene scene, IReadOnlyCollection<Guid> ids, Guid edited)
     {
-        foreach (var id in ids)
-            Require(scene, id);
+        RequireAll(scene, ids);
         var at = Require(scene, edited);
         var gone = ids.ToHashSet();
         if (!CanDelete(scene, gone))
@@ -100,8 +104,7 @@ public static class SceneEditing
     /// <summary>Hides or shows tracks <paramref name="ids"/>.</summary>
     public static Scene SetHidden(Scene scene, IReadOnlyCollection<Guid> ids, bool hidden)
     {
-        foreach (var id in ids)
-            Require(scene, id);
+        RequireAll(scene, ids);
         if (ids.All(id => scene.Hidden.Contains(id) == hidden))
             return scene;
         var set = new HashSet<Guid>(scene.Hidden);
@@ -134,5 +137,12 @@ public static class SceneEditing
 
     /// <summary>The index of track <paramref name="id"/>, refusing an unknown one.</summary>
     public static int Require(Scene scene, Guid id) =>
-        IndexOf(scene, id) is var index and >= 0 ? index : throw new ArgumentException("There is no such track.");
+        IndexOf(scene, id) is var index and >= 0 ? index : throw new ArgumentException(NoSuchTrack);
+
+    /// <summary>Refuses unless every one of tracks <paramref name="ids"/> is in the scene.</summary>
+    public static void RequireAll(Scene scene, IEnumerable<Guid> ids)
+    {
+        foreach (var id in ids)
+            Require(scene, id);
+    }
 }

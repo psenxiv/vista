@@ -3,6 +3,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Vista.Core.Camera;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
@@ -63,25 +64,25 @@ internal sealed class CameraWindow : Window
             EditorColours.AxisX,
             Angles.Degrees(pitch),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             v => game.TurnCamera(yaw, EditLimits.Pitch(Angles.Radians(v), pitch))
         );
         Field(
             "cam-yaw",
             "Yaw",
             EditorColours.AxisY,
-            Angles.Degrees(Angles.Wrap(yaw)),
+            EditLimits.AngleDegrees(yaw),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             v => game.TurnCamera(EditLimits.Angle(Angles.Radians(v), yaw), pitch)
         );
         Field(
             "cam-roll",
             "Roll",
             EditorColours.AxisZ,
-            Angles.Degrees(Angles.Wrap(game.CameraRoll)),
+            EditLimits.AngleDegrees(game.CameraRoll),
             PoseGrid.AngleSpeed,
-            "%.1f°",
+            Units.DegreesField,
             v => game.CameraRoll = EditLimits.Angle(Angles.Radians(v), game.CameraRoll)
         );
 
@@ -102,7 +103,7 @@ internal sealed class CameraWindow : Window
             null,
             Angles.Degrees(game.CameraFov),
             PoseGrid.FovSpeed,
-            "%.1f°",
+            Units.DegreesField,
             v => game.CameraFov = EditLimits.Fov(Angles.Radians(v), game.CameraFov)
         );
 
@@ -122,7 +123,7 @@ internal sealed class CameraWindow : Window
                 border,
                 position[at],
                 PoseGrid.PositionSpeed,
-                "%.2f",
+                Units.YalmsField,
                 v => game.CameraPosition = EditLimits.Coordinate(position, at, v)
             );
         }
@@ -139,7 +140,7 @@ internal sealed class CameraWindow : Window
                 border,
                 0f,
                 PoseGrid.PositionSpeed,
-                "%.2f",
+                Units.YalmsField,
                 v =>
                 {
                     if (float.IsFinite(v))

@@ -11,6 +11,9 @@ namespace Vista.Plugin.Session;
 /// <summary>Carries out the session's mode changes in game: free-cam, movement lock, camera ownership and UI; and edits that need the camera.</summary>
 internal sealed class GameSession
 {
+    /// <summary>Why an edit that needs the camera is refused when it can't be read.</summary>
+    private const string CameraUnreadable = "Cannot read the camera.";
+
     private readonly NearbyCharacters characters = new();
     private readonly SessionState state;
     private readonly FreeCam freeCam = new();
@@ -247,7 +250,7 @@ internal sealed class GameSession
             return state.SetAim(aim, camera);
         var placesFromCamera = TrackEditing.LookAtFromCamera(state.Track, aim);
         return state.Mode == CameraMode.Editing && placesFromCamera
-            ? "Cannot read the camera."
+            ? CameraUnreadable
             : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
     }
 
@@ -272,7 +275,7 @@ internal sealed class GameSession
     /// <summary>Puts the free-cam at point <paramref name="index"/> while editing, as a scrub release would.</summary>
     public void JumpToPoint(int index)
     {
-        if (state.Mode != CameraMode.Editing || index < 0 || index >= state.Track.Points.Count)
+        if (state.Mode != CameraMode.Editing || !TrackEditing.IsPoint(state.Track, index))
             return;
         state.Transport.ScrubTo(state.World.Evaluator.PointSeconds(index));
         if (state.World.FrameAt(state.Transport.ScrubHead) is { } frame)
@@ -301,7 +304,7 @@ internal sealed class GameSession
     {
         if (state.AddPointRefusal is { } refusal)
             return refusal;
-        return CameraPoint() is { } point ? edit(point) : "Cannot read the camera.";
+        return CameraPoint() is { } point ? edit(point) : CameraUnreadable;
     }
 
     /// <summary>The current camera as a control point, or the previewed frame while previewing; null when the camera can't be read.</summary>

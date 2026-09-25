@@ -14,9 +14,8 @@ public sealed class SessionState
     private readonly EditHistory history = new();
     private readonly Func<Vector3, float?> groundBelow;
     private readonly NearbyCharacters? aimTargets;
+    private readonly EvaluatorCache liveStartEvaluator = new();
     private EditSnapshot? liveEditStart;
-    private Track? evaluatedStart;
-    private TrackEvaluator? liveStartEvaluator;
 
     /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds watched or followed characters.</summary>
     public SessionState(Func<Vector3, float?>? groundBelow = null, NearbyCharacters? aimTargets = null)
@@ -83,6 +82,18 @@ public sealed class SessionState
 
     /// <summary>True when Vista hasn't stopped and the playlist has an entry whose track has points.</summary>
     public bool CanGoLive => !Stopped && PlaylistEditing.CanPlay(Scene);
+
+    /// <summary>Why a preview is refused outside a live edit.</summary>
+    private const string NoLiveEdit = "No live edit is in progress.";
+
+    /// <summary>Why a track edit is refused outside Edit.</summary>
+    private const string TrackOnlyWhileEditing = "The track can only change while editing.";
+
+    /// <summary>Why an edit of the selected point is refused with none selected.</summary>
+    private const string SelectAPoint = "Select a point first.";
+
+    /// <summary>Why an edit of points is refused when one isn't in the track.</summary>
+    private const string NoSuchPoint = "There is no such point.";
 
     /// <summary>What the player is told once Vista has stopped, and why Edit and Live are refused.</summary>
     public const string StopMessage =
@@ -290,8 +301,8 @@ public sealed class SessionState
     {
         if (Mode != CameraMode.Editing)
             return "Tracks can only be switched while editing.";
-        if (SceneEditing.IndexOf(Scene, id) < 0)
-            return "There is no such track.";
+        if (!SceneEditing.TryGet(Scene, id, out _))
+            return SceneEditing.NoSuchTrack;
         if (Scene.Hidden.Contains(id) && SetTracksHidden([id], false) is { } refusal)
             return refusal;
         if (id == EditedTrackId)
@@ -391,7 +402,7 @@ public sealed class SessionState
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change) =>
-        Apply(change, result => Selection.Points.Where(p => p < result.Points.Count).ToArray());
+        Apply(change, result => Selection.Points.Where(p => TrackEditing.IsPoint(result, p)).ToArray());
 
     /// <summary>Appends a world point, placing the anchors under a first point; the selection is unchanged.</summary>
     public string? AddToEnd(ControlPoint point) =>
@@ -428,15 +439,15 @@ public sealed class SessionState
     public string? DeleteSelected()
     {
         if (Mode != CameraMode.Editing)
-            return "The track can only change while editing.";
-        return Selection.Points.Count == 0 ? "Select a point first." : DeletePoints(Selection.Points);
+            return TrackOnlyWhileEditing;
+        return Selection.Points.Count == 0 ? SelectAPoint : DeletePoints(Selection.Points);
     }
 
     /// <summary>Deletes points <paramref name="indices"/>; any other selected point stays selected.</summary>
     public string? DeletePoints(IReadOnlyCollection<int> indices)
     {
-        if (indices.Count == 0 || indices.Any(i => i < 0 || i >= Local.Points.Count))
-            return "There is no such point.";
+        if (indices.Count == 0 || !indices.All(i => TrackEditing.IsPoint(Local, i)))
+            return NoSuchPoint;
         int? Kept(int p) => indices.Contains(p) ? null : p - indices.Distinct().Count(d => d < p);
         var kept = Selection.Points.Select(Kept).OfType<int>().ToArray();
         var last = Selection.LastPoint is { } l ? Kept(l) : null;
@@ -450,9 +461,9 @@ public sealed class SessionState
     public string? MovePointsTo(IReadOnlyCollection<int> indices, Guid? destination)
     {
         if (Mode != CameraMode.Editing)
-            return "The track can only change while editing.";
-        if (indices.Count == 0 || indices.Any(i => i < 0 || i >= Local.Points.Count))
-            return "There is no such point.";
+            return TrackOnlyWhileEditing;
+        if (indices.Count == 0 || !indices.All(i => TrackEditing.IsPoint(Local, i)))
+            return NoSuchPoint;
 
         var points = indices.Distinct().Order().ToArray();
         var world = Track;
@@ -484,15 +495,9 @@ public sealed class SessionState
     /// <summary>Moves points <paramref name="points"/>, grabbed by <paramref name="grabbed"/>, as a block onto <paramref name="target"/>, or the end when null; the selection stays on the same points.</summary>
     public string? MovePoints(IReadOnlyCollection<int> points, int grabbed, int? target)
     {
-        int[]? order;
-        try
-        {
-            order = BlockMove.Order(Local.Points.Count, points, grabbed, target);
-        }
-        catch (ArgumentException ex)
-        {
-            return ex.Message;
-        }
+        int[]? order = null;
+        if (Refusal(() => order = BlockMove.Order(Local.Points.Count, points, grabbed, target)) is { } refused)
+            return refused;
         if (order is null)
             return null;
 
@@ -541,8 +546,8 @@ public sealed class SessionState
     }
 
     private string? SelectionRefusal() =>
-        Mode != CameraMode.Editing ? "The track can only change while editing."
-        : Selection.Points.Count == 0 ? "Select a point first."
+        Mode != CameraMode.Editing ? TrackOnlyWhileEditing
+        : Selection.Points.Count == 0 ? SelectAPoint
         : Selection.Points.Count > 1 ? "Select one point first."
         : null;
 
@@ -670,25 +675,20 @@ public sealed class SessionState
     public string? PreviewPoint(int index, ControlPoint point)
     {
         if (liveEditStart is null)
-            return "No live edit is in progress.";
-        try
+            return NoLiveEdit;
+        return Refusal(() =>
         {
             var result = TrackEditing.Replace(Local, index, ToLocal(point));
             _ = new TrackEvaluator(result);
             Local = result;
-            return null;
-        }
-        catch (ArgumentException ex)
-        {
-            return ex.Message;
-        }
+        });
     }
 
     /// <summary>During a live edit, sets the aim height without recording a step. Returns why it was refused, or null.</summary>
     public string? PreviewAimHeight(float yalms)
     {
         if (liveEditStart is null)
-            return "No live edit is in progress.";
+            return NoLiveEdit;
         Local = TrackEditing.SetAimHeight(Local, yalms);
         return null;
     }
@@ -697,7 +697,7 @@ public sealed class SessionState
     public string? PreviewFollowOrbit(Orbit orbit)
     {
         if (liveEditStart is null)
-            return "No live edit is in progress.";
+            return NoLiveEdit;
         if (Local is not { Aim: AimMode.FollowTarget, Points.Count: 1 } local)
             return "Only a Follow Target track with its point has an orbit.";
         Local = TrackEditing.Replace(local, 0, Tracks.Aiming.FollowOrbit.With(local.Points[0], orbit));
@@ -730,7 +730,7 @@ public sealed class SessionState
     public string? PreviewAnchor(Anchor world, bool carry)
     {
         if (liveEditStart is not { } start)
-            return "No live edit is in progress.";
+            return NoLiveEdit;
         if (Selection.Anchor is not { } kind || kind == AnchorKind.LookAt)
             return "Select an anchor first.";
         if (Selection.UnplacedRefusal(kind) is { } unplaced)
@@ -746,7 +746,7 @@ public sealed class SessionState
     public string? PreviewLookAt(Vector3 world)
     {
         if (liveEditStart is null)
-            return "No live edit is in progress.";
+            return NoLiveEdit;
         if (Selection.Anchor != AnchorKind.LookAt)
             return "Select the Look At point first.";
         if (Selection.UnplacedRefusal(AnchorKind.LookAt) is { } unused)
@@ -775,25 +775,15 @@ public sealed class SessionState
     private string? PreviewFromStart(Func<Track, TrackEvaluator, Track> change)
     {
         if (liveEditStart is not { } start)
-            return "No live edit is in progress.";
+            return NoLiveEdit;
         var startTrack = SceneEditing.Get(start.Scene, start.Edited);
-        if (!ReferenceEquals(evaluatedStart, startTrack))
+        var evaluator = liveStartEvaluator.For(startTrack);
+        return Refusal(() =>
         {
-            liveStartEvaluator = new TrackEvaluator(startTrack);
-            evaluatedStart = startTrack;
-        }
-
-        try
-        {
-            var result = change(startTrack, liveStartEvaluator!);
+            var result = change(startTrack, evaluator);
             _ = new TrackEvaluator(result);
             Local = result;
-            return null;
-        }
-        catch (ArgumentException ex)
-        {
-            return ex.Message;
-        }
+        });
     }
 
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
@@ -858,14 +848,14 @@ public sealed class SessionState
     {
         Transport.StopPreview();
         if (Mode != CameraMode.Editing)
-            return "The track can only change while editing.";
+            return TrackOnlyWhileEditing;
         EndLiveEdit();
 
-        try
+        return Refusal(() =>
         {
             var result = change(Scene);
             if (ReferenceEquals(result, Scene))
-                return null;
+                return;
 
             var edited = SceneEditing.Get(result, EditedTrackId);
             _ = new TrackEvaluator(edited);
@@ -873,12 +863,7 @@ public sealed class SessionState
             var selected = selectAfter(edited);
             Scene = result;
             Selection.AfterCommit(selected, edited);
-            return null;
-        }
-        catch (ArgumentException ex)
-        {
-            return ex.Message;
-        }
+        });
     }
 
     /// <summary>Applies a scene change and the edited track it leaves, as one undo step. Returns why it was refused, or null.</summary>
@@ -889,17 +874,26 @@ public sealed class SessionState
             return "The scene can only change while editing.";
         EndLiveEdit();
 
-        try
+        return Refusal(() =>
         {
             var (result, edited) = change(Scene);
             if (edited == EditedTrackId && (ReferenceEquals(result, Scene) || SameValues(result, Scene)))
-                return null;
+                return;
 
             history.Record(Current);
             if (edited != EditedTrackId)
                 ClearForSwitch();
             Scene = result;
             EditedTrackId = edited;
+        });
+    }
+
+    /// <summary>Runs <paramref name="attempt"/>; returns the refusal an <see cref="ArgumentException"/> carries, or null when it ran.</summary>
+    private static string? Refusal(Action attempt)
+    {
+        try
+        {
+            attempt();
             return null;
         }
         catch (ArgumentException ex)
