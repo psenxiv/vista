@@ -83,7 +83,8 @@ public class TimingCurveTests
     public void ConstructorThrowsWhenPositionDecreases()
     {
         var keys = new[] { Key(0f, 1f), Key(1f, 0f) };
-        Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        Assert.Equal("Timing key positions must not decrease.", ex.Message);
     }
 
     [Fact]
@@ -350,6 +351,7 @@ public class TimingCurveTests
     public void ANonFiniteTangentIsRejected()
     {
         var keys = new[] { Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, float.NaN, 0f), Key(1f, 1f) };
-        Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
+        Assert.Equal("Timing key 0 has a non-finite tangent.", ex.Message);
     }
 }

@@ -195,6 +195,28 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void EachIndexRefusalNamesWhatItIndexes()
+    {
+        // Three points are indices 0..2, and with no holds they are the three keys, 0..2.
+        var track = Build3PointTrack();
+
+        string Refusal(Action act) => Assert.Throws<ArgumentOutOfRangeException>(act).Message;
+
+        Assert.Equal("Point index must be 0..2 for a 3-point track.", Refusal(() => TrackEditing.PointKey(track, 3)));
+        Assert.Equal("Hold index must be 0..2 for a 3-point track.", Refusal(() => TrackEditing.HoldSeconds(track, 3)));
+        Assert.Equal(
+            "Insert index must be 0..2 for a 3-point track.",
+            Refusal(() => TrackEditing.InsertAfter(track, 3, Point(0f)))
+        );
+        Assert.Equal("Delete index must be 0..2 for a 3-point track.", Refusal(() => TrackEditing.Delete(track, 3)));
+        Assert.Equal(
+            "Replace index must be 0..2 for a 3-point track.",
+            Refusal(() => TrackEditing.Replace(track, 3, Point(0f)))
+        );
+        Assert.Equal("Key index must be 0..2.", Refusal(() => TrackEditing.RoleOf(track, 3)));
+    }
+
+    [Fact]
     public void SetLegDurationClampsNonPositiveSecondsToTheShortestLeg()
     {
         var track = Build3PointTrack();
