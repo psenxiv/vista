@@ -46,7 +46,12 @@ internal sealed class TrackEditorWindow : Window
         new(PlaybackDirection.PingPong, "Ping-pong", FontAwesomeIcon.ArrowsAltH),
     ];
 
-    private static readonly Vector2 CellPadding = new(6f, 4f);
+    private static readonly Vector2 CellPadding = new(6f, 0f);
+
+    // The space above and below a points row's contents, given as row height so value cells can fill the whole row.
+    private const float RowPadding = 4f;
+    private const string NumberHeader = "#";
+    private static readonly string[] ValueHeaders = ["Duration (s)", "Speed", "Hold (s)"];
     private const float SpeedWidth = 90f;
     private const float ModeWidth = 80f;
     private const float MinWidth = 420f;
@@ -703,22 +708,26 @@ internal sealed class TrackEditorWindow : Window
             if (
                 ImGui.BeginTable(
                     "point-table",
-                    6,
+                    7,
                     ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.PadOuterX
                 )
             )
             {
-                ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("Duration (s)");
-                ImGui.TableSetupColumn("Speed");
-                ImGui.TableSetupColumn("Hold (s)");
+                ImGui.TableSetupColumn(
+                    "##handle",
+                    ImGuiTableColumnFlags.WidthFixed,
+                    IconButton.GlyphWidth(FontAwesomeIcon.GripVertical)
+                );
+                ImGui.TableSetupColumn(NumberHeader);
+                foreach (var header in ValueHeaders)
+                    SetupValueColumn(header);
                 ImGui.TableSetupColumn(
                     "##pin",
                     ImGuiTableColumnFlags.WidthFixed,
                     IconButton.Width(FontAwesomeIcon.Thumbtack)
                 );
                 ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableHeadersRow();
+                DrawPointHeaders();
 
                 var selected = session.Selection.Points;
                 for (var i = 0; i < track.Points.Count; i++)
@@ -733,6 +742,32 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndChild();
     }
 
+    /// <summary>A value column, fixed at the field width or its header's, whichever is wider, so a cell-filling field can't widen it.</summary>
+    private static void SetupValueColumn(string header) =>
+        ImGui.TableSetupColumn(
+            header,
+            ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoResize,
+            MathF.Max(Layout.FieldWidth, ImGui.CalcTextSize(header).X)
+        );
+
+    /// <summary>The header row, drawn as text so it keeps its padding while the table's cells have none.</summary>
+    private static void DrawPointHeaders()
+    {
+        ImGui.TableNextRow(ImGuiTableRowFlags.Headers, ImGui.GetTextLineHeight() + (RowPadding * 2f));
+        ImGui.TableSetColumnIndex(1);
+        PadRow();
+        ImGui.TextUnformatted(NumberHeader);
+        for (var i = 0; i < ValueHeaders.Length; i++)
+        {
+            ImGui.TableSetColumnIndex(2 + i);
+            PadRow();
+            ImGui.TextUnformatted(ValueHeaders[i]);
+        }
+    }
+
+    /// <summary>Moves the cursor down by the row padding, for a cell whose contents don't fill the row.</summary>
+    private static void PadRow() => ImGui.SetCursorPosY(ImGui.GetCursorPosY() + RowPadding);
+
     /// <summary>One point and the leg arriving at it: the whole row selects on click, jumps on double-click, drags to reorder or onto a track, and right-clicks for its menu; the trash icon, shown on hover, deletes it.</summary>
     /// <remarks><paramref name="track"/> and <paramref name="evaluator"/> are a snapshot taken once for the whole list: an earlier row's delete or reorder must not change what a later row reads.</remarks>
     private void DrawPointRow(
@@ -743,23 +778,21 @@ internal sealed class TrackEditorWindow : Window
         bool editing
     )
     {
-        ImGui.TableNextRow();
+        var rowHeight = ImGui.GetFrameHeight() + (RowPadding * 2f);
+        ImGui.TableNextRow(ImGuiTableRowFlags.None, rowHeight);
         ImGui.BeginDisabled(!editing);
 
         ImGui.TableNextColumn();
-        // The row's full height, cell padding included, so neighbouring rows' hover areas meet.
-        var top = ImGui.GetCursorScreenPos().Y - CellPadding.Y;
+        // Selectable pads itself by half the item spacing above and below, so it's drawn that much inside the row to cover exactly the row.
+        var rowTop = ImGui.GetCursorPosY();
+        var spacing = ImGui.GetStyle().ItemSpacing.Y;
+        ImGui.SetCursorPosY(rowTop + MathF.Floor(spacing * 0.5f));
         var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
         var picked = selected.Contains(index);
         var group = RowPicking.IsGroup(selected, index);
-        if (ImGui.Selectable($"##row{index}", picked, rowFlags, new Vector2(0f, ImGui.GetFrameHeight())))
+        if (ImGui.Selectable($"##row{index}", picked, rowFlags, new Vector2(0f, rowHeight - spacing)))
             session.Selection.ClickPoint(index, DragRows.Click());
-        var rowHovered =
-            editing
-            && IconButton.RowHovered(
-                new Vector2(ImGui.GetItemRectMin().X, top),
-                new Vector2(ImGui.GetItemRectMax().X, top + ImGui.GetFrameHeight() + (CellPadding.Y * 2f))
-            );
+        var rowHovered = editing && IconButton.RowHovered(ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
         if (editing && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
             game.JumpToPoint(index);
         if (editing)
@@ -780,46 +813,54 @@ internal sealed class TrackEditorWindow : Window
         }
 
         ImGui.SameLine(0f, 0f);
+        ImGui.SetCursorPosY(rowTop + RowPadding);
+        ImGui.AlignTextToFramePadding();
+        IconButton.Glyph(FontAwesomeIcon.GripVertical, rowHovered ? null : UiColours.Dim());
+
+        ImGui.TableNextColumn();
+        PadRow();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted((index + 1).ToString(CultureInfo.InvariantCulture));
 
         ImGui.TableNextColumn();
         if (index > 0)
-            fields.Draw(
+            DrawValueCell(
                 $"leg{index}",
                 evaluator.LegSeconds(index),
                 Units.SecondsNumber,
-                Layout.FieldWidth,
                 LegRange,
-                v => Report(session.SetLegDuration(index, v))
+                v => Report(session.SetLegDuration(index, v)),
+                rowHovered
             );
 
         ImGui.TableNextColumn();
         if (index > 0)
-            fields.Draw(
+            DrawValueCell(
                 $"leg-speed{index}",
                 evaluator.LegLength(index) / evaluator.LegSeconds(index),
                 Units.YalmsPerSecondField,
-                Layout.FieldWidth,
                 SpeedRange,
-                v => Report(session.SetLegSpeed(index, v))
+                v => Report(session.SetLegSpeed(index, v)),
+                rowHovered
             );
 
         ImGui.TableNextColumn();
-        fields.Draw(
+        DrawValueCell(
             $"hold{index}",
             TrackEditing.HoldSeconds(track, index),
             Units.SecondsNumber,
-            Layout.FieldWidth,
             HoldRange,
-            v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, v)))
+            v => Report(session.ChangeTrack(t => TrackEditing.SetHold(t, index, v))),
+            rowHovered
         );
 
         ImGui.TableNextColumn();
+        PadRow();
         if (index > 0)
             DrawPin(track, index, rowHovered);
 
         ImGui.TableNextColumn();
+        PadRow();
         Layout.RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
         if (IconButton.RowAction($"delete{index}", FontAwesomeIcon.Trash, "Delete point", rowHovered, danger: true))
         {
@@ -828,6 +869,26 @@ internal sealed class TrackEditorWindow : Window
         }
 
         ImGui.EndDisabled();
+    }
+
+    /// <summary>A value field filling its whole cell, square and flat: faint while its row is hovered, lit when it is hovered or held.</summary>
+    private void DrawValueCell(
+        string id,
+        float current,
+        string format,
+        PendingField.Range range,
+        Action<float> apply,
+        bool rowHovered
+    )
+    {
+        var width = ImGui.GetContentRegionAvail().X + (CellPadding.X * 2f);
+        ImGui.SetCursorScreenPos(ImGui.GetCursorScreenPos() - new Vector2(CellPadding.X, 0f));
+        var framePadding = ImGui.GetStyle().FramePadding;
+        using var style = ImRaii
+            .PushStyle(ImGuiStyleVar.FrameRounding, 0f)
+            .Push(ImGuiStyleVar.FramePadding, framePadding with { Y = framePadding.Y + RowPadding });
+        using var colour = ImRaii.PushColor(ImGuiCol.FrameBg, rowHovered ? UiColours.FrameHint() : 0u);
+        fields.Draw(id, current, format, width, range, apply);
     }
 
     /// <summary>The leg's pin: always shown in the accent colour when pinned, shown only on row hover when following the track speed.</summary>

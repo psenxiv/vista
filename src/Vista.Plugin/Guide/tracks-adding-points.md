@@ -16,7 +16,7 @@ The table in the middle of the **Vista** window lists the track's points. The nu
 
 - Click a row to select the point. The [Point window](tracks-point-window.md) opens.
 - Double-click a row to move the camera to that point.
-- Drag a row to change the point's place in the track, or onto a track in the Hierarchy to move it there.
+- Drag a row by {icon:GripVertical} to change the point's place in the track, or onto a track in the Hierarchy to move it there.
 - Right-click a row to move the point to another track or delete it. `Ctrl` + click or `Shift` + click to select several. See [Selecting several](tracks-selecting.md).
 - Hover a row and click {icon:Trash} **Delete point** to delete it, or press `Delete` to delete every selected point.
 

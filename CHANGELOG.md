@@ -1,5 +1,10 @@
 # Changelog
 
+## X.Y.Z.N
+
+- Reworked the points table's rows, with flatter value fields and a handle for dragging a row.
+- The plugin installer now says Vista works in GPose or out in the world.
+
 ## 0.10.0.1
 
 - If something goes wrong inside Vista, or a game update breaks part of it, Vista gives the camera back and stops until you reload it, instead of risking a crash.

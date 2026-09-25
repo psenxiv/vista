@@ -32,6 +32,13 @@ internal static class UiColours
     /// <summary>The User Guide's dividers: the text colour at 15%.</summary>
     public static uint Faint() => Text(0.15f);
 
+    /// <summary>A flat value cell while its row is hovered: the frame colour at 40%.</summary>
+    public static uint FrameHint()
+    {
+        var frame = ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBg];
+        return ImGui.ColorConvertFloat4ToU32(frame with { W = frame.W * 0.4f });
+    }
+
     /// <summary>The accent with its alpha set to <paramref name="alpha"/>.</summary>
     private static uint AccentAt(float alpha) =>
         ImGui.ColorConvertFloat4ToU32(ImGui.ColorConvertU32ToFloat4(Accent) with { W = alpha });
