@@ -1,6 +1,7 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Xunit;
+using Xunit.Sdk;
 using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests;
@@ -59,4 +60,15 @@ public class FixturesTests
     [Fact]
     public void AnUpThatIsNotANumberMakesTheLargestTwistNotANumber() =>
         Assert.True(float.IsNaN(LargestTwist(UpLostAtHalfASecond, 1.0)));
+
+    [Fact]
+    public void AMalformedFrameFailsNamingWhereAndTheRule()
+    {
+        // A field of view of 0 rad is below the 5° minimum, the only rule this frame breaks.
+        var frame = new CameraState(Vector3.Zero, new Vector3(0f, 0f, -10f), Vector3.UnitY, 0f);
+
+        var failure = Assert.Throws<FailException>(() => AssertWellFormed(frame, "Frame 3"));
+
+        Assert.Equal("Frame 3: the field of view is out of range (0)", failure.Message);
+    }
 }

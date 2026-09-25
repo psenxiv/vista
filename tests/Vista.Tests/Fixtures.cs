@@ -284,38 +284,12 @@ internal static class Fixtures
         return largest;
     }
 
-    /// <summary>The closest a well-formed frame's look-at may be to its position, in yalms: 1 cm.</summary>
-    internal const float MinLookAtDistance = 0.01f;
-
-    /// <summary>How far a well-formed frame's up may be from unit length, and its dot with the unit view from 0.</summary>
-    internal const float UpTolerance = 1e-3f;
-
-    /// <summary>Fails, naming <paramref name="where"/>, the first rule broken and the value that broke it, unless the frame is finite, looks at least 1 cm ahead, has a unit up square to the view, and a field of view the editor allows.</summary>
+    /// <summary>Fails, naming <paramref name="where"/>, the first rule broken and the value that broke it, unless the frame is well-formed.</summary>
     internal static void AssertWellFormed(CameraState frame, string where)
     {
-        void Fail(string rule, object value) => Assert.Fail($"{where}: {rule} ({value})");
-
-        if (!IsFinite(frame.Position))
-            Fail("the position isn't finite", frame.Position);
-        if (!IsFinite(frame.LookAt))
-            Fail("the look-at isn't finite", frame.LookAt);
-        if (!IsFinite(frame.Up))
-            Fail("the up isn't finite", frame.Up);
-        if (!float.IsFinite(frame.Fov))
-            Fail("the field of view isn't finite", frame.Fov);
-        var view = frame.LookAt - frame.Position;
-        if (!(view.Length() >= MinLookAtDistance))
-            Fail("the look-at is too close to the position", view.Length());
-        if (!(MathF.Abs(frame.Up.Length() - 1f) <= UpTolerance))
-            Fail("the up isn't unit length", frame.Up.Length());
-        var square = Vector3.Dot(frame.Up, Vector3.Normalize(view));
-        if (!(MathF.Abs(square) <= UpTolerance))
-            Fail("the up isn't square to the view", square);
-        if (!(frame.Fov >= EditLimits.MinFov && frame.Fov <= EditLimits.MaxFov))
-            Fail("the field of view is out of range", frame.Fov);
+        if (WellFormed.FirstBroken(frame) is { } rule)
+            Assert.Fail($"{where}: {rule}");
     }
-
-    private static bool IsFinite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
 
     /// <summary>A frame step in seconds: mostly up to two 60 fps frames, sometimes up to a 2 s hitch.</summary>
     internal static readonly Gen<float> AnyFrameStep = Gen.Frequency(
