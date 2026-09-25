@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Display;
+using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
@@ -106,6 +107,19 @@ public class CameraGlyphTests
         // From (1, 2, 3) the aim point (1, 2, −7) is (0, 0, −10) away.
         var moved = TrackEditing.Append(TrackEditing.Empty(), Point(1f, 2f, 3f));
         Assert.Equal(new Vector3(0f, 0f, -10f), CameraGlyph.Pose(moved, 0, new Vector3(1f, 2f, -7f), Unused).Forward);
+    }
+
+    // The glyph draws the field of view that plays: a point recorded at 3 rad (about 172°) plays at the editor's widest,
+    // EditLimits.MaxFov (120°), and one at 0.01 rad plays at its narrowest, EditLimits.MinFov (5°).
+
+    [Theory]
+    [InlineData(3f, EditLimits.MaxFov)]
+    [InlineData(0.01f, EditLimits.MinFov)]
+    public void AGlyphDrawsTheFieldOfViewThatPlays(float recorded, float played)
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f) with { Fov = recorded });
+
+        Assert.Equal(played, CameraGlyph.Pose(track, 0, null, Unused).Fov);
     }
 
     // An aim point closer than TrackAim.MinTargetDistance (0.1) gives no aim, so the recorded one is drawn.
