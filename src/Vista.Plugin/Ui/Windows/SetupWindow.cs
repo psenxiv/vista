@@ -36,8 +36,7 @@ internal sealed class SetupWindow : Window
     public override void OnOpen() => parent = files.Ready ? files.Chosen : null;
 
     /// <summary>Centres the window the first time it appears.</summary>
-    public override void PreDraw() =>
-        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+    public override void PreDraw() => Layout.CentreOnAppearing();
 
     public override void Draw()
     {

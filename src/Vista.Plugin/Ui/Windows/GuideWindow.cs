@@ -45,11 +45,7 @@ internal sealed class GuideWindow : Window, IDisposable
     {
         Size = new Vector2(760f, 520f);
         SizeCondition = ImGuiCond.FirstUseEver;
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new Vector2(480f, 300f),
-            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
-        };
+        SizeConstraints = Layout.AtLeast(new Vector2(480f, 300f));
         // The same font as the body, built larger, so headings stay crisp rather than scaled.
         headings = HeadingScales
             .Select(scale =>
@@ -287,7 +283,7 @@ internal sealed class GuideWindow : Window, IDisposable
         style switch
         {
             RunStyle.Key => ImGui.CalcTextSize(text).X + (KeyPadding.X * 2f),
-            RunStyle.Icon when Icon(text) is { } icon => IconWidth(icon),
+            RunStyle.Icon when Icon(text) is { } icon => IconButton.GlyphWidth(icon),
             RunStyle.Icon => ImGui.CalcTextSize(IconTag(text)).X,
             _ => ImGui.CalcTextSize(text).X,
         };
@@ -301,8 +297,7 @@ internal sealed class GuideWindow : Window, IDisposable
                 DrawKey(text);
                 return;
             case RunStyle.Icon when Icon(text) is { } icon:
-                using (ImRaii.PushFont(UiBuilder.IconFont))
-                    ImGui.TextUnformatted(icon.ToIconString());
+                IconButton.Glyph(icon);
                 return;
             case RunStyle.Icon:
                 ImGui.TextUnformatted(IconTag(text));
@@ -348,12 +343,6 @@ internal sealed class GuideWindow : Window, IDisposable
         char.IsLetter(name[0]) && Enum.TryParse<FontAwesomeIcon>(name, out var icon) ? icon : null;
 
     private static string IconTag(string name) => $"{{icon:{name}}}";
-
-    private static float IconWidth(FontAwesomeIcon icon)
-    {
-        using var font = ImRaii.PushFont(UiBuilder.IconFont);
-        return ImGui.CalcTextSize(icon.ToIconString()).X;
-    }
 
     /// <summary>A page's blocks, read once; a page that is missing says so in the pane.</summary>
     private IReadOnlyList<Block> Page(string file)

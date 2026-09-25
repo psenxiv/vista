@@ -106,10 +106,7 @@ internal sealed class EditorKeys
     /// <summary>Space does what the Play button would: pauses a running shot, starts one otherwise.</summary>
     private static string? Transport(GameSession game)
     {
-        if (game.State.IsPlaying)
-            game.StopPlay();
-        else
-            game.StartPlay();
+        game.TogglePlay();
         return null;
     }
 

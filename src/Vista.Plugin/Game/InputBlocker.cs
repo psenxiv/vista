@@ -186,23 +186,21 @@ internal sealed unsafe class InputBlocker : IDisposable
     public void SyncHookState()
     {
         var wanted = shouldBlock();
-
         foreach (var hook in Hooks)
-        {
-            if (hook is null)
-                continue;
-            if (wanted && !hook.IsEnabled)
-                hook.Enable();
-            else if (!wanted && hook.IsEnabled)
-                hook.Disable();
-        }
+            Sync(hook, wanted);
+        Sync(mouseWheelHook, wanted);
+    }
 
-        if (mouseWheelHook is null)
+    /// <summary>Enables or disables <paramref name="hook"/> to match <paramref name="wanted"/>, if it was made.</summary>
+    private static void Sync<T>(Hook<T>? hook, bool wanted)
+        where T : Delegate
+    {
+        if (hook is null)
             return;
-        if (wanted && !mouseWheelHook.IsEnabled)
-            mouseWheelHook.Enable();
-        else if (!wanted && mouseWheelHook.IsEnabled)
-            mouseWheelHook.Disable();
+        if (wanted && !hook.IsEnabled)
+            hook.Enable();
+        else if (!wanted && hook.IsEnabled)
+            hook.Disable();
     }
 
     /// <summary>Disables every hook until the next <see cref="SyncHookState"/> wants them.</summary>
@@ -236,12 +234,15 @@ internal sealed unsafe class InputBlocker : IDisposable
     public void Dispose()
     {
         foreach (var hook in Hooks)
-        {
-            hook?.Disable();
-            hook?.Dispose();
-        }
+            Remove(hook);
+        Remove(mouseWheelHook);
+    }
 
-        mouseWheelHook?.Disable();
-        mouseWheelHook?.Dispose();
+    /// <summary>Disables and disposes <paramref name="hook"/>, if it was made.</summary>
+    private static void Remove<T>(Hook<T>? hook)
+        where T : Delegate
+    {
+        hook?.Disable();
+        hook?.Dispose();
     }
 }

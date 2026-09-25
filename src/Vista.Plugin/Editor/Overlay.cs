@@ -15,8 +15,13 @@ internal sealed class Overlay
     private const float PathSpacing = 0.25f;
     private const float PathThickness = 3f;
     private const float GlyphDepth = 1f;
-    private const float GlyphThickness = 1.5f;
-    private const float SelectedGlyphThickness = 2.5f;
+
+    /// <summary>How thick the overlay's lines and rings are, and the Timing window's key rings.</summary>
+    public const float LineThickness = 1.5f;
+
+    /// <summary>How thick a selected item's lines and rings are.</summary>
+    public const float SelectedLineThickness = 2.5f;
+
     private const float AnchorRadius = 0.5f;
     private const float AnchorArrow = 0.9f;
     private const float SceneAnchorRadius = 1f;
@@ -82,19 +87,8 @@ internal sealed class Overlay
     )
     {
         var list = ImGui.GetBackgroundDrawList();
-        var colour =
-            selected ? EditorColours.Selected
-            : edited ? EditorColours.Anchor
-            : EditorColours.OtherAnchor;
-        if (firstPoint is { } first)
-            DrawEdge(
-                list,
-                view,
-                world.Position,
-                first,
-                edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink,
-                GlyphThickness
-            );
+        var colour = AnchorColour(selected, edited);
+        DrawLink(list, view, world.Position, firstPoint, edited);
 
         for (var i = 0; i < AnchorSegments; i++)
         {
@@ -106,11 +100,11 @@ internal sealed class Overlay
                 world.Position + Ring(a, AnchorRadius),
                 world.Position + Ring(b, AnchorRadius),
                 colour,
-                selected ? SelectedGlyphThickness : GlyphThickness
+                selected ? SelectedLineThickness : LineThickness
             );
         }
 
-        DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedGlyphThickness : GlyphThickness);
+        DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedLineThickness : LineThickness);
         if (name is not null)
             DrawName(list, view, world.Position, name);
         return view.ToScreen(world.Position);
@@ -121,7 +115,7 @@ internal sealed class Overlay
     {
         var list = ImGui.GetBackgroundDrawList();
         var colour = selected ? EditorColours.Selected : EditorColours.SceneAnchor;
-        var thickness = selected ? SelectedGlyphThickness : PathThickness;
+        var thickness = selected ? SelectedLineThickness : PathThickness;
         for (var i = 0; i < 4; i++)
         {
             var a = world.Yaw + (MathF.PI / 2f * i);
@@ -144,20 +138,9 @@ internal sealed class Overlay
     public static Vector2? DrawLookAt(EditorView view, Vector3 world, Vector3? firstPoint, bool edited, bool selected)
     {
         var list = ImGui.GetBackgroundDrawList();
-        var colour =
-            selected ? EditorColours.Selected
-            : edited ? EditorColours.Anchor
-            : EditorColours.OtherAnchor;
-        if (firstPoint is { } first)
-            DrawEdge(
-                list,
-                view,
-                world,
-                first,
-                edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink,
-                GlyphThickness
-            );
-        DrawCross(list, view, world, LookAtCross, colour, selected ? SelectedGlyphThickness : GlyphThickness);
+        var colour = AnchorColour(selected, edited);
+        DrawLink(list, view, world, firstPoint, edited);
+        DrawCross(list, view, world, LookAtCross, colour, selected ? SelectedLineThickness : LineThickness);
         return view.ToScreen(world);
     }
 
@@ -165,23 +148,28 @@ internal sealed class Overlay
     public static void DrawTargetMarker(EditorView view, Vector3 world, Vector3? firstPoint, bool edited)
     {
         var list = ImGui.GetBackgroundDrawList();
+        DrawLink(list, view, world, firstPoint, edited);
+        DrawCross(list, view, world, TargetCross, AnchorColour(selected: false, edited), LineThickness);
+    }
+
+    /// <summary>An anchor's colour: the selection's when selected, else the edited track's or another's.</summary>
+    private static uint AnchorColour(bool selected, bool edited) =>
+        selected ? EditorColours.Selected
+        : edited ? EditorColours.Anchor
+        : EditorColours.OtherAnchor;
+
+    /// <summary>The faint line from <paramref name="from"/> to the track's first point, when it has one.</summary>
+    private static void DrawLink(ImDrawListPtr list, EditorView view, Vector3 from, Vector3? firstPoint, bool edited)
+    {
         if (firstPoint is { } first)
             DrawEdge(
                 list,
                 view,
-                world,
+                from,
                 first,
                 edited ? EditorColours.AnchorLink : EditorColours.OtherAnchorLink,
-                GlyphThickness
+                LineThickness
             );
-        DrawCross(
-            list,
-            view,
-            world,
-            TargetCross,
-            edited ? EditorColours.Anchor : EditorColours.OtherAnchor,
-            GlyphThickness
-        );
     }
 
     private static void DrawCross(
@@ -313,7 +301,7 @@ internal sealed class Overlay
     )
     {
         var colour = selected ? EditorColours.Selected : palette.Glyph;
-        var thickness = selected ? SelectedGlyphThickness : GlyphThickness;
+        var thickness = selected ? SelectedLineThickness : LineThickness;
         var corners = glyph.Corners;
         for (var i = 0; i < corners.Length; i++)
         {
@@ -361,7 +349,7 @@ internal sealed class Overlay
                 MarkerRadius,
                 picked ? EditorColours.Selected : palette.MarkerRing,
                 0,
-                picked ? 3f : 1.5f
+                picked ? 3f : LineThickness
             );
 
             var label = (i + 1).ToString(CultureInfo.InvariantCulture);

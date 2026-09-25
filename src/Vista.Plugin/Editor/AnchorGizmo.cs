@@ -49,8 +49,7 @@ internal sealed class AnchorGizmo
         {
             session.EndLiveEdit();
             dragStart = null;
-            waitForRelease = true;
-            Gizmo.Reset();
+            Gizmo.Drop(ref waitForRelease);
         }
 
         if (session.Selection.Anchor is not { } kind || Shown(session, kind) is not { } anchor)
@@ -60,10 +59,7 @@ internal sealed class AnchorGizmo
             return;
         }
 
-        ImGuizmo.SetDrawlist();
-        ImGuizmo.SetOrthographic(false);
-        ImGuizmo.SetRect(view.Origin.X, view.Origin.Y, view.Size.X, view.Size.Y);
-        ImGuizmo.AllowAxisFlip(false);
+        Gizmo.Begin(view);
 
         var shown = dragStart ?? anchor;
         if (dragStart is null)
@@ -82,12 +78,8 @@ internal sealed class AnchorGizmo
         var usingNow = ImGuizmo.IsUsing();
         Hot = usingNow || ImGuizmo.IsOver();
 
-        if (waitForRelease)
-        {
-            if (!usingNow)
-                waitForRelease = false;
+        if (Gizmo.StillHeld(ref waitForRelease, usingNow))
             return;
-        }
 
         if (usingNow)
         {
@@ -110,8 +102,7 @@ internal sealed class AnchorGizmo
             {
                 Report(refusal);
                 dragStart = null;
-                waitForRelease = true;
-                Gizmo.Reset();
+                Gizmo.Drop(ref waitForRelease);
             }
 
             return;

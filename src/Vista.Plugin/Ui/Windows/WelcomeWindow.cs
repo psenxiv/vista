@@ -1,7 +1,6 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Vista.Plugin.Ui.Widgets;
 
@@ -34,8 +33,7 @@ internal sealed class WelcomeWindow : Window
     }
 
     /// <summary>Centres the window the first time it appears.</summary>
-    public override void PreDraw() =>
-        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+    public override void PreDraw() => Layout.CentreOnAppearing();
 
     /// <summary>Ok and the close button both land here, so either one dismisses it for good and moves on to Setup, or the Vista window once a folder is set.</summary>
     public override void OnClose()
@@ -66,16 +64,10 @@ internal sealed class WelcomeWindow : Window
     /// <summary>The feedback line with a red heart after it, on the same line when it fits; the game font has no emoji.</summary>
     private static void DrawFeedback()
     {
-        var heart = FontAwesomeIcon.Heart.ToIconString();
-        float heartWidth;
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-            heartWidth = ImGui.CalcTextSize(heart).X;
-
+        var heartWidth = IconButton.GlyphWidth(FontAwesomeIcon.Heart);
         ImGui.TextUnformatted(Feedback);
         if (ImGui.CalcTextSize(Feedback).X + ImGui.GetStyle().ItemSpacing.X + heartWidth <= Width)
             ImGui.SameLine();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Red))
-            ImGui.TextUnformatted(heart);
+        IconButton.Glyph(FontAwesomeIcon.Heart, UiColours.Red);
     }
 }

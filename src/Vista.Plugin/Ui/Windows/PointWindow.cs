@@ -305,13 +305,12 @@ internal sealed class PointWindow : Window
         Func<ControlPoint, float, ControlPoint> set
     )
     {
-        var edited = value;
-        var changed = PoseGrid.Field(id, name, border, ref edited, speed, format);
         // Refused once an undo mid-drag has ended the edit; the rest of that drag does nothing.
-        LiveDrag.Handle(
+        LiveDrag.Field(
             session,
-            changed,
-            () =>
+            value,
+            (ref float edited) => PoseGrid.Field(id, name, border, ref edited, speed, format),
+            edited =>
             {
                 if (TrackEditing.IsPoint(session.Track, index))
                     _ = session.PreviewPoint(index, set(session.Track.Points[index], edited));
@@ -331,12 +330,11 @@ internal sealed class PointWindow : Window
         Func<Anchor, float, Anchor> set
     )
     {
-        var edited = value;
-        var changed = PoseGrid.Field(id, name, border, ref edited, speed, format);
-        LiveDrag.Handle(
+        LiveDrag.Field(
             session,
-            changed,
-            () =>
+            value,
+            (ref float edited) => PoseGrid.Field(id, name, border, ref edited, speed, format),
+            edited =>
             {
                 if (session.Selection.AnchorInWorld is { } current)
                     _ = session.PreviewAnchor(set(current, edited), carry: true);
@@ -348,12 +346,12 @@ internal sealed class PointWindow : Window
     /// <summary>A Look At point's field: dragging moves it live, and each drag is one undo step.</summary>
     private void LookAtField(string id, string name, uint border, float value, Func<Vector3, float, Vector3> set)
     {
-        var edited = value;
-        var changed = PoseGrid.Field(id, name, border, ref edited, PoseGrid.PositionSpeed, Units.YalmsField);
-        LiveDrag.Handle(
+        LiveDrag.Field(
             session,
-            changed,
-            () =>
+            value,
+            (ref float edited) =>
+                PoseGrid.Field(id, name, border, ref edited, PoseGrid.PositionSpeed, Units.YalmsField),
+            edited =>
             {
                 if (session.Selection.LookAtInWorld is { } current)
                     _ = session.PreviewLookAt(set(current, edited));

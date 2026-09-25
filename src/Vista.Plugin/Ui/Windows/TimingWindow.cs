@@ -41,11 +41,10 @@ internal sealed class TimingWindow : Window
     private const int TimeTicks = 16;
     private const int YalmTicks = 6;
 
-    private readonly GameSession game;
     private readonly SessionState session;
     private readonly List<Vector2?> keyScreens = [];
     private readonly List<(KeySide Side, Vector2 End)> handleEnds = [];
-    private bool scrubbing;
+    private readonly Scrubber scrub;
     private Drag? drag;
     private int? popupKey;
     private TimingView? view;
@@ -55,29 +54,25 @@ internal sealed class TimingWindow : Window
     public TimingWindow(GameSession game)
         : base("Timing###vista-timing")
     {
-        this.game = game;
         session = game.State;
+        scrub = new Scrubber(game);
         RespectCloseHotkey = false;
         // The wheel zooms the graph; it must never scroll the window as well.
         Flags |= ImGuiWindowFlags.NoScrollWithMouse;
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new Vector2(360f, 200f),
-            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
-        };
+        SizeConstraints = Layout.AtLeast(new Vector2(360f, 200f));
     }
 
     /// <summary>Ends a scrub or a drag, since a closed window never reports the mouse letting go.</summary>
     public override void OnClose()
     {
-        EndScrub();
+        scrub.End();
         EndDrag();
         pan = null;
     }
 
     public override void Draw()
     {
-        using var popups = PopupStyle.Push();
+        using var popups = WindowStyle.Popups();
         DrawTopRow();
 
         var region = Vector2.Max(ImGui.GetContentRegionAvail(), Vector2.One);
@@ -91,7 +86,7 @@ internal sealed class TimingWindow : Window
         var list = ImGui.GetWindowDrawList();
         if (session.Track.Points.Count < 2)
         {
-            EndScrub();
+            scrub.End();
             EndDrag();
             pan = null;
             keyScreens.Clear();
@@ -155,8 +150,7 @@ internal sealed class TimingWindow : Window
             ImGui.TextUnformatted(string.Empty);
 
         ImGui.SameLine();
-        var fitLeft = ImGui.GetWindowContentRegionMax().X - IconButton.Width(FontAwesomeIcon.Expand);
-        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), fitLeft));
+        Layout.RightAlign(IconButton.Width(FontAwesomeIcon.Expand));
         ImGui.BeginDisabled(view is null);
         if (IconButton.Draw("fit", FontAwesomeIcon.Expand, "Show the whole track"))
             view = null;
@@ -356,7 +350,7 @@ internal sealed class TimingWindow : Window
             if (keyScreens[i] is not { } at)
                 continue;
             var ring = i == selected ? EditorColours.Selected : EditorColours.MarkerRing;
-            var thickness = i == selected ? 2.5f : 1.5f;
+            var thickness = i == selected ? Overlay.SelectedLineThickness : Overlay.LineThickness;
             var fill = i == selected ? EditorColours.Selected : EditorColours.Marker;
 
             if (TrackEditing.RoleOf(track, i) == KeyRole.Point)
@@ -377,7 +371,7 @@ internal sealed class TimingWindow : Window
     /// <summary>A marker and tooltip on the curve under the mouse, while nothing is being dragged or scrubbed.</summary>
     private void DrawHoverReadout(ImDrawListPtr list, TimingGraph graph)
     {
-        if (drag is not null || scrubbing || !ImGui.IsItemHovered())
+        if (drag is not null || scrub.Active || !ImGui.IsItemHovered())
             return;
         var mouse = ImGui.GetMousePos();
         if (!graph.Contains(mouse))
@@ -393,12 +387,12 @@ internal sealed class TimingWindow : Window
     /// <summary>Carries on or ends a scrub, a drag or a pan, zooms on the wheel, acts on a right press over a key, then on a left press: a handle, then a key, then the curve, then empty plot space to pan, then the time axis.</summary>
     private void HandleMouse(TimingGraph graph, float stripBottom)
     {
-        if (scrubbing)
+        if (scrub.Active)
         {
             if (ImGui.IsItemActive())
                 session.Transport.ScrubTo(graph.TimeAt(ImGui.GetMousePos().X));
             else
-                EndScrub();
+                scrub.End();
         }
 
         ContinueDrag();
@@ -492,11 +486,11 @@ internal sealed class TimingWindow : Window
         }
 
         var actions = TimingEditing.ActionsFor(session.Track, key);
-        if (actions.RemoveHold && ImGui.MenuItem("Remove hold"))
+        if (actions.RemoveHold && Menu.Item("Remove hold"))
             Report(session.RemoveHold(key));
-        if (actions.BreakHandles && ImGui.MenuItem("Break handles"))
+        if (actions.BreakHandles && Menu.Item("Break handles"))
             Report(session.BreakHandles(key));
-        if (actions.UnifyHandles && ImGui.MenuItem("Unify handles"))
+        if (actions.UnifyHandles && Menu.Item("Unify handles"))
             Report(session.UnifyHandles(key, actions.UnifyFrom));
         ImGui.EndPopup();
     }
@@ -553,9 +547,8 @@ internal sealed class TimingWindow : Window
     {
         if (mouse.Y < graph.Origin.Y + graph.Size.Y || mouse.Y > stripBottom)
             return;
-        session.Transport.BeginScrub();
+        scrub.Begin();
         session.Transport.ScrubTo(graph.TimeAt(mouse.X));
-        scrubbing = session.Transport.Scrubbing;
     }
 
     /// <summary>The view for this frame: whole for a new track or one that no longer needs zooming, else kept within the shot.</summary>
@@ -577,7 +570,7 @@ internal sealed class TimingWindow : Window
     private void Zoom(TimingGraph graph, Vector2 mouse)
     {
         var wheel = ImGui.GetIO().MouseWheel;
-        if (wheel == 0f || !ImGui.IsItemHovered() || drag is not null || scrubbing || pan is not null)
+        if (wheel == 0f || !ImGui.IsItemHovered() || drag is not null || scrub.Active || pan is not null)
             return;
         var from = view ?? TimingView.Whole(graph.Duration);
         var next = from.Zoom(graph.TimeAt(mouse.X), MathF.Pow(ZoomPerNotch, -wheel), graph.Duration);
@@ -595,14 +588,6 @@ internal sealed class TimingWindow : Window
             return;
         }
         view = p.Start.Drag(p.StartX - mouse.X, graph.Size.X, graph.Duration);
-    }
-
-    private void EndScrub()
-    {
-        if (!scrubbing)
-            return;
-        scrubbing = false;
-        game.FinishScrub();
     }
 
     private Vector2 CurvePoint(TimingGraph graph, float time) =>
