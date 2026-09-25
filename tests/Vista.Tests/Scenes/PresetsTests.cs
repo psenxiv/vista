@@ -100,8 +100,38 @@ public class PresetsTests
         Assert.Equal(second, twice.Tracks[2].Id);
         Assert.NotEqual(preset.Track.Id, first);
         Assert.NotEqual(first, second);
-        Assert.Equal("Crane", twice.Tracks[2].Name);
         Assert.True(twice.Tracks[2].AnchorPlaced);
+    }
+
+    [Fact]
+    public void PlacingAPresetTwiceNumbersTheSecondTrack()
+    {
+        var (once, _) = Presets.Place(SceneEditing.New(), Crane(), Ground);
+        var (twice, _) = Presets.Place(once, Crane(), Ground);
+
+        // "Crane" is free the first time; the second time it is taken, so "Crane 2", as SceneNames.Numbered gives.
+        Assert.Equal(new[] { "Track 1", "Crane", "Crane 2" }, twice.Tracks.Select(t => t.Name));
+    }
+
+    [Fact]
+    public void APlacedTracksNameMayReachTheLongestNameButNoFurther()
+    {
+        static Preset Named(string name) => Crane() with { Track = Crane().Track with { Name = name } };
+        static Scene Holding(string name)
+        {
+            var scene = SceneEditing.New();
+            return SceneEditing.Rename(scene, scene.Tracks[0].Id, name);
+        }
+
+        // A 62-character name taken gives "name 2", 62 + 2 = 64 characters, the longest allowed.
+        var fits = new string('a', 62);
+        var (scene, id) = Presets.Place(Holding(fits), Named(fits), Ground);
+        Assert.Equal($"{fits} 2", SceneEditing.Get(scene, id).Name);
+
+        // A 63-character name taken would give 63 + 2 = 65 characters.
+        var over = new string('a', 63);
+        var refused = Assert.Throws<ArgumentException>(() => Presets.Place(Holding(over), Named(over), Ground));
+        Assert.Equal("The track's name would be too long. Shorten the preset's name first.", refused.Message);
     }
 
     [Fact]

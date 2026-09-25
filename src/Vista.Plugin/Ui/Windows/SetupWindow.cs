@@ -7,6 +7,7 @@ using Dalamud.Interface.Windowing;
 using Vista.Core.Scenes;
 using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Widgets;
+using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Windows;
 
@@ -63,15 +64,15 @@ internal sealed class SetupWindow : Window
 
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Width - OkWidth);
         ImGui.BeginDisabled(parent is null);
-        if (
-            ImGui.Button("Ok", new Vector2(OkWidth, 0f))
-            && parent is not null
-            && files.Choose(parent) is null
-            && files.Ready
-        )
+        if (ImGui.Button("Ok", new Vector2(OkWidth, 0f)) && parent is not null)
         {
-            IsOpen = false;
-            continued();
+            var refusal = files.Choose(parent);
+            Report(refusal);
+            if (refusal is null && files.Ready)
+            {
+                IsOpen = false;
+                continued();
+            }
         }
 
         ImGui.EndDisabled();

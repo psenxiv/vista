@@ -2,6 +2,7 @@ using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Session;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
+using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Editor;
 
@@ -94,8 +95,7 @@ internal sealed class EditorKeys
             _ => null,
         };
 
-        if (refusal is not null)
-            Plugin.Log.Debug("[editor] {Key}: {Refusal}", key.ToString(), refusal);
+        Report(refusal);
     }
 
     /// <summary>Space does what the Play button would: pauses a running shot, starts one otherwise.</summary>

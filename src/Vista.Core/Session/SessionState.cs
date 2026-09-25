@@ -658,6 +658,9 @@ public sealed class SessionState
     /// <summary>Sets whether a Follow Target camera looks at the character. Returns why it was refused, or null.</summary>
     public string? SetFollowLooks(bool looks) => ApplySetting(t => TrackEditing.SetFollowLooks(t, looks));
 
+    /// <summary>True from <see cref="BeginLiveEdit"/> until the live edit ends, which an undo or leaving Edit also does.</summary>
+    public bool LiveEditing => liveEditStart is not null;
+
     /// <summary>Starts a live edit: previews change the track at once and end as one undo step. Editing only.</summary>
     public void BeginLiveEdit()
     {

@@ -25,6 +25,9 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/vista";
 
+    /// <summary>The title of every notification Vista shows.</summary>
+    internal const string NoticeTitle = "Vista";
+
     [PluginService]
     internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
 
@@ -268,7 +271,7 @@ public sealed class Plugin : IDalamudPlugin
         Notifications.AddNotification(
             new Notification
             {
-                Title = "Vista",
+                Title = NoticeTitle,
                 Content = SessionState.StopMessage,
                 Type = NotificationType.Error,
             }

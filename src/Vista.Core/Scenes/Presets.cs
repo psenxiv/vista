@@ -16,13 +16,17 @@ public static class Presets
         return new Preset(track with { Anchor = Anchor.Origin }, SceneGeometry.WorldAnchor(scene, track).Yaw);
     }
 
-    /// <summary>Appends the preset as a new track, its anchor at <paramref name="ground"/> with the preset's yaw, placing an unplaced scene anchor there first.</summary>
+    /// <summary>Appends the preset as a new track named after it, numbered if the name is taken, its anchor at <paramref name="ground"/> with the preset's yaw, placing an unplaced scene anchor there first; a name too long is refused.</summary>
     public static (Scene Scene, Guid Added) Place(Scene scene, Preset preset, Vector3 ground)
     {
+        var name = SceneNames.Numbered(preset.Track.Name, SceneEditing.Names(scene));
+        if (name.Length > SceneNames.MaxLength)
+            throw new ArgumentException("The track's name would be too long. Shorten the preset's name first.");
         var placed = SceneGeometry.PlaceScene(scene, ground);
         var track = preset.Track with
         {
             Id = Guid.NewGuid(),
+            Name = name,
             Anchor = placed.Anchor.ToLocal(new Anchor(ground, preset.Yaw)),
             AnchorPlaced = true,
         };
