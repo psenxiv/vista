@@ -78,6 +78,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private float wheel;
     private bool escapeWasDown;
+    private bool cameraHookChecked;
     private static bool blockEscape;
 
     public Plugin()
@@ -127,6 +128,8 @@ public sealed class Plugin : IDalamudPlugin
             setupWindow.IsOpen = true;
 
         Camera = new CameraController(() => game.Frame((float)Framework.UpdateDelta.TotalSeconds), faults);
+        CheckTouchPointsAtLoad();
+        CheckCameraHook();
 
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -181,6 +184,44 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    /// <summary>Logs each touch point checked at load, and stops Vista if any failed.</summary>
+    private void CheckTouchPointsAtLoad()
+    {
+        (string Name, bool Passed)[] checks =
+        [
+            ("input query hooks", Input.QueriesHooked),
+            ("mouse wheel hook", Input.WheelHooked),
+            ("movement lock", Movement.Available),
+        ];
+        Log.Information(
+            "[vista] touch points: {Results}",
+            string.Join(", ", checks.Select(c => $"{c.Name} {Result(c.Passed)}"))
+        );
+        foreach (var (name, passed) in checks)
+            CheckTouchPoint(name, passed);
+    }
+
+    /// <summary>Once the camera hook has been tried, logs whether it installed, and stops Vista if not.</summary>
+    private void CheckCameraHook()
+    {
+        if (cameraHookChecked || Camera.Hooked is not { } hooked)
+            return;
+        cameraHookChecked = true;
+        Log.Information("[vista] touch points: camera update hook {Result}", Result(hooked));
+        CheckTouchPoint("camera update hook", hooked);
+    }
+
+    private static string Result(bool passed) => passed ? "ok" : "unavailable";
+
+    /// <summary>Reports a touch point's check to the session, releasing and telling the player if it stops Vista.</summary>
+    private void CheckTouchPoint(string name, bool passed)
+    {
+        if (!game.State.ReportTouchPoint(name, passed))
+            return;
+        game.Release($"{name} unavailable");
+        AnnounceStop(notify: true);
+    }
+
     /// <summary>Logs why Vista stopped and, unless Dalamud already tells the player, shows the stop message.</summary>
     private void AnnounceStop(bool notify)
     {
@@ -213,6 +254,7 @@ public sealed class Plugin : IDalamudPlugin
     private void UpdateFeatures()
     {
         Camera.TryInstallHook();
+        CheckCameraHook();
         sceneFiles.Tick();
         editorKeys.Update(game, pointGizmo, editorLayer);
         game.RefreshCharacters();

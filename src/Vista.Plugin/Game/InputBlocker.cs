@@ -45,10 +45,23 @@ internal sealed unsafe class InputBlocker : IDisposable
         this.shouldBlockEscape = shouldBlockEscape;
         this.faults = faults;
 
-        longPressHook = Hook(InputData.MemberFunctionPointers.IsInputIdHeld, LongPressDetour, "IsInputIdHeld");
-        pressedHook = Hook(InputData.MemberFunctionPointers.IsInputIdPressed, PressedDetour, "IsInputIdPressed");
-        downHook = Hook(InputData.MemberFunctionPointers.IsInputIdDown, DownDetour, "IsInputIdDown");
-        releasedHook = Hook(InputData.MemberFunctionPointers.IsInputIdReleased, ReleasedDetour, "IsInputIdReleased");
+        // Each address is read in its own lambda, so a ClientStructs member that's gone throws inside Hook's try.
+        longPressHook = Hook(
+            () => (nint)InputData.MemberFunctionPointers.IsInputIdHeld,
+            LongPressDetour,
+            "IsInputIdHeld"
+        );
+        pressedHook = Hook(
+            () => (nint)InputData.MemberFunctionPointers.IsInputIdPressed,
+            PressedDetour,
+            "IsInputIdPressed"
+        );
+        downHook = Hook(() => (nint)InputData.MemberFunctionPointers.IsInputIdDown, DownDetour, "IsInputIdDown");
+        releasedHook = Hook(
+            () => (nint)InputData.MemberFunctionPointers.IsInputIdReleased,
+            ReleasedDetour,
+            "IsInputIdReleased"
+        );
 
         mouseWheelHook = HookBySignature<GetMouseWheelDelegate>(
             MouseWheelSignature,
@@ -56,6 +69,12 @@ internal sealed unsafe class InputBlocker : IDisposable
             "getMouseWheelStatus"
         );
     }
+
+    /// <summary>True when all four input queries resolved and hooked.</summary>
+    public bool QueriesHooked => Hooks.All(hook => hook is not null);
+
+    /// <summary>True when the mouse wheel reader resolved and hooked.</summary>
+    public bool WheelHooked => mouseWheelHook is not null;
 
     /// <summary>Scans for a function and hooks it. ScanText already follows a call or jmp match.</summary>
     private static Hook<T>? HookBySignature<T>(string signature, T detour, string name)
@@ -73,12 +92,23 @@ internal sealed unsafe class InputBlocker : IDisposable
         }
 
         Plugin.Log.Debug("[input] {Name} resolved to 0x{Addr:X}", name, address);
-        return Plugin.Hooks.HookFromAddress<T>(address, detour);
+        return Install(address, detour, name);
     }
 
-    private static Hook<IsInputIdDelegate>? Hook(void* address, IsInputIdDelegate detour, string name)
+    private static Hook<IsInputIdDelegate>? Hook(Func<nint> address, IsInputIdDelegate detour, string name)
     {
-        if (address == null)
+        nint resolved;
+        try
+        {
+            resolved = address();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[input] {Name} address did not resolve; not hooked.", name);
+            return null;
+        }
+
+        if (resolved == 0)
         {
             Plugin.Log.Error("[input] {Name} address did not resolve; not hooked.", name);
             return null;
@@ -86,7 +116,22 @@ internal sealed unsafe class InputBlocker : IDisposable
 
         // Left disabled. These fire thousands of times a second, so they are only
         // enabled while we are flying.
-        return Plugin.Hooks.HookFromAddress<IsInputIdDelegate>((nint)address, detour);
+        return Install(resolved, detour, name);
+    }
+
+    /// <summary>Creates a hook at <paramref name="address"/>, left disabled, or null if it can't be.</summary>
+    private static Hook<T>? Install<T>(nint address, T detour, string name)
+        where T : Delegate
+    {
+        try
+        {
+            return Plugin.Hooks.HookFromAddress<T>(address, detour);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[input] {Name} did not hook.", name);
+            return null;
+        }
     }
 
     private byte LongPressDetour(InputData* self, InputId id) => Filter(longPressHook!, self, id);

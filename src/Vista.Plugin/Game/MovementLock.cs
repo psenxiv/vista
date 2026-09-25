@@ -1,3 +1,5 @@
+using Vista.Core.Session;
+
 namespace Vista.Plugin.Game;
 
 /// <summary>Stops the character moving, without touching input.</summary>
@@ -13,6 +15,9 @@ internal sealed unsafe class MovementLock : IDisposable
     private readonly int* counter;
 
     public bool Held { get; private set; }
+
+    /// <summary>True when the signature resolved to something that looks like the counter; otherwise it's never written.</summary>
+    public bool Available => counter != null;
 
     /// <summary>The game's current count. Other plugins share it.</summary>
     public int Count => counter != null ? *counter : 0;
@@ -36,7 +41,17 @@ internal sealed unsafe class MovementLock : IDisposable
             return;
         }
 
-        counter = (int*)(address + CounterOffset);
+        var found = (int*)(address + CounterOffset);
+        if (!MovementCounter.IsPlausible(*found))
+        {
+            Plugin.Log.Error(
+                "[movement] lock counter reads {Count}, which isn't plausible; movement will not lock.",
+                *found
+            );
+            return;
+        }
+
+        counter = found;
         Plugin.Log.Debug("[movement] lock counter at 0x{Addr:X}", (nint)counter);
     }
 

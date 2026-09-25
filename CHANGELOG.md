@@ -1,5 +1,9 @@
 # Changelog
 
+## X.Y.Z.N
+
+- If something goes wrong inside Vista, or a game update breaks part of it, Vista gives the camera back and stops until you reload it, instead of risking a crash.
+
 ## 0.9.0.1
 
 - Hide game UI when Live stays on or off between sessions.

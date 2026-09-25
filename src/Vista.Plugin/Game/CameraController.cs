@@ -29,11 +29,13 @@ internal sealed unsafe class CameraController : IDisposable
     /// <summary>Installs the hook once a camera exists, trying only once. Safe to call repeatedly.</summary>
     public void TryInstallHook()
     {
-        if (Hooked is not null || !CameraAccess.TryGetWorldCamera(out var camera))
+        if (Hooked is not null)
             return;
 
         try
         {
+            if (!CameraAccess.TryGetWorldCamera(out var camera))
+                return;
             Install(camera);
             Hooked = true;
         }
