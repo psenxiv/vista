@@ -78,6 +78,13 @@ internal sealed class EditorKeys
     private static void Act(GameSession game, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
     {
         var session = game.State;
+        // Nothing to undo or redo does nothing, as in any editor.
+        if (key is VirtualKey.Z or VirtualKey.Y)
+        {
+            _ = key == VirtualKey.Z ? session.Undo() : session.Redo();
+            return;
+        }
+
         var refusal = key switch
         {
             VirtualKey.SPACE when ctrl => Restart(game),
@@ -86,8 +93,6 @@ internal sealed class EditorKeys
             VirtualKey.OEM_3 when ctrl => game.OverwriteSelected(),
             VirtualKey.OEM_3 when alt => game.AddAfterSelected(),
             VirtualKey.OEM_3 => game.AddToEnd(),
-            VirtualKey.Z => session.Undo() ? null : "Nothing to undo.",
-            VirtualKey.Y => session.Redo() ? null : "Nothing to redo.",
             VirtualKey.R
                 when session.Selection.Point is not null
                     || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
