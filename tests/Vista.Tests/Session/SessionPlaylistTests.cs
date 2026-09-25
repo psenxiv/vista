@@ -27,6 +27,24 @@ public class SessionPlaylistTests
     private static Guid Second(SessionState state) => state.Scene.Tracks[1].Id;
 
     [Fact]
+    public void PlaylistItemsAreTheEntriesWithPointsInOrder()
+    {
+        // Entries for Track 2 (3 times), an empty third track, then Track 1: the empty one can't play.
+        var state = Editing();
+        state.AddTrack();
+        state.AddToPlaylist([Second(state)]);
+        state.AddToPlaylist([state.Scene.Tracks[2].Id]);
+        state.AddToPlaylist([First(state)]);
+        state.SetEntryLoops(state.Scene.Playlist[0].Id, 3);
+
+        var items = state.PlaylistItems();
+
+        Assert.Equal([state.Scene.Playlist[0].Id, state.Scene.Playlist[2].Id], items.Select(i => i.EntryId));
+        Assert.Equal([Second(state), First(state)], items.Select(i => i.Track.Id));
+        Assert.Equal([3, null], items.Select(i => i.Loops));
+    }
+
+    [Fact]
     public void PlaylistEditsAreUndoSteps()
     {
         var state = Editing();

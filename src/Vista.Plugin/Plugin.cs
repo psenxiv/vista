@@ -179,7 +179,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         while (faults.TryTake(out var fault))
         {
-            game.Release($"fault in {fault.Where}");
+            game.Release(SessionState.FaultReason(fault.Where));
             if (game.State.ReportFault(fault.Where))
                 AnnounceStop(fault.Notifies);
         }
