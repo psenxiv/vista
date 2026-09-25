@@ -102,4 +102,61 @@ public class TimingGraphTests
         Assert.Equal(12.5f, Graph.TimeAtOpenEnded(600f), 1e-4f);
         Assert.Equal(5f, Graph.TimeAtOpenEnded(300f), 1e-4f);
     }
+
+    private static TimingGraph Viewing(float timeFrom, float timeTo, float distanceFrom, float distanceTo) =>
+        Graph with
+        {
+            TimeFrom = timeFrom,
+            TimeTo = timeTo,
+            DistanceFrom = distanceFrom,
+            DistanceTo = distanceTo,
+        };
+
+    // Ticks run from ⌈from / step − 1e-4⌉ steps while k · step ≤ to + 1e-4, so a tick on either edge stays.
+
+    [Fact]
+    public void TimeTicksCoverTheViewAtTheStep()
+    {
+        Assert.Equal([0f, 0.5f, 1f, 1.5f, 2f], Viewing(0f, 2f, 0f, 20f).TickTimes(0.5f));
+        // ⌈0.6 − 1e-4⌉ = 1, and 1.5 is past 1.2001.
+        Assert.Equal([0.5f, 1f], Viewing(0.3f, 1.2f, 0f, 20f).TickTimes(0.5f));
+        // 2 ≤ 1.99995 + 1e-4.
+        Assert.Equal(2f, Viewing(0f, 1.99995f, 0f, 20f).TickTimes(0.5f)[^1]);
+    }
+
+    [Fact]
+    public void DistanceTicksCoverTheViewAtTheStepLeavingOutZero()
+    {
+        Assert.Equal([1f, 2f, 3f], Viewing(0f, 10f, 0f, 3f).TickDistances(1f));
+        // max(1, ⌈1.5 − 1e-4⌉ = 2) = 2.
+        Assert.Equal([2f, 3f], Viewing(0f, 10f, 1.5f, 3.2f).TickDistances(1f));
+    }
+
+    // In view means within 1e-4 of the view's range.
+
+    [Fact]
+    public void TimesAndDistancesJustPastTheEdgeStayInView()
+    {
+        var graph = Viewing(1f, 2f, 0f, 10f);
+
+        Assert.True(graph.ShowsTime(0.99995f));
+        Assert.False(graph.ShowsTime(0.9998f));
+        Assert.True(graph.ShowsTime(2.00005f));
+        Assert.False(graph.ShowsTime(2.0002f));
+        Assert.False(graph.ShowsTime(float.NaN));
+        Assert.True(graph.ShowsDistance(10.00005f));
+        Assert.False(graph.ShowsDistance(-0.0002f));
+        Assert.True(graph.ShowsDistance(float.NaN));
+    }
+
+    // The plot spans x 100 to 500 and y 50 to 250, edges included.
+
+    [Fact]
+    public void ThePlotContainsItsOwnEdges()
+    {
+        Assert.True(Graph.Contains(new Vector2(100f, 50f)));
+        Assert.True(Graph.Contains(new Vector2(500f, 250f)));
+        Assert.False(Graph.Contains(new Vector2(99.5f, 100f)));
+        Assert.False(Graph.Contains(new Vector2(300f, 250.5f)));
+    }
 }

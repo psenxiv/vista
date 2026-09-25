@@ -40,7 +40,6 @@ internal sealed class TimingWindow : Window
     private const float ZoomPerNotch = 1.25f;
     private const int TimeTicks = 16;
     private const int YalmTicks = 6;
-    private const float InView = 1e-4f;
 
     private readonly GameSession game;
     private readonly SessionState session;
@@ -218,7 +217,7 @@ internal sealed class TimingWindow : Window
         keyScreens.Clear();
         foreach (var key in session.World.Evaluator.Keys)
             keyScreens.Add(
-                InViewTime(graph, key.Time)
+                graph.ShowsTime(key.Time)
                     ? graph.ToScreen(key.Time, session.World.Evaluator.DistanceOf(key.Position))
                     : null
             );
@@ -250,7 +249,7 @@ internal sealed class TimingWindow : Window
         for (var i = 0; i < session.Track.Points.Count; i++)
         {
             var along = session.World.Evaluator.DistanceOf(i);
-            if (along < graph.DistanceFrom - InView || along > graph.DistanceTo + InView)
+            if (!graph.ShowsDistance(along))
                 continue;
             var y = graph.ToScreen(0f, along).Y;
             list.AddLine(new Vector2(graph.Origin.X, y), new Vector2(right, y), EditorColours.GraphGrid);
@@ -266,13 +265,8 @@ internal sealed class TimingWindow : Window
     {
         var text = FullAlpha(EditorColours.GraphGrid);
         var right = graph.Origin.X + graph.Size.X;
-        for (
-            var k = Math.Max(1, (int)MathF.Ceiling((graph.DistanceFrom / step) - InView));
-            k * step <= graph.DistanceTo + InView;
-            k++
-        )
+        foreach (var d in graph.TickDistances(step))
         {
-            var d = k * step;
             var y = graph.ToScreen(0f, d).Y;
             list.AddLine(new Vector2(right, y), new Vector2(right + TickLength, y), EditorColours.GraphGrid);
 
@@ -297,14 +291,10 @@ internal sealed class TimingWindow : Window
         list.AddText(new Vector2(totalLeft, labelY), text, total);
 
         var step = Ticks.Step(graph.TimeTo - graph.TimeFrom, TimeTicks);
-        var format =
-            step >= 1f ? "0"
-            : step >= 0.1f ? "0.0"
-            : "0.00";
+        var format = Ticks.Format(step);
         var lastRight = float.MinValue;
-        for (var k = (int)MathF.Ceiling((graph.TimeFrom / step) - InView); k * step <= graph.TimeTo + InView; k++)
+        foreach (var t in graph.TickTimes(step))
         {
-            var t = k * step;
             var x = graph.ToScreen(t, 0f).X;
             list.AddLine(new Vector2(x, bottom), new Vector2(x, bottom + TickLength), EditorColours.GraphGrid);
 
@@ -338,7 +328,7 @@ internal sealed class TimingWindow : Window
     {
         if (!session.Transport.HeadOnEditedTrack)
             return;
-        if (!InViewTime(graph, (float)session.Transport.ScrubHead))
+        if (!graph.ShowsTime((float)session.Transport.ScrubHead))
             return;
         var x = graph.ToScreen((float)session.Transport.ScrubHead, 0f).X;
         list.AddLine(new Vector2(x, graph.Origin.Y), new Vector2(x, stripBottom), EditorColours.Playhead);
@@ -390,7 +380,7 @@ internal sealed class TimingWindow : Window
         if (drag is not null || scrubbing || !ImGui.IsItemHovered())
             return;
         var mouse = ImGui.GetMousePos();
-        if (!PlotContains(graph, mouse))
+        if (!graph.Contains(mouse))
             return;
 
         var t = graph.TimeAt(mouse.X);
@@ -422,7 +412,7 @@ internal sealed class TimingWindow : Window
             return;
         if (ClickHandle(graph, mouse) || ClickKey(graph, mouse) || ClickCurve(graph, mouse))
             return;
-        if (view is { } zoomed && PlotContains(graph, mouse))
+        if (view is { } zoomed && graph.Contains(mouse))
         {
             pan = (mouse.X, zoomed);
             return;
@@ -459,7 +449,7 @@ internal sealed class TimingWindow : Window
     /// <summary>Selects the leg under the cursor when it is near the curve.</summary>
     private bool ClickCurve(TimingGraph graph, Vector2 mouse)
     {
-        if (!PlotContains(graph, mouse))
+        if (!graph.Contains(mouse))
             return false;
 
         var time = graph.TimeAt(mouse.X);
@@ -578,10 +568,7 @@ internal sealed class TimingWindow : Window
             viewTrack = session.EditedTrackId;
         }
         if (view is { } v)
-        {
-            v = v.Clamp(duration);
-            view = v.IsWhole(duration) ? null : v;
-        }
+            view = v.Clamp(duration).UnlessWhole(duration);
 
         return view ?? TimingView.Whole(duration);
     }
@@ -594,7 +581,7 @@ internal sealed class TimingWindow : Window
             return;
         var from = view ?? TimingView.Whole(graph.Duration);
         var next = from.Zoom(graph.TimeAt(mouse.X), MathF.Pow(ZoomPerNotch, -wheel), graph.Duration);
-        view = next.IsWhole(graph.Duration) ? null : next;
+        view = next.UnlessWhole(graph.Duration);
     }
 
     /// <summary>Slides the view with the mouse while the pan is held, from where it was grabbed.</summary>
@@ -607,11 +594,8 @@ internal sealed class TimingWindow : Window
             pan = null;
             return;
         }
-        view = p.Start.Pan((p.StartX - mouse.X) / graph.Size.X * p.Start.Span, graph.Duration);
+        view = p.Start.Drag(p.StartX - mouse.X, graph.Size.X, graph.Duration);
     }
-
-    private static bool InViewTime(TimingGraph graph, float time) =>
-        time >= graph.TimeFrom - InView && time <= graph.TimeTo + InView;
 
     private void EndScrub()
     {
@@ -626,13 +610,6 @@ internal sealed class TimingWindow : Window
 
     /// <summary>The time under pixel column <paramref name="x"/>, running on past the shot's end so the last key can lengthen it.</summary>
     private static float DragTime(TimingGraph graph, float x) => graph.TimeAtOpenEnded(x);
-
-    /// <summary>Whether <paramref name="point"/> falls inside the plot rectangle.</summary>
-    private static bool PlotContains(TimingGraph graph, Vector2 point) =>
-        point.X >= graph.Origin.X
-        && point.X <= graph.Origin.X + graph.Size.X
-        && point.Y >= graph.Origin.Y
-        && point.Y <= graph.Origin.Y + graph.Size.Y;
 
     private static string YalmLabel(float distance) => $"{distance:0.##} y";
 

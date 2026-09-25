@@ -14,6 +14,12 @@ public readonly record struct TimingView(float From, float To)
 
     public bool IsWhole(float duration) => From <= 0f && To >= duration;
 
+    /// <summary>This view, or null when it shows the whole shot.</summary>
+    public TimingView? UnlessWhole(float duration) => IsWhole(duration) ? null : this;
+
+    /// <summary>Slides the view by a drag of <paramref name="pixels"/> across a plot <paramref name="width"/> pixels wide, stopping at either end of the shot.</summary>
+    public TimingView Drag(float pixels, float width, float duration) => Pan(pixels / width * Span, duration);
+
     /// <summary>Zooms by <paramref name="factor"/>, below 1 in and above 1 out, keeping <paramref name="anchor"/> where it is on screen and staying within the shot.</summary>
     public TimingView Zoom(float anchor, float factor, float duration)
     {

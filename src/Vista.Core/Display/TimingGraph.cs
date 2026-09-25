@@ -6,6 +6,9 @@ namespace Vista.Core.Display;
 /// <summary>The timing graph's plot: time across, distance up, and the maths for its handles.</summary>
 public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Duration, float Distance)
 {
+    /// <summary>Seconds or yalms past the view's edge that still count as in it, so a tick or key on the edge isn't lost to rounding.</summary>
+    private const float Slack = 1e-4f;
+
     /// <summary>The first second in view; 0 unless zoomed.</summary>
     public float TimeFrom { get; init; }
 
@@ -20,6 +23,38 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
 
     private float TimeRange => MathF.Max(TimeTo - TimeFrom, 1e-3f);
     private float DistanceRange => MathF.Max(DistanceTo - DistanceFrom, 1e-3f);
+
+    /// <summary>The times of ticks <paramref name="step"/> seconds apart across the view.</summary>
+    public IReadOnlyList<float> TickTimes(float step)
+    {
+        var ticks = new List<float>();
+        for (var k = (int)MathF.Ceiling((TimeFrom / step) - Slack); k * step <= TimeTo + Slack; k++)
+            ticks.Add(k * step);
+        return ticks;
+    }
+
+    /// <summary>The distances of ticks <paramref name="step"/> yalms apart up the view, leaving out zero.</summary>
+    public IReadOnlyList<float> TickDistances(float step)
+    {
+        var ticks = new List<float>();
+        for (
+            var k = Math.Max(1, (int)MathF.Ceiling((DistanceFrom / step) - Slack));
+            k * step <= DistanceTo + Slack;
+            k++
+        )
+            ticks.Add(k * step);
+        return ticks;
+    }
+
+    /// <summary>Whether <paramref name="time"/> is in view.</summary>
+    public bool ShowsTime(float time) => time >= TimeFrom - Slack && time <= TimeTo + Slack;
+
+    /// <summary>Whether <paramref name="distance"/> is in view; not a number counts as in view.</summary>
+    public bool ShowsDistance(float distance) => !(distance < DistanceFrom - Slack || distance > DistanceTo + Slack);
+
+    /// <summary>Whether <paramref name="point"/> falls inside the plot rectangle.</summary>
+    public bool Contains(Vector2 point) =>
+        point.X >= Origin.X && point.X <= Origin.X + Size.X && point.Y >= Origin.Y && point.Y <= Origin.Y + Size.Y;
 
     /// <summary>The pixel for a time and a distance.</summary>
     public Vector2 ToScreen(float time, float distance) =>
