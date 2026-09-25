@@ -70,9 +70,8 @@ public class TrackEvaluatorTests
         var state = evaluator.Evaluate(2.0);
         Assert.NotNull(state);
 
-        var toLookAt = Vector3.Normalize(state!.Value.LookAt - state.Value.Position);
-        var expected = TrackAim.FromDirection(new Vector3(1f, 0f, 0f));
-        var actual = TrackAim.FromDirection(toLookAt);
+        var expected = CameraRotation.YawPitch(new Vector3(1f, 0f, 0f));
+        var actual = CameraRotation.YawPitch(state!.Value.Forward);
 
         Assert.Equal(expected.Yaw, actual.Yaw, 3);
         Assert.Equal(expected.Pitch, actual.Pitch, 3);
@@ -188,11 +187,8 @@ public class TrackEvaluatorTests
         }
     }
 
-    private static float YawAt(TrackEvaluator evaluator, double time)
-    {
-        var state = evaluator.Evaluate(time)!.Value;
-        return TrackAim.FromDirection(state.LookAt - state.Position).Yaw;
-    }
+    private static float YawAt(TrackEvaluator evaluator, double time) =>
+        CameraRotation.YawPitch(evaluator.Evaluate(time)!.Value.Forward).Yaw;
 
     [Theory]
     [InlineData(AimMode.AimKeys)]
@@ -322,7 +318,7 @@ public class TrackEvaluatorTests
 
         var state = new TrackEvaluator(TrackThrough(points, aim, 2f)).Evaluate(1.0)!.Value;
 
-        Assert.Equal(90f * Deg, TrackAim.FromDirection(state.LookAt - state.Position).Yaw, 3);
+        Assert.Equal(90f * Deg, CameraRotation.YawPitch(state.Forward).Yaw, 3);
     }
 
     [Theory]
@@ -336,7 +332,7 @@ public class TrackEvaluatorTests
             .Evaluate(0.0, new Vector3(1f, 2f, -7f))!
             .Value;
 
-        var (yaw, pitch) = TrackAim.FromDirection(state.LookAt - state.Position);
+        var (yaw, pitch) = CameraRotation.YawPitch(state.Forward);
         Assert.Equal(point.Position, state.Position);
         Assert.Equal(0f, yaw, 4);
         Assert.Equal(0f, pitch, 4);
@@ -358,11 +354,8 @@ public class TrackEvaluatorTests
     }
 
     // The direction the camera faces at time t, aimed at target when given.
-    private static Vector3 Facing(TrackEvaluator evaluator, double t, Vector3? target = null)
-    {
-        var frame = evaluator.Evaluate(t, target)!.Value;
-        return Vector3.Normalize(frame.LookAt - frame.Position);
-    }
+    private static Vector3 Facing(TrackEvaluator evaluator, double t, Vector3? target = null) =>
+        evaluator.Evaluate(t, target)!.Value.Forward;
 
     [Fact]
     public void LookingAheadOnAStraightPathFacesAlongIt()
@@ -550,7 +543,7 @@ public class TrackEvaluatorTests
         var evaluator = new TrackEvaluator(
             TrackThrough([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(15f, yaw: 3f)], speed: 5f)
         );
-        float Yaw(double time) => TrackAim.FromDirection(Facing(evaluator, time)).Yaw;
+        float Yaw(double time) => CameraRotation.YawPitch(Facing(evaluator, time)).Yaw;
         var (left, right) = Slopes(Yaw, 2.0, 1e-3);
 
         Assert.Equal(1.5f, left, 0.02f);
@@ -569,7 +562,7 @@ public class TrackEvaluatorTests
         var evaluator = new TrackEvaluator(track);
         var arrive = evaluator.PointSeconds(1);
 
-        Assert.Equal(1f, TrackAim.FromDirection(Facing(evaluator, arrive + 1.9)).Yaw, 1e-4f);
+        Assert.Equal(1f, CameraRotation.YawPitch(Facing(evaluator, arrive + 1.9)).Yaw, 1e-4f);
     }
 
     // The largest turn of the facing from one millisecond to the next across the whole shot, in radians.
@@ -628,8 +621,8 @@ public class TrackEvaluatorTests
         );
         var evaluator = new TrackEvaluator(track);
 
-        Assert.Equal(0f, TrackAim.FromDirection(Facing(evaluator, 2.0)).Yaw, 1e-4f);
-        Assert.Equal(-MathF.PI / 2f, TrackAim.FromDirection(Facing(evaluator, evaluator.Duration - 2.0)).Yaw, 1e-4f);
+        Assert.Equal(0f, CameraRotation.YawPitch(Facing(evaluator, 2.0)).Yaw, 1e-4f);
+        Assert.Equal(-MathF.PI / 2f, CameraRotation.YawPitch(Facing(evaluator, evaluator.Duration - 2.0)).Yaw, 1e-4f);
         Assert.InRange(LargestTwist(evaluator), 0f, PictureSpinLimit);
 
         // The way out (+x) is a quarter turn from the way in (-z), short of 135°, so the passage turns the picture a quarter
@@ -940,7 +933,7 @@ public class TrackEvaluatorTests
         CameraState FrameAt(double t) => evaluator.Evaluate(t, track.LookAt)!.Value;
         var under = FrameAt(evaluator.PointSeconds(1));
 
-        Near(Vector3.UnitY, Vector3.Normalize(under.LookAt - under.Position), 1e-4f);
+        Near(Vector3.UnitY, under.Forward, 1e-4f);
         Assert.Equal(0f, under.Up.X, 0.004f);
         Assert.Equal(1f, MathF.Abs(under.Up.Z), 1e-3f);
         Assert.InRange(Fixtures.LargestTwist(FrameAt, evaluator.Duration), 0f, PictureSpinLimit);

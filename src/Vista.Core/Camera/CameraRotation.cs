@@ -26,8 +26,7 @@ public static class CameraRotation
     {
         var forward = Forward(rotation);
         var up = Up(rotation);
-        // Against the horizontal components, not asin(y): asin loses precision near straight up or down.
-        var pitch = MathF.Atan2(forward.Y, MathF.Sqrt((forward.X * forward.X) + (forward.Z * forward.Z)));
+        var (yaw, pitch) = YawPitch(forward);
 
         if (MathF.Abs(forward.Y) > ParallelDot)
         {
@@ -35,11 +34,24 @@ public static class CameraRotation
             return (poleYaw, pitch, 0f);
         }
 
-        var yaw = MathF.Atan2(-forward.X, -forward.Z);
-        var upright = UprightUp(yaw, pitch);
-        var roll = MathF.Atan2(Vector3.Dot(Vector3.Cross(upright, up), forward), Vector3.Dot(upright, up));
-        return (yaw, pitch, roll);
+        return (yaw, pitch, Vectors.SignedAngle(UprightUp(yaw, pitch), up, forward));
     }
+
+    /// <summary>The unit facing at <paramref name="yaw"/> and <paramref name="pitch"/>: yaw 0 faces −z and turns toward −x, pitch turns up. Sign convention measured in game, not assumed.</summary>
+    public static Vector3 Direction(float yaw, float pitch)
+    {
+        var cosPitch = MathF.Cos(pitch);
+        return new Vector3(-MathF.Sin(yaw) * cosPitch, MathF.Sin(pitch), -MathF.Cos(yaw) * cosPitch);
+    }
+
+    /// <summary>The yaw and pitch of a facing of any length, the inverse of <see cref="Direction"/>.</summary>
+    public static (float Yaw, float Pitch) YawPitch(Vector3 direction) =>
+        // Pitch against the level part, not asin(y): asin loses precision near straight up or down.
+        (MathF.Atan2(-direction.X, -direction.Z), MathF.Atan2(direction.Y, Sideways(direction)));
+
+    /// <summary><paramref name="up"/> rolled about unit <paramref name="forward"/> by <paramref name="roll"/> radians, positive rolling right.</summary>
+    public static Vector3 RollUp(Vector3 up, Vector3 forward, float roll) =>
+        Vector3.Transform(up, Quaternion.CreateFromAxisAngle(forward, roll));
 
     /// <summary>The rotation's local forward, (0,0,-1) transformed into world space.</summary>
     public static Vector3 Forward(Quaternion rotation) => Vector3.Transform(new Vector3(0f, 0f, -1f), rotation);
@@ -81,11 +93,11 @@ public static class CameraRotation
         return new Vector3(MathF.Sin(yaw) * sinPitch, MathF.Cos(pitch), MathF.Cos(yaw) * sinPitch);
     }
 
-    /// <summary>Builds the rotation whose local forward and up land on the given, already orthonormal, forward and up.</summary>
-    private static Quaternion FromForwardAndUp(Vector3 forward, Vector3 up)
+    /// <summary>The rotation matrix whose rows are right, <paramref name="up"/> and backward, for an already orthonormal <paramref name="forward"/> and <paramref name="up"/>.</summary>
+    public static Matrix4x4 Basis(Vector3 forward, Vector3 up)
     {
         var right = Vector3.Cross(forward, up);
-        var matrix = new Matrix4x4(
+        return new Matrix4x4(
             right.X,
             right.Y,
             right.Z,
@@ -103,8 +115,11 @@ public static class CameraRotation
             0f,
             1f
         );
-        return Quaternion.CreateFromRotationMatrix(matrix);
     }
+
+    /// <summary>Builds the rotation whose local forward and up land on the given, already orthonormal, forward and up.</summary>
+    private static Quaternion FromForwardAndUp(Vector3 forward, Vector3 up) =>
+        Quaternion.CreateFromRotationMatrix(Basis(forward, up));
 
     /// <summary>The shortest rotation taking unit vector <paramref name="from"/> onto unit vector <paramref name="to"/>.</summary>
     public static Quaternion MinimalRotation(Vector3 from, Vector3 to)
@@ -123,6 +138,6 @@ public static class CameraRotation
         }
 
         var axis = Vector3.Normalize(Vector3.Cross(a, b));
-        return Quaternion.CreateFromAxisAngle(axis, MathF.Acos(dot));
+        return Quaternion.CreateFromAxisAngle(axis, Vectors.AngleBetween(a, b));
     }
 }

@@ -291,7 +291,7 @@ public static class TrackEditing
     /// <summary>Puts the Look At point at <paramref name="local"/>, relative to the track's anchor; unchanged when not finite.</summary>
     public static Track SetLookAt(Track track, Vector3 local)
     {
-        if (!float.IsFinite(local.X) || !float.IsFinite(local.Y) || !float.IsFinite(local.Z))
+        if (!Vectors.IsFinite(local))
             return track;
         return track.LookAtPlaced && track.LookAt == local ? track : track with { LookAt = local, LookAtPlaced = true };
     }

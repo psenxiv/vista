@@ -68,7 +68,7 @@ public sealed class AimTracker
         var watching = world.Aim == AimMode.WatchTarget;
         if (TrackAim.Toward(frame.Position, at) is not null)
         {
-            lastAim = TrackAim.FromDirection(frame.LookAt - frame.Position);
+            lastAim = CameraRotation.YawPitch(frame.Forward);
             return Carry(frame, dt, watching);
         }
 
@@ -129,7 +129,7 @@ public sealed class AimTracker
     /// <summary>A watching frame's up carried on from the last frame and settled toward its own upright up, so passing under or over the character turns the picture round rather than flipping it; other frames pass through and are remembered.</summary>
     private CameraState Carry(CameraState frame, float dt, bool settle)
     {
-        var facing = Vector3.Normalize(frame.LookAt - frame.Position);
+        var facing = frame.Forward;
         var way = 1f;
         if (settle && carried is { } last)
         {

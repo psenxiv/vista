@@ -16,8 +16,8 @@ public static class EditLimits
     /// <summary>A yaw or roll in radians wrapped to within half a turn, or <paramref name="current"/> when not finite.</summary>
     public static float Angle(float radians, float current) => float.IsFinite(radians) ? Angles.Wrap(radians) : current;
 
-    public const float MinFov = 5f * MathF.PI / 180f;
-    public const float MaxFov = 120f * MathF.PI / 180f;
+    public const float MinFov = 5f * Angles.Degree;
+    public const float MaxFov = 120f * Angles.Degree;
 
     /// <summary>A field of view in radians, 5° to 120°, or <paramref name="current"/> when not finite.</summary>
     public static float Fov(float radians, float current) =>

@@ -168,8 +168,7 @@ public static class SelfTestRules
     }
 
     /// <summary>The angle between two directions in degrees.</summary>
-    private static double Degrees(Vector3 from, Vector3 to) =>
-        Math.Atan2(Vector3.Cross(from, to).Length(), Vector3.Dot(from, to)) * 180.0 / Math.PI;
+    private static float Degrees(Vector3 from, Vector3 to) => Angles.Degrees(Vectors.AngleBetween(from, to));
 
     private static string? Mismatch(string part, Vector3 written, Vector3 read) =>
         Same(written.X, read.X) && Same(written.Y, read.Y) && Same(written.Z, read.Z)

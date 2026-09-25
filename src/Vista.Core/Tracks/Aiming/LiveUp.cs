@@ -13,15 +13,15 @@ public static class LiveUp
     private const float SnapAngle = MathF.PI / 2f;
 
     /// <summary>Within this of a half turn from its target, 10°, settling keeps turning the way it last turned rather than the way that's shorter, which float noise flips at a half turn.</summary>
-    private const float TieMargin = 10f * MathF.PI / 180f;
+    private const float TieMargin = 10f * Angles.Degree;
 
     /// <summary>From a vertical passage's edge (<see cref="LevelUp.PassageSideways"/>) out to 30° from straight up or down, settling fades back in; inside a passage it doesn't settle at all.</summary>
-    private static readonly float PoleFade = MathF.Sin(30f * MathF.PI / 180f);
+    private static readonly float PoleFade = MathF.Sin(30f * Angles.Degree);
 
     /// <summary>The up carried from facing <paramref name="from"/> to facing <paramref name="to"/>: turned by as much as the facing turns, or, past a snap, turned about itself.</summary>
     public static Vector3 Carry(Vector3 from, Vector3 to, Vector3 up)
     {
-        var angle = MathF.Acos(Math.Clamp(Vector3.Dot(Vector3.Normalize(from), Vector3.Normalize(to)), -1f, 1f));
+        var angle = Vectors.AngleBetween(from, to);
         var carried = angle > SnapAngle ? up : Vector3.Transform(up, CameraRotation.MinimalRotation(from, to));
         return CameraRotation.SquareUp(carried, Vector3.Normalize(to));
     }
@@ -42,16 +42,13 @@ public static class LiveUp
         );
         if (fade <= 0f || seconds <= 0f)
             return (up, way);
-        var angle = MathF.Atan2(Vector3.Dot(Vector3.Cross(up, target), forward), Vector3.Dot(up, target));
+        var angle = Vectors.SignedAngle(up, target, forward);
         if (angle * way < -(MathF.PI - TieMargin))
             angle += 2f * MathF.PI * way;
         var most = SettleRate * seconds * fade;
         var turn = Math.Clamp(angle, -most, most);
         if (turn == 0f)
             return (up, way);
-        return (
-            CameraRotation.SquareUp(Vector3.Transform(up, Quaternion.CreateFromAxisAngle(forward, turn)), forward),
-            MathF.Sign(turn)
-        );
+        return (CameraRotation.SquareUp(CameraRotation.RollUp(up, forward, turn), forward), MathF.Sign(turn));
     }
 }

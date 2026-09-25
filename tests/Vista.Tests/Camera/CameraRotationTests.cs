@@ -20,8 +20,8 @@ public class CameraRotationTests
     private static Vector3 UprightUp(float yaw, float pitch) =>
         new(MathF.Sin(yaw) * MathF.Sin(pitch), MathF.Cos(pitch), MathF.Cos(yaw) * MathF.Sin(pitch));
 
-    // FreeCamMotion is the existing convention for the view direction; FromAngles must keep it, so it is the reference
-    // here rather than a derived literal. The upright up at (yaw, pitch) is the pitch-derivative of that direction,
+    // Direction is the view direction's convention, measured in game and pinned below; FromAngles must keep it, so it is
+    // the reference here rather than a derived literal. The upright up at (yaw, pitch) is the pitch-derivative of that direction,
     // (sin yaw·sin pitch, cos pitch, cos yaw·sin pitch), world up made square to the facing.
     [Theory]
     [MemberData(nameof(AnglePairs))]
@@ -29,8 +29,7 @@ public class CameraRotationTests
     {
         var rotation = CameraRotation.FromAngles(yaw, pitch, 0f);
 
-        var expectedForward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
-        Near(expectedForward, CameraRotation.Forward(rotation), 1e-5f);
+        Near(CameraRotation.Direction(yaw, pitch), CameraRotation.Forward(rotation), 1e-5f);
 
         Near(UprightUp(yaw, pitch), CameraRotation.Up(rotation), 1e-5f);
     }
@@ -46,11 +45,62 @@ public class CameraRotationTests
         const float pitch = 0.3f;
 
         var rotation = CameraRotation.FromAngles(yaw, pitch, roll);
-        var forward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
+        var forward = CameraRotation.Direction(yaw, pitch);
         var upright = UprightUp(yaw, pitch);
 
         var expectedUp = (upright * MathF.Cos(roll)) + (Vector3.Cross(forward, upright) * MathF.Sin(roll));
         Near(expectedUp, CameraRotation.Up(rotation), 1e-5f);
+    }
+
+    [Fact]
+    public void DirectionFacesMinusZAtYawZeroTurnsTowardMinusXAndPitchesUp()
+    {
+        // (−sin yaw·cos pitch, sin pitch, −cos yaw·cos pitch): yaw 0 is (0, 0, −1), a quarter turn is (−1, 0, 0), and 30° up
+        // is (0, 0.5, −0.8660254).
+        Near(new Vector3(0f, 0f, -1f), CameraRotation.Direction(0f, 0f), 1e-6f);
+        Near(new Vector3(-1f, 0f, 0f), CameraRotation.Direction(QuarterTurn, 0f), 1e-6f);
+        Near(new Vector3(0f, 0.5f, -0.8660254f), CameraRotation.Direction(0f, 30f * Deg), 1e-6f);
+    }
+
+    [Theory]
+    [InlineData(0f, 0f)]
+    [InlineData(1.2f, -0.3f)]
+    [InlineData(-2.7f, 0.6f)]
+    [InlineData(3.0f, 0.9f)]
+    public void YawPitchInvertsDirection(float yaw, float pitch)
+    {
+        var (roundYaw, roundPitch) = CameraRotation.YawPitch(CameraRotation.Direction(yaw, pitch));
+
+        Assert.Equal(yaw, roundYaw, 1e-5f);
+        Assert.Equal(pitch, roundPitch, 1e-5f);
+    }
+
+    [Fact]
+    public void YawPitchReadsAFacingOfAnyLength()
+    {
+        // (0, 10, −10) is 45° up along −z; (−20, 0, 0) is level, a quarter turn round.
+        var (upYaw, upPitch) = CameraRotation.YawPitch(new Vector3(0f, 10f, -10f));
+        var (roundYaw, roundPitch) = CameraRotation.YawPitch(new Vector3(-20f, 0f, 0f));
+
+        Assert.Equal(0f, upYaw, 1e-6f);
+        Assert.Equal(45f * Deg, upPitch, 1e-6f);
+        Assert.Equal(QuarterTurn, roundYaw, 1e-6f);
+        Assert.Equal(0f, roundPitch, 1e-6f);
+    }
+
+    [Fact]
+    public void PitchJustShortOfStraightUpKeepsItsTilt()
+    {
+        // (0, 1, −1e-4) is atan(1e-4) ≈ 1e-4 short of straight up: pitch π/2 − 1e-4 = 1.5706963. Its unit y,
+        // 1/√(1 + 1e-8), rounds to 1 in single precision, so asin(y) would read exactly π/2 and lose the tilt.
+        Assert.Equal(1.5706963f, CameraRotation.YawPitch(new Vector3(0f, 1f, -1e-4f)).Pitch, 1e-6f);
+    }
+
+    [Fact]
+    public void RollUpTurnsTheUpRightAboutTheFacing()
+    {
+        // Facing −z, rolling a quarter turn right carries up (0, 1, 0) onto the right, (1, 0, 0).
+        Near(Vector3.UnitX, CameraRotation.RollUp(Vector3.UnitY, new Vector3(0f, 0f, -1f), QuarterTurn), 1e-6f);
     }
 
     [Fact]

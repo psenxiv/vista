@@ -9,52 +9,13 @@ namespace Vista.Tests.Tracks.Aiming;
 
 public class TrackAimTests
 {
-    [Theory]
-    [InlineData(0f, 0f)]
-    [InlineData(1.2f, -0.3f)]
-    [InlineData(-2.7f, 0.6f)]
-    [InlineData(3.0f, 0.9f)]
-    public void FromDirectionInvertsFreeCamMotionDirection(float yaw, float pitch)
-    {
-        var direction = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
-        var (roundYaw, roundPitch) = TrackAim.FromDirection(direction);
-
-        Assert.Equal(yaw, roundYaw, 4);
-        Assert.Equal(pitch, roundPitch, 4);
-    }
-
-    [Fact]
-    public void UnwrapAnglesTakesTheShortWayAcrossPlusMinus180()
-    {
-        var yaws = new[] { 170f * Deg, -170f * Deg };
-        var unwrapped = TrackAim.UnwrapAngles(yaws);
-
-        Assert.Equal(170f * Deg, unwrapped[0], 4);
-        Assert.Equal(190f * Deg, unwrapped[1], 4);
-        Assert.True(MathF.Abs(unwrapped[1] - unwrapped[0]) <= MathF.PI + 1e-4f);
-    }
-
-    [Fact]
-    public void UnwrapAnglesLeavesASmallStepUntouched()
-    {
-        var yaws = new[] { 10f * Deg, 15f * Deg, 5f * Deg };
-        var unwrapped = TrackAim.UnwrapAngles(yaws);
-
-        Assert.Equal(10f * Deg, unwrapped[0], 4);
-        Assert.Equal(15f * Deg, unwrapped[1], 4);
-        Assert.Equal(5f * Deg, unwrapped[2], 4);
-    }
-
-    [Fact]
-    public void UnwrapAnglesOfEmptySequenceIsEmpty() => Assert.Empty(TrackAim.UnwrapAngles(Array.Empty<float>()));
-
     [Fact]
     public void AimAlongAVerticalPathDirectionLooksStraightUp()
     {
         var points = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 2, 0), new Vector3(0, 3, 0) };
         var table = new ArcLengthTable(points);
 
-        var (_, pitch) = TrackAim.FromDirection(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
+        var (_, pitch) = CameraRotation.YawPitch(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
         // Every point has x = z = 0, so the direction is exactly +y: pitch π/2, with no cap.
         Assert.Equal(MathF.PI / 2f, pitch, 1e-6f);
@@ -76,9 +37,9 @@ public class TrackAimTests
         var points = new[] { new Vector3(5, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0), new Vector3(15, 0, 0) };
         var table = new ArcLengthTable(points);
 
-        var actual = TrackAim.FromDirection(TrackAim.PathDirection(points, table, 0, 0.5f)!.Value);
+        var actual = CameraRotation.YawPitch(TrackAim.PathDirection(points, table, 0, 0.5f)!.Value);
 
-        var expected = TrackAim.FromDirection(new Vector3(1, 0, 0));
+        var expected = CameraRotation.YawPitch(new Vector3(1, 0, 0));
         Assert.Equal(expected.Yaw, actual.Yaw, 4);
         Assert.Equal(expected.Pitch, actual.Pitch, 4);
     }
@@ -98,7 +59,7 @@ public class TrackAimTests
         };
         var table = new ArcLengthTable(points);
 
-        var (yaw, pitch) = TrackAim.FromDirection(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
+        var (yaw, pitch) = CameraRotation.YawPitch(TrackAim.PathDirection(points, table, 1, 0.5f)!.Value);
 
         Assert.Equal(-90f * Deg, yaw, 1e-4f);
         Assert.Equal(0f, pitch, 1e-4f);
@@ -151,10 +112,10 @@ public class TrackAimTests
         // A camera settling there must not flick, so the end and a hair from it agree to within 0.01°.
         var table = new ArcLengthTable(CurvedEnd);
 
-        var (endYaw, endPitch) = TrackAim.FromDirection(
+        var (endYaw, endPitch) = CameraRotation.YawPitch(
             TrackAim.PathDirection(CurvedEnd, table, segment, atEnd)!.Value
         );
-        var (nearYaw, nearPitch) = TrackAim.FromDirection(
+        var (nearYaw, nearPitch) = CameraRotation.YawPitch(
             TrackAim.PathDirection(CurvedEnd, table, segment, nearEnd)!.Value
         );
 

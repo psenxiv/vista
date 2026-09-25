@@ -5,6 +5,9 @@ namespace Vista.Core.Camera;
 /// <summary>Where the camera is, what it looks at, which way is up in the picture (a unit vector square to the view), and its field of view.</summary>
 public readonly record struct CameraState(Vector3 Position, Vector3 LookAt, Vector3 Up, float Fov)
 {
+    /// <summary>The unit direction the camera faces.</summary>
+    public Vector3 Forward => Vector3.Normalize(LookAt - Position);
+
     /// <summary>The picture's roll about the view in radians, positive rolling right; 0 when facing straight up or down.</summary>
     public float Roll => CameraRotation.ToAngles(CameraRotation.FromBasis(LookAt - Position, Up)).Roll;
 

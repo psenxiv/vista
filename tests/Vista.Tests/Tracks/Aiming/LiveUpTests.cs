@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
@@ -40,7 +41,7 @@ public class LiveUpTests
 
         var (up, _) = LiveUp.SettleToward(rolled, facing, upright, 0.01f, 1f);
 
-        Assert.Equal(10f - 0.62094f, MathF.Acos(Math.Clamp(Vector3.Dot(up, upright), -1f, 1f)) / Deg, 1e-3f);
+        Assert.Equal(10f - 0.62094f, Vectors.AngleBetween(up, upright) / Deg, 1e-3f);
     }
 
     [Fact]
@@ -67,10 +68,10 @@ public class LiveUpTests
         var facing = new Vector3(0f, 0f, -1f);
         for (var step = 0; step < 50; step++)
             (up, _) = LiveUp.SettleToward(up, facing, Vector3.UnitY, 0.01f, 1f);
-        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(up, Vector3.UnitY), -1f, 1f)), 89f * Deg, 91f * Deg);
+        Assert.InRange(Vectors.AngleBetween(up, Vector3.UnitY), 89f * Deg, 91f * Deg);
 
         for (var step = 0; step < 50; step++)
             (up, _) = LiveUp.SettleToward(up, facing, Vector3.UnitY, 0.01f, 1f);
-        Assert.InRange(MathF.Acos(Math.Clamp(Vector3.Dot(up, Vector3.UnitY), -1f, 1f)), 0f, 1f * Deg);
+        Assert.InRange(Vectors.AngleBetween(up, Vector3.UnitY), 0f, 1f * Deg);
     }
 }

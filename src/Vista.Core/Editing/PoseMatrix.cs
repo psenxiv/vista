@@ -10,39 +10,22 @@ public static class PoseMatrix
     public static Matrix4x4 From(Vector3 position, float yaw, float pitch, float roll)
     {
         var rotation = CameraRotation.FromAngles(yaw, pitch, roll);
-        var forward = CameraRotation.Forward(rotation);
-        var up = CameraRotation.Up(rotation);
-        var right = Vector3.Cross(forward, up);
-        var back = -forward;
-
-        return new Matrix4x4(
-            right.X,
-            right.Y,
-            right.Z,
-            0f,
-            up.X,
-            up.Y,
-            up.Z,
-            0f,
-            back.X,
-            back.Y,
-            back.Z,
-            0f,
-            position.X,
-            position.Y,
-            position.Z,
-            1f
-        );
+        var matrix = CameraRotation.Basis(CameraRotation.Forward(rotation), CameraRotation.Up(rotation));
+        matrix.Translation = position;
+        return matrix;
     }
 
     /// <summary>The camera pose a gizmo matrix describes.</summary>
     public static (Vector3 Position, float Yaw, float Pitch, float Roll) ToPose(Matrix4x4 matrix)
     {
-        var position = new Vector3(matrix.M41, matrix.M42, matrix.M43);
-        var forward = -Vector3.Normalize(new Vector3(matrix.M31, matrix.M32, matrix.M33));
-        var up = Vector3.Normalize(new Vector3(matrix.M21, matrix.M22, matrix.M23));
-
-        var (yaw, pitch, roll) = CameraRotation.ToAngles(CameraRotation.FromBasis(forward, up));
-        return (position, yaw, pitch, roll);
+        var (yaw, pitch, roll) = CameraRotation.ToAngles(CameraRotation.FromBasis(Forward(matrix), Up(matrix)));
+        return (matrix.Translation, yaw, pitch, roll);
     }
+
+    /// <summary>The unit forward a gizmo matrix faces: its backward row, negated.</summary>
+    public static Vector3 Forward(Matrix4x4 matrix) =>
+        -Vector3.Normalize(new Vector3(matrix.M31, matrix.M32, matrix.M33));
+
+    /// <summary>A gizmo matrix's unit up row.</summary>
+    public static Vector3 Up(Matrix4x4 matrix) => Vector3.Normalize(new Vector3(matrix.M21, matrix.M22, matrix.M23));
 }

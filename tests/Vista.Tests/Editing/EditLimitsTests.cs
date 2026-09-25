@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Xunit;
 using static Vista.Tests.Fixtures;
@@ -31,6 +32,15 @@ public class EditLimitsTests
         Assert.Equal(5f * Deg, EditLimits.Fov(1f * Deg, 0.7f), 5);
         Assert.Equal(120f * Deg, EditLimits.Fov(200f * Deg, 0.7f), 5);
         Assert.Equal(90f * Deg, EditLimits.Fov(90f * Deg, 0.7f), 5);
+    }
+
+    [Fact]
+    public void AFieldOfViewTypedAtALimitLandsExactlyOnIt()
+    {
+        // 5 × 0.017453292 (π/180 in single precision) is 0.08726646; typed degrees convert by the same constant.
+        Assert.Equal(0.08726646f, EditLimits.MinFov);
+        Assert.Equal(EditLimits.MinFov, Angles.Radians(5f));
+        Assert.Equal(EditLimits.MaxFov, Angles.Radians(120f));
     }
 
     [Theory]

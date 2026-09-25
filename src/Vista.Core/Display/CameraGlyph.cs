@@ -10,7 +10,7 @@ namespace Vista.Core.Display;
 public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLeft, Vector3 TabTip, Vector3 TabRight)
 {
     /// <summary>Widest half-angle drawn, so an extreme FoV stays finite.</summary>
-    private const float MaxHalfAngle = 80f * MathF.PI / 180f;
+    private const float MaxHalfAngle = 80f * Angles.Degree;
 
     /// <summary>Half of the game's default 44.7° FoV, used when the FoV is not a number.</summary>
     private const float DefaultHalfAngle = 0.39f;
@@ -31,10 +31,7 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
         if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is not null)
         {
             var facing = at - point.Position;
-            var up = Vector3.Transform(
-                CameraRotation.Upright(facing),
-                Quaternion.CreateFromAxisAngle(Vector3.Normalize(facing), point.Roll)
-            );
+            var up = CameraRotation.RollUp(CameraRotation.Upright(facing), Vector3.Normalize(facing), point.Roll);
             return (facing, up, point.Fov);
         }
 
@@ -51,10 +48,7 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
     public static CameraGlyph Build(Vector3 apex, Vector3 forward, Vector3 up, float fov, float aspect, float depth)
     {
         var f = Vector3.Normalize(forward);
-        var u = up - (f * Vector3.Dot(up, f));
-        if (u.LengthSquared() < 1e-8f)
-            u = CameraRotation.Upright(f);
-        u = Vector3.Normalize(u);
+        var u = CameraRotation.SquareUp(up, f);
         var side = Vector3.Cross(u, f);
 
         var halfAngle = float.IsFinite(fov) ? Math.Clamp(fov / 2f, 0f, MaxHalfAngle) : DefaultHalfAngle;

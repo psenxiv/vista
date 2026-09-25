@@ -139,11 +139,7 @@ public class AimTrackerTests
             GuardAt(characters, new Vector3(-20f + (i / 6f), 10f, 0f));
             frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
             if (last is { } previous)
-                Assert.InRange(
-                    Twist(previous.LookAt - previous.Position, previous.Up, frame.LookAt - frame.Position, frame.Up),
-                    0f,
-                    PictureSpinLimit
-                );
+                Assert.InRange(Twist(previous.Forward, previous.Up, frame.Forward, frame.Up), 0f, PictureSpinLimit);
             last = frame;
         }
 
@@ -170,7 +166,7 @@ public class AimTrackerTests
         {
             GuardAt(characters, new Vector3(-17f + (i / 6f), 10f, 0f));
             var frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
-            Assert.Equal(0f, Vector3.Dot(frame.Up, Vector3.Normalize(frame.LookAt - frame.Position)), 1e-5f);
+            Assert.Equal(0f, Vector3.Dot(frame.Up, frame.Forward), 1e-5f);
         }
     }
 
@@ -311,7 +307,7 @@ public class AimTrackerTests
         Assert.Equal(10f, Frame(tracker, track, 0.5f).Position.X, 4);
     }
 
-    private static float LookYaw(CameraState frame) => TrackAim.FromDirection(frame.LookAt - frame.Position).Yaw;
+    private static float LookYaw(CameraState frame) => CameraRotation.YawPitch(frame.Forward).Yaw;
 
     [Fact]
     public void SmoothingEasesTheRecordedAimAsTheCharacterTurns()

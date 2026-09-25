@@ -42,11 +42,12 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Angles, rotations and vectors
 
-- `Camera/Angles`: degrees and radians, wrapping to half a turn, and the shortest signed difference between two angles.
-- `Camera/CameraRotation`: rotations from yaw, pitch and roll and back, from a forward and up, the forward and up of a rotation, squaring an up to a forward, the upright up, and the shortest rotation between two directions.
-- `Camera/CameraState`: a camera frame from a rotation or from angles, and its roll.
+- `Camera/Angles`: the degree constant, degrees and radians, wrapping to half a turn, the shortest signed difference between two angles, and unwrapping a sequence of angles.
+- `Camera/Vectors`: the angle between two vectors, the signed angle about an axis, normalising or flattening with a fallback, and whether a vector is finite.
+- `Camera/CameraRotation`: rotations from yaw, pitch and roll and back, the facing at a yaw and pitch and the yaw and pitch of a facing, rotations from a forward and up and their basis matrix, the forward and up of a rotation, squaring an up to a forward, rolling an up about a forward, the upright up, and the shortest rotation between two directions.
+- `Camera/CameraState`: a camera frame from a rotation or from angles, its forward and its roll.
 - `Camera/FreeCamMotion`: a free-cam step, turn and roll, the look-at distance, and a look-at point from angles or a rotation.
-- `Editing/PoseMatrix`: a pose to and from the gizmo's matrix.
+- `Editing/PoseMatrix`: a pose to and from the gizmo's matrix, and a matrix's unit forward and up.
 
 ### Scalars and curves
 

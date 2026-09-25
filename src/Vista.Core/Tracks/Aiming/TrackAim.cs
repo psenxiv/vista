@@ -20,41 +20,16 @@ public static class TrackAim
     public static bool UsesPointAim(AimMode aim) =>
         aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget;
 
-    /// <summary>Yaw and pitch of a view direction; the exact inverse of <c>FreeCamMotion</c>'s direction convention.</summary>
-    public static (float Yaw, float Pitch) FromDirection(Vector3 direction)
-    {
-        var normalized = Vector3.Normalize(direction);
-        var yaw = MathF.Atan2(-normalized.X, -normalized.Z);
-        var pitch = MathF.Asin(Math.Clamp(normalized.Y, -1f, 1f));
-        return (yaw, pitch);
-    }
-
     /// <summary>The aim from <paramref name="from"/> at <paramref name="target"/>, or null when it is closer than <see cref="MinTargetDistance"/>.</summary>
     public static (float Yaw, float Pitch)? Toward(Vector3 from, Vector3 target)
     {
         var direction = target - from;
-        return direction.Length() < MinTargetDistance ? null : FromDirection(direction);
+        return direction.Length() < MinTargetDistance ? null : CameraRotation.YawPitch(direction);
     }
 
     /// <summary><paramref name="direction"/>, or null when it's too short to give an aim.</summary>
     public static Vector3? Usable(Vector3 direction) =>
         direction.LengthSquared() > DirectionEpsilon * DirectionEpsilon ? direction : null;
-
-    /// <summary>Walks an angle sequence (yaw or roll), adding or subtracting full turns so consecutive values differ by at most π.</summary>
-    public static float[] UnwrapAngles(IReadOnlyList<float> yaws)
-    {
-        var result = new float[yaws.Count];
-        if (yaws.Count == 0)
-            return result;
-
-        result[0] = yaws[0];
-        for (var i = 1; i < yaws.Count; i++)
-        {
-            result[i] = result[i - 1] + Angles.Delta(result[i - 1], yaws[i]);
-        }
-
-        return result;
-    }
 
     /// <summary>The path's direction of travel, unclamped, falling back to the nearest valid direction where coincident points collapse the derivative; null when no segment has one.</summary>
     public static Vector3? PathDirection(

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
@@ -24,7 +25,7 @@ public class LevelUpTests
         for (var t = 0.001; t <= duration; t += 0.001)
         {
             var up = level.At(t, facing(t));
-            largest = MathF.Max(largest, MathF.Acos(Math.Clamp(Vector3.Dot(last, up), -1f, 1f)) / Deg);
+            largest = MathF.Max(largest, Vectors.AngleBetween(last, up) / Deg);
             last = up;
         }
 

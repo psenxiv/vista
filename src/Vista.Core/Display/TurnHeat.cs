@@ -36,10 +36,8 @@ public static class TurnHeat
         {
             var time = i == steps ? evaluator.Duration : i * span;
             var frame = evaluator.Evaluate(time, target)!.Value;
-            var look = Vector3.Normalize(frame.LookAt - frame.Position);
-            var rate = before is { } b
-                ? (float)(Angles.Degrees(MathF.Acos(Math.Clamp(Vector3.Dot(b, look), -1f, 1f))) / span)
-                : 0f;
+            var look = frame.Forward;
+            var rate = before is { } b ? (float)(Angles.Degrees(Vectors.AngleBetween(b, look)) / span) : 0f;
             samples[i] = new Sample(frame.Position, rate);
             before = look;
         }

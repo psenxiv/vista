@@ -1,7 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Core.Editing;
 
@@ -35,18 +34,17 @@ public static class GizmoEdit
     /// <summary>The point turned by its dragged ring frame — yaw or roll alone, or all three for pitch, since going over the top turns them together — or <paramref name="original"/> itself when it did not turn.</summary>
     public static ControlPoint Rotate(ControlPoint original, GimbalRing ring, Matrix4x4 dragged)
     {
-        var forward = -Vector3.Normalize(new Vector3(dragged.M31, dragged.M32, dragged.M33));
+        var forward = PoseMatrix.Forward(dragged);
         switch (ring)
         {
             case GimbalRing.Yaw:
-                var yaw = TrackAim.FromDirection(forward).Yaw;
+                var yaw = CameraRotation.YawPitch(forward).Yaw;
                 return Same(yaw, original.Yaw) ? original : original with { Yaw = yaw };
 
             case GimbalRing.Pitch:
                 // The ring frame carries roll 0; re-roll its dragged up by the original roll before reading
                 // the angles back, so a drag past vertical goes over the top instead of clamping.
-                var ringUp = new Vector3(dragged.M21, dragged.M22, dragged.M23);
-                var rolledUp = Vector3.Transform(ringUp, Quaternion.CreateFromAxisAngle(forward, original.Roll));
+                var rolledUp = CameraRotation.RollUp(PoseMatrix.Up(dragged), forward, original.Roll);
                 var (pitchYaw, pitch, pitchRoll) = CameraRotation.ToAngles(CameraRotation.FromBasis(forward, rolledUp));
                 var turned = original with
                 {
@@ -67,12 +65,12 @@ public static class GizmoEdit
         rotate
             ? start with
             {
-                Yaw = TrackAim.FromDirection(-new Vector3(dragged.M31, dragged.M32, dragged.M33)).Yaw,
+                Yaw = CameraRotation.YawPitch(PoseMatrix.Forward(dragged)).Yaw,
             }
             : start with
             {
                 Position = dragged.Translation,
             };
 
-    private static bool Same(float a, float b) => MathF.Abs(Angles.Wrap(a - b)) <= Tolerance;
+    private static bool Same(float a, float b) => MathF.Abs(Angles.Delta(b, a)) <= Tolerance;
 }

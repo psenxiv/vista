@@ -87,7 +87,7 @@ internal sealed class FreeCam
 
         if (written is { } last)
         {
-            var yawDelta = Angles.Wrap(read.Yaw - last.Yaw);
+            var yawDelta = Angles.Delta(last.Yaw, read.Yaw);
             rotation = FreeCamMotion.Turn(rotation, yawDelta, read.Pitch - last.Pitch);
         }
 

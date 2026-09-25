@@ -61,7 +61,7 @@ public class RegressionSceneTests
 
         return
         [
-            .. Steps(Frame, (a, b) => Vector3.Distance(Facing(a), Facing(b)), FacingStepFloor, duration)
+            .. Steps(Frame, (a, b) => Vector3.Distance(a.Forward, b.Forward), FacingStepFloor, duration)
                 .Select(s =>
                     $"facing turns {2f * MathF.Asin(MathF.Min(s.Size / 2f, 1f)) / Deg:0.###}° at {s.Time:0.####} s"
                 ),
@@ -75,6 +75,4 @@ public class RegressionSceneTests
                 ),
         ];
     }
-
-    private static Vector3 Facing(CameraState frame) => Vector3.Normalize(frame.LookAt - frame.Position);
 }

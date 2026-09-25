@@ -55,6 +55,16 @@ public class CameraGlyphTests
     }
 
     [Fact]
+    public void AnUpAHairOffTheForwardStillTurnsTheTab()
+    {
+        // Up (1e-5, 0, 1) squared to forward +z leaves (1e-5, 0, 0), longer than the 1e-6 a square up falls back below, so
+        // the tab points along +x: the face's top is 1 from the axis, and the tab rises half its span of 1 above that.
+        var glyph = CameraGlyph.Build(Vector3.Zero, Vector3.UnitZ, new Vector3(1e-5f, 0f, 1f), MathF.PI / 2f, 1f, 1f);
+
+        Near(new Vector3(1.5f, 0f, 1f), glyph.TabTip, 1e-4f);
+    }
+
+    [Fact]
     public void ItFollowsThePositionAndIgnoresUnnormalisedInputs()
     {
         var at = new Vector3(5f, 6f, 7f);

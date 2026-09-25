@@ -16,11 +16,11 @@ public static class WellFormed
     /// <summary>The first rule <paramref name="frame"/> breaks, with the value that broke it, or null when it's well-formed.</summary>
     public static string? FirstBroken(CameraState frame)
     {
-        if (!IsFinite(frame.Position))
+        if (!Vectors.IsFinite(frame.Position))
             return Broken("the position isn't finite", frame.Position);
-        if (!IsFinite(frame.LookAt))
+        if (!Vectors.IsFinite(frame.LookAt))
             return Broken("the look-at isn't finite", frame.LookAt);
-        if (!IsFinite(frame.Up))
+        if (!Vectors.IsFinite(frame.Up))
             return Broken("the up isn't finite", frame.Up);
         if (!float.IsFinite(frame.Fov))
             return Broken("the field of view isn't finite", frame.Fov);
@@ -39,6 +39,4 @@ public static class WellFormed
 
     private static string Broken(string rule, object value) =>
         string.Create(CultureInfo.InvariantCulture, $"{rule} ({value})");
-
-    private static bool IsFinite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
 }

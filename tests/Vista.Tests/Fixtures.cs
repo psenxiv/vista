@@ -37,8 +37,8 @@ internal static class Fixtures
             return text;
         };
 
-    /// <summary>Radians in a degree.</summary>
-    internal const float Deg = MathF.PI / 180f;
+    /// <summary>Radians in a degree: <see cref="Angles.Degree"/>, short for the many tests that turn by degrees.</summary>
+    internal const float Deg = Angles.Degree;
 
     /// <summary>A quarter turn in radians.</summary>
     internal const float QuarterTurn = MathF.PI / 2f;
@@ -261,7 +261,7 @@ internal static class Fixtures
     internal static void AimsAt(Vector3 target, CameraState frame, int precision)
     {
         var want = Vector3.Normalize(target - frame.Position);
-        var got = Vector3.Normalize(frame.LookAt - frame.Position);
+        var got = frame.Forward;
         Assert.Equal(want.X, got.X, precision);
         Assert.Equal(want.Y, got.Y, precision);
         Assert.Equal(want.Z, got.Z, precision);
@@ -295,10 +295,7 @@ internal static class Fixtures
                 .Where(step =>
                 {
                     var (a, b) = (frame(step.Time), frame(step.Time + moment));
-                    var turn = Vector3.Distance(
-                        Vector3.Normalize(a.LookAt - a.Position),
-                        Vector3.Normalize(b.LookAt - b.Position)
-                    );
+                    var turn = Vector3.Distance(a.Forward, b.Forward);
                     return !(step.Size <= turn * SpinPerTurn);
                 }),
         ];
@@ -361,8 +358,7 @@ internal static class Fixtures
     internal static float Twist(Vector3 forwardA, Vector3 upA, Vector3 forwardB, Vector3 upB)
     {
         var carried = Vector3.Transform(upA, CameraRotation.MinimalRotation(forwardA, forwardB));
-        var dot = Math.Clamp(Vector3.Dot(Vector3.Normalize(carried), Vector3.Normalize(upB)), -1f, 1f);
-        return MathF.Acos(dot);
+        return Vectors.AngleBetween(carried, upB);
     }
 
     /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds beyond <see cref="SpinPerTurn"/> times the facing's own turn, in radians: a whip, where the picture turns though the view barely does. Not a number once any frame isn't.</summary>
@@ -374,11 +370,8 @@ internal static class Fixtures
         for (var t = frameSeconds; t <= duration; t += frameSeconds)
         {
             var next = frame(t);
-            var (from, to) = (
-                Vector3.Normalize(last.LookAt - last.Position),
-                Vector3.Normalize(next.LookAt - next.Position)
-            );
-            var turn = MathF.Acos(Math.Clamp(Vector3.Dot(from, to), -1f, 1f));
+            var (from, to) = (last.Forward, next.Forward);
+            var turn = Vectors.AngleBetween(from, to);
             largest = MathF.Max(largest, Twist(from, last.Up, to, next.Up) - (SpinPerTurn * turn));
             last = next;
         }

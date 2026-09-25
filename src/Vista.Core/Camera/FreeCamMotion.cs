@@ -41,16 +41,9 @@ public static class FreeCamMotion
 
     /// <summary>A point ahead of the camera along its facing.</summary>
     public static Vector3 LookAtFrom(Vector3 position, float yaw, float pitch) =>
-        position + (Direction(yaw, pitch) * LookAtDistance);
+        position + (CameraRotation.Direction(yaw, pitch) * LookAtDistance);
 
     /// <summary>A point ahead of the camera along the rotation's facing.</summary>
     public static Vector3 LookAtFrom(Vector3 position, Quaternion rotation) =>
         position + (CameraRotation.Forward(rotation) * LookAtDistance);
-
-    /// <summary>Unit view direction. Sign convention measured in game, not assumed.</summary>
-    private static Vector3 Direction(float yaw, float pitch)
-    {
-        var cosPitch = MathF.Cos(pitch);
-        return new Vector3(-MathF.Sin(yaw) * cosPitch, MathF.Sin(pitch), -MathF.Cos(yaw) * cosPitch);
-    }
 }

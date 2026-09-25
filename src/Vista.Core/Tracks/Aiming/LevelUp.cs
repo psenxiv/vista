@@ -16,10 +16,10 @@ public sealed class LevelUp
     private const float Vertical = 1e-4f;
 
     /// <summary>A facing whose sideways part is shorter than this, within 15° of straight up or down, is in a vertical passage, where level is only the heading and swings round fast.</summary>
-    public static readonly float PassageSideways = MathF.Sin(15f * MathF.PI / 180f);
+    public static readonly float PassageSideways = MathF.Sin(15f * Angles.Degree);
 
     /// <summary>A step where the facing turns more than this, 5°, is halved until it doesn't, so a facing whipping through straight up can't cross a passage between samples.</summary>
-    private const float MostTurnPerSample = 5f * MathF.PI / 180f;
+    private const float MostTurnPerSample = 5f * Angles.Degree;
 
     /// <summary>The most times a step is halved: 0.1 s down to about 1.5 µs, past float time's resolution over a long shot.</summary>
     private const int MostHalvings = 16;
@@ -55,8 +55,7 @@ public sealed class LevelUp
             .Select(k => (float)Math.Min(k * StepSeconds, duration))
             .Distinct()
             .ToArray();
-        Vector3 FacingAt(float time, Vector3 before) =>
-            facing(time) is { } f && f != Vector3.Zero ? Vector3.Normalize(f) : before;
+        Vector3 FacingAt(float time, Vector3 before) => facing(time) is { } f ? Vectors.NormalizeOr(f, before) : before;
 
         var samples = new List<(float Time, Vector3 Facing)>
         {
@@ -70,7 +69,7 @@ public sealed class LevelUp
                 halvings < MostHalvings
                 && middle > from
                 && middle < to
-                && (crossesEdge || Angle(fromFacing, toFacing) > MostTurnPerSample)
+                && (crossesEdge || Vectors.AngleBetween(fromFacing, toFacing) > MostTurnPerSample)
             )
             {
                 var middleFacing = FacingAt(middle, fromFacing);
@@ -92,7 +91,7 @@ public sealed class LevelUp
         var sampleFacings = samples.Select(s => s.Facing).ToArray();
         var sampleTurned = new float[sampleTimes.Length];
         for (var k = 1; k < sampleTimes.Length; k++)
-            sampleTurned[k] = sampleTurned[k - 1] + Angle(sampleFacings[k - 1], sampleFacings[k]);
+            sampleTurned[k] = sampleTurned[k - 1] + Vectors.AngleBetween(sampleFacings[k - 1], sampleFacings[k]);
 
         var found = new List<Passage>();
         var inverted = false;
@@ -132,7 +131,7 @@ public sealed class LevelUp
                 to = -to;
             }
 
-            var turn = MathF.Atan2(Vector3.Dot(Vector3.Cross(from, to), Vector3.UnitY), Vector3.Dot(from, to));
+            var turn = Vectors.SignedAngle(from, to, Vector3.UnitY);
             found.Add(new Passage(start, end, from, turn, inverted, after, FromLevel: true));
             inverted = after;
             k = end;
@@ -168,14 +167,11 @@ public sealed class LevelUp
     private float Turned(double time, Vector3 forward)
     {
         var index = Search.LastAtOrBelow(times, time, 0, times.Length);
-        return turned[index] + Angle(facings[index], forward);
+        return turned[index] + Vectors.AngleBetween(facings[index], forward);
     }
 
     /// <summary>Whether unit <paramref name="forward"/> is within a vertical passage.</summary>
     private static bool InPassage(Vector3 forward) => CameraRotation.Sideways(forward) < PassageSideways;
-
-    /// <summary>The angle between two unit vectors, precise when they're close.</summary>
-    private static float Angle(Vector3 a, Vector3 b) => MathF.Atan2(Vector3.Cross(a, b).Length(), Vector3.Dot(a, b));
 
     /// <summary>The upright up facing unit <paramref name="forward"/>.</summary>
     private static Vector3 Level(Vector3 forward) => CameraRotation.Upright(forward);
@@ -184,8 +180,8 @@ public sealed class LevelUp
     private static Vector3 Level(Vector3 forward, bool inverted, float pole) =>
         (inverted ? pole : -pole) * Flat(forward);
 
-    /// <summary><paramref name="v"/>'s level part as a unit vector.</summary>
-    private static Vector3 Flat(Vector3 v) => Vector3.Normalize(new Vector3(v.X, 0f, v.Z));
+    /// <summary><paramref name="v"/>'s level part as a unit vector; straight up or down, yaw 0's heading, −z.</summary>
+    private static Vector3 Flat(Vector3 v) => Vectors.FlatOr(v, new Vector3(0f, 0f, -1f));
 
     /// <summary>A vertical passage from sample <see cref="Start"/> to sample <see cref="End"/> (null if the shot ends in it), turning up about the vertical by <see cref="Turn"/> from leaning along <see cref="From"/>; <see cref="FromLevel"/> when it starts from a level sample.</summary>
     private readonly record struct Passage(

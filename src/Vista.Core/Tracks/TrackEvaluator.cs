@@ -59,7 +59,7 @@ public sealed class TrackEvaluator
         _keys = TimingCompiler.Compile(track, legLengths);
         _distanceKeys = _keys.Select(ToDistance).ToArray();
         _curve = new TimingCurve(_distanceKeys);
-        _yaws = TrackAim.UnwrapAngles(track.Points.Select(p => p.Yaw).ToArray());
+        _yaws = Angles.Unwrap(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
         var fovs = track.Points.Select(p => p.Fov).ToArray();
         _fovMin = fovs.Length == 0 ? 0f : fovs.Min();
@@ -72,7 +72,7 @@ public sealed class TrackEvaluator
         var depart = arrive
             .Select((at, i) => track.Timing[i].Hold > 0f ? _keys[TrackEditing.PointKey(track, i) + 1].Time : at)
             .ToArray();
-        var rolls = TrackAim.UnwrapAngles(track.Points.Select(p => p.Roll).ToArray());
+        var rolls = Angles.Unwrap(track.Points.Select(p => p.Roll).ToArray());
         _rotation = new TimedRotation(
             _yaws.Select((yaw, i) => CameraRotation.FromAngles(yaw, _pitches[i], rolls[i])).ToArray(),
             arrive,
@@ -231,7 +231,7 @@ public sealed class TrackEvaluator
         var forward = Vector3.Normalize(direction);
         var roll = _roll!.At(time);
         if (roll != 0f)
-            up = Vector3.Transform(up, Quaternion.CreateFromAxisAngle(forward, roll));
+            up = CameraRotation.RollUp(up, forward, roll);
         return new CameraState(from, from + (forward * FreeCamMotion.LookAtDistance), up, fov);
     }
 
@@ -279,7 +279,7 @@ public sealed class TrackEvaluator
         var arrival = PointAt(MathF.Min(_distances[^1], start + LookAheadBlend)) - PointAt(start);
         if (arrival.LengthSquared() == 0f)
             return null;
-        var toward = chord.LengthSquared() == 0f ? Vector3.Zero : Vector3.Normalize(chord);
+        var toward = Vectors.NormalizeOr(chord, Vector3.Zero);
         return TrackAim.Usable((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
     }
 

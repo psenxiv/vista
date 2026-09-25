@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
@@ -192,12 +193,12 @@ public static class SceneJson
             && In(t.AimHeight, 0f, TrackEditing.MaxAimHeight)
             && In(t.Smoothing, 0f, 1f)
             && In(t.LookAhead, 0f, TrackEditing.MaxLookAhead)
-            && Finite(t.LookAt)
-            && Finite(t.Anchor.Position)
+            && Vectors.IsFinite(t.LookAt)
+            && Vectors.IsFinite(t.Anchor.Position)
             && float.IsFinite(t.Anchor.Yaw)
             // A point records the camera as it was, which the editor's pitch and FoV limits don't bound, so only the impossible is refused.
             && t.Points.All(p =>
-                Finite(p.Position)
+                Vectors.IsFinite(p.Position)
                 && float.IsFinite(p.Yaw)
                 && In(p.Pitch, -MathF.PI / 2f, MathF.PI / 2f)
                 && p.Fov > 0f
@@ -225,9 +226,7 @@ public static class SceneJson
         return t;
     }
 
-    private static bool Finite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
-
-    private static bool Finite(VectorDto v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
+    private static bool Finite(VectorDto v) => Vectors.IsFinite(ToVector(v));
 
     private static VectorDto FromVector(Vector3 v) => new(v.X, v.Y, v.Z);
 

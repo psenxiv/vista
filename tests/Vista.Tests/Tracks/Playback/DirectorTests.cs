@@ -137,7 +137,7 @@ public class DirectorTests
     private static void StraightTrackFrame(float t, Vista.Core.Camera.CameraState frame)
     {
         Near(new Vector3(t, 0f, 0f), frame.Position, 1e-3f);
-        Near(Vector3.UnitX, Vector3.Normalize(frame.LookAt - frame.Position), 1e-3f);
+        Near(Vector3.UnitX, frame.Forward, 1e-3f);
         Assert.Equal(1f, frame.Fov, 1e-5f);
         Assert.Equal(0f, frame.Roll, 1e-5f);
     }
@@ -310,7 +310,7 @@ public class DirectorTests
         GuardAt(characters, -20f);
         var held = director.Tick(1f / 60f)!.Value;
 
-        Near(Vector3.Normalize(eased.LookAt - eased.Position), Vector3.Normalize(held.LookAt - held.Position), 5e-5f);
+        Near(eased.Forward, held.Forward, 5e-5f);
     }
 
     // StraightTrack's control points sit at x = 0, 5 and 10 with two legs of 5 s, so the shot runs

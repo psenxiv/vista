@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 
 namespace Vista.Core.Tracks.Aiming;
 
@@ -11,7 +12,7 @@ public static class FollowOrbit
     public static Orbit Of(ControlPoint offset)
     {
         var p = offset.Position;
-        return new Orbit(MathF.Sqrt((p.X * p.X) + (p.Z * p.Z)), Wrap(MathF.Atan2(p.X, p.Z)), p.Y);
+        return new Orbit(CameraRotation.Sideways(p), Wrap(MathF.Atan2(p.X, p.Z)), p.Y);
     }
 
     /// <summary>The offset moved to <paramref name="orbit"/>: a change of angle swings it round the character and turns its yaw with it; aim, roll and FoV are otherwise kept.</summary>
@@ -19,10 +20,7 @@ public static class FollowOrbit
     {
         var current = Of(offset);
         var turned = new Anchor(Vector3.Zero, orbit.Angle - current.Angle).ToWorld(offset);
-        var across =
-            current.Distance > Epsilon
-                ? Vector3.Normalize(turned.Position with { Y = 0f })
-                : new Vector3(MathF.Sin(orbit.Angle), 0f, MathF.Cos(orbit.Angle));
+        var across = Vectors.FlatOr(turned.Position, -CameraRotation.Direction(orbit.Angle, 0f), Epsilon);
         var distance = MathF.Max(0f, orbit.Distance);
         return turned with { Position = new Vector3(across.X * distance, orbit.Height, across.Z * distance) };
     }
