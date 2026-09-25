@@ -26,8 +26,8 @@ public static class PointTransfer
             throw new ArgumentException("There are no points to move.");
         if (world.Count != points.Count)
             throw new ArgumentException("Each moved point needs its place in the world.");
-        if (points.Distinct().Count() != points.Count || points.Any(p => p < 0 || p >= from.Points.Count))
-            throw new ArgumentException("There is no such point.");
+        if (points.Distinct().Count() != points.Count || !points.All(p => TrackEditing.IsPoint(from, p)))
+            throw new ArgumentException(TrackEditing.NoSuchPoint);
         if (destination == source)
             throw new ArgumentException("The points are already on that track.");
         if (destination is { } named && SceneEditing.Get(scene, named).Aim == AimMode.FollowTarget)

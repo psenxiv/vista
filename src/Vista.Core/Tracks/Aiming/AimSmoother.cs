@@ -19,6 +19,8 @@ public sealed class AimSmoother
             return target;
         }
 
+        if (dt <= 0f)
+            return from;
         var factor = Factor(dt, smoothing);
         var next = factor == 1f ? target : Vector3.Lerp(from, target, factor);
         current = next;

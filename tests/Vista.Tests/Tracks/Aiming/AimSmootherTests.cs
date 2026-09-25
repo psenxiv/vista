@@ -97,4 +97,16 @@ public class AimSmootherTests
 
         Assert.Equal(HalfSecondAtFull, smoother.Step(Target, 0.5f, 1f).X, 4);
     }
+
+    // With no time passed the smoother stays where it was without looking at the target, so even a target that isn't
+    // finite can't leave it NaN for the steps after.
+    [Fact]
+    public void NoTimePassedStaysPutWhateverTheTarget()
+    {
+        var smoother = new AimSmoother();
+        smoother.Seed(new Vector3(1f, 2f, 3f));
+
+        Assert.Equal(new Vector3(1f, 2f, 3f), smoother.Step(new Vector3(float.PositiveInfinity, 0f, 0f), 0f, 0.5f));
+        Assert.Equal(new Vector3(1f, 2f, 3f), smoother.Step(new Vector3(1f, 2f, 3f), 0.1f, 0.5f));
+    }
 }

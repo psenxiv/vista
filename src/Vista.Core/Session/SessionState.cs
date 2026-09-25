@@ -92,9 +92,6 @@ public sealed class SessionState
     /// <summary>Why an edit of the selected point is refused with none selected.</summary>
     private const string SelectAPoint = "Select a point first.";
 
-    /// <summary>Why an edit of points is refused when one isn't in the track.</summary>
-    private const string NoSuchPoint = "There is no such point.";
-
     /// <summary>What the player is told once Vista has stopped, and why Edit and Live are refused.</summary>
     public const string StopMessage =
         "Vista has stopped. Reload it in /xlplugins, or check for an update if that doesn't help.";
@@ -447,7 +444,7 @@ public sealed class SessionState
     public string? DeletePoints(IReadOnlyCollection<int> indices)
     {
         if (indices.Count == 0 || !indices.All(i => TrackEditing.IsPoint(Local, i)))
-            return NoSuchPoint;
+            return TrackEditing.NoSuchPoint;
         int? Kept(int p) => indices.Contains(p) ? null : p - indices.Distinct().Count(d => d < p);
         var kept = Selection.Points.Select(Kept).OfType<int>().ToArray();
         var last = Selection.LastPoint is { } l ? Kept(l) : null;
@@ -463,7 +460,7 @@ public sealed class SessionState
         if (Mode != CameraMode.Editing)
             return TrackOnlyWhileEditing;
         if (indices.Count == 0 || !indices.All(i => TrackEditing.IsPoint(Local, i)))
-            return NoSuchPoint;
+            return TrackEditing.NoSuchPoint;
 
         var points = indices.Distinct().Order().ToArray();
         var world = Track;

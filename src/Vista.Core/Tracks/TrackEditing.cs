@@ -56,6 +56,9 @@ public static class TrackEditing
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
     public const string FollowHasOnePoint = "A Follow Target track has one point.";
 
+    /// <summary>Why an edit naming a point the track doesn't have is refused.</summary>
+    public const string NoSuchPoint = "There is no such point.";
+
     /// <summary>Why a track with several points can't aim with Follow Target.</summary>
     private const string FollowNeedsOnePoint = "Follow Target needs a track with one point.";
 
