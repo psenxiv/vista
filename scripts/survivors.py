@@ -43,7 +43,9 @@ killed = counts.get("Killed", 0) + counts.get("Timeout", 0)
 survived = counts.get("Survived", 0)
 uncovered = counts.get("NoCoverage", 0)
 tested = killed + survived + uncovered
-score = 100 * killed / tested if tested else 100
+if not tested:
+    sys.exit("Stryker tested no mutants, so there's no score")
+score = 100 * killed / tested
 print(f"Mutation score {score:.1f}%: {killed} killed, {survived} survived, {uncovered} not covered")
 if commit:
     print(f"{len(survivors)} survivors on lines changed since {commit[:7]}:")
