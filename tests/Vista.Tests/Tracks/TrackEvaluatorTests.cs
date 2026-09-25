@@ -859,6 +859,24 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelFacesTheWayTheSpotLeavesAsItPassesThroughTheHoldingCamera()
+    {
+        // Legs of 0.25 s: the camera holds at the origin from 0.25 s to 1.25 s, and reaches it again at 2 s. At 0.75 s,
+        // with the look ahead at 1.25 s, the spot passes through the holding camera, between (-5, 0, 0) and (5, 0, 0),
+        // equally far either side, so along +x. Only the spot moves, so the chord opens that way.
+        var track = TrackEditing.Empty(AimMode.PathTangent);
+        foreach (
+            var point in new[] { Point(0f, 0f, 5f), Point(0f), Point(0f, 0f, -5f), Point(-5f), Point(0f), Point(5f) }
+        )
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg <= 5; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), 1.25f));
+
+        Along(Vector3.UnitX, Facing(evaluator, 0.75), 1e-6f);
+    }
+
+    [Fact]
     public void LookAtStartingStraightUnderItsPointDoesNotWhip()
     {
         // Found by ThePictureNeverWhips as a 7.6° excess in a frame: starting 0.1° from straight under the point, the
