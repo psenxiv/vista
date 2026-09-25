@@ -79,7 +79,9 @@ Turn lint rules off in `.editorconfig` with a comment saying why, never with `#p
     make testing                # Ship to opted-in testers (test-vX.Y.Z.N)
     make release                # Ship to everyone (prod-vX.Y.Z.N)
 
-Pushing a tag runs the release workflow. Only the user pushes tags.
+Pushing a tag runs the release workflow. Only the user pushes tags and runs the release scripts.
+
+**Never drive a deployment without the user's explicit permission.** That covers pushing a release tag, running `make testing`, `make release` or `scripts/release.sh`, and re-running, retrying, cancelling or otherwise touching a release workflow run. If a release or its workflow fails, report what failed and why, touch nothing, and wait for the user's instructions.
 
 Versions are SemVer's `X.Y.Z` plus `N`, which goes up by one for every shipped build of that `X.Y.Z`. A test build that holds up is promoted by releasing the same version.
 
