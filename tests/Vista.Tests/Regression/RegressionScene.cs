@@ -64,6 +64,7 @@ internal static class RegressionScene
         new("Look At straight overhead: turns upright, no flip", PassingUnder(), 0),
         new("Climbing turn: horizon stays level", Travel(ClimbingTurn), 0),
         new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
+        new("Field of view recorded at 3° and 143°: zooms from 5° to 120° and back, no pop", PastTheFovRange(), 0),
     ];
 
     /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
@@ -184,6 +185,17 @@ internal static class RegressionScene
             TrackEditing.MaxLookAhead
         );
         return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 3, 2f);
+    }
+
+    /// <summary>Recorded aim through points recorded at 3°, 143° and 3°, past the editor's 5° to 120°, holding a second at each.</summary>
+    private static Track PastTheFovRange()
+    {
+        var track = TrackEditing.Empty(AimMode.AimKeys);
+        foreach (var (x, fov) in new[] { (-10f, 3f), (0f, 143f), (10f, 3f) })
+            track = TrackEditing.Append(track, new ControlPoint(new Vector3(x, 0f, 0f), 0f, 0f, fov * Fixtures.Deg));
+        for (var i = 0; i < track.Points.Count; i++)
+            track = TrackEditing.SetHold(track, i, 1f);
+        return track;
     }
 
     /// <summary>Recorded aim through points that each look, zoom and roll differently, holding at the middle and the end.</summary>

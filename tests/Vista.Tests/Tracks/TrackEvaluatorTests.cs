@@ -1,6 +1,7 @@
 using System.Numerics;
 using CsCheck;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Timing;
@@ -95,15 +96,15 @@ public class TrackEvaluatorTests
         {
             Point(0f, 0f, 0f, fov: 1f),
             Point(10f, 0f, 0f, fov: 1f),
-            Point(20f, 0f, 0f, fov: 3f),
+            Point(20f, 0f, 0f, fov: 2f),
             Point(30f, 0f, 0f, fov: 1f),
             Point(40f, 0f, 0f, fov: 1f),
         };
         var track = TrackEditing.SetSpeed(Build(points), 10f);
         var evaluator = new TrackEvaluator(track);
 
-        // Position 3.335 lands in segment 3 at fraction 0.335, where the raw spline
-        // value dips to roughly 0.85 - below the authored minimum of 1.
+        // Speed 10 over 10-yalm legs reaches the points at 0, 1, 2, 3 and 4 s. Point 3's slope is ((1 - 2) + (1 - 1)) / 2 = -0.5
+        // and point 4's is 0, so at 3.335 s, 0.335 into leg 4, the raw value is 1 + h10(0.335)·(-0.5) = 1 - 0.148·0.5 ≈ 0.926.
         var state = evaluator.Evaluate(3.335);
         Assert.NotNull(state);
         Assert.Equal(1f, state!.Value.Fov, 2);
@@ -113,21 +114,50 @@ public class TrackEvaluatorTests
     public void FovReachesAHigherPointsValueAndIsClampedAtTheAuthoredMax()
     {
         // Speed 10 over 10-yalm legs reaches the points at 0, 1, 2 and 3 s. Each point's slope is the time-weighted
-        // Catmull-Rom one: point 1's is ((3 - 1) + (3 - 3)) / 2 = 1 and point 2's is ((3 - 3) + (1 - 3)) / 2 = -1.
+        // Catmull-Rom one: point 1's is ((2 - 1) + (2 - 2)) / 2 = 0.5 and point 2's is ((2 - 2) + (1 - 2)) / 2 = -0.5.
         var points = new[]
         {
             Point(0f, 0f, 0f, fov: 1f),
-            Point(10f, 0f, 0f, fov: 3f),
-            Point(20f, 0f, 0f, fov: 3f),
+            Point(10f, 0f, 0f, fov: 2f),
+            Point(20f, 0f, 0f, fov: 2f),
             Point(30f, 0f, 0f, fov: 1f),
         };
         var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(Build(points), 10f));
 
         // At 1 s the camera is at point 1, with its own field of view.
-        Assert.Equal(3f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-3f);
+        Assert.Equal(2f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-3f);
 
-        // Halfway along leg 2, Hermite(3, 3, 1, -1, 0.5) = 0.5·3 + 0.125·1 + 0.5·3 + (-0.125)·(-1) = 3.25, past the max of 3.
-        Assert.Equal(3f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-3f);
+        // Halfway along leg 2, Hermite(2, 2, 0.5, -0.5, 0.5) = 0.5·2 + 0.125·0.5 + 0.5·2 + (-0.125)·(-0.5) = 2.125, past the max of 2.
+        Assert.Equal(2f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-3f);
+    }
+
+    [Fact]
+    public void AFieldOfViewPastTheEditorsRangePlaysAtItsEdge()
+    {
+        // The counterexample, simplified: a point three float steps under 5°, held 3 s, then 10 yalms at speed 2 to a
+        // point recorded at 2.5 radians (about 143°). The channel runs from 5° to 120°: the leg starts at 3 s and ends at 8 s.
+        var track = TrackEditing.SetHold(Build([Point(0f, fov: 0.087266445f), Point(10f, fov: 2.5f)]), 0, 3f);
+        var evaluator = new TrackEvaluator(track);
+
+        // In the hold, the first point's field of view raised to the editor's 5°.
+        Assert.Equal(EditLimits.MinFov, evaluator.Evaluate(0.030769)!.Value.Fov, 0f);
+
+        // Halfway along the leg the held first point's slope is 0 and the last point's is half the leg's average,
+        // (MaxFov - MinFov) / 5 / 2 per second, so Hermite gives 0.5·(0.0872665 + 2.0943951) - 0.125·(2.0943951 - 0.0872665) / 2
+        // = 1.0908308 - 0.1254455 = 0.9653853. Between the raw 0.087266445 and 2.5 it would be 1.1428374.
+        Assert.Equal(0.9653853f, evaluator.Evaluate(5.5)!.Value.Fov, 1e-4f);
+
+        // At the end, the last point's field of view lowered to the editor's 120°.
+        Assert.Equal(EditLimits.MaxFov, evaluator.Evaluate(8.0)!.Value.Fov, 0f);
+    }
+
+    [Fact]
+    public void ASinglePointPastTheEditorsRangePlaysAtItsEdge()
+    {
+        // A point recorded at 2.5 radians, about 143°, past the editor's 120°.
+        var evaluator = new TrackEvaluator(Build([Point(0f, fov: 2.5f)]));
+
+        Assert.Equal(EditLimits.MaxFov, evaluator.Evaluate(0.0)!.Value.Fov, 0f);
     }
 
     [Fact]

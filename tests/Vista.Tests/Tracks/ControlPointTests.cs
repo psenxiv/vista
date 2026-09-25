@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Xunit;
 
@@ -43,5 +44,16 @@ public class ControlPointTests
         Assert.Equal(-0.2f, point.Pitch, 1e-5f);
         Assert.Equal(0.1f, point.Roll, 1e-5f);
         Assert.Equal(Vector3.One, point.Position);
+    }
+
+    [Theory]
+    // Three float steps under 5°, as a generated point once was: CsCheck's lowest draw from MinFov to MaxFov, 1·L + (MinFov − L) with L = MaxFov − MinFov, rounds under MinFov.
+    [InlineData(0.087266445f, EditLimits.MinFov)]
+    [InlineData(1f, 1f)]
+    // 2.5 radians is about 143°, wider than the editor's 120° but a field of view a camera can record.
+    [InlineData(2.5f, EditLimits.MaxFov)]
+    public void APointPlaysAtItsOwnFieldOfViewKeptWithinTheEditorsRange(float recorded, float played)
+    {
+        Assert.Equal(played, new ControlPoint(Vector3.Zero, 0f, 0f, recorded).PlayedFov, 0f);
     }
 }

@@ -101,7 +101,13 @@ public sealed class AimTracker
         {
             var fallback = world.Points[0];
             return lastFollow
-                ?? CameraState.FromAngles(fallback.Position, fallback.Yaw, fallback.Pitch, offset.Roll, offset.Fov);
+                ?? CameraState.FromAngles(
+                    fallback.Position,
+                    fallback.Yaw,
+                    fallback.Pitch,
+                    offset.Roll,
+                    offset.PlayedFov
+                );
         }
 
         var facing = world.FollowTurns ? character.Facing : heldFacing ??= character.Facing;
@@ -119,7 +125,7 @@ public sealed class AimTracker
             (yaw, pitch) = aim;
 
         lastFollow = Carry(
-            CameraState.FromAngles(position, yaw, pitch, offset.Roll, offset.Fov),
+            CameraState.FromAngles(position, yaw, pitch, offset.Roll, offset.PlayedFov),
             dt,
             world.FollowLooks
         );

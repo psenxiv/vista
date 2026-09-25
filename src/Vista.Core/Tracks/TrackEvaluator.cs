@@ -61,7 +61,7 @@ public sealed class TrackEvaluator
         _curve = new TimingCurve(_distanceKeys);
         _yaws = TrackAim.UnwrapAngles(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
-        var fovs = track.Points.Select(p => p.Fov).ToArray();
+        var fovs = track.Points.Select(p => p.PlayedFov).ToArray();
         _fovMin = fovs.Length == 0 ? 0f : fovs.Min();
         _fovMax = fovs.Length == 0 ? 0f : fovs.Max();
         if (track.Points.Count == 0)
@@ -126,7 +126,7 @@ public sealed class TrackEvaluator
         {
             var only = _track.Points[0];
             var (onlyYaw, onlyPitch) = Toward(only.Position, target) ?? (only.Yaw, only.Pitch);
-            return CameraState.FromAngles(only.Position, onlyYaw, onlyPitch, only.Roll, only.Fov);
+            return CameraState.FromAngles(only.Position, onlyYaw, onlyPitch, only.Roll, only.PlayedFov);
         }
 
         var (cameraPosition, segment, fraction) = PlaceAt(time);
