@@ -89,9 +89,16 @@ public sealed class TrackEvaluator
         return _lengths[leg - 1];
     }
 
+    /// <summary>The times leg <paramref name="leg"/> starts and ends: its start key's and its end key's.</summary>
+    public (float Start, float End) LegSpan(int leg) =>
+        (_keys[TrackEditing.LegStartKey(_track, leg)].Time, _keys[TrackEditing.LegEndKey(_track, leg)].Time);
+
     /// <summary>The time leg <paramref name="leg"/> takes, from its start key to its end key.</summary>
-    public float LegSeconds(int leg) =>
-        _keys[TrackEditing.LegEndKey(_track, leg)].Time - _keys[TrackEditing.LegStartKey(_track, leg)].Time;
+    public float LegSeconds(int leg)
+    {
+        var (start, end) = LegSpan(leg);
+        return end - start;
+    }
 
     /// <summary>The time point <paramref name="point"/> is reached.</summary>
     public float PointSeconds(int point) => _keys[TrackEditing.PointKey(_track, point)].Time;
@@ -101,10 +108,8 @@ public sealed class TrackEvaluator
     {
         for (var leg = 1; leg < _track.Points.Count; leg++)
         {
-            if (
-                time >= _keys[TrackEditing.LegStartKey(_track, leg)].Time
-                && time <= _keys[TrackEditing.LegEndKey(_track, leg)].Time
-            )
+            var (start, end) = LegSpan(leg);
+            if (time >= start && time <= end)
                 return leg;
         }
 

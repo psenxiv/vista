@@ -200,4 +200,31 @@ public class TimingEditingTests
         Assert.Same(track, RippleKey(track, 0, 2f));
         Assert.Same(track, RippleKey(track, 1, float.NaN));
     }
+
+    // Build3PointTrack with a 2 s hold on point 1 has keys 0 (point 0), 1 (point 1), 2 (its hold end) and 3 (point 2).
+    // By HasHandle's rules a hold end has only an out side, a point key with a hold only an in side, and the last key no out side.
+
+    [Fact]
+    public void AHoldEndOffersRemovingItsHoldAndBreakingItsOutHandle()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+
+        Assert.Equal(new KeyActions(true, true, false, KeySide.Out), TimingEditing.ActionsFor(track, 2));
+        Assert.Equal(new KeyActions(false, true, false, KeySide.In), TimingEditing.ActionsFor(track, 1));
+    }
+
+    [Fact]
+    public void ABrokenKeyOffersUnifyingFromItsOutSideWhenItHasOne()
+    {
+        var held = TimingEditing.SetBroken(TrackEditing.SetHold(Build3PointTrack(), 1, 2f), 1, true);
+        var plain = TimingEditing.SetBroken(Build3PointTrack(), 0, true);
+
+        Assert.Equal(new KeyActions(false, false, true, KeySide.In), TimingEditing.ActionsFor(held, 1));
+        Assert.Equal(new KeyActions(true, false, true, KeySide.Out), TimingEditing.ActionsFor(held, 2));
+        Assert.Equal(new KeyActions(false, false, true, KeySide.Out), TimingEditing.ActionsFor(plain, 0));
+    }
+
+    [Fact]
+    public void TheOnlyKeyOfAOnePointTrackOffersNothing() =>
+        Assert.False(TimingEditing.ActionsFor(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), 0).Any);
 }

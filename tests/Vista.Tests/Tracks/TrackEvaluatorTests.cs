@@ -1067,4 +1067,20 @@ public class TrackEvaluatorTests
             print: Kept<Track>(Print)
         );
     }
+
+    // Build3PointTrack's keys are at 0, 5 and 10 s; a 2 s hold on point 1 adds a key at 7 and moves point 2's to 12.
+
+    [Fact]
+    public void ALegSpansFromItsStartKeyToItsEndKey()
+    {
+        var evaluator = new TrackEvaluator(Build3PointTrack());
+        var held = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f));
+
+        Assert.Equal(0f, evaluator.LegSpan(1).Start, 1e-4f);
+        Assert.Equal(5f, evaluator.LegSpan(1).End, 1e-4f);
+        Assert.Equal(5f, evaluator.LegSpan(2).Start, 1e-4f);
+        Assert.Equal(10f, evaluator.LegSpan(2).End, 1e-4f);
+        Assert.Equal(7f, held.LegSpan(2).Start, 1e-4f);
+        Assert.Equal(12f, held.LegSpan(2).End, 1e-4f);
+    }
 }

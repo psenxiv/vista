@@ -46,6 +46,20 @@ public static class TimingEditing
             : key < TrackEditing.KeyCount(track) - 1 && HasDeparture(track, point, role);
     }
 
+    /// <summary>What key <paramref name="key"/>'s menu offers: a hold end removes its hold, handles break while unbroken and unify while broken, from the out side when it has one.</summary>
+    public static KeyActions ActionsFor(Track track, int key)
+    {
+        var broken = track.Timing[TrackEditing.PointOf(track, key)].Broken;
+        var hasIn = HasHandle(track, key, KeySide.In);
+        var hasOut = HasHandle(track, key, KeySide.Out);
+        return new KeyActions(
+            TrackEditing.RoleOf(track, key) == KeyRole.HoldEnd,
+            !broken && (hasIn || hasOut),
+            broken,
+            hasOut ? KeySide.Out : KeySide.In
+        );
+    }
+
     /// <summary>Removes the hold a hold end closes. A point's key has no hold to remove.</summary>
     public static Track RemoveHold(Track track, int key)
     {

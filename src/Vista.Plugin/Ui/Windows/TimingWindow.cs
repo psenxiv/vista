@@ -191,7 +191,6 @@ internal sealed class TimingWindow : Window
     /// <summary>The key's time, the Smooth, Linear and Flat buttons, and a trash icon for a hold end.</summary>
     private void DrawKeyControls(int key)
     {
-        var role = TrackEditing.RoleOf(session.Track, key);
         ImGui.TextUnformatted($"Key: {session.World.Evaluator.Keys[key].Time:0.00} s");
 
         ImGui.BeginDisabled(!Editing);
@@ -207,7 +206,7 @@ internal sealed class TimingWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(!Editing || role == KeyRole.Point);
+        ImGui.BeginDisabled(!Editing || !TimingEditing.ActionsFor(session.Track, key).RemoveHold);
         if (IconButton.Draw("key-delete", FontAwesomeIcon.Trash, "Remove hold", danger: true))
             Report(session.RemoveHold(key));
         ImGui.EndDisabled();
@@ -437,17 +436,12 @@ internal sealed class TimingWindow : Window
         if (SelectedKeyIndex() is not { } key || keyScreens[key] is not { } at)
             return false;
 
-        (KeySide Side, float Distance)? best = null;
-        foreach (var (side, end) in handleEnds)
-        {
-            var distance = Vector2.Distance(end, mouse);
-            if (distance <= HandleHitRadius && (best is null || distance < best.Value.Distance))
-                best = (side, distance);
-        }
-
-        if (best is not { } hit)
+        if (
+            MarkerHitTest.Nearest(handleEnds.Select(h => (Vector2?)h.End).ToList(), mouse, HandleHitRadius)
+            is not { } hit
+        )
             return false;
-        BeginDrag(new Drag(key, hit.Side, at, graph));
+        BeginDrag(new Drag(key, handleEnds[hit].Side, at, graph));
         return true;
     }
 
@@ -484,14 +478,7 @@ internal sealed class TimingWindow : Window
             return;
         session.Selection.SelectKey(key);
 
-        var track = session.Track;
-        var hasHandle =
-            TimingEditing.HasHandle(track, key, KeySide.In) || TimingEditing.HasHandle(track, key, KeySide.Out);
-        if (
-            TrackEditing.RoleOf(track, key) == KeyRole.Point
-            && !track.Timing[TrackEditing.PointOf(track, key)].Broken
-            && !hasHandle
-        )
+        if (!TimingEditing.ActionsFor(session.Track, key).Any)
             return;
         popupKey = key;
         ImGui.OpenPopup(KeyPopup);
@@ -514,18 +501,13 @@ internal sealed class TimingWindow : Window
             return;
         }
 
-        var track = session.Track;
-        var role = TrackEditing.RoleOf(track, key);
-        var broken = track.Timing[TrackEditing.PointOf(track, key)].Broken;
-        var hasIn = TimingEditing.HasHandle(track, key, KeySide.In);
-        var hasOut = TimingEditing.HasHandle(track, key, KeySide.Out);
-
-        if (role == KeyRole.HoldEnd && ImGui.MenuItem("Remove hold"))
+        var actions = TimingEditing.ActionsFor(session.Track, key);
+        if (actions.RemoveHold && ImGui.MenuItem("Remove hold"))
             Report(session.RemoveHold(key));
-        if (!broken && (hasIn || hasOut) && ImGui.MenuItem("Break handles"))
+        if (actions.BreakHandles && ImGui.MenuItem("Break handles"))
             Report(session.BreakHandles(key));
-        if (broken && ImGui.MenuItem("Unify handles"))
-            Report(session.UnifyHandles(key, hasOut ? KeySide.Out : KeySide.In));
+        if (actions.UnifyHandles && ImGui.MenuItem("Unify handles"))
+            Report(session.UnifyHandles(key, actions.UnifyFrom));
         ImGui.EndPopup();
     }
 
@@ -677,14 +659,8 @@ internal sealed class TimingWindow : Window
         session.Selection.Leg is { } leg && leg >= 1 && leg < session.Track.Points.Count ? leg : null;
 
     /// <summary>The selected leg's start and end times, or null.</summary>
-    private (float Start, float End)? SelectedLegSpan()
-    {
-        if (SelectedLegIndex() is not { } leg)
-            return null;
-        var track = session.Track;
-        var keys = session.World.Evaluator.Keys;
-        return (keys[TrackEditing.LegStartKey(track, leg)].Time, keys[TrackEditing.LegEndKey(track, leg)].Time);
-    }
+    private (float Start, float End)? SelectedLegSpan() =>
+        SelectedLegIndex() is { } leg ? session.World.Evaluator.LegSpan(leg) : null;
 
     /// <summary>A key or handle being dragged, with the graph and key position from the frame it began.</summary>
     private sealed class Drag(int key, KeySide? side, Vector2 keyScreen, TimingGraph graph, bool ripple = false)
