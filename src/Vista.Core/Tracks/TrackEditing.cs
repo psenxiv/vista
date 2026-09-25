@@ -50,6 +50,7 @@ public static class TrackEditing
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
     public const string FollowHasOnePoint = "A Follow Target track has one point";
 
+    /// <summary>Why a track with several points can't aim with Follow Target.</summary>
     private const string FollowNeedsOnePoint = "Follow Target needs a track with one point";
 
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>

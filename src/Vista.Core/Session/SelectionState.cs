@@ -165,7 +165,7 @@ public sealed class SelectionState
         return null;
     }
 
-    /// <summary>Applies a click in the world on <paramref name="hit"/>, or on empty space when null: plain selects what it hit, editing its track first, or clears the selection; Ctrl or Shift act only on the edited track's points. Returns why it was refused, or null.</summary>
+    /// <summary>Applies a click in the world on <paramref name="hit"/>, or on nothing when null. Returns why it was refused, or null.</summary>
     public string? ClickMarker(TrackMarker? hit, RowClick click)
     {
         if (click != RowClick.Plain)
