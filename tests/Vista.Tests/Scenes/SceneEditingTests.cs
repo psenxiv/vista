@@ -236,4 +236,34 @@ public class SceneEditingTests
         Assert.Same(hidden, SceneEditing.SetHidden(hidden, [ids[0]], true));
         Assert.Throws<ArgumentException>(() => SceneEditing.SetHidden(scene, [Guid.NewGuid()], true));
     }
+
+    // A delete is allowed while some track isn't in it.
+
+    [Fact]
+    public void DeletingIsAllowedWhileATrackWouldRemain()
+    {
+        var scene = SceneEditing.Add(SceneEditing.New()).Scene;
+        var (a, b) = (scene.Tracks[0].Id, scene.Tracks[1].Id);
+
+        Assert.True(SceneEditing.CanDelete(scene, [a]));
+        Assert.False(SceneEditing.CanDelete(scene, [a, b]));
+        var one = SceneEditing.New();
+        Assert.False(SceneEditing.CanDelete(one, [one.Tracks[0].Id]));
+    }
+
+    // Show needs a hidden track among them; Hide needs a shown one that isn't the edited track.
+
+    [Fact]
+    public void ShowNeedsAHiddenTrackAndHideAShownOneOtherThanTheEdited()
+    {
+        var three = Three();
+        var (a, b, c) = (three.Tracks[0].Id, three.Tracks[1].Id, three.Tracks[2].Id);
+        var scene = SceneEditing.SetHidden(three, [b], true);
+
+        Assert.True(SceneEditing.CanShow(scene, [a, b]));
+        Assert.False(SceneEditing.CanShow(scene, [a]));
+        Assert.True(SceneEditing.CanHide(scene, [a, c], a));
+        Assert.False(SceneEditing.CanHide(scene, [a], a));
+        Assert.False(SceneEditing.CanHide(scene, [b], a));
+    }
 }

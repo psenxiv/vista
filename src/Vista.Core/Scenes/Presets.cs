@@ -6,6 +6,9 @@ namespace Vista.Core.Scenes;
 /// <summary>Takes a track out of a scene as a preset and places a preset in a scene.</summary>
 public static class Presets
 {
+    /// <summary>True when a track has points to save as a preset.</summary>
+    public static bool CanSave(Track track) => track.Points.Count > 0;
+
     /// <summary>Track <paramref name="trackId"/> with its anchor at the origin, and that anchor's world yaw.</summary>
     public static Preset From(Scene scene, Guid trackId)
     {

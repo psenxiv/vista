@@ -67,9 +67,9 @@ public static class SceneEditing
             Require(scene, id);
         var at = Require(scene, edited);
         var gone = ids.ToHashSet();
-        var tracks = scene.Tracks.Where(t => !gone.Contains(t.Id)).ToList();
-        if (tracks.Count == 0)
+        if (!CanDelete(scene, gone))
             throw new ArgumentException("A scene keeps at least one track.");
+        var tracks = scene.Tracks.Where(t => !gone.Contains(t.Id)).ToList();
 
         var next = gone.Contains(edited)
             ? scene.Tracks.Skip(at + 1).FirstOrDefault(t => !gone.Contains(t.Id)) ?? tracks[^1]
@@ -85,6 +85,10 @@ public static class SceneEditing
             next.Id
         );
     }
+
+    /// <summary>True when deleting tracks <paramref name="ids"/> would leave at least one.</summary>
+    public static bool CanDelete(Scene scene, IReadOnlyCollection<Guid> ids) =>
+        scene.Tracks.Any(t => !ids.Contains(t.Id));
 
     /// <summary>Puts the tracks in <paramref name="order"/> (old indices).</summary>
     public static Scene Reorder(Scene scene, IReadOnlyList<int> order)
@@ -114,6 +118,13 @@ public static class SceneEditing
             Hidden = set,
         };
     }
+
+    /// <summary>True when showing tracks <paramref name="ids"/> would show one that is hidden.</summary>
+    public static bool CanShow(Scene scene, IReadOnlyCollection<Guid> ids) => ids.Any(scene.Hidden.Contains);
+
+    /// <summary>True when hiding tracks <paramref name="ids"/> would hide a shown one other than <paramref name="edited"/>, which is always shown.</summary>
+    public static bool CanHide(Scene scene, IReadOnlyCollection<Guid> ids, Guid edited) =>
+        ids.Any(id => id != edited && !scene.Hidden.Contains(id));
 
     private static int Require(Scene scene, Guid id) =>
         IndexOf(scene, id) is var index and >= 0 ? index : throw new ArgumentException("There is no such track.");

@@ -78,4 +78,15 @@ public class SceneNamesTests
         Assert.Equal("Dolly copy 2", SceneNames.CopyOf("Dolly", ["Dolly", "Dolly copy"]));
         Assert.Equal("Dolly copy 3", SceneNames.CopyOf("Dolly", ["dolly COPY", "Dolly copy 2"]));
     }
+
+    // A preset name is checked by the name rules alone, and replaces a taken one (trimmed, ignoring case) only when usable.
+
+    [Fact]
+    public void APresetNameReplacesATakenOneOnlyWhenUsable()
+    {
+        Assert.Equal((null, true), SceneNames.PresetCheck("Dusk ", ["dusk"]));
+        Assert.Equal((null, false), SceneNames.PresetCheck("Dawn", ["Dusk"]));
+        Assert.Equal(("Enter a name", false), SceneNames.PresetCheck("  ", ["Dusk"]));
+        Assert.Equal((Unusable, false), SceneNames.PresetCheck("a/b", ["a/b"]));
+    }
 }

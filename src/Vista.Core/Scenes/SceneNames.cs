@@ -53,6 +53,13 @@ public static class SceneNames
         return null;
     }
 
+    /// <summary>Why <paramref name="name"/> can't name a preset, or null, and whether it replaces one of <paramref name="presets"/>.</summary>
+    public static (string? Refusal, bool Replaces) PresetCheck(string name, IEnumerable<string> presets)
+    {
+        var refusal = Refusal(name);
+        return (refusal, refusal is null && Taken(name, presets));
+    }
+
     /// <summary>True when a name in <paramref name="existing"/> matches the trimmed <paramref name="name"/>, ignoring case.</summary>
     public static bool Taken(string name, IEnumerable<string> existing)
     {

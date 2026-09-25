@@ -233,15 +233,11 @@ internal sealed class HierarchyPanel
         // Checked when the text changes, not every frame, since a scene check lists the folder.
         if (checkedName is not { } check || check.Text != nameText)
         {
-            var preset = what == Naming.SavePreset;
-            var nameRefusal = preset
-                ? SceneNames.Refusal(nameText)
-                : files.NameRefusal(nameText, what == Naming.RenameScene);
-            checkedName = check = (
-                nameText,
-                nameRefusal,
-                preset && nameRefusal is null && SceneNames.Taken(nameText, presets)
-            );
+            var (nameRefusal, nameReplaces) =
+                what == Naming.SavePreset
+                    ? SceneNames.PresetCheck(nameText, presets)
+                    : (files.NameRefusal(nameText, what == Naming.RenameScene), false);
+            checkedName = check = (nameText, nameRefusal, nameReplaces);
         }
 
         var (_, refusal, replaces) = check;
@@ -427,14 +423,14 @@ internal sealed class HierarchyPanel
             Report(session.DuplicateTrack(track.Id));
         if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked))
             Report(session.AddToPlaylist([track.Id]));
-        if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, track.Points.Count > 0))
+        if (ImGui.MenuItem("Save as preset", string.Empty, ref ticked, Presets.CanSave(track)))
         {
             presets = files.PresetNames();
             presetTrack = track.Id;
             AskName(Naming.SavePreset, track.Name);
         }
 
-        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, scene.Tracks.Count > 1))
+        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, SceneEditing.CanDelete(scene, [track.Id])))
             Report(session.DeleteTracks([track.Id]));
     }
 
@@ -445,18 +441,11 @@ internal sealed class HierarchyPanel
         var edited = session.EditedTrackId;
         if (ImGui.MenuItem("Add to playlist", string.Empty, ref ticked))
             Report(session.AddToPlaylist(selected));
-        if (ImGui.MenuItem("Show", string.Empty, ref ticked, selected.Any(scene.Hidden.Contains)))
+        if (ImGui.MenuItem("Show", string.Empty, ref ticked, SceneEditing.CanShow(scene, selected)))
             Report(session.SetTracksHidden(selected, false));
-        if (
-            ImGui.MenuItem(
-                "Hide",
-                string.Empty,
-                ref ticked,
-                selected.Any(id => id != edited && !scene.Hidden.Contains(id))
-            )
-        )
+        if (ImGui.MenuItem("Hide", string.Empty, ref ticked, SceneEditing.CanHide(scene, selected, edited)))
             Report(session.SetTracksHidden(selected, true));
-        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, selected.Count < scene.Tracks.Count))
+        if (ImGui.MenuItem("Delete", string.Empty, ref ticked, SceneEditing.CanDelete(scene, selected)))
             Report(session.DeleteTracks(selected));
     }
 

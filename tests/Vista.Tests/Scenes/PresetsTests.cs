@@ -122,4 +122,11 @@ public class PresetsTests
         // Unplaced, the scene anchor is the origin, so the Look At was at (5, 6, 7) in the world.
         Near(new Vector3(5f, 6f, 7f), SceneGeometry.InWorld(placed, placed.Tracks[0]).LookAt, 1e-4f);
     }
+
+    [Fact]
+    public void OnlyATrackWithPointsCanBeSaved()
+    {
+        Assert.False(Presets.CanSave(TrackEditing.Empty()));
+        Assert.True(Presets.CanSave(TrackEditing.Append(TrackEditing.Empty(), Point(0f))));
+    }
 }
