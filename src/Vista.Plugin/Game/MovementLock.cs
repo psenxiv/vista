@@ -42,6 +42,16 @@ internal sealed unsafe class MovementLock : IDisposable
         }
 
         var found = (int*)(address + CounterOffset);
+        var image = Plugin.SigScanner.Module;
+        if (!MovementCounter.InImage((long)found, image.BaseAddress, image.ModuleMemorySize))
+        {
+            Plugin.Log.Error(
+                "[movement] lock counter at 0x{Addr:X} is outside the game; movement will not lock.",
+                (nint)found
+            );
+            return;
+        }
+
         if (!MovementCounter.IsPlausible(*found))
         {
             Plugin.Log.Error(

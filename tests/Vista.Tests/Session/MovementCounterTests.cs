@@ -16,4 +16,14 @@ public class MovementCounterTests
     [InlineData(int.MaxValue, false)]
     public void ACountIsPlausibleFromZeroToSixteen(int count, bool plausible) =>
         Assert.Equal(plausible, MovementCounter.IsPlausible(count));
+
+    // An image from 0x1000 to 0x1100: the counter's four bytes fit from 0x1000 up to 0x10FC (0x10FC + 4 = 0x1100).
+    [Theory]
+    [InlineData(0x0FFF, false)]
+    [InlineData(0x1000, true)]
+    [InlineData(0x10FC, true)]
+    [InlineData(0x10FD, false)]
+    [InlineData(0x1100, false)]
+    public void ACounterIsReadOnlyInsideTheImage(long address, bool inside) =>
+        Assert.Equal(inside, MovementCounter.InImage(address, 0x1000, 0x100));
 }

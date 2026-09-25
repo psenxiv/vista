@@ -7,6 +7,7 @@ namespace Vista.Plugin.Game;
 internal sealed class Faults(Func<CameraMode> mode)
 {
     private readonly ConcurrentQueue<Fault> waiting = new();
+    private readonly ConcurrentDictionary<string, byte> logged = new(StringComparer.Ordinal);
     private volatile bool any;
 
     /// <summary>One caught exception: where it happened, and whether the player is told if it's the first stop.</summary>
@@ -15,11 +16,12 @@ internal sealed class Faults(Func<CameraMode> mode)
     /// <summary>True once any fault is recorded; hooks then leave the game alone until the plugin is reloaded.</summary>
     public bool Any => any;
 
-    /// <summary>Logs <paramref name="exception"/> with where it happened and the mode, and queues it for the framework update.</summary>
+    /// <summary>Logs <paramref name="exception"/> with where it happened and the mode, the first time only for each place, and queues it for the framework update.</summary>
     public void Record(string where, Exception exception, bool notifies = true)
     {
         any = true;
-        Plugin.Log.Error(exception, "[vista] fault in {Where} while {Mode}", where, mode());
+        if (logged.TryAdd(where, 0))
+            Plugin.Log.Error(exception, "[vista] fault in {Where} while {Mode}", where, mode());
         waiting.Enqueue(new Fault(where, notifies));
     }
 
