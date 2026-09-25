@@ -25,8 +25,8 @@ internal sealed class PlaylistPanel
     // A repeat count being typed, and whether its field still needs focus.
     private (Guid Id, string Text, bool Focus)? loopsTyping;
 
-    // Wheel travel over the loop cells not yet taken as a step, so a trackpad steps once per notch.
-    private float wheelCarry;
+    // Wheel travel over the loop cells, dropped when the mouse leaves them.
+    private readonly WheelSteps wheel = new();
     private bool loopsHovered;
 
     public PlaylistPanel(SessionState session) => this.session = session;
@@ -104,7 +104,7 @@ internal sealed class PlaylistPanel
         ImGui.EndChild();
         ImGui.EndDisabled();
         if (!loopsHovered)
-            wheelCarry = 0f;
+            wheel.Reset();
     }
 
     /// <summary>One entry: its number and track, a warning when its watched or followed character isn't found, click to select, drag to reorder or drop tracks on it, right-click several for their menu, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
@@ -192,11 +192,14 @@ internal sealed class PlaylistPanel
 
         var holds = PlaylistEditing.HoldsPlaylist(scene, entry);
         var value = loopsDrag is { } drag && drag.Id == entry.Id ? drag.Value : entry.Loops ?? 0;
-        var format =
-            value > 0 ? "%d"
-            : holds ? "∞"
-            : "—";
-        var colour = value > 0 || holds ? UiColours.Amber : UiColours.Dim();
+        var repeats = PlaylistEditing.RepeatsOf(value, holds);
+        var format = repeats switch
+        {
+            Repeats.Count => "%d",
+            Repeats.Forever => "∞",
+            _ => "—",
+        };
+        var colour = repeats == Repeats.Once ? UiColours.Dim() : UiColours.Amber;
 
         ImGui.SetNextItemWidth(LoopWidth);
         bool changed;
@@ -279,16 +282,12 @@ internal sealed class PlaylistPanel
     /// <summary>Each whole notch of the mouse wheel steps the count by one: down from 1 empties it, up from empty gives 1.</summary>
     private void StepLoops(PlaylistEntry entry)
     {
-        wheelCarry += ImGui.GetIO().MouseWheel;
+        var steps = wheel.Take(ImGui.GetIO().MouseWheel);
+        var up = steps > 0;
         var loops = entry.Loops;
-        while (MathF.Abs(wheelCarry) >= 1f)
+        for (var i = 0; i < Math.Abs(steps); i++)
         {
-            var up = wheelCarry > 0f;
-            wheelCarry -= up ? 1f : -1f;
-            int? next =
-                up ? Math.Min((loops ?? 0) + 1, PlaylistEditing.MaxLoops)
-                : loops is { } n && n > 1 ? n - 1
-                : null;
+            var next = PlaylistEditing.StepLoops(loops, up);
             if (next == loops)
                 continue;
             Report(session.SetEntryLoops(entry.Id, next));

@@ -6,6 +6,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Game;
@@ -71,7 +72,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
 
-    private float wheel;
+    private readonly WheelSteps wheel = new();
     private bool escapeWasDown;
     private static bool blockEscape;
 
@@ -207,18 +208,16 @@ public sealed class Plugin : IDalamudPlugin
         var io = ImGui.GetIO();
         if (game.State.Mode == CameraMode.Editing && !io.WantCaptureMouse)
         {
-            wheel += io.MouseWheel;
-            var steps = (int)wheel;
+            var steps = wheel.Take(io.MouseWheel);
             if (steps != 0)
             {
                 game.State.Transport.StopPreview();
                 game.Speed.Step(steps);
-                wheel -= steps;
             }
         }
         else
         {
-            wheel = 0f;
+            wheel.Reset();
         }
 
         editorLayer.Draw();

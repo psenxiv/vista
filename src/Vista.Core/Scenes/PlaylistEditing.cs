@@ -66,6 +66,18 @@ public static class PlaylistEditing
         return scene with { Playlist = entries };
     }
 
+    /// <summary>How repeat count <paramref name="loops"/> reads; 0 follows the track: forever when that holds the playlist, else once.</summary>
+    public static Repeats RepeatsOf(int loops, bool holds) =>
+        loops > 0 ? Repeats.Count
+        : holds ? Repeats.Forever
+        : Repeats.Once;
+
+    /// <summary>A repeat count one wheel notch on: up adds one to <see cref="MaxLoops"/>, down from 1 follows the track.</summary>
+    public static int? StepLoops(int? loops, bool up) =>
+        up ? Math.Min((loops ?? 0) + 1, MaxLoops)
+        : loops is { } n && n > 1 ? n - 1
+        : null;
+
     /// <summary>Sets whether Live wraps from the last entry to the first.</summary>
     public static Scene SetPlaylistLoops(Scene scene, bool loops) =>
         scene.PlaylistLoops == loops ? scene : scene with { PlaylistLoops = loops };

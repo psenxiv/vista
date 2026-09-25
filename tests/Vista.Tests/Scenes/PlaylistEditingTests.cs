@@ -179,4 +179,26 @@ public class PlaylistEditingTests
         Assert.Equal(new[] { ids[1] }, PlaylistEditing.Remove(full, [ids[0], ids[2]]).Playlist.Select(e => e.Id));
         Assert.Same(full, PlaylistEditing.Remove(full, []));
     }
+
+    // A count above 0 reads as itself; 0 follows the track, forever when that holds the playlist, else once.
+
+    [Theory]
+    [InlineData(3, false, Repeats.Count)]
+    [InlineData(3, true, Repeats.Count)]
+    [InlineData(0, true, Repeats.Forever)]
+    [InlineData(0, false, Repeats.Once)]
+    public void ARepeatCountReadsAsACountForeverOrOnce(int loops, bool holds, Repeats expected) =>
+        Assert.Equal(expected, PlaylistEditing.RepeatsOf(loops, holds));
+
+    // Up adds one, stopping at 99; down takes one, and down from 1 or from none follows the track.
+
+    [Theory]
+    [InlineData(null, true, 1)]
+    [InlineData(4, true, 5)]
+    [InlineData(99, true, 99)]
+    [InlineData(4, false, 3)]
+    [InlineData(1, false, null)]
+    [InlineData(null, false, null)]
+    public void AWheelNotchStepsTheCountByOne(int? loops, bool up, int? expected) =>
+        Assert.Equal(expected, PlaylistEditing.StepLoops(loops, up));
 }
