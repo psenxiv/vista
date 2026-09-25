@@ -35,7 +35,7 @@ public static class GizmoEdit
     /// <summary>The point turned by its dragged ring frame — yaw or roll alone, or all three for pitch, since going over the top turns them together — or <paramref name="original"/> itself when it did not turn.</summary>
     public static ControlPoint Rotate(ControlPoint original, GimbalRing ring, Matrix4x4 dragged)
     {
-        var forward = -new Vector3(dragged.M31, dragged.M32, dragged.M33);
+        var forward = -Vector3.Normalize(new Vector3(dragged.M31, dragged.M32, dragged.M33));
         switch (ring)
         {
             case GimbalRing.Yaw:

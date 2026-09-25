@@ -386,7 +386,12 @@ internal sealed class HierarchyPanel
 
         if (editing && ImGui.BeginDragDropSource())
         {
-            DragRows.Carry(DragRows.Track, index, group, group ? $"{selected.Count} tracks" : track.Name);
+            DragRows.Carry(
+                DragRows.Track,
+                index,
+                group,
+                group ? FormattableString.Invariant($"{selected.Count} tracks") : track.Name
+            );
             ImGui.EndDragDropSource();
         }
 

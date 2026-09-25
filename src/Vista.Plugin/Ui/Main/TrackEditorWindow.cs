@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -291,7 +292,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndDisabled();
 
         AlignTo(loopX, ImGui.GetStyle().ItemSpacing.X);
-        if (IconButton.Draw("timing", FontAwesomeIcon.ChartLine, "Timing"))
+        if (IconButton.Draw("timing", FontAwesomeIcon.ChartLine, "Timing", timing.IsOpen ? UiColours.Accent : null))
             timing.Toggle();
 
         if (editing)
@@ -387,9 +388,17 @@ internal sealed class TrackEditorWindow : Window
         ImGui.SetNextItemWidth(SpeedWidth);
         var speed = game.Speed;
         var step = speed.Index;
-        if (ImGui.SliderInt("##speed", ref step, 0, FlySpeed.Steps.Count - 1, $"{speed.Multiplier:0.##}x"))
+        if (
+            ImGui.SliderInt(
+                "##speed",
+                ref step,
+                0,
+                FlySpeed.Steps.Count - 1,
+                FormattableString.Invariant($"{speed.Multiplier:0.##}x")
+            )
+        )
             speed.Set(step);
-        if (ImGui.IsItemHovered())
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip("Fly speed");
     }
 
@@ -604,7 +613,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.Indent();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted("Look ahead");
-        if (ImGui.IsItemHovered())
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip(tooltip);
         ImGui.SameLine();
         fields.Draw(
@@ -615,7 +624,7 @@ internal sealed class TrackEditorWindow : Window
             LookAheadRange,
             v => Report(session.SetLookAhead(v))
         );
-        if (ImGui.IsItemHovered())
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip(tooltip);
         ImGui.Unindent();
     }
@@ -777,7 +786,14 @@ internal sealed class TrackEditorWindow : Window
             game.JumpToPoint(index);
         if (editing && ImGui.BeginDragDropSource())
         {
-            DragRows.Carry(DragRows.Point, index, group, group ? $"{selected.Count} points" : $"Point {index + 1}");
+            DragRows.Carry(
+                DragRows.Point,
+                index,
+                group,
+                group
+                    ? FormattableString.Invariant($"{selected.Count} points")
+                    : FormattableString.Invariant($"Point {index + 1}")
+            );
             ImGui.EndDragDropSource();
         }
 
@@ -790,7 +806,7 @@ internal sealed class TrackEditorWindow : Window
 
         ImGui.SameLine(0f, 0f);
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted($"{index + 1}");
+        ImGui.TextUnformatted((index + 1).ToString(CultureInfo.InvariantCulture));
 
         ImGui.TableNextColumn();
         if (index > 0)
@@ -862,7 +878,13 @@ internal sealed class TrackEditorWindow : Window
         DrawTransport();
         ImGui.BeginDisabled(session.Released || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-        var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), $"%.1f / {duration:0.0} s");
+        var moved = ImGui.SliderFloat(
+            "##scrub",
+            ref head,
+            0f,
+            MathF.Max(duration, 0.001f),
+            FormattableString.Invariant($"%.1f / {duration:0.0} s")
+        );
         if (ImGui.IsItemActivated())
         {
             fields.Commit();

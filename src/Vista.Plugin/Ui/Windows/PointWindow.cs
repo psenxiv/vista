@@ -62,7 +62,7 @@ internal sealed class PointWindow : Window
             (_, AnchorKind.Scene, _) => "Scene anchor###vista-point",
             (_, AnchorKind.Track, _) => "Track anchor###vista-point",
             (_, AnchorKind.LookAt, _) => "Look At point###vista-point",
-            ({ } index, _, _) => $"Point {index + 1}###vista-point",
+            ({ } index, _, _) => FormattableString.Invariant($"Point {index + 1}###vista-point"),
             _ => WindowName,
         };
     }

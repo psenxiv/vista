@@ -79,7 +79,7 @@ internal sealed class CameraWindow : Window
             "cam-roll",
             "Roll",
             EditorColours.AxisZ,
-            Angles.Degrees(game.CameraRoll),
+            Angles.Degrees(Angles.Wrap(game.CameraRoll)),
             PoseGrid.AngleSpeed,
             "%.1f°",
             v => game.CameraRoll = EditLimits.Angle(Angles.Radians(v), game.CameraRoll)

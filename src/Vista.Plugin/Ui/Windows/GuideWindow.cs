@@ -160,7 +160,7 @@ internal sealed class GuideWindow : Window, IDisposable
                 case NumberedList list:
                     for (var n = 0; n < list.Items.Count; n++)
                     {
-                        ImGui.TextUnformatted($"{n + 1}.");
+                        ImGui.TextUnformatted(FormattableString.Invariant($"{n + 1}."));
                         ImGui.SameLine();
                         Flow(list.Items[n]);
                     }
