@@ -1,6 +1,6 @@
 # Changelog
 
-## X.Y.Z.N
+## 0.11.0.1
 
 - Reworked the points table's rows, with flatter value fields and a handle for dragging a row.
 - The plugin installer now says Vista works in GPose or out in the world.
