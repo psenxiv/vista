@@ -4,7 +4,7 @@ namespace Vista.Core.Scenes;
 public sealed class SceneLibrary
 {
     private const string Stem = "Scene";
-    private const string Exists = "A scene with that name exists";
+    private const string Exists = "A scene with that name exists.";
 
     private readonly Func<Scene> scene;
     private readonly Func<Scene, string?> load;
@@ -28,6 +28,12 @@ public sealed class SceneLibrary
     /// <summary>The names of the readable scenes, sorted ignoring case.</summary>
     public IReadOnlyList<string> Scenes() => Folder.SceneNames();
 
+    /// <summary>The name "New scene" suggests: the first free "Scene N" among every scene file, readable or not.</summary>
+    public string NewSuggestion() => SceneNames.NextFree(Stem, Folder.SceneFiles());
+
+    /// <summary>The name "Duplicate scene" suggests: the open scene's first free copy name among every scene file, readable or not.</summary>
+    public string CopySuggestion() => SceneNames.CopyOf(CurrentName, Folder.SceneFiles());
+
     /// <summary>Opens <paramref name="last"/> if it exists, else the first scene by name, else a new Scene N. Returns why it was refused, or null.</summary>
     public string? Open(string? last)
     {
@@ -35,7 +41,7 @@ public sealed class SceneLibrary
         var name =
             names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase))
             ?? (names.Count > 0 ? names[0] : null);
-        return name is null ? Create(SceneNames.NextFree(Stem, Folder.SceneFiles())) : Load(name);
+        return name is null ? Create(NewSuggestion()) : Load(name);
     }
 
     /// <summary>Saves the open scene and loads <paramref name="name"/>. Returns why it was refused, or null.</summary>

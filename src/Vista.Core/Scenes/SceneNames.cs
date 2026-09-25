@@ -1,12 +1,12 @@
 namespace Vista.Core.Scenes;
 
-/// <summary>Checks and suggests scene and preset names, which are also their file names.</summary>
+/// <summary>Checks and suggests scene and preset names, which are also their file names, and track names.</summary>
 public static class SceneNames
 {
     /// <summary>The longest name, in characters, after trimming.</summary>
     public const int MaxLength = 64;
 
-    private const string Unusable = "That name can't be used as a file name";
+    private const string Unusable = "That name can't be used as a file name.";
 
     private static readonly HashSet<char> Forbidden = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
@@ -38,14 +38,21 @@ public static class SceneNames
         StringComparer.OrdinalIgnoreCase
     );
 
-    /// <summary>Why the trimmed <paramref name="name"/> can't be a file name, or null when it can.</summary>
-    public static string? Refusal(string name)
+    /// <summary>Why the trimmed <paramref name="name"/> is blank or too long, or null; all a track name is checked for.</summary>
+    public static string? LengthRefusal(string name)
     {
         var trimmed = name.Trim();
         if (trimmed.Length == 0)
-            return "Enter a name";
-        if (trimmed.Length > MaxLength)
-            return "That name is too long";
+            return "Enter a name.";
+        return trimmed.Length > MaxLength ? "That name is too long." : null;
+    }
+
+    /// <summary>Why the trimmed <paramref name="name"/> can't be a file name, or null when it can.</summary>
+    public static string? Refusal(string name)
+    {
+        if (LengthRefusal(name) is { } refusal)
+            return refusal;
+        var trimmed = name.Trim();
         if (trimmed.Any(c => char.IsControl(c) || Forbidden.Contains(c)))
             return Unusable;
         if (trimmed.EndsWith('.') || Devices.Contains(trimmed))

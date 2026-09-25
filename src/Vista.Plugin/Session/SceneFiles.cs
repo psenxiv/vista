@@ -47,6 +47,12 @@ internal sealed class SceneFiles
     public string? NameRefusal(string name, bool renaming = false) =>
         library?.NameRefusal(name, renaming) ?? SceneNames.Refusal(name);
 
+    /// <summary>The name "New scene" suggests, read now; empty with no folder.</summary>
+    public string NewSuggestion() => library?.NewSuggestion() ?? string.Empty;
+
+    /// <summary>The name "Duplicate scene" suggests, read now; empty with no folder.</summary>
+    public string CopySuggestion() => library?.CopySuggestion() ?? string.Empty;
+
     /// <summary>The preset names in the folder, read now.</summary>
     public IReadOnlyList<string> PresetNames() => library?.Folder.PresetNames() ?? [];
 

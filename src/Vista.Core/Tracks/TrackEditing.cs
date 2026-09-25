@@ -47,6 +47,9 @@ public static class TrackEditing
 
     private const int DurationSteps = 60;
 
+    /// <summary>What new tracks are named after: "Track 1", "Track 2", ….</summary>
+    public const string NameStem = "Track";
+
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
     public const string FollowHasOnePoint = "A Follow Target track has one point";
 
@@ -54,7 +57,7 @@ public static class TrackEditing
     private const string FollowNeedsOnePoint = "Follow Target needs a track with one point";
 
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
-    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1") =>
+    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = NameStem + " 1") =>
         new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
 
     /// <summary>An empty track that keeps <paramref name="track"/>'s Id, Name and anchor.</summary>

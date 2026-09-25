@@ -37,13 +37,14 @@ public class SceneEditingTests
     }
 
     [Fact]
-    public void AddAfterADeleteCanRepeatAName()
+    public void AddAfterADeleteTakesTheFirstFreeName()
     {
         var scene = Three();
         scene = SceneEditing.Delete(scene, [scene.Tracks[0].Id], scene.Tracks[0].Id).Scene;
         scene = SceneEditing.Add(scene).Scene;
 
-        Assert.Equal(new[] { "Track 2", "Track 3", "Track 3" }, scene.Tracks.Select(t => t.Name));
+        // Track 1 went, so it is the first of Track 1, Track 2, … that no track has.
+        Assert.Equal(new[] { "Track 2", "Track 3", "Track 1" }, scene.Tracks.Select(t => t.Name));
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class SceneEditingTests
     }
 
     [Fact]
-    public void RenameChangesTheNameAndRefusesAnEmptyOne()
+    public void RenameChangesTheName()
     {
         var scene = Three();
         var id = scene.Tracks[1].Id;
@@ -80,8 +81,38 @@ public class SceneEditingTests
 
         Assert.Equal("Crane", renamed.Tracks[1].Name);
         Assert.Same(renamed, SceneEditing.Rename(renamed, id, "Crane"));
-        Assert.Throws<ArgumentException>(() => SceneEditing.Rename(scene, id, ""));
-        Assert.Throws<ArgumentException>(() => SceneEditing.Rename(scene, id, "   "));
+    }
+
+    [Fact]
+    public void RenameRefusesABlankOrTooLongName()
+    {
+        var scene = Three();
+        var id = scene.Tracks[1].Id;
+
+        string Refusal(string name) =>
+            Assert.Throws<ArgumentException>(() => SceneEditing.Rename(scene, id, name)).Message;
+
+        Assert.Equal("Enter a name.", Refusal(""));
+        Assert.Equal("Enter a name.", Refusal("   "));
+        // 65 characters is one past SceneNames.MaxLength.
+        Assert.Equal("That name is too long.", Refusal(new string('a', 65)));
+    }
+
+    [Fact]
+    public void RenameTakesANameNoFileCouldHaveOrOneAnotherTrackHas()
+    {
+        var scene = Three();
+        var id = scene.Tracks[1].Id;
+
+        string Renamed(string name) => SceneEditing.Rename(scene, id, name).Tracks[1].Name;
+
+        // 64 characters is SceneNames.MaxLength, counted after trimming.
+        Assert.Equal(new string('a', 64), Renamed($"  {new string('a', 64)}  "));
+        // File-name rules don't apply to tracks, and neither does another track's name.
+        Assert.Equal("a/b?", Renamed("a/b?"));
+        Assert.Equal("CON", Renamed("CON"));
+        Assert.Equal("Dolly.", Renamed("Dolly."));
+        Assert.Equal("Track 3", Renamed("Track 3"));
     }
 
     [Fact]
@@ -109,6 +140,21 @@ public class SceneEditingTests
         Assert.Equal("Track 1 copy", result.Tracks[1].Name);
         Assert.Equal(original.Points, result.Tracks[1].Points);
         Assert.Same(scene.Tracks[1], result.Tracks[2]);
+    }
+
+    [Fact]
+    public void DuplicatingAgainTakesTheNextFreeCopyName()
+    {
+        var scene = Three();
+        var id = scene.Tracks[0].Id;
+        scene = SceneEditing.Duplicate(scene, id).Scene;
+        scene = SceneEditing.Duplicate(scene, id).Scene;
+
+        // Each copy goes straight after Track 1, so the newest is second; "Track 1 copy" is taken by the first copy.
+        Assert.Equal(
+            new[] { "Track 1", "Track 1 copy 2", "Track 1 copy", "Track 2", "Track 3" },
+            scene.Tracks.Select(t => t.Name)
+        );
     }
 
     [Fact]

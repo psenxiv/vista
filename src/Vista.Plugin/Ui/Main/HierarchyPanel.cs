@@ -19,6 +19,9 @@ internal sealed class HierarchyPanel
     private const string NamePopup = "Name###vista-name";
     private const string DeletePopup = "Delete###vista-delete";
 
+    /// <summary>The name fields' buffer, a little past the longest name so a longer one can be typed and refused.</summary>
+    private const int NameBuffer = SceneNames.MaxLength + 8;
+
     /// <summary>What the name prompt is naming.</summary>
     private enum Naming
     {
@@ -126,11 +129,11 @@ internal sealed class HierarchyPanel
 
         ImGui.Separator();
         if (ImGui.Selectable("New scene"))
-            AskName(Naming.NewScene, SceneNames.NextFree("Scene", scenes));
+            AskName(Naming.NewScene, files.NewSuggestion());
         if (ImGui.Selectable("Rename scene"))
             AskName(Naming.RenameScene, current);
         if (ImGui.Selectable("Duplicate scene"))
-            AskName(Naming.DuplicateScene, SceneNames.CopyOf(current, scenes));
+            AskName(Naming.DuplicateScene, files.CopySuggestion());
         if (ImGui.Selectable("Delete scene"))
         {
             deleting = (false, current);
@@ -226,7 +229,7 @@ internal sealed class HierarchyPanel
         var entered = ImGui.InputText(
             "##name",
             ref nameText,
-            SceneNames.MaxLength + 8,
+            NameBuffer,
             ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll
         );
 
@@ -492,7 +495,7 @@ internal sealed class HierarchyPanel
     /// <summary>The name as a text field; Enter or clicking away renames, Escape cancels.</summary>
     private void DrawRename(Track track, float width)
     {
-        var result = TextEdit.Draw("##rename", ref renameText, 64, width, focusRename);
+        var result = TextEdit.Draw("##rename", ref renameText, NameBuffer, width, focusRename);
         focusRename = false;
         if (result == TextEdit.Result.Editing)
             return;
