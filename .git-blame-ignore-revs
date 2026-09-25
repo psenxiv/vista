@@ -1,5 +1,0 @@
-# Formatting-only commits, skipped by git blame (git config blame.ignoreRevsFile .git-blame-ignore-revs)
-# style(format) reformat with csharpier
-53ccd3834d8940dec43e1cb78e74eb39aa1b38f7
-# docs(claude) line up the build commands
-341cf417dae22692fcafc624e17e8b6d3c1e1d2a

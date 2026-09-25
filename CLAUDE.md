@@ -71,7 +71,7 @@ Everything targets .NET 10, as Dalamud does.
 
 **Run `make verify` before every commit, and commit only when it passes.** Commit what it formatted. If coverage falls below the floor, add tests rather than lowering it.
 
-Turn lint rules off in `.editorconfig` with a comment saying why, never with `#pragma`. Never build with bare `dotnet build`; the scripts set `DALAMUD_HOME`. Formatting-only commits go in `.git-blame-ignore-revs`.
+Turn lint rules off in `.editorconfig` with a comment saying why, never with `#pragma`. Never build with bare `dotnet build`; the scripts set `DALAMUD_HOME`.
 
 ## Releases
 
