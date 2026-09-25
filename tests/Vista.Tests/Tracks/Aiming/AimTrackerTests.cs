@@ -1,7 +1,11 @@
 using System.Numerics;
+using CsCheck;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
+using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -428,5 +432,138 @@ public class AimTrackerTests
         );
         Assert.Null(AimTracker.AimPoint(FollowingAt(Behind, looks: false), guard));
         Assert.Null(AimTracker.AimPoint(Single(AimMode.AimKeys), guard));
+    }
+
+    /// <summary>A character's walk: where their feet are and which way they face at each waypoint, and the seconds each leg between waypoints takes.</summary>
+    private sealed record Walk((Vector3 Feet, float Facing)[] Waypoints, float[] Legs)
+    {
+        public double Duration => Legs.Sum();
+
+        /// <summary>The guard <paramref name="time"/> seconds into the walk, moving and turning evenly along each leg, and standing at the end once it's over.</summary>
+        public LoadedCharacter At(double time)
+        {
+            for (var leg = 0; leg < Legs.Length; leg++)
+            {
+                if (time > Legs[leg])
+                {
+                    time -= Legs[leg];
+                    continue;
+                }
+
+                var (from, to) = (Waypoints[leg], Waypoints[leg + 1]);
+                var t = (float)(time / Legs[leg]);
+                return new LoadedCharacter(
+                    "Guard",
+                    null,
+                    Vector3.Lerp(from.Feet, to.Feet, t),
+                    from.Facing + ((to.Facing - from.Facing) * t)
+                );
+            }
+
+            return new LoadedCharacter("Guard", null, Waypoints[^1].Feet, Waypoints[^1].Facing);
+        }
+
+        public override string ToString() =>
+            $"Waypoints: {string.Join(", ", Waypoints)}\nLegs: {string.Join(", ", Legs)}";
+    }
+
+    private static readonly Gen<(Vector3 Feet, float Facing)> AnyWaypoint = Gen.Select(
+        AnyPosition,
+        Gen.Float[-MathF.PI, MathF.PI]
+    );
+
+    /// <summary>A walk through any places that, on the way, drops the character's aim point <paramref name="aimHeight"/> above their feet from straight over <paramref name="camera"/> to as far straight under it, passing through it.</summary>
+    private static Gen<Walk> AnyWalkPast(Vector3 camera, float aimHeight) =>
+        from before in AnyWaypoint.Array[0, 2]
+        from rise in Gen.Float[0f, 5f]
+        from facing in Gen.Float[-MathF.PI, MathF.PI]
+        from after in AnyWaypoint.Array[0, 2]
+        let feet = camera - (Vector3.UnitY * aimHeight)
+        from legs in Gen.Float[0.2f, 5f].Array[before.Length + after.Length + 1]
+        select new Walk(
+            [.. before, (feet + (Vector3.UnitY * rise), facing), (feet - (Vector3.UnitY * rise), facing), .. after],
+            legs
+        );
+
+    /// <summary>A generated path track watching the guard, with any aim height and smoothing, sometimes cut to its first point so the camera stands still.</summary>
+    private static readonly Gen<Track> AnyWatchTrack =
+        from track in AnyPathTrack
+        from single in Gen.Bool
+        from aimHeight in Gen.Float[0f, TrackEditing.MaxAimHeight]
+        from smoothing in Gen.Float[0f, 1f]
+        let cut = single ? TrackEditing.Delete(track, [.. Enumerable.Range(1, track.Points.Count - 1)]) : track
+        let watching = TrackEditing.SetAim(cut, AimMode.WatchTarget, track.Points[0])
+        select TrackEditing.SetSmoothing(
+            TrackEditing.SetAimHeight(TrackEditing.SetTarget(watching, "Guard", null), aimHeight),
+            smoothing
+        );
+
+    /// <summary>A Follow Target track on the guard at any offset, or straight over or under them, or on their aim point, with any aim height and smoothing, turning with them or not and looking at them or not.</summary>
+    private static readonly Gen<Track> AnyFollowTrack =
+        from aimHeight in Gen.Float[0f, TrackEditing.MaxAimHeight]
+        // 0 any offset, 1 straight over or under the guard's feet, 2 on their aim point.
+        from kind in Gen.Int[0, 2]
+        from position in AnyPosition
+        from height in Gen.Float[-5f, 5f]
+        from yaw in Gen.Float[-MathF.PI, MathF.PI]
+        from pitch in Gen.Float[-EditLimits.PitchLimit, EditLimits.PitchLimit]
+        from fov in Gen.Float[EditLimits.MinFov, EditLimits.MaxFov]
+        from roll in Gen.Float[-MathF.PI, MathF.PI]
+        from smoothing in Gen.Float[0f, 1f]
+        from turns in Gen.Bool
+        from looks in Gen.Bool
+        let offset = kind switch
+        {
+            0 => position,
+            1 => new Vector3(0f, height, 0f),
+            _ => new Vector3(0f, aimHeight, 0f),
+        }
+        let track = TrackEditing.Append(
+            TrackEditing.Empty(AimMode.FollowTarget),
+            new ControlPoint(offset, yaw, pitch, fov, roll)
+        )
+        select TrackEditing.SetFollowLooks(
+            TrackEditing.SetFollowTurns(
+                TrackEditing.SetSmoothing(
+                    TrackEditing.SetAimHeight(TrackEditing.SetTarget(track, "Guard", null), aimHeight),
+                    smoothing
+                ),
+                turns
+            ),
+            looks
+        );
+
+    /// <summary>The most frames a watched or followed walk is played for.</summary>
+    private const int FrameBudget = 1500;
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void EveryWatchAndFollowFrameIsWellFormed()
+    {
+        (
+            from track in Gen.OneOf(AnyWatchTrack, AnyFollowTrack)
+            from walk in AnyWalkPast(track.Points[0].Position, track.AimHeight)
+            from steps in AnyFrameStep.Array[1, 32]
+            select (Track: track, Walk: walk, Steps: steps)
+        ).Sample(
+            x =>
+            {
+                var characters = new NearbyCharacters();
+                var playback = new TrackPlayback(x.Track, characters);
+                var clock = 0.0;
+                for (var i = 0; i < FrameBudget && clock <= x.Walk.Duration + 1.0; i++)
+                {
+                    var dt = x.Steps[i % x.Steps.Length];
+                    clock += dt;
+                    characters.Update([x.Walk.At(clock)]);
+                    if (playback.Advance(dt) is { } frame)
+                        AssertWellFormed(frame, $"Frame {i} at {clock:0.######} s");
+                }
+            },
+            iter: 1000,
+            print: Kept<(Track Track, Walk Walk, float[] Steps)>(x =>
+                $"{SceneJson.Write(new Scene([x.Track], new HashSet<Guid>(), []))}\n{x.Walk}\nSteps: {string.Join(", ", x.Steps)}"
+            )
+        );
     }
 }
