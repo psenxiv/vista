@@ -266,4 +266,15 @@ public class SceneEditingTests
         Assert.False(SceneEditing.CanHide(scene, [a], a));
         Assert.False(SceneEditing.CanHide(scene, [b], a));
     }
+
+    [Fact]
+    public void OthersShownLeaveOutTheEditedTrackAndHiddenOnes()
+    {
+        var three = Three();
+        var (a, b, c) = (three.Tracks[0].Id, three.Tracks[1].Id, three.Tracks[2].Id);
+
+        var others = SceneEditing.OthersShown(SceneEditing.SetHidden(three, [b], true), a);
+
+        Assert.Equal([c], others.Select(t => t.Id));
+    }
 }

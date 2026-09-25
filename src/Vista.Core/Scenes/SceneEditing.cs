@@ -119,6 +119,10 @@ public static class SceneEditing
         };
     }
 
+    /// <summary>The tracks neither hidden nor <paramref name="edited"/>, in scene order.</summary>
+    public static IEnumerable<Track> OthersShown(Scene scene, Guid edited) =>
+        scene.Tracks.Where(t => t.Id != edited && !scene.Hidden.Contains(t.Id));
+
     /// <summary>True when showing tracks <paramref name="ids"/> would show one that is hidden.</summary>
     public static bool CanShow(Scene scene, IReadOnlyCollection<Guid> ids) => ids.Any(scene.Hidden.Contains);
 

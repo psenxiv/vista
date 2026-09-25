@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
@@ -162,6 +163,38 @@ public sealed class SelectionState
         if (entries.Count > 0)
             lastEntry = last;
         return null;
+    }
+
+    /// <summary>Applies a click in the world on <paramref name="hit"/>, or on empty space when null: plain selects what it hit, editing its track first, or clears the selection; Ctrl or Shift act only on the edited track's points. Returns why it was refused, or null.</summary>
+    public string? ClickMarker(TrackMarker? hit, RowClick click)
+    {
+        if (click != RowClick.Plain)
+        {
+            if (hit is { Kind: MarkerKind.Point } point && point.Track == session.EditedTrackId)
+                ClickPoint(point.Point, click);
+            return null;
+        }
+
+        if (hit is not { } marker)
+        {
+            Select(null);
+            return null;
+        }
+
+        switch (marker.Kind)
+        {
+            case MarkerKind.SceneAnchor:
+                return SelectSceneAnchor();
+            case MarkerKind.TrackAnchor:
+                return SelectTrackAnchor(marker.Track);
+            case MarkerKind.LookAt:
+                return SelectLookAt(marker.Track);
+            default:
+                if (marker.Track != session.EditedTrackId)
+                    return session.SelectPoint(marker.Track, marker.Point);
+                Select(marker.Point);
+                return null;
+        }
     }
 
     /// <summary>Selects a timing key while editing; a point's key also selects its point.</summary>

@@ -66,10 +66,8 @@ internal sealed class EditorLayer
         var markers = new List<TrackMarker>();
 
         // Other tracks first, so the edited track draws on top.
-        foreach (var other in scene.Tracks)
+        foreach (var other in SceneEditing.OthersShown(scene, edited))
         {
-            if (other.Id == edited || scene.Hidden.Contains(other.Id))
-                continue;
             var otherWorld = session.World.Shown(other);
             AddMarkers(
                 markers,
@@ -199,42 +197,15 @@ internal sealed class EditorLayer
     private void Apply(ClickOutcome outcome, List<TrackMarker> markers)
     {
         var click = RowPicking.FromKeys(PhysicalKeys.IsDown(VirtualKey.SHIFT), PhysicalKeys.IsDown(VirtualKey.CONTROL));
-        if (click != RowClick.Plain)
-        {
-            if (
-                outcome.Kind == ClickKind.Select
-                && outcome.Index < markers.Count
-                && markers[outcome.Index] is { Kind: MarkerKind.Point } point
-                && point.Track == session.EditedTrackId
-            )
-                session.Selection.ClickPoint(point.Point, click);
-            return;
-        }
-
         switch (outcome.Kind)
         {
             case ClickKind.Select when outcome.Index < markers.Count:
-                var hit = markers[outcome.Index];
-                var refusal = hit.Kind switch
-                {
-                    MarkerKind.SceneAnchor => session.Selection.SelectSceneAnchor(),
-                    MarkerKind.TrackAnchor => session.Selection.SelectTrackAnchor(hit.Track),
-                    MarkerKind.LookAt => session.Selection.SelectLookAt(hit.Track),
-                    _ when hit.Track == session.EditedTrackId => Select(hit.Point),
-                    _ => session.SelectPoint(hit.Track, hit.Point),
-                };
-                Report(refusal);
+                Report(session.Selection.ClickMarker(markers[outcome.Index], click));
                 break;
             case ClickKind.Deselect:
-                session.Selection.Select(null);
+                Report(session.Selection.ClickMarker(null, click));
                 break;
         }
-    }
-
-    private string? Select(int point)
-    {
-        session.Selection.Select(point);
-        return null;
     }
 
     private static Vector3? FirstPosition(Track world) => world.Points.Count > 0 ? world.Points[0].Position : null;

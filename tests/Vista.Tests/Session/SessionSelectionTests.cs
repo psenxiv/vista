@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -591,5 +592,96 @@ public class SessionSelectionTests
         Assert.True(state.Undo());
 
         Assert.Equal([2], state.Selection.Points);
+    }
+
+    // Editing() with Track 2 given points at x = 0 and 10 too, so both tracks' anchors and the scene's are placed.
+    private static SessionState TwoWithPoints()
+    {
+        var state = Editing();
+        var first = state.EditedTrackId;
+        state.SwitchTrack(Track(state, 1));
+        state.AddToEnd(Point(0f));
+        state.AddToEnd(Point(10f));
+        state.SwitchTrack(first);
+        return state;
+    }
+
+    // A plain click on another track's point edits that track and selects the point, as SelectPoint does.
+
+    [Fact]
+    public void APlainClickOnAnotherTracksPointEditsItAndSelectsThePoint()
+    {
+        var state = TwoWithPoints();
+
+        Assert.Null(state.Selection.ClickMarker(new TrackMarker(Track(state, 1), 1, null), RowClick.Plain));
+
+        Assert.Equal(Track(state, 1), state.EditedTrackId);
+        Assert.Equal([1], state.Selection.Points);
+    }
+
+    [Fact]
+    public void APlainClickOnTheEditedTracksPointSelectsOnlyIt()
+    {
+        var state = TwoWithPoints();
+        state.Selection.Select(0);
+
+        state.Selection.ClickMarker(new TrackMarker(Track(state, 0), 2, null), RowClick.Plain);
+
+        Assert.Equal([2], state.Selection.Points);
+    }
+
+    // Anchors and the Look At point route to their own Select calls, so a Follow track's anchor is refused as SelectTrackAnchor refuses it.
+
+    [Fact]
+    public void APlainClickOnAnAnchorOrTheLookAtPointSelectsIt()
+    {
+        var state = TwoWithPoints();
+        var first = Track(state, 0);
+
+        state.Selection.ClickMarker(new TrackMarker(Guid.Empty, -1, null, MarkerKind.SceneAnchor), RowClick.Plain);
+        Assert.Equal(AnchorKind.Scene, state.Selection.Anchor);
+
+        state.Selection.ClickMarker(new TrackMarker(first, -1, null, MarkerKind.TrackAnchor), RowClick.Plain);
+        Assert.Equal(AnchorKind.Track, state.Selection.Anchor);
+
+        state.SetAim(AimMode.LookAt, Point(0f));
+        state.Selection.ClickMarker(new TrackMarker(first, -1, null, MarkerKind.LookAt), RowClick.Plain);
+        Assert.Equal(AnchorKind.LookAt, state.Selection.Anchor);
+
+        state.ChangeTrack(t => t with { Aim = AimMode.FollowTarget });
+        Assert.Equal(
+            "A Follow Target track's anchor is hidden",
+            state.Selection.ClickMarker(new TrackMarker(first, -1, null, MarkerKind.TrackAnchor), RowClick.Plain)
+        );
+    }
+
+    [Fact]
+    public void APlainClickOnNothingClearsTheSelection()
+    {
+        var state = TwoWithPoints();
+        state.Selection.Select(1);
+
+        state.Selection.ClickMarker(null, RowClick.Plain);
+
+        Assert.Empty(state.Selection.Points);
+    }
+
+    // With Ctrl or Shift only the edited track's points respond; anything else leaves the selection and the edited track alone.
+
+    [Fact]
+    public void AModifiedClickActsOnlyOnTheEditedTracksPoints()
+    {
+        var state = TwoWithPoints();
+        var first = Track(state, 0);
+        state.Selection.Select(0);
+
+        state.Selection.ClickMarker(new TrackMarker(first, 1, null), RowClick.Toggle);
+        Assert.Equal([0, 1], state.Selection.Points);
+
+        Assert.Null(state.Selection.ClickMarker(new TrackMarker(Track(state, 1), 0, null), RowClick.Toggle));
+        state.Selection.ClickMarker(null, RowClick.Range);
+
+        Assert.Equal(first, state.EditedTrackId);
+        Assert.Equal([0, 1], state.Selection.Points);
     }
 }
