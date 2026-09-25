@@ -8,6 +8,7 @@
 - Error messages say what failed, such as deleting a scene, instead of always saying it couldn't save.
 - Fixed Direction of travel facing the wrong way for a moment as a shot starts, when its path comes back to where it began within the look ahead.
 - When Vista can't do something you asked, it now tells you why.
+- A point recorded with a field of view under 5° or over 120° now plays at 5° or 120°, the range the Point window allows.
 
 ## 0.9.0.1
 
