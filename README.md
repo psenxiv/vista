@@ -2,7 +2,7 @@
 
 # Vista
 
-Create smooth, cinematic camera tracks in FFXIV, organise them into scenes, and play them back live.
+Create smooth, cinematic camera tracks in GPose or out in the world, organise them into scenes, and play them back live.
 
 Vista is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin. Open it with `/vista`.
 
