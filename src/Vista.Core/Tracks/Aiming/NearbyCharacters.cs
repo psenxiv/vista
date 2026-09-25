@@ -10,6 +10,21 @@ public sealed class NearbyCharacters
     /// <summary>Every character as last read.</summary>
     public IReadOnlyList<LoadedCharacter> All => characters;
 
+    /// <summary>A character's name and home world as a list shows it, or NPC with no world.</summary>
+    public static string Label(string name, string? world) => $"{name} · {world ?? "NPC"}";
+
+    /// <summary>The characters whose names contain the trimmed <paramref name="search"/>, ignoring case, once per name and world, by name then world.</summary>
+    public IReadOnlyList<LoadedCharacter> Listed(string search)
+    {
+        var filter = search.Trim();
+        return characters
+            .Where(c => filter.Length == 0 || c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            .DistinctBy(c => (c.Name, c.World))
+            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.World ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     /// <summary>Replaces the characters with a copy of <paramref name="loaded"/>.</summary>
     public void Update(IReadOnlyList<LoadedCharacter> loaded) => characters = loaded.ToArray();
 

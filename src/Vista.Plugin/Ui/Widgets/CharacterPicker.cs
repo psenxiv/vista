@@ -12,7 +12,9 @@ internal static class CharacterPicker
     public static string? Draw(SessionState session, NearbyCharacters characters, ref string search, float width)
     {
         var track = session.Track;
-        var chosen = track.TargetName is { } name ? $"{name} · {track.TargetWorld ?? "NPC"}" : "Choose a character";
+        var chosen = track.TargetName is { } name
+            ? NearbyCharacters.Label(name, track.TargetWorld)
+            : "Choose a character";
         ImGui.SetNextItemWidth(width);
         if (!ImGui.BeginCombo("##character", chosen, ImGuiComboFlags.HeightLarge))
             return null;
@@ -27,12 +29,7 @@ internal static class CharacterPicker
         ImGui.InputTextWithHint("##search", "Search", ref search, 64);
 
         var filter = search.Trim();
-        var listed = characters
-            .All.Where(c => filter.Length == 0 || c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
-            .DistinctBy(c => (c.Name, c.World))
-            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => c.World ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var listed = characters.Listed(search);
 
         if (listed.Count == 0)
         {
@@ -46,7 +43,7 @@ internal static class CharacterPicker
             var character = listed[i];
             using var id = ImRaii.PushId($"character{i}");
             var named = character.Name == track.TargetName && character.World == track.TargetWorld;
-            if (ImGui.Selectable($"{character.Name} · {character.World ?? "NPC"}###character", named))
+            if (ImGui.Selectable($"{NearbyCharacters.Label(character.Name, character.World)}###character", named))
                 refusal = session.SetTarget(character.Name, character.World);
         }
 

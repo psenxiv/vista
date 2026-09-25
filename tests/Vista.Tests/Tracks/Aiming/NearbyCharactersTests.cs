@@ -106,4 +106,45 @@ public class NearbyCharactersTests
             characters.FindCharacter("Aya", null, new Vector3(-15f, 0f, 0f))?.Position
         );
     }
+
+    // Loaded Bob of B before bob of A, so a sort that kept input order would list Bob first.
+    private static NearbyCharacters Crowd() =>
+        With(
+            new LoadedCharacter("Bob", "B", Vector3.Zero),
+            new LoadedCharacter("bob", "A", Vector3.Zero),
+            new LoadedCharacter("Alice", null, Vector3.Zero),
+            new LoadedCharacter("bob", "A", Vector3.UnitX),
+            new LoadedCharacter("Carl", "A", Vector3.Zero)
+        );
+
+    // " b " trims to "b": Bob and bob contain it ignoring case, Alice and Carl don't; the second bob of A goes;
+    // Bob and bob tie on name ignoring case, so their worlds order them, A then B.
+
+    [Fact]
+    public void TheListMatchesTheSearchOncePerNameAndWorldInNameThenWorldOrder()
+    {
+        var listed = Crowd().Listed(" b ");
+
+        Assert.Equal([("bob", "A"), ("Bob", "B")], listed.Select(c => (c.Name, c.World)));
+    }
+
+    // With no search every name and world is listed once: Alice, then bob (A) and Bob (B), then Carl.
+
+    [Fact]
+    public void AnEmptySearchListsEveryone()
+    {
+        var listed = Crowd().Listed("");
+
+        Assert.Equal(
+            [("Alice", null), ("bob", "A"), ("Bob", "B"), ("Carl", "A")],
+            listed.Select(c => (c.Name, c.World))
+        );
+    }
+
+    [Fact]
+    public void ALabelNamesTheWorldOrNpc()
+    {
+        Assert.Equal("Guard · NPC", NearbyCharacters.Label("Guard", null));
+        Assert.Equal("Ann · Ultros", NearbyCharacters.Label("Ann", "Ultros"));
+    }
 }
