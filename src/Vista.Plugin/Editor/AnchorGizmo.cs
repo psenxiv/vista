@@ -5,6 +5,7 @@ using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Game;
+using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Editor;
 
@@ -40,7 +41,11 @@ internal sealed class AnchorGizmo
     /// <summary>Draws the gizmo on the selected anchor into the current window. Call inside the editor window.</summary>
     public void Draw(EditorView view, SessionState session)
     {
-        if (dragStart is not null && (session.Selection.Anchor != dragKind || session.EditedTrackId != dragTrack))
+        // An undo mid-drag ends the live edit; the rest of that drag does nothing, as with the fields.
+        if (
+            dragStart is not null
+            && (session.Selection.Anchor != dragKind || session.EditedTrackId != dragTrack || !session.LiveEditing)
+        )
         {
             session.EndLiveEdit();
             dragStart = null;
@@ -103,7 +108,7 @@ internal sealed class AnchorGizmo
                     : session.PreviewAnchor(edited, carry: !PhysicalKeys.IsDown(VirtualKey.MENU));
             if (refusal is not null)
             {
-                Plugin.Log.Warning("[editor] anchor drag abandoned: {Refusal}", refusal);
+                Report(refusal);
                 dragStart = null;
                 waitForRelease = true;
                 Gizmo.Reset();

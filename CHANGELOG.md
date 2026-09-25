@@ -7,6 +7,7 @@
 - New tracks, copies and tracks placed from a preset no longer share a name with an existing track.
 - Error messages say what failed, such as deleting a scene, instead of always saying it couldn't save.
 - Fixed Direction of travel facing the wrong way for a moment as a shot starts, when its path comes back to where it began within the look ahead.
+- When Vista can't do something you asked, it now tells you why.
 
 ## 0.9.0.1
 
