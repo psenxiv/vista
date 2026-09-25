@@ -32,29 +32,29 @@ public static class SceneEditing
         return scene with { Tracks = tracks };
     }
 
-    /// <summary>Adds an empty track at the end, named "Track N" for the new count.</summary>
+    /// <summary>Adds an empty track at the end, named the first "Track N" no other track has.</summary>
     public static (Scene Scene, Guid Added) Add(Scene scene)
     {
-        var track = TrackEditing.Empty(name: $"Track {scene.Tracks.Count + 1}");
+        var track = TrackEditing.Empty(name: SceneNames.NextFree(TrackEditing.NameStem, Names(scene)));
         return (scene with { Tracks = [.. scene.Tracks, track] }, track.Id);
     }
 
-    /// <summary>Renames track <paramref name="id"/>; an empty name is refused.</summary>
+    /// <summary>Renames track <paramref name="id"/> to the trimmed <paramref name="name"/>; a blank or too long name is refused.</summary>
     public static Scene Rename(Scene scene, Guid id, string name)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("A track needs a name.");
+        if (SceneNames.LengthRefusal(name) is { } refusal)
+            throw new ArgumentException(refusal);
         name = name.Trim();
         var track = Get(scene, id);
         return track.Name == name ? scene : Replace(scene, track with { Name = name });
     }
 
-    /// <summary>Inserts a copy of track <paramref name="id"/> after it, with a new Id and "copy" after its name.</summary>
+    /// <summary>Inserts a copy of track <paramref name="id"/> after it, with a new Id and the first free "copy" name.</summary>
     public static (Scene Scene, Guid Copy) Duplicate(Scene scene, Guid id)
     {
         var index = Require(scene, id);
         var original = scene.Tracks[index];
-        var copy = original with { Id = Guid.NewGuid(), Name = $"{original.Name} copy" };
+        var copy = original with { Id = Guid.NewGuid(), Name = SceneNames.CopyOf(original.Name, Names(scene)) };
         var tracks = scene.Tracks.ToList();
         tracks.Insert(index + 1, copy);
         return (scene with { Tracks = tracks }, copy.Id);
@@ -130,6 +130,9 @@ public static class SceneEditing
     public static bool CanHide(Scene scene, IReadOnlyCollection<Guid> ids, Guid edited) =>
         ids.Any(id => id != edited && !scene.Hidden.Contains(id));
 
-    private static int Require(Scene scene, Guid id) =>
+    private static IEnumerable<string> Names(Scene scene) => scene.Tracks.Select(t => t.Name);
+
+    /// <summary>The index of track <paramref name="id"/>, refusing an unknown one.</summary>
+    public static int Require(Scene scene, Guid id) =>
         IndexOf(scene, id) is var index and >= 0 ? index : throw new ArgumentException("There is no such track.");
 }

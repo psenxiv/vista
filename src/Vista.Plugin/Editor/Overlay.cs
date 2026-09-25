@@ -376,7 +376,7 @@ internal sealed class Overlay
                 picked ? 3f : 1.5f
             );
 
-            var label = (i + 1).ToString(CultureInfo.CurrentCulture);
+            var label = (i + 1).ToString(CultureInfo.InvariantCulture);
             var size = ImGui.CalcTextSize(label) * LabelScale;
             list.AddText(
                 ImGui.GetFont(),

@@ -45,6 +45,17 @@ public class SessionPlaylistTests
     }
 
     [Fact]
+    public void MovingAnUnknownEntrySaysThereIsNoSuchEntry()
+    {
+        var state = Editing();
+        Assert.Null(state.AddToPlaylist([First(state)]));
+        var entry = state.Scene.Playlist[0].Id;
+
+        Assert.Equal("There is no such playlist entry.", state.MoveEntries([Guid.NewGuid()], entry, null));
+        Assert.Equal("There is no such playlist entry.", state.MoveEntries([entry], entry, Guid.NewGuid()));
+    }
+
+    [Fact]
     public void PlaylistEditsAreUndoSteps()
     {
         var state = Editing();

@@ -111,7 +111,7 @@ internal sealed class TimingWindow : Window
         var (distanceFrom, distanceTo) = view is null ? (0f, distance) : shown.Distances(session.World.Evaluator);
         var yalmStep = Ticks.Step(distanceTo - distanceFrom, YalmTicks);
         // Sized for any label up to the whole path, so zooming never shifts the plot sideways.
-        var rightInset = ImGui.CalcTextSize($"{distance:0.00} y").X + 6f;
+        var rightInset = ImGui.CalcTextSize(FormattableString.Invariant($"{distance:0.00} y")).X + 6f;
 
         var plotTopLeft = topLeft + new Vector2(LeftInset, TopInset);
         var plotSize = Vector2.Max(region - new Vector2(LeftInset + rightInset, TopInset + AxisStrip), Vector2.One);
@@ -166,7 +166,7 @@ internal sealed class TimingWindow : Window
     /// <summary>The leg's name and a drop-down of easing presets, showing Custom when it matches none.</summary>
     private void DrawLegControls(int leg)
     {
-        ImGui.TextUnformatted($"Leg {leg} → {leg + 1}");
+        ImGui.TextUnformatted(FormattableString.Invariant($"Leg {leg} → {leg + 1}"));
         ImGui.SameLine();
 
         var current = LegEasing.Read(session.Track, leg);
@@ -190,7 +190,7 @@ internal sealed class TimingWindow : Window
     /// <summary>The key's time, the Smooth, Linear and Flat buttons, and a trash icon for a hold end.</summary>
     private void DrawKeyControls(int key)
     {
-        ImGui.TextUnformatted($"Key: {session.World.Evaluator.Keys[key].Time:0.00} s");
+        ImGui.TextUnformatted(FormattableString.Invariant($"Key: {session.World.Evaluator.Keys[key].Time:0.00} s"));
 
         ImGui.BeginDisabled(!Editing);
         ImGui.SameLine();
@@ -254,7 +254,7 @@ internal sealed class TimingWindow : Window
             var y = graph.ToScreen(0f, along).Y;
             list.AddLine(new Vector2(graph.Origin.X, y), new Vector2(right, y), EditorColours.GraphGrid);
 
-            var label = (i + 1).ToString(CultureInfo.CurrentCulture);
+            var label = (i + 1).ToString(CultureInfo.InvariantCulture);
             var size = ImGui.CalcTextSize(label);
             list.AddText(new Vector2(graph.Origin.X - 4f - size.X, y - (size.Y / 2f)), text, label);
         }
@@ -284,7 +284,7 @@ internal sealed class TimingWindow : Window
     {
         var text = ImGui.GetColorU32(ImGuiCol.Text);
         var bottom = graph.Origin.Y + graph.Size.Y;
-        var total = $"{session.Duration:0.0} s";
+        var total = FormattableString.Invariant($"{session.Duration:0.0} s");
         var totalSize = ImGui.CalcTextSize(total);
         var totalLeft = graph.Origin.X + graph.Size.X + rightInset - totalSize.X;
         var labelY = stripBottom - totalSize.Y;
@@ -298,7 +298,7 @@ internal sealed class TimingWindow : Window
             var x = graph.ToScreen(t, 0f).X;
             list.AddLine(new Vector2(x, bottom), new Vector2(x, bottom + TickLength), EditorColours.GraphGrid);
 
-            var label = t.ToString(format, CultureInfo.CurrentCulture);
+            var label = t.ToString(format, CultureInfo.InvariantCulture);
             var width = ImGui.CalcTextSize(label).X;
             var left = x - (width / 2f);
             if (left < lastRight + 4f || left + width > totalLeft - 4f)
@@ -363,7 +363,7 @@ internal sealed class TimingWindow : Window
             {
                 list.AddCircleFilled(at, PointKeyRadius, EditorColours.Marker);
                 list.AddCircle(at, PointKeyRadius, ring, 0, thickness);
-                var label = (TrackEditing.PointOf(track, i) + 1).ToString(CultureInfo.CurrentCulture);
+                var label = (TrackEditing.PointOf(track, i) + 1).ToString(CultureInfo.InvariantCulture);
                 list.AddText(at - (ImGui.CalcTextSize(label) / 2f), EditorColours.MarkerText, label);
             }
             else
@@ -387,7 +387,7 @@ internal sealed class TimingWindow : Window
         var d = session.World.Evaluator.DistanceAt(t);
         var speed = session.World.Evaluator.SlopeAt(t);
         list.AddCircleFilled(graph.ToScreen(t, d), HoverRadius, EditorColours.Playhead);
-        ImGui.SetTooltip($"{t:0.00} s  ·  {d:0.0} y  ·  {speed:0.00} y/s");
+        ImGui.SetTooltip(FormattableString.Invariant($"{t:0.00} s  ·  {d:0.0} y  ·  {speed:0.00} y/s"));
     }
 
     /// <summary>Carries on or ends a scrub, a drag or a pan, zooms on the wheel, acts on a right press over a key, then on a left press: a handle, then a key, then the curve, then empty plot space to pan, then the time axis.</summary>
@@ -611,7 +611,7 @@ internal sealed class TimingWindow : Window
     /// <summary>The time under pixel column <paramref name="x"/>, running on past the shot's end so the last key can lengthen it.</summary>
     private static float DragTime(TimingGraph graph, float x) => graph.TimeAtOpenEnded(x);
 
-    private static string YalmLabel(float distance) => $"{distance:0.##} y";
+    private static string YalmLabel(float distance) => FormattableString.Invariant($"{distance:0.##} y");
 
     /// <summary>An ImGui colour with its alpha forced to full.</summary>
     private static uint FullAlpha(uint colour) => (colour & 0x00FFFFFFu) | 0xFF000000u;

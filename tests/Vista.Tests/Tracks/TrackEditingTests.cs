@@ -185,13 +185,35 @@ public class TrackEditingTests
     {
         var track = Build3PointTrack();
         Assert.Equal(
-            "leg index must be 1..2 for a 3-point track",
+            "Leg index must be 1..2 for a 3-point track.",
             Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 3, 1f)).Message
         );
         Assert.Equal(
-            "hold index must be 0..2 for a 3-point track",
+            "Hold index must be 0..2 for a 3-point track.",
             Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetHold(track, 3, 1f)).Message
         );
+    }
+
+    [Fact]
+    public void EachIndexRefusalNamesWhatItIndexes()
+    {
+        // Three points are indices 0..2, and with no holds they are the three keys, 0..2.
+        var track = Build3PointTrack();
+
+        string Refusal(Action act) => Assert.Throws<ArgumentOutOfRangeException>(act).Message;
+
+        Assert.Equal("Point index must be 0..2 for a 3-point track.", Refusal(() => TrackEditing.PointKey(track, 3)));
+        Assert.Equal("Hold index must be 0..2 for a 3-point track.", Refusal(() => TrackEditing.HoldSeconds(track, 3)));
+        Assert.Equal(
+            "Insert index must be 0..2 for a 3-point track.",
+            Refusal(() => TrackEditing.InsertAfter(track, 3, Point(0f)))
+        );
+        Assert.Equal("Delete index must be 0..2 for a 3-point track.", Refusal(() => TrackEditing.Delete(track, 3)));
+        Assert.Equal(
+            "Replace index must be 0..2 for a 3-point track.",
+            Refusal(() => TrackEditing.Replace(track, 3, Point(0f)))
+        );
+        Assert.Equal("Key index must be 0..2.", Refusal(() => TrackEditing.RoleOf(track, 3)));
     }
 
     [Fact]
@@ -203,15 +225,26 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void SetLegDurationIgnoresNaNAndClampsInfinity()
+    public void SetLegDurationClampsALongLegToTheLongest()
+    {
+        // 9999 s is past MaxSeconds, 600 s.
+        var track = Build3PointTrack();
+        Assert.Equal(600f, LegSeconds(TrackEditing.SetLegDuration(track, 1, 9999f), 1), 1);
+    }
+
+    [Theory]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    [InlineData(float.NegativeInfinity)]
+    public void ATimingValueThatIsNotFiniteChangesNothing(float value)
     {
         var track = Build3PointTrack();
-        Assert.Same(track, TrackEditing.SetLegDuration(track, 1, float.NaN));
-        Assert.Equal(
-            TrackEditing.MaxSeconds,
-            LegSeconds(TrackEditing.SetLegDuration(track, 1, float.PositiveInfinity), 1),
-            1
-        );
+
+        Assert.Same(track, TrackEditing.SetSpeed(track, value));
+        Assert.Same(track, TrackEditing.SetDuration(track, value));
+        Assert.Same(track, TrackEditing.SetLegSpeed(track, 1, value));
+        Assert.Same(track, TrackEditing.SetLegDuration(track, 1, value));
+        Assert.Same(track, TrackEditing.SetHold(track, 1, value));
     }
 
     [Fact]
@@ -265,14 +298,11 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void SetHoldIgnoresNaNAndClampsInfinity()
+    public void SetHoldClampsALongHoldToTheLongest()
     {
+        // 9999 s is past MaxSeconds, 600 s.
         var track = Build3PointTrack();
-        Assert.Same(track, TrackEditing.SetHold(track, 1, float.NaN));
-        Assert.Equal(
-            TrackEditing.MaxSeconds,
-            TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, float.PositiveInfinity), 1)
-        );
+        Assert.Equal(600f, TrackEditing.HoldSeconds(TrackEditing.SetHold(track, 1, 9999f), 1));
     }
 
     [Fact]
@@ -303,14 +333,14 @@ public class TrackEditingTests
     {
         var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f, 0f, 0f));
         var ex = Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.LegSpeed(track, 1));
-        Assert.Equal("this track has no legs", ex.Message);
+        Assert.Equal("This track has no legs.", ex.Message);
     }
 
     [Fact]
     public void HoldOnAnEmptyTrackSaysItHasNoPoints()
     {
         var ex = Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.HoldSeconds(TrackEditing.Empty(), 0));
-        Assert.Equal("this track has no points", ex.Message);
+        Assert.Equal("This track has no points.", ex.Message);
     }
 
     [Fact]
@@ -677,7 +707,7 @@ public class TrackEditingTests
         var two = TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(10f));
         var one = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
 
-        Assert.Equal("Follow Target needs a track with one point", TrackEditing.AimRefusal(two, AimMode.FollowTarget));
+        Assert.Equal("Follow Target needs a track with one point.", TrackEditing.AimRefusal(two, AimMode.FollowTarget));
         Assert.Null(TrackEditing.AimRefusal(one, AimMode.FollowTarget));
         Assert.Null(TrackEditing.AimRefusal(two, AimMode.LookAt));
     }

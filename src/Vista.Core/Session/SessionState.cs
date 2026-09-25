@@ -339,9 +339,9 @@ public sealed class SessionState
         {
             var order = BlockMove.Order(
                 scene.Tracks.Count,
-                ids.Select(id => Require(SceneEditing.IndexOf(scene, id))).ToArray(),
-                Require(SceneEditing.IndexOf(scene, grabbed)),
-                target is { } t ? Require(SceneEditing.IndexOf(scene, t)) : null
+                ids.Select(id => SceneEditing.Require(scene, id)).ToArray(),
+                SceneEditing.Require(scene, grabbed),
+                target is { } t ? SceneEditing.Require(scene, t) : null
             );
             return (order is null ? scene : SceneEditing.Reorder(scene, order), EditedTrackId);
         });
@@ -374,9 +374,9 @@ public sealed class SessionState
         {
             var order = BlockMove.Order(
                 scene.Playlist.Count,
-                ids.Select(id => Require(PlaylistEditing.IndexOf(scene, id))).ToArray(),
-                Require(PlaylistEditing.IndexOf(scene, grabbed)),
-                target is { } t ? Require(PlaylistEditing.IndexOf(scene, t)) : null
+                ids.Select(id => PlaylistEditing.Require(scene, id)).ToArray(),
+                PlaylistEditing.Require(scene, grabbed),
+                target is { } t ? PlaylistEditing.Require(scene, t) : null
             );
             return (order is null ? scene : PlaylistEditing.Reorder(scene, order), EditedTrackId);
         });
@@ -388,9 +388,6 @@ public sealed class SessionState
     /// <summary>Sets whether Live loops the playlist, as one undo step. Returns why it was refused, or null.</summary>
     public string? SetPlaylistLoops(bool loops) =>
         CommitScene(scene => (PlaylistEditing.SetPlaylistLoops(scene, loops), EditedTrackId));
-
-    /// <summary>An index found by an IndexOf, refusing −1.</summary>
-    private static int Require(int index) => index >= 0 ? index : throw new ArgumentException("There is no such row.");
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change) =>
@@ -522,9 +519,9 @@ public sealed class SessionState
             if (local.Points.Count >= 1)
                 throw new ArgumentException(TrackEditing.FollowHasOnePoint);
             if (local.TargetName is null)
-                throw new ArgumentException("Choose a character to follow");
+                throw new ArgumentException("Choose a character to follow.");
             if (World.FollowFrame(scene, local) is null)
-                throw new ArgumentException("Character not found");
+                throw new ArgumentException("Character not found.");
         }
 
         var placed =
@@ -550,19 +547,17 @@ public sealed class SessionState
         : null;
 
     /// <summary>Sets the track's speed. Returns why it was refused, or null.</summary>
-    public string? SetTrackSpeed(float speed) => ApplyTiming(t => TrackEditing.SetSpeed(t, EditLimits.Speed(speed)));
+    public string? SetTrackSpeed(float speed) => ApplyTiming(t => TrackEditing.SetSpeed(t, speed));
 
     /// <summary>Sets the track's speed so the shot takes about <paramref name="seconds"/>. Returns why it was refused, or null.</summary>
-    public string? SetTrackDuration(float seconds) =>
-        ApplyTiming(t => TrackEditing.SetDuration(t, EditLimits.ShotDuration(seconds)));
+    public string? SetTrackDuration(float seconds) => ApplyTiming(t => TrackEditing.SetDuration(t, seconds));
 
     /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>. Returns why it was refused, or null.</summary>
     public string? SetLegDuration(int leg, float seconds) =>
-        ApplyTiming(t => TrackEditing.SetLegDuration(t, leg, EditLimits.Leg(seconds)));
+        ApplyTiming(t => TrackEditing.SetLegDuration(t, leg, seconds));
 
     /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>. Returns why it was refused, or null.</summary>
-    public string? SetLegSpeed(int leg, float speed) =>
-        ApplyTiming(t => TrackEditing.SetLegSpeed(t, leg, EditLimits.Speed(speed)));
+    public string? SetLegSpeed(int leg, float speed) => ApplyTiming(t => TrackEditing.SetLegSpeed(t, leg, speed));
 
     /// <summary>Unpins leg <paramref name="leg"/> so it follows the track speed again. Returns why it was refused, or null.</summary>
     public string? ResetLeg(int leg) => ApplyTiming(t => TrackEditing.ResetLeg(t, leg));

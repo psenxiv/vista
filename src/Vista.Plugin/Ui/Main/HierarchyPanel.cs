@@ -19,6 +19,9 @@ internal sealed class HierarchyPanel
     private const string NamePopup = "Name###vista-name";
     private const string DeletePopup = "Delete###vista-delete";
 
+    /// <summary>The name fields' buffer, a little past the longest name so a longer one can be typed and refused.</summary>
+    private const int NameBuffer = SceneNames.MaxLength + 8;
+
     /// <summary>What the name prompt is naming.</summary>
     private enum Naming
     {
@@ -126,11 +129,11 @@ internal sealed class HierarchyPanel
 
         ImGui.Separator();
         if (ImGui.Selectable("New scene"))
-            AskName(Naming.NewScene, SceneNames.NextFree("Scene", scenes));
+            AskName(Naming.NewScene, files.NewSuggestion());
         if (ImGui.Selectable("Rename scene"))
             AskName(Naming.RenameScene, current);
         if (ImGui.Selectable("Duplicate scene"))
-            AskName(Naming.DuplicateScene, SceneNames.CopyOf(current, scenes));
+            AskName(Naming.DuplicateScene, files.CopySuggestion());
         if (ImGui.Selectable("Delete scene"))
         {
             deleting = (false, current);
@@ -226,7 +229,7 @@ internal sealed class HierarchyPanel
         var entered = ImGui.InputText(
             "##name",
             ref nameText,
-            SceneNames.MaxLength + 8,
+            NameBuffer,
             ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll
         );
 
@@ -243,7 +246,7 @@ internal sealed class HierarchyPanel
         var (_, refusal, replaces) = check;
         // Always a line here, blank when the name is fine, so the buttons don't jump as you type.
         using (ImRaii.PushColor(ImGuiCol.Text, refusal is not null ? UiColours.Red : UiColours.Muted()))
-            ImGui.TextUnformatted(refusal ?? (replaces ? $"A preset called {nameText.Trim()} exists" : " "));
+            ImGui.TextUnformatted(refusal ?? (replaces ? $"A preset called {nameText.Trim()} exists." : " "));
 
         ImGui.BeginDisabled(refusal is not null);
         var ok = ImGui.Button(replaces ? "Replace" : "Ok", new Vector2(127f, 0f)) || (entered && refusal is null);
@@ -383,7 +386,12 @@ internal sealed class HierarchyPanel
 
         if (editing && ImGui.BeginDragDropSource())
         {
-            DragRows.Carry(DragRows.Track, index, group, group ? $"{selected.Count} tracks" : track.Name);
+            DragRows.Carry(
+                DragRows.Track,
+                index,
+                group,
+                group ? FormattableString.Invariant($"{selected.Count} tracks") : track.Name
+            );
             ImGui.EndDragDropSource();
         }
 
@@ -492,7 +500,7 @@ internal sealed class HierarchyPanel
     /// <summary>The name as a text field; Enter or clicking away renames, Escape cancels.</summary>
     private void DrawRename(Track track, float width)
     {
-        var result = TextEdit.Draw("##rename", ref renameText, 64, width, focusRename);
+        var result = TextEdit.Draw("##rename", ref renameText, NameBuffer, width, focusRename);
         focusRename = false;
         if (result == TextEdit.Result.Editing)
             return;

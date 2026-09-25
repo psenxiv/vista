@@ -47,6 +47,12 @@ internal sealed class SceneFiles
     public string? NameRefusal(string name, bool renaming = false) =>
         library?.NameRefusal(name, renaming) ?? SceneNames.Refusal(name);
 
+    /// <summary>The name "New scene" suggests, read now; empty with no folder.</summary>
+    public string NewSuggestion() => library?.NewSuggestion() ?? string.Empty;
+
+    /// <summary>The name "Duplicate scene" suggests, read now; empty with no folder.</summary>
+    public string CopySuggestion() => library?.CopySuggestion() ?? string.Empty;
+
     /// <summary>The preset names in the folder, read now.</summary>
     public IReadOnlyList<string> PresetNames() => library?.Folder.PresetNames() ?? [];
 
@@ -99,7 +105,10 @@ internal sealed class SceneFiles
 
     /// <summary>Saves track <paramref name="trackId"/> as the preset <paramref name="name"/>, replacing one of that name.</summary>
     public string? SavePreset(string name, Guid trackId) =>
-        Files(folder => folder.SavePreset(name.Trim(), Presets.From(session.Scene, trackId)));
+        Files(
+            $"save preset {name.Trim()}",
+            folder => folder.SavePreset(name.Trim(), Presets.From(session.Scene, trackId))
+        );
 
     /// <summary>Adds the preset <paramref name="name"/> to the scene under the camera.</summary>
     public string? AddPreset(string name)
@@ -113,12 +122,12 @@ internal sealed class SceneFiles
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            return Report($"Could not open preset {name}: {e.Message}");
+            return Report($"Could not add preset {name}: {e.Message}");
         }
         return game.AddPreset(preset);
     }
 
-    public string? DeletePreset(string name) => Files(folder => folder.DeletePreset(name));
+    public string? DeletePreset(string name) => Files($"delete preset {name}", folder => folder.DeletePreset(name));
 
     /// <summary>Opens the scenes folder, or the presets folder, in the system's file browser, as Dalamud's installer opens folders.</summary>
     public void OpenFolder(bool presets)
@@ -194,7 +203,8 @@ internal sealed class SceneFiles
         return refusal;
     }
 
-    private string? Files(Action<SceneFolder> action)
+    /// <summary>Runs a preset file action, saying "Could not <paramref name="doing"/>" if it fails.</summary>
+    private string? Files(string doing, Action<SceneFolder> action)
     {
         if (library is not { } l)
             return "No save folder is chosen.";
@@ -205,7 +215,7 @@ internal sealed class SceneFiles
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return Report($"Could not save: {e.Message}");
+            return Report($"Could not {doing}: {e.Message}");
         }
     }
 

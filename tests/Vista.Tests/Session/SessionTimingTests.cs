@@ -198,7 +198,7 @@ public class SessionTimingTests
     {
         var state = Editing();
         var before = state.Track;
-        Assert.NotNull(state.RemoveHold(1));
+        Assert.Equal("Only a hold end can remove its hold.", state.RemoveHold(1));
         Assert.Same(before, state.Track);
     }
 

@@ -5,7 +5,7 @@ namespace Vista.Tests.Scenes;
 
 public class SceneNamesTests
 {
-    private const string Unusable = "That name can't be used as a file name";
+    private const string Unusable = "That name can't be used as a file name.";
 
     [Theory]
     [InlineData("Scene 1")]
@@ -18,14 +18,14 @@ public class SceneNamesTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void AnEmptyNameAsksForOne(string name) => Assert.Equal("Enter a name", SceneNames.Refusal(name));
+    public void AnEmptyNameAsksForOne(string name) => Assert.Equal("Enter a name.", SceneNames.Refusal(name));
 
     [Fact]
     public void LengthIsCountedAfterTrimming()
     {
         Assert.Null(SceneNames.Refusal(new string('a', 64)));
         Assert.Null(SceneNames.Refusal($"  {new string('a', 64)}  "));
-        Assert.Equal("That name is too long", SceneNames.Refusal(new string('a', 65)));
+        Assert.Equal("That name is too long.", SceneNames.Refusal(new string('a', 65)));
     }
 
     [Theory]
@@ -86,7 +86,7 @@ public class SceneNamesTests
     {
         Assert.Equal((null, true), SceneNames.PresetCheck("Dusk ", ["dusk"]));
         Assert.Equal((null, false), SceneNames.PresetCheck("Dawn", ["Dusk"]));
-        Assert.Equal(("Enter a name", false), SceneNames.PresetCheck("  ", ["Dusk"]));
+        Assert.Equal(("Enter a name.", false), SceneNames.PresetCheck("  ", ["Dusk"]));
         Assert.Equal((Unusable, false), SceneNames.PresetCheck("a/b", ["a/b"]));
     }
 }

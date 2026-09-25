@@ -37,6 +37,14 @@ public class GizmoEditTests
         Assert.Same(Original, GizmoEdit.Rotate(Original, ring, GizmoEdit.RingFrame(Original, ring)));
 
     [Fact]
+    public void AScaledPitchRingFrameReadsAsUnturned()
+    {
+        // Doubling the frame's axes changes their length, not their direction, so nothing turned.
+        var dragged = Matrix4x4.CreateScale(2f) * GizmoEdit.RingFrame(Original, GimbalRing.Pitch);
+        Assert.Same(Original, GizmoEdit.Rotate(Original, GimbalRing.Pitch, dragged));
+    }
+
+    [Fact]
     public void TheYawRingLiesFlatAroundWorldUp()
     {
         var frame = GizmoEdit.RingFrame(Original, GimbalRing.Yaw);

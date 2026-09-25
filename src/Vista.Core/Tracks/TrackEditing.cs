@@ -26,6 +26,9 @@ public static class TrackEditing
     /// <summary>The longest leg or hold, in seconds.</summary>
     public const float MaxSeconds = 600f;
 
+    /// <summary>The shortest shot, in seconds.</summary>
+    public const float MinShotSeconds = 0.2f;
+
     /// <summary>The longest shot, in seconds.</summary>
     public const float MaxShotSeconds = 3600f;
 
@@ -47,14 +50,17 @@ public static class TrackEditing
 
     private const int DurationSteps = 60;
 
+    /// <summary>What new tracks are named after: "Track 1", "Track 2", ….</summary>
+    public const string NameStem = "Track";
+
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
-    public const string FollowHasOnePoint = "A Follow Target track has one point";
+    public const string FollowHasOnePoint = "A Follow Target track has one point.";
 
     /// <summary>Why a track with several points can't aim with Follow Target.</summary>
-    private const string FollowNeedsOnePoint = "Follow Target needs a track with one point";
+    private const string FollowNeedsOnePoint = "Follow Target needs a track with one point.";
 
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
-    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1") =>
+    public static Track Empty(AimMode aim = AimMode.AimKeys, string name = NameStem + " 1") =>
         new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
 
     /// <summary>An empty track that keeps <paramref name="track"/>'s Id, Name and anchor.</summary>
@@ -78,7 +84,7 @@ public static class TrackEditing
     /// <summary>Index of point <paramref name="point"/>'s key.</summary>
     public static int PointKey(Track track, int point)
     {
-        ValidatePointIndex(track, point, "point");
+        ValidatePointIndex(track, point, "Point");
         var key = 0;
         for (var p = 0; p < point; p++)
             key += track.Timing[p].Hold > 0f ? 2 : 1;
@@ -143,7 +149,7 @@ public static class TrackEditing
     /// <summary>Point <paramref name="point"/>'s hold, in seconds.</summary>
     public static float HoldSeconds(Track track, int point)
     {
-        ValidatePointIndex(track, point, "hold");
+        ValidatePointIndex(track, point, "Hold");
         return track.Timing[point].Hold;
     }
 
@@ -158,7 +164,7 @@ public static class TrackEditing
     /// <summary>Inserts a point after point <paramref name="index"/>, both halves keeping the split leg's speed and pin; after the last point it appends.</summary>
     public static Track InsertAfter(Track track, int index, ControlPoint point)
     {
-        ValidatePointIndex(track, index, "insert");
+        ValidatePointIndex(track, index, "Insert");
         if (index == track.Points.Count - 1)
             return Append(track, point);
 
@@ -177,7 +183,7 @@ public static class TrackEditing
     /// <summary>Removes point <paramref name="index"/>: a middle point's legs merge at the first leg's speed, an end point's leg goes.</summary>
     public static Track Delete(Track track, int index)
     {
-        ValidatePointIndex(track, index, "delete");
+        ValidatePointIndex(track, index, "Delete");
         var n = track.Points.Count;
         if (n == 1)
             return track with { Points = [], Timing = [] };
@@ -230,7 +236,7 @@ public static class TrackEditing
     /// <summary>Replaces point <paramref name="index"/>, keeping its timing.</summary>
     public static Track Replace(Track track, int index, ControlPoint point)
     {
-        ValidatePointIndex(track, index, "replace");
+        ValidatePointIndex(track, index, "Replace");
         if (Equals(track.Points[index], point))
             return track;
 
@@ -238,11 +244,11 @@ public static class TrackEditing
         return track with { Points = points };
     }
 
-    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it.</summary>
+    /// <summary>Sets point <paramref name="index"/>'s hold, clamped to 0 to <see cref="MaxSeconds"/> and rounded down to 0 below <see cref="MinKeyGap"/>; later keys shift with it. Unchanged when not finite.</summary>
     public static Track SetHold(Track track, int index, float seconds)
     {
-        ValidatePointIndex(track, index, "hold");
-        if (float.IsNaN(seconds))
+        ValidatePointIndex(track, index, "Hold");
+        if (!float.IsFinite(seconds))
             return track;
         var clamped = Math.Clamp(seconds, 0f, MaxSeconds);
         if (clamped < MinKeyGap)
@@ -339,22 +345,22 @@ public static class TrackEditing
     public static Track SetFollowLooks(Track track, bool looks) =>
         track.FollowLooks == looks ? track : track with { FollowLooks = looks };
 
-    /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
+    /// <summary>Sets the speed unpinned legs follow, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>; unchanged when not finite.</summary>
     public static Track SetSpeed(Track track, float speed)
     {
-        if (float.IsNaN(speed))
+        if (!float.IsFinite(speed))
             return track;
         var clamped = ClampSpeed(speed);
         return clamped == track.Speed ? track : track with { Speed = clamped };
     }
 
-    /// <summary>Sets the track speed so the shot, holds included, takes <paramref name="seconds"/> as near as the ranges allow; unchanged when every leg is pinned.</summary>
+    /// <summary>Sets the track speed so the shot, holds included, takes <paramref name="seconds"/>, clamped to <see cref="MinShotSeconds"/> to <see cref="MaxShotSeconds"/>, as near as the ranges allow; unchanged when not finite or every leg is pinned.</summary>
     public static Track SetDuration(Track track, float seconds)
     {
-        if (float.IsNaN(seconds) || AllPinned(track))
+        if (!float.IsFinite(seconds) || AllPinned(track))
             return track;
 
-        var target = MathF.Min(seconds, MaxShotSeconds);
+        var target = Math.Clamp(seconds, MinShotSeconds, MaxShotSeconds);
         var lengths = LegLengths(track);
         var fixedSeconds = track.Timing.Sum(t => (double)t.Hold);
         for (var leg = 1; leg < lengths.Length; leg++)
@@ -394,20 +400,20 @@ public static class TrackEditing
         return SetSpeed(track, (float)Math.Exp((low + high) / 2.0));
     }
 
-    /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>.</summary>
+    /// <summary>Pins leg <paramref name="leg"/> at <paramref name="speed"/>, clamped to <see cref="MinSpeed"/> to <see cref="MaxSpeed"/>; unchanged when not finite.</summary>
     public static Track SetLegSpeed(Track track, int leg, float speed)
     {
         ValidateLegIndex(track, leg);
-        if (float.IsNaN(speed))
+        if (!float.IsFinite(speed))
             return track;
         return WithTiming(track, leg, track.Timing[leg] with { LegSpeed = ClampSpeed(speed) });
     }
 
-    /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>, clamped to the leg range.</summary>
+    /// <summary>Pins leg <paramref name="leg"/> at the speed that takes <paramref name="seconds"/>, clamped to the leg range; unchanged when not finite.</summary>
     public static Track SetLegDuration(Track track, int leg, float seconds)
     {
         ValidateLegIndex(track, leg);
-        if (float.IsNaN(seconds))
+        if (!float.IsFinite(seconds))
             return track;
         return SetLegSpeed(track, leg, LegLengths(track)[leg] / Math.Clamp(seconds, MinLegSeconds, MaxSeconds));
     }
@@ -433,18 +439,18 @@ public static class TrackEditing
     {
         var n = track.Points.Count;
         if (n < 2)
-            throw new ArgumentOutOfRangeException(null, "this track has no legs");
+            throw new ArgumentOutOfRangeException(null, "This track has no legs.");
         if (index < 1 || index > n - 1)
-            throw new ArgumentOutOfRangeException(null, $"leg index must be 1..{n - 1} for a {n}-point track");
+            throw new ArgumentOutOfRangeException(null, $"Leg index must be 1..{n - 1} for a {n}-point track.");
     }
 
     internal static void ValidatePointIndex(Track track, int index, string what)
     {
         var n = track.Points.Count;
         if (n == 0)
-            throw new ArgumentOutOfRangeException(null, "this track has no points");
+            throw new ArgumentOutOfRangeException(null, "This track has no points.");
         if (index < 0 || index > n - 1)
-            throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track");
+            throw new ArgumentOutOfRangeException(null, $"{what} index must be 0..{n - 1} for a {n}-point track.");
     }
 
     private static float ClampSpeed(float speed) => Math.Clamp(speed, MinSpeed, MaxSpeed);
@@ -453,7 +459,7 @@ public static class TrackEditing
     {
         var count = KeyCount(track);
         if (key < 0 || key >= count)
-            throw new ArgumentOutOfRangeException(null, $"key index must be 0..{count - 1}");
+            throw new ArgumentOutOfRangeException(null, $"Key index must be 0..{count - 1}.");
 
         var first = 0;
         for (var p = 0; ; p++)

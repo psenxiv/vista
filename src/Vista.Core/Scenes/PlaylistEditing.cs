@@ -99,7 +99,8 @@ public static class PlaylistEditing
     public static bool CanPlay(Scene scene) =>
         scene.Playlist.Any(e => SceneEditing.Get(scene, e.TrackId).Points.Count > 0);
 
-    private static int Require(Scene scene, Guid entryId) =>
+    /// <summary>The index of entry <paramref name="entryId"/>, refusing an unknown one.</summary>
+    public static int Require(Scene scene, Guid entryId) =>
         IndexOf(scene, entryId) is var index and >= 0
             ? index
             : throw new ArgumentException("There is no such playlist entry.");

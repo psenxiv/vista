@@ -189,6 +189,18 @@ public class TimingCompilerTests
     }
 
     [Fact]
+    public void SetDurationStopsAtTheShortestShotBeforeTheFastestSpeed()
+    {
+        // One 10 yalm leg takes 0.1 s at MaxSpeed, under the 0.2 s shortest shot, so 0 asks for 0.2 s: 10 / 0.2 = 50 yalms per second.
+        var track = TrackEditing.SetDuration(
+            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)),
+            0f
+        );
+        AssertNear(50f, track.Speed, 0.01f);
+        AssertNear(0.2f, (float)new TrackEvaluator(track).Duration, 0.001f);
+    }
+
+    [Fact]
     public void SetDurationStopsAtTheLongestLegs()
     {
         var track = TrackEditing.SetDuration(Three(), 99999f);

@@ -45,7 +45,9 @@ internal sealed class PlaylistPanel
 
         ImGui.AlignTextToFramePadding();
         var header = playing is { } now
-            ? $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {scene.Playlist.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
+            ? FormattableString.Invariant(
+                $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {scene.Playlist.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
+            )
             : "Playlist";
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted(), playing is null))
             ImGui.TextUnformatted(header);
@@ -140,7 +142,7 @@ internal sealed class PlaylistPanel
             )
         )
             Report(session.Selection.ClickEntry(entry.Id, DragRows.Click()));
-        RowText.Draw(entry.Id, $"{index + 1}  {name}", nameWidth);
+        RowText.Draw(entry.Id, FormattableString.Invariant($"{index + 1}  {name}"), nameWidth);
         var rowMin = ImGui.GetItemRectMin();
         var rowMax = new Vector2(
             ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X,
@@ -150,7 +152,12 @@ internal sealed class PlaylistPanel
 
         if (editing && ImGui.BeginDragDropSource())
         {
-            DragRows.Carry(DragRows.Entry, index, group, group ? $"{selected.Count} rows" : name);
+            DragRows.Carry(
+                DragRows.Entry,
+                index,
+                group,
+                group ? FormattableString.Invariant($"{selected.Count} rows") : name
+            );
             ImGui.EndDragDropSource();
         }
 

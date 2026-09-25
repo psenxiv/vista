@@ -22,7 +22,10 @@ public class TimingEditingTests
     {
         var track = TimingEditing.SetKeyMode(Build3PointTrack(), 1, TangentMode.Linear);
         Assert.Equal((TangentMode.Linear, TangentMode.Linear), (track.Timing[1].InMode, track.Timing[1].OutMode));
-        Assert.Throws<ArgumentException>(() => TimingEditing.SetKeyMode(track, 1, TangentMode.Manual));
+        Assert.Equal(
+            "A key's mode can't be set to Manual directly.",
+            Assert.Throws<ArgumentException>(() => TimingEditing.SetKeyMode(track, 1, TangentMode.Manual)).Message
+        );
     }
 
     [Fact]
@@ -56,6 +59,9 @@ public class TimingEditingTests
     {
         var track = Build3PointTrack();
         Assert.Same(track, MoveKey(track, 0, 2f));
+        Assert.Same(track, MoveKey(track, 1, float.NaN));
+        Assert.Same(track, MoveKey(track, 1, float.PositiveInfinity));
+        Assert.Same(track, MoveKey(track, 2, float.NegativeInfinity));
 
         var longer = MoveKey(track, 2, 12f);
         Assert.Equal(12f, new TrackEvaluator(longer).Keys[2].Time, 2);
@@ -172,6 +178,20 @@ public class TimingEditingTests
     public void NegativeHandleSlopesClampToZero() =>
         Assert.Equal(0f, TimingEditing.SetHandles(Build3PointTrack(), 1, -2f, null).Timing[1].InTangent);
 
+    [Theory]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    [InlineData(float.NegativeInfinity)]
+    public void AHandleSlopeThatIsNotFiniteLeavesItsSideAlone(float slope)
+    {
+        var track = Build3PointTrack();
+        Assert.Same(track, TimingEditing.SetHandles(track, 1, slope, slope));
+
+        // The finite out side still applies.
+        var timing = TimingEditing.SetHandles(track, 1, slope, 0.5f).Timing[1];
+        Assert.Equal(new PointTiming(OutMode: TangentMode.Manual, OutTangent: 0.5f), timing);
+    }
+
     [Fact]
     public void HandlesExistOnlyWhereASpanIsNotAHold()
     {
@@ -238,6 +258,8 @@ public class TimingEditingTests
 
         Assert.Same(track, RippleKey(track, 0, 2f));
         Assert.Same(track, RippleKey(track, 1, float.NaN));
+        Assert.Same(track, RippleKey(track, 1, float.PositiveInfinity));
+        Assert.Same(track, RippleKey(track, 2, float.NegativeInfinity));
     }
 
     // Build3PointTrack with a 2 s hold on point 1 has keys 0 (point 0), 1 (point 1), 2 (its hold end) and 3 (point 2).

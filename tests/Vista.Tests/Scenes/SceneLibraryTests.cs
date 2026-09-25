@@ -141,10 +141,10 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Theory]
-    [InlineData("  ", "Enter a name")]
-    [InlineData("a/b", "That name can't be used as a file name")]
-    [InlineData("dusk", "A scene with that name exists")]
-    [InlineData(" Broken ", "A scene with that name exists")]
+    [InlineData("  ", "Enter a name.")]
+    [InlineData("a/b", "That name can't be used as a file name.")]
+    [InlineData("dusk", "A scene with that name exists.")]
+    [InlineData(" Broken ", "A scene with that name exists.")]
     public void NewAndDuplicateRefuseBadNames(string name, string refusal)
     {
         Save("Dawn", "Crane");
@@ -222,8 +222,8 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Theory]
-    [InlineData("dusk", "A scene with that name exists")]
-    [InlineData("Dawn.", "That name can't be used as a file name")]
+    [InlineData("dusk", "A scene with that name exists.")]
+    [InlineData("Dawn.", "That name can't be used as a file name.")]
     public void RenamingRefusesBadNames(string name, string refusal)
     {
         Save("Dawn", "Crane");
@@ -292,7 +292,7 @@ public sealed class SceneLibraryTests : IDisposable
         library.Open("Dawn");
         Directory.Delete(temp.Scenes, recursive: true);
 
-        Assert.StartsWith("Could not save Dawn:", library.Delete());
+        Assert.StartsWith("Could not delete Dawn:", library.Delete());
         Assert.Equal("Dawn", library.CurrentName);
     }
 
@@ -349,17 +349,43 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void SuggestionsSkipUnreadableFiles()
+    {
+        Save("Scene 1", "Crane");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Scene 2.json"), "{");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Scene 1 copy.json"), "{");
+        library.Open("Scene 1");
+
+        // Scene 1 is read and Scene 2 isn't, but both are taken; so is Scene 1 copy.
+        Assert.Equal("Scene 3", library.NewSuggestion());
+        Assert.Equal("Scene 1 copy 2", library.CopySuggestion());
+        Assert.Null(library.New(library.NewSuggestion()));
+    }
+
+    [Fact]
     public void NameRefusalCountsUnreadableFilesAndLetsARenameKeepItsName()
     {
         Save("Dawn", "Crane");
         File.WriteAllText(Path.Combine(temp.Scenes, "Broken.json"), "{");
         library.Open("Dawn");
 
-        Assert.Equal("A scene with that name exists", library.NameRefusal(" broken "));
-        Assert.Equal("A scene with that name exists", library.NameRefusal("DAWN"));
+        Assert.Equal("A scene with that name exists.", library.NameRefusal(" broken "));
+        Assert.Equal("A scene with that name exists.", library.NameRefusal("DAWN"));
         Assert.Null(library.NameRefusal("DAWN", renaming: true));
-        Assert.Equal("A scene with that name exists", library.NameRefusal("Broken", renaming: true));
+        Assert.Equal("A scene with that name exists.", library.NameRefusal("Broken", renaming: true));
         Assert.Null(library.NameRefusal("Dusk"));
+    }
+
+    [Fact]
+    public void RecreatingIsRefusedWhenAFileHasTheFoldersName()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        Directory.Delete(temp.Folder.Root, recursive: true);
+        File.WriteAllText(temp.Folder.Root, "");
+
+        Assert.StartsWith("Could not create the save folder:", library.Recreate());
+        Assert.Equal("Dawn", library.CurrentName);
     }
 
     [Fact]

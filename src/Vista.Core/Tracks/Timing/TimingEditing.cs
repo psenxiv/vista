@@ -8,7 +8,7 @@ public static class TimingEditing
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
         if (mode == TangentMode.Manual)
-            throw new ArgumentException("a key's mode can't be set to Manual directly");
+            throw new ArgumentException("A key's mode can't be set to Manual directly.");
 
         var timing = track.Timing[point];
         if (role == KeyRole.Point)
@@ -18,15 +18,15 @@ public static class TimingEditing
         return TrackEditing.WithTiming(track, point, timing);
     }
 
-    /// <summary>Sets Manual slopes, as ratios to their span's average speed, on the key's sides given; a null side, or one the key doesn't own, is left alone. Negative slopes become 0.</summary>
+    /// <summary>Sets Manual slopes, as ratios to their span's average speed, on the key's sides given; a null or non-finite side, or one the key doesn't own, is left alone. Negative slopes become 0.</summary>
     public static Track SetHandles(Track track, int key, float? inSlope, float? outSlope)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
         var timing = track.Timing[point];
-        if (role == KeyRole.Point && inSlope is { } i)
-            timing = timing with { InMode = TangentMode.Manual, InTangent = Slope(i) };
-        if (HasDeparture(track, point, role) && outSlope is { } o)
-            timing = timing with { OutMode = TangentMode.Manual, OutTangent = Slope(o) };
+        if (role == KeyRole.Point && inSlope is { } i && float.IsFinite(i))
+            timing = timing with { InMode = TangentMode.Manual, InTangent = MathF.Max(i, 0f) };
+        if (HasDeparture(track, point, role) && outSlope is { } o && float.IsFinite(o))
+            timing = timing with { OutMode = TangentMode.Manual, OutTangent = MathF.Max(o, 0f) };
         return TrackEditing.WithTiming(track, point, timing);
     }
 
@@ -64,15 +64,15 @@ public static class TimingEditing
     public static Track RemoveHold(Track track, int key)
     {
         if (TrackEditing.RoleOf(track, key) != KeyRole.HoldEnd)
-            throw new ArgumentException("only a hold end can remove its hold");
+            throw new ArgumentException("Only a hold end can remove its hold.");
         return TrackEditing.SetHold(track, TrackEditing.PointOf(track, key), 0f);
     }
 
-    /// <summary>Drags key <paramref name="key"/> towards <paramref name="time"/>, pinning the legs whose time changes; <paramref name="evaluator"/> is the track's.</summary>
+    /// <summary>Drags key <paramref name="key"/> towards <paramref name="time"/>, pinning the legs whose time changes; <paramref name="evaluator"/> is the track's. Unchanged when not finite.</summary>
     public static Track MoveKey(Track track, TrackEvaluator evaluator, int key, float time)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
-        if (key == 0 || float.IsNaN(time))
+        if (key == 0 || !float.IsFinite(time))
             return track;
 
         var keys = evaluator.Keys;
@@ -119,11 +119,11 @@ public static class TimingEditing
             : result;
     }
 
-    /// <summary>Drags key <paramref name="key"/> towards <paramref name="time"/>, carrying every later key with it; <paramref name="evaluator"/> is the track's.</summary>
+    /// <summary>Drags key <paramref name="key"/> towards <paramref name="time"/>, carrying every later key with it; <paramref name="evaluator"/> is the track's. Unchanged when not finite.</summary>
     public static Track RippleKey(Track track, TrackEvaluator evaluator, int key, float time)
     {
         var (point, role) = (TrackEditing.PointOf(track, key), TrackEditing.RoleOf(track, key));
-        if (key == 0 || float.IsNaN(time))
+        if (key == 0 || !float.IsFinite(time))
             return track;
 
         var keys = evaluator.Keys;
@@ -155,6 +155,4 @@ public static class TimingEditing
     /// <summary>True when the key sets its point's departure side: a hold end, or a point key without a hold.</summary>
     private static bool HasDeparture(Track track, int point, KeyRole role) =>
         role == KeyRole.HoldEnd || track.Timing[point].Hold <= 0f;
-
-    private static float Slope(float value) => float.IsFinite(value) ? MathF.Max(value, 0f) : 0f;
 }

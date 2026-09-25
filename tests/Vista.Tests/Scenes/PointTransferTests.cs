@@ -151,7 +151,8 @@ public class PointTransferTests
         var added = result.Tracks[2];
         Assert.Equal(3, result.Tracks.Count);
         Assert.Equal(added.Id, to);
-        Assert.Equal("Track 3", added.Name);
+        // The other tracks are A and B, so Track 1 is free.
+        Assert.Equal("Track 1", added.Name);
         Assert.Equal([0], moved);
 
         // Ground under (115, 3, 20) is (115, 1.5, 20); less the scene anchor (100, 0, 0) that is (15, 1.5, 20), yaw 0.
@@ -208,7 +209,7 @@ public class PointTransferTests
         var refused = Assert.Throws<ArgumentException>(() =>
             PointTransfer.Move(scene, scene.Tracks[0].Id, [0], [W1], scene.Tracks[1].Id, NoGround)
         );
-        Assert.Equal("A Follow Target track has one point", refused.Message);
+        Assert.Equal("A Follow Target track has one point.", refused.Message);
     }
 
     [Fact]
