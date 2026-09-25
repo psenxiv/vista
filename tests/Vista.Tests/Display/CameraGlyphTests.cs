@@ -1,5 +1,7 @@
 using System.Numerics;
 using Vista.Core.Display;
+using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -84,4 +86,86 @@ public class CameraGlyphTests
         Assert.Equal(-5.6713f, glyph.Corners[2].Y, 4);
         Assert.Equal(-5.6713f, glyph.Corners[3].Y, 4);
     }
+
+    // An aim point gives the forward toward it, unnormalised, and the upright up rolled by the point's roll.
+
+    [Fact]
+    public void AGlyphFacesItsAimPointRolledByItsPoint()
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
+        var rolled = TrackEditing.Append(TrackEditing.Empty(), Point(0f, roll: MathF.PI / 2f));
+
+        var (forward, up, fov) = CameraGlyph.Pose(track, 0, new Vector3(0f, 0f, -10f), Unused);
+        Assert.Equal(new Vector3(0f, 0f, -10f), forward);
+        Near(Vector3.UnitY, up, 1e-6f);
+        Assert.Equal(1f, fov);
+
+        // Turning π/2 about −Z is turning −π/2 about +Z, which takes (0, 1) to (sin π/2, cos π/2) = (1, 0).
+        Near(Vector3.UnitX, CameraGlyph.Pose(rolled, 0, new Vector3(0f, 0f, -10f), Unused).Up, 1e-6f);
+    }
+
+    // An aim point closer than TrackAim.MinTargetDistance (0.1) gives no aim, so the recorded one is drawn.
+
+    [Fact]
+    public void AnAimPointOnTheCameraFallsBackToTheRecordedAim()
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f, yaw: MathF.PI / 2f));
+
+        // Forward (0, 0, −1) turned π/2 about Y is (−sin, 0, −cos) = (−1, 0, 0).
+        var (forward, up, _) = CameraGlyph.Pose(track, 0, new Vector3(0.05f, 0f, 0f), Unused);
+
+        Near(-Vector3.UnitX, forward, 1e-6f);
+        Near(Vector3.UnitY, up, 1e-6f);
+    }
+
+    [Fact]
+    public void RecordedAimNeverBuildsTheEvaluator()
+    {
+        var calls = 0;
+        var track = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
+
+        var (forward, up, _) = CameraGlyph.Pose(
+            track,
+            0,
+            null,
+            () =>
+            {
+                calls++;
+                return new TrackEvaluator(track);
+            }
+        );
+
+        Near(-Vector3.UnitZ, forward, 1e-6f);
+        Near(Vector3.UnitY, up, 1e-6f);
+        Assert.Equal(0, calls);
+    }
+
+    // Direction of travel along +x with no look ahead faces along the path, level.
+
+    [Fact]
+    public void DirectionOfTravelFacesAlongThePath()
+    {
+        var track = TrackEditing.SetLookAhead(
+            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f)), Point(10f)),
+            0f
+        );
+        var calls = 0;
+
+        var (forward, up, _) = CameraGlyph.Pose(
+            track,
+            0,
+            null,
+            () =>
+            {
+                calls++;
+                return new TrackEvaluator(track);
+            }
+        );
+
+        Near(Vector3.UnitX, Vector3.Normalize(forward), 1e-4f);
+        Near(Vector3.UnitY, up, 1e-4f);
+        Assert.Equal(1, calls);
+    }
+
+    private static TrackEvaluator Unused() => throw new InvalidOperationException("The evaluator isn't needed here.");
 }

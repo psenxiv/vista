@@ -14,6 +14,9 @@ public static class TurnHeat
     /// <summary>The level drawn warm, halfway to <see cref="Hot"/>.</summary>
     public const float Warm = 0.5f;
 
+    /// <summary>Yalms a watched character moves before its heat is worked out again.</summary>
+    private const float TargetStep = 0.25f;
+
     /// <summary>A place on the path and how fast the look turns arriving there, in degrees per second.</summary>
     public readonly record struct Sample(Vector3 Position, float DegreesPerSecond);
 
@@ -45,4 +48,28 @@ public static class TurnHeat
 
     /// <summary>Where <paramref name="degreesPerSecond"/> falls on the scale: 0 at rest, <see cref="Warm"/> halfway, 1 at <see cref="Hot"/> and above.</summary>
     public static float Level(float degreesPerSecond) => Math.Clamp(degreesPerSecond / Hot, 0f, 1f);
+
+    /// <summary>True when the aim point appeared, went, or moved more than <see cref="TargetStep"/> yalms.</summary>
+    public static bool TargetMoved(Vector3? before, Vector3? now) =>
+        before is { } a && now is { } b ? Vector3.Distance(a, b) > TargetStep : before.HasValue != now.HasValue;
+
+    /// <summary>The colour for heat <paramref name="level"/>: <paramref name="restColour"/> at rest, <paramref name="warmColour"/> at <see cref="Warm"/> and <paramref name="hotColour"/> at 1, blended between.</summary>
+    public static uint Colour(float level, uint restColour, uint warmColour, uint hotColour) =>
+        level <= Warm
+            ? Blend(restColour, warmColour, level / Warm)
+            : Blend(warmColour, hotColour, (level - Warm) / (1f - Warm));
+
+    /// <summary>Two ImGui colours mixed channel by channel, <paramref name="t"/> of the way from <paramref name="a"/> to <paramref name="b"/>.</summary>
+    private static uint Blend(uint a, uint b, float t)
+    {
+        uint result = 0;
+        for (var shift = 0; shift < 32; shift += 8)
+        {
+            var from = (a >> shift) & 0xFF;
+            var to = (b >> shift) & 0xFF;
+            result |= (uint)MathF.Round(from + ((to - (float)from) * t)) << shift;
+        }
+
+        return result;
+    }
 }

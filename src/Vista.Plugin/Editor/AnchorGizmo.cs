@@ -4,7 +4,6 @@ using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Game;
 
 namespace Vista.Plugin.Editor;
@@ -97,15 +96,7 @@ internal sealed class AnchorGizmo
                 session.BeginLiveEdit();
             }
 
-            var edited = rotate
-                ? dragStart.Value with
-                {
-                    Yaw = TrackAim.FromDirection(-new Vector3(matrix.M31, matrix.M32, matrix.M33)).Yaw,
-                }
-                : dragStart.Value with
-                {
-                    Position = matrix.Translation,
-                };
+            var edited = GizmoEdit.MoveAnchor(dragStart.Value, matrix, rotate);
             var refusal =
                 kind == AnchorKind.LookAt
                     ? session.PreviewLookAt(edited.Position)

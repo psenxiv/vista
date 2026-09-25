@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Display;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
@@ -82,4 +83,27 @@ public class TurnHeatTests
     [InlineData(-5f, 0f)]
     public void TheScaleIsWarmAt45AndHotAt90(float degreesPerSecond, float level) =>
         Assert.Equal(level, TurnHeat.Level(degreesPerSecond), 1e-5f);
+
+    // Rest black, warm red (low byte), hot white, all opaque. Halfway between channels 0 and 255 is 127.5, which MathF.Round takes to even, 128.
+
+    [Theory]
+    [InlineData(0f, 0xFF000000u)]
+    [InlineData(0.25f, 0xFF000080u)]
+    [InlineData(0.5f, 0xFF0000FFu)]
+    [InlineData(0.75f, 0xFF8080FFu)]
+    [InlineData(1f, 0xFFFFFFFFu)]
+    public void HeatBlendsFromRestToWarmToHot(float level, uint expected) =>
+        Assert.Equal(expected, TurnHeat.Colour(level, 0xFF000000u, 0xFF0000FFu, 0xFFFFFFFFu));
+
+    // A watched character must move more than a quarter yalm, or appear or go, for the heat to be worked out again.
+
+    [Fact]
+    public void TheTargetMovesOncePastAQuarterYalm()
+    {
+        Assert.False(TurnHeat.TargetMoved(Vector3.Zero, new Vector3(0.25f, 0f, 0f)));
+        Assert.True(TurnHeat.TargetMoved(Vector3.Zero, new Vector3(0.5f, 0f, 0f)));
+        Assert.False(TurnHeat.TargetMoved(null, null));
+        Assert.True(TurnHeat.TargetMoved(null, Vector3.Zero));
+        Assert.True(TurnHeat.TargetMoved(Vector3.Zero, null));
+    }
 }

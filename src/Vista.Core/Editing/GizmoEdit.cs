@@ -62,5 +62,17 @@ public static class GizmoEdit
         }
     }
 
+    /// <summary>The anchor turned to the dragged matrix's yaw when <paramref name="rotate"/>, else moved to its position.</summary>
+    public static Anchor MoveAnchor(Anchor start, Matrix4x4 dragged, bool rotate) =>
+        rotate
+            ? start with
+            {
+                Yaw = TrackAim.FromDirection(-new Vector3(dragged.M31, dragged.M32, dragged.M33)).Yaw,
+            }
+            : start with
+            {
+                Position = dragged.Translation,
+            };
+
     private static bool Same(float a, float b) => MathF.Abs(Angles.Wrap(a - b)) <= Tolerance;
 }

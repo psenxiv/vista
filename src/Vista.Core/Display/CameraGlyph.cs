@@ -1,5 +1,7 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Core.Display;
 
@@ -15,6 +17,35 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
 
     private const float TabHalfWidth = 0.35f;
     private const float TabHeight = 0.5f;
+
+    /// <summary>Point <paramref name="index"/>'s aim, up and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded; <paramref name="evaluator"/> is called only for the path.</summary>
+    public static (Vector3 Forward, Vector3 Up, float Fov) Pose(
+        Track track,
+        int index,
+        Vector3? aimPoint,
+        Func<TrackEvaluator> evaluator
+    )
+    {
+        var point = track.Points[index];
+        var recorded = CameraRotation.FromAngles(point.Yaw, point.Pitch, point.Roll);
+        if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is not null)
+        {
+            var facing = at - point.Position;
+            var up = Vector3.Transform(
+                CameraRotation.Upright(facing),
+                Quaternion.CreateFromAxisAngle(Vector3.Normalize(facing), point.Roll)
+            );
+            return (facing, up, point.Fov);
+        }
+
+        if (track.Aim != AimMode.PathTangent)
+            return (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
+
+        var path = evaluator();
+        return path.Evaluate(path.PointSeconds(index)) is { } frame
+            ? (frame.LookAt - frame.Position, frame.Up, point.Fov)
+            : (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
+    }
 
     /// <summary>Builds the glyph at <paramref name="apex"/>; <paramref name="fov"/> is vertical, in radians, and <paramref name="depth"/> in yalms.</summary>
     public static CameraGlyph Build(Vector3 apex, Vector3 forward, Vector3 up, float fov, float aspect, float depth)

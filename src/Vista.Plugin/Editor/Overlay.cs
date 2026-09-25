@@ -4,7 +4,6 @@ using Dalamud.Bindings.ImGui;
 using Vista.Core.Camera;
 using Vista.Core.Display;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 
 namespace Vista.Plugin.Editor;
 
@@ -15,7 +14,6 @@ internal sealed class Overlay
     private const float LabelScale = 2f;
     private const float PathSpacing = 0.25f;
     private const float PathThickness = 3f;
-    private const float HeatTargetStep = 0.25f;
     private const float GlyphDepth = 1f;
     private const float GlyphThickness = 1.5f;
     private const float SelectedGlyphThickness = 2.5f;
@@ -56,7 +54,7 @@ internal sealed class Overlay
         var labels = new Vector2?[track.Points.Count];
         for (var i = 0; i < track.Points.Count; i++)
         {
-            var (forward, up, fov) = Pose(track, cache, i, aimPoint);
+            var (forward, up, fov) = CameraGlyph.Pose(track, i, aimPoint, () => EvaluatorFor(track, cache));
             var glyph = CameraGlyph.Build(track.Points[i].Position, forward, up, fov, aspect, GlyphDepth);
             DrawGlyph(list, view, glyph, selected.Contains(i), palette);
             labels[i] = view.ToScreen(track.Points[i].Position);
@@ -272,7 +270,7 @@ internal sealed class Overlay
     {
         var evaluator = EvaluatorFor(track, cache);
         // A watched character moves every frame, so its heat is redrawn only once it has moved a little.
-        if (!ReferenceEquals(cache.HeatTrack, track) || Moved(cache.HeatTarget, aimPoint))
+        if (!ReferenceEquals(cache.HeatTrack, track) || TurnHeat.TargetMoved(cache.HeatTarget, aimPoint))
         {
             cache.Heat = TurnHeat.Samples(evaluator, aimPoint);
             cache.HeatTrack = track;
@@ -295,34 +293,15 @@ internal sealed class Overlay
                 list.AddLine(
                     view.Origin + s.Start,
                     view.Origin + s.End,
-                    HeatColour(TurnHeat.Level(to.DegreesPerSecond), palette.Path),
+                    TurnHeat.Colour(
+                        TurnHeat.Level(to.DegreesPerSecond),
+                        palette.Path,
+                        EditorColours.HeatWarm,
+                        EditorColours.HeatHot
+                    ),
                     PathThickness
                 );
         }
-    }
-
-    /// <summary>True when the aim point appeared, went, or moved more than <see cref="HeatTargetStep"/> yalms.</summary>
-    private static bool Moved(Vector3? before, Vector3? now) =>
-        before is { } a && now is { } b ? Vector3.Distance(a, b) > HeatTargetStep : before.HasValue != now.HasValue;
-
-    /// <summary>The path's colour at rest, warm at <see cref="TurnHeat.Warm"/> and hot at 1, blended between.</summary>
-    private static uint HeatColour(float level, uint rest) =>
-        level <= TurnHeat.Warm
-            ? Blend(rest, EditorColours.HeatWarm, level / TurnHeat.Warm)
-            : Blend(EditorColours.HeatWarm, EditorColours.HeatHot, (level - TurnHeat.Warm) / (1f - TurnHeat.Warm));
-
-    /// <summary>Two ImGui colours mixed channel by channel, <paramref name="t"/> of the way from <paramref name="a"/> to <paramref name="b"/>.</summary>
-    private static uint Blend(uint a, uint b, float t)
-    {
-        uint result = 0;
-        for (var shift = 0; shift < 32; shift += 8)
-        {
-            var from = (a >> shift) & 0xFF;
-            var to = (b >> shift) & 0xFF;
-            result |= (uint)MathF.Round(from + ((to - (float)from) * t)) << shift;
-        }
-
-        return result;
     }
 
     /// <summary>The cached evaluator for <paramref name="track"/>, rebuilt when the track changes.</summary>
@@ -335,35 +314,6 @@ internal sealed class Overlay
         }
 
         return cache.Evaluator!;
-    }
-
-    /// <summary>Point <paramref name="index"/>'s aim, up and FoV: at <paramref name="aimPoint"/>, along the path in Direction-of-travel mode, or recorded.</summary>
-    private static (Vector3 Forward, Vector3 Up, float Fov) Pose(
-        Track track,
-        TrackCache cache,
-        int index,
-        Vector3? aimPoint
-    )
-    {
-        var point = track.Points[index];
-        var recorded = CameraRotation.FromAngles(point.Yaw, point.Pitch, point.Roll);
-        if (aimPoint is { } at && TrackAim.Toward(point.Position, at) is not null)
-        {
-            var facing = at - point.Position;
-            var up = Vector3.Transform(
-                CameraRotation.Upright(facing),
-                Quaternion.CreateFromAxisAngle(Vector3.Normalize(facing), point.Roll)
-            );
-            return (facing, up, point.Fov);
-        }
-
-        if (track.Aim != AimMode.PathTangent)
-            return (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
-
-        var evaluator = EvaluatorFor(track, cache);
-        return evaluator.Evaluate(evaluator.PointSeconds(index)) is { } frame
-            ? (frame.LookAt - frame.Position, frame.Up, point.Fov)
-            : (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
     }
 
     private static void DrawGlyph(

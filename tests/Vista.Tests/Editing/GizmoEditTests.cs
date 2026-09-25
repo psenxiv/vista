@@ -102,4 +102,20 @@ public class GizmoEditTests
         var turned = Original with { Yaw = Original.Yaw + MathF.Tau };
         Assert.Same(turned, GizmoEdit.Rotate(turned, GimbalRing.Yaw, GizmoEdit.RingFrame(Original, GimbalRing.Yaw)));
     }
+
+    // CreateRotationY(0.5)'s third row is (sin 0.5, 0, cos 0.5), so the forward is (−sin, 0, −cos) and its yaw atan2(sin, cos) = 0.5.
+
+    [Fact]
+    public void AnAnchorTurnsToTheDraggedYawOrMovesToTheDraggedPosition()
+    {
+        var start = new Anchor(new Vector3(1f, 2f, 3f), 0.2f);
+
+        var turned = GizmoEdit.MoveAnchor(start, Matrix4x4.CreateRotationY(0.5f), rotate: true);
+        Assert.Equal(0.5f, turned.Yaw, 1e-6f);
+        Assert.Equal(start.Position, turned.Position);
+
+        var moved = GizmoEdit.MoveAnchor(start, Matrix4x4.CreateTranslation(4f, 5f, 6f), rotate: false);
+        Assert.Equal(new Vector3(4f, 5f, 6f), moved.Position);
+        Assert.Equal(0.2f, moved.Yaw);
+    }
 }
