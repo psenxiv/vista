@@ -63,6 +63,7 @@ internal static class RegressionScene
         new("Recorded aim over the top: straight up, no swing", OverTheTop(), 0),
         new("Look At straight overhead: turns upright, no flip", PassingUnder(), 0),
         new("Climbing turn: horizon stays level", Travel(ClimbingTurn), 0),
+        new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
     ];
 
     /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
@@ -173,6 +174,16 @@ internal static class RegressionScene
     {
         var track = Travel([P(-10f, 0f, 0f), P(0f, 0f, -4f), P(10f, 0f, -2f)]);
         return TrackEditing.SetHold(LegEasing.Set(track, 2, Easing.EaseOut), 2, 1.5f);
+    }
+
+    /// <summary>A 10-yalm triangle at 25 yalms a second, holding 2 s back at its start: at 0 s the spot 2 s ahead waits where the camera is.</summary>
+    private static Track LapBackToTheStart()
+    {
+        var track = Travel(
+            [P(-5f, 0f, 5f), P(-5f, 0f, -5f), P(5f, 0f, -5f), P(-5f, 0f, 5f)],
+            TrackEditing.MaxLookAhead
+        );
+        return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 3, 2f);
     }
 
     /// <summary>Recorded aim through points that each look, zoom and roll differently, holding at the middle and the end.</summary>

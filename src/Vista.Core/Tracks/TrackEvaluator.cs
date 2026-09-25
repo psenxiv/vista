@@ -261,17 +261,18 @@ public sealed class TrackEvaluator
         return TravelDirection(time, position, segment, fraction);
     }
 
-    /// <summary>The direction from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, blending towards the path's direction into that spot as it nears; null with no look-ahead or no direction.</summary>
+    /// <summary>The direction from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, blending towards the path's direction into that spot as it nears, or the way the chord opens where the spot is on the camera; null with no look-ahead or no direction.</summary>
     private Vector3? LookAhead(double time, Vector3 from)
     {
         if (_track.LookAhead <= 0f)
             return null;
 
         var ahead = _curve.PositionAt(time + _track.LookAhead);
+        var here = _curve.PositionAt(time);
         var chord = PointAt(ahead) - from;
-        var weight = MathF.Max(0f, ahead - _curve.PositionAt(time)) / LookAheadBlend;
+        var weight = MathF.Max(0f, ahead - here) / LookAheadBlend;
         if (weight >= 1f)
-            return TrackAim.Usable(chord);
+            return TrackAim.Usable(chord) ?? Opening(time, here, ahead);
 
         // Weighed by distance along the path, a chord shrunk to rounding noise carries almost no weight, and a hairpin's short chord keeps its full weight.
         var start = MathF.Max(0f, ahead - LookAheadBlend);
@@ -280,6 +281,23 @@ public sealed class TrackEvaluator
             return null;
         var toward = chord.LengthSquared() == 0f ? Vector3.Zero : Vector3.Normalize(chord);
         return TrackAim.Usable((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
+    }
+
+    /// <summary>The way the chord opens where the path comes back to the camera within the look ahead: the spot's velocity less the camera's; null where neither moves.</summary>
+    private Vector3? Opening(double time, float here, float ahead)
+    {
+        // At the start the curve's slope reads 0, so the camera's is the first key's slope out.
+        var slope = time <= 0.0 ? _curve.SideSlope(0, KeySide.Out) : _curve.SlopeAt(time);
+        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(time + _track.LookAhead)) - Velocity(here, slope));
+    }
+
+    /// <summary>The velocity along the path <paramref name="distance"/> along it, moving at <paramref name="slope"/> distance per second.</summary>
+    private Vector3 Velocity(float distance, float slope)
+    {
+        var (segment, fraction) = LocateDistance(distance);
+        return TrackAim.PathDirection(_positions, _table, segment, fraction) is { } direction
+            ? Vector3.Normalize(direction) * slope
+            : Vector3.Zero;
     }
 
     /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>
