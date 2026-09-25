@@ -40,6 +40,18 @@ internal static unsafe class GameUi
             );
         });
 
+#if DEBUG
+    /// <summary>Whether the game reports its UI visible, or null when it can't be read.</summary>
+    public static bool? SelfTestVisible
+    {
+        get
+        {
+            var module = RaptureAtkModule.Instance();
+            return module == null ? null : module->IsUiVisible;
+        }
+    }
+#endif
+
     /// <summary>Runs <paramref name="action"/> on the game's thread, logging it if it throws.</summary>
     private static void OnGameThread(Action action) =>
         _ = Plugin

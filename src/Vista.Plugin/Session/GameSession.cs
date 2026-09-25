@@ -59,6 +59,34 @@ internal sealed class GameSession
     /// <summary>True while the plugin writes the camera.</summary>
     public bool OwnsCamera => owned;
 
+    /// <summary>True while flight keys and zoom are blocked: whenever the session locks input, and while a self-test holds the camera.</summary>
+    public bool LocksInput
+    {
+        get
+        {
+#if DEBUG
+            if (selfTestHolds)
+                return true;
+#endif
+            return state.LocksInput;
+        }
+    }
+
+#if DEBUG
+    private bool selfTestHolds;
+
+    /// <summary>True while a self-test runs; the window refuses mode changes until it ends.</summary>
+    public bool SelfTestRunning { get; set; }
+
+    /// <summary>Takes the camera and holds movement as going to Edit or Live does, without changing mode, until the next release.</summary>
+    public void SelfTestHold()
+    {
+        movement.Hold();
+        TakeCamera();
+        selfTestHolds = true;
+    }
+#endif
+
     /// <summary>The free-cam's speed setting.</summary>
     public FlySpeed Speed => freeCam.Speed;
 
@@ -184,6 +212,9 @@ internal sealed class GameSession
         previewedLastFrame = false;
         owned = false;
         snapshotBeforeTakeover = null;
+#if DEBUG
+        selfTestHolds = false;
+#endif
 
         Faults.Attempt("turning the free cam off", freeCam.Disable);
         Faults.Attempt("restoring the game UI", GameUi.Restore);

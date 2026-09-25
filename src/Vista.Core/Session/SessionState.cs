@@ -95,7 +95,10 @@ public sealed class SessionState
     public string? StopReason { get; private set; }
 
     /// <summary>Stops Vista after a fault at <paramref name="where"/>. True when this is the first stop, so the player is told.</summary>
-    public bool ReportFault(string where) => Halt($"fault in {where}");
+    public bool ReportFault(string where) => Halt(FaultReason(where));
+
+    /// <summary>The stop reason for a fault at <paramref name="where"/>.</summary>
+    public static string FaultReason(string where) => $"fault in {where}";
 
     /// <summary>Takes a touch point's startup check; a failed one stops Vista. True when this is the first stop, so the player is told.</summary>
     public bool ReportTouchPoint(string name, bool passed) => !passed && Halt($"{name} unavailable");
@@ -229,11 +232,7 @@ public sealed class SessionState
     {
         if (Stopped)
             return PlayOutcome.Refused;
-        var items = Scene
-            .Playlist.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
-            .Where(x => x.Track.Points.Count > 0)
-            .Select(x => new PlaylistItem(x.Entry.Id, World.WorldOf(x.Track), x.Entry.Loops))
-            .ToList();
+        var items = PlaylistItems();
         if (items.Count == 0)
             return PlayOutcome.Refused;
         Transport.StopPreview();
@@ -246,6 +245,14 @@ public sealed class SessionState
         Mode = CameraMode.Live;
         return fromGame ? PlayOutcome.StartedFromGame : PlayOutcome.Started;
     }
+
+    /// <summary>The playlist's entries whose tracks have points, in order and in the world, as Live plays them.</summary>
+    public IReadOnlyList<PlaylistItem> PlaylistItems() =>
+        Scene
+            .Playlist.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
+            .Where(x => x.Track.Points.Count > 0)
+            .Select(x => new PlaylistItem(x.Entry.Id, World.WorldOf(x.Track), x.Entry.Loops))
+            .ToList();
 
     /// <summary>Starts an Edit preview from the scrub head, or from the beginning when asked or when the scrub head is where the shot finishes.</summary>
     private PlayOutcome StartPreview(bool fromStart)

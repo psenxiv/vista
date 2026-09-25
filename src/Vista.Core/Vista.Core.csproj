@@ -5,4 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- The self-test is for developer builds only; leaving its files out keeps even their names out of the Release symbols. -->
+    <Compile Remove="SelfTest/**" />
+  </ItemGroup>
 </Project>

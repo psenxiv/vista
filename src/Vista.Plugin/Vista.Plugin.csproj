@@ -16,4 +16,8 @@
     <!-- Without SetPlatform, x64 propagates to Core and design-time builds look in a bin/x64 no build writes. -->
     <ProjectReference Include="../Vista.Core/Vista.Core.csproj" SetPlatform="Platform=AnyCPU" />
   </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- The self-test is for developer builds only; leaving its files out keeps even their names out of the Release symbols. -->
+    <Compile Remove="SelfTest/**" />
+  </ItemGroup>
 </Project>
