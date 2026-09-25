@@ -15,6 +15,9 @@ using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Main;
 using Vista.Plugin.Ui.Widgets;
 using Vista.Plugin.Ui.Windows;
+#if DEBUG
+using Vista.Plugin.SelfTest;
+#endif
 
 namespace Vista.Plugin;
 
@@ -55,6 +58,18 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService]
     internal static INotificationManager Notifications { get; private set; } = null!;
 
+#if DEBUG
+    [PluginService]
+    internal static IChatGui ChatGui { get; private set; } = null!;
+#endif
+
+    /// <summary>True while the game moves the player between areas.</summary>
+    internal static bool BetweenAreas =>
+        Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51];
+
+    /// <summary>This build's version.</summary>
+    internal static string Build => typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown";
+
     internal static CameraController Camera { get; private set; } = null!;
     internal static InputBlocker Input { get; private set; } = null!;
     internal static MovementLock Movement { get; private set; } = null!;
@@ -76,6 +91,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly GuideWindow guideWindow;
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
+#if DEBUG
+    private readonly SelfTestRunner selfTest;
+#endif
 
     private readonly WheelSteps wheel = new();
     private bool escapeWasDown;
@@ -89,7 +107,7 @@ public sealed class Plugin : IDalamudPlugin
         Movement = new MovementLock();
         game = new GameSession(config, Movement);
         faults = new Faults(() => game.State.Mode);
-        Input = new InputBlocker(() => game.State.LocksInput, () => blockEscape, faults);
+        Input = new InputBlocker(() => game.LocksInput, () => blockEscape, faults);
         sceneFiles = new SceneFiles(config, game);
         fields = new PendingField(() => game.State.Mode == CameraMode.Editing);
         editorLayer = new EditorLayer(game, pointGizmo);
@@ -131,6 +149,12 @@ public sealed class Plugin : IDalamudPlugin
         Camera = new CameraController(() => game.Frame((float)Framework.UpdateDelta.TotalSeconds), faults);
         CheckTouchPointsAtLoad();
         CheckCameraHook();
+#if DEBUG
+        selfTest = new SelfTestRunner(
+            game,
+            () => [.. LoadTouchPoints(), (CameraController.Name, Camera.Hooked == true)]
+        );
+#endif
 
         PluginInterface.UiBuilder.DisableGposeUiHide = true;
         PluginInterface.UiBuilder.Draw += OnDraw;
@@ -139,10 +163,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.Logout += OnLogout;
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) { HelpMessage = "/vista opens the editor" });
 
-        Log.Information(
-            "Vista loaded. Build {Build}.",
-            typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown"
-        );
+        Log.Information("Vista loaded. Build {Build}.", Build);
     }
 
     private void OnCommand(string command, string args) => faults.Guard("the /vista command", () => RunCommand(args));
@@ -156,8 +177,17 @@ public sealed class Plugin : IDalamudPlugin
                 OpenTrackEditor();
                 break;
             case "release":
+#if DEBUG
+                if (selfTest.Refuses())
+                    break;
+#endif
                 game.Release("command");
                 break;
+#if DEBUG
+            case "selftest":
+                selfTest.Start();
+                break;
+#endif
             default:
                 Log.Information("[vista] unknown verb '{Verb}'.", verb);
                 break;
@@ -172,6 +202,9 @@ public sealed class Plugin : IDalamudPlugin
         faults.Guard("syncing the input hooks", Input.SyncHookState);
         faults.Guard("watching the movement counter", NoticeCounterCleared);
         faults.Guard("the framework update", UpdateFeatures);
+#if DEBUG
+        faults.Guard("the self-test", selfTest.Tick);
+#endif
     }
 
     /// <summary>Releases the camera and stops Vista for every fault waiting, telling the player the first time Vista stops.</summary>
@@ -185,15 +218,18 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    /// <summary>Logs each touch point checked at load, and stops Vista if any failed.</summary>
-    private void CheckTouchPointsAtLoad()
-    {
-        (string Name, bool Passed)[] checks =
+    /// <summary>The touch points checked at load, each with whether it resolved and installed.</summary>
+    private static (string Name, bool Passed)[] LoadTouchPoints() =>
         [
             ("input query hooks", Input.QueriesHooked),
             ("mouse wheel hook", Input.WheelHooked),
             ("movement lock", Movement.Available),
         ];
+
+    /// <summary>Logs each touch point checked at load, and stops Vista if any failed.</summary>
+    private void CheckTouchPointsAtLoad()
+    {
+        var checks = LoadTouchPoints();
         Log.Information(
             "[vista] touch points: {Results}",
             string.Join(", ", checks.Select(c => $"{c.Name} {Result(c.Passed)}"))
@@ -208,8 +244,8 @@ public sealed class Plugin : IDalamudPlugin
         if (cameraHookChecked || Camera.Hooked is not { } hooked)
             return;
         cameraHookChecked = true;
-        Log.Information("[vista] touch points: camera update hook {Result}", Result(hooked));
-        CheckTouchPoint("camera update hook", hooked);
+        Log.Information("[vista] touch points: {Name:l} {Result}", CameraController.Name, Result(hooked));
+        CheckTouchPoint(CameraController.Name, hooked);
     }
 
     private static string Result(bool passed) => passed ? "ok" : "unavailable";
@@ -227,21 +263,25 @@ public sealed class Plugin : IDalamudPlugin
     private void AnnounceStop(bool notify)
     {
         Log.Error("[vista] stopped: {Reason}", game.State.StopReason ?? "unknown");
-        if (notify)
-            Notifications.AddNotification(
-                new Notification
-                {
-                    Title = "Vista",
-                    Content = SessionState.StopMessage,
-                    Type = NotificationType.Error,
-                }
-            );
+        if (!notify)
+            return;
+        Notifications.AddNotification(
+            new Notification
+            {
+                Title = "Vista",
+                Content = SessionState.StopMessage,
+                Type = NotificationType.Error,
+            }
+        );
+#if DEBUG
+        selfTest.NoteStopNotified();
+#endif
     }
 
     /// <summary>Covers every transition: a teleport, an aethernet hop, a cutscene, a duty starting.</summary>
     private void ReleaseBetweenAreas()
     {
-        if (game.OwnsCamera && (Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51]))
+        if (game.OwnsCamera && BetweenAreas)
             game.Release("area transition");
     }
 

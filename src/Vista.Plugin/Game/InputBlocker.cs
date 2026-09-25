@@ -224,6 +224,15 @@ internal sealed unsafe class InputBlocker : IDisposable
         }
     }
 
+#if DEBUG
+    /// <summary>How many of the five hooks, four queries and the wheel, are enabled.</summary>
+    public (int Enabled, int Total) SelfTestHookState()
+    {
+        var all = Hooks.Cast<IDalamudHook?>().Append(mouseWheelHook).ToList();
+        return (all.Count(hook => hook is { IsEnabled: true }), all.Count);
+    }
+#endif
+
     public void Dispose()
     {
         foreach (var hook in Hooks)

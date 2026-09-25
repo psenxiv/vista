@@ -15,6 +15,9 @@ public static class SelfTestRules
     /// <summary>How far the camera's facing may be from where it was once handed back, in degrees; provisional.</summary>
     public const double RestoreDegrees = 0.1;
 
+    /// <summary>Why a self-test, or a mode change, is refused while one runs.</summary>
+    public const string Running = "Self-test: running; wait for it to end.";
+
     /// <summary>Why a self-test can't start now, or null when it can.</summary>
     public static string? Refusal(
         bool running,
@@ -24,7 +27,7 @@ public static class SelfTestRules
         CameraMode mode,
         bool stopped
     ) =>
-        running ? "Self-test: running; wait for it to end."
+        running ? Running
         : !loggedIn ? "Self-test: log in first."
         : stopped ? "Self-test: Vista has stopped; reload it first."
         : inCombat ? "Self-test: leave combat first."
