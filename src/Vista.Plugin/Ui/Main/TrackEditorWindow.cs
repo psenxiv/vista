@@ -544,8 +544,8 @@ internal sealed class TrackEditorWindow : Window
         var aim = Array.FindIndex(Aims, c => c.Mode == track.Aim);
         var (colour, tooltip) = track.Aim switch
         {
-            AimMode.WatchTarget => TargetState(track, "Watch Target", "using recorded aim"),
-            AimMode.FollowTarget => TargetState(track, "Follow Target", null),
+            AimMode.WatchTarget => AimTip(track, "Watch Target", "using recorded aim"),
+            AimMode.FollowTarget => AimTip(track, "Follow Target", null),
             _ => (null, $"Select aim ({Aims[aim].Name})"),
         };
         if (IconButton.Draw("aim", FontAwesomeIcon.Crosshairs, tooltip, colour))
@@ -571,7 +571,7 @@ internal sealed class TrackEditorWindow : Window
                     DrawTargetEntry(AimMode.WatchTarget, Aims[i].Name, i == aim, width, pencil, watchTarget.Open, null);
                     continue;
                 case AimMode.FollowTarget:
-                    var refusal = track.Points.Count > 1 ? "Follow Target needs a track with one point" : null;
+                    var refusal = TrackEditing.AimRefusal(track, AimMode.FollowTarget);
                     DrawTargetEntry(
                         AimMode.FollowTarget,
                         Aims[i].Name,
@@ -617,13 +617,15 @@ internal sealed class TrackEditorWindow : Window
     }
 
     /// <summary>The aim icon's colour and tooltip under a character mode: accent when found, red when lost or none is chosen.</summary>
-    private (uint? Colour, string Tooltip) TargetState(Track track, string mode, string? lost)
+    private (uint? Colour, string Tooltip) AimTip(Track track, string mode, string? lost)
     {
-        if (track.TargetName is not { } name)
-            return (UiColours.Red, $"{mode}: choose a character");
-        return session.World.TargetLost(track)
-            ? (UiColours.Red, lost is null ? $"{name} (Not found)" : $"{name} (Not found): {lost}")
-            : (UiColours.Accent, $"{mode}: {name}");
+        var name = track.TargetName;
+        return session.World.StateOfTarget(track) switch
+        {
+            TargetState.Unchosen => (UiColours.Red, $"{mode}: choose a character"),
+            TargetState.Lost => (UiColours.Red, lost is null ? $"{name} (Not found)" : $"{name} (Not found): {lost}"),
+            _ => (UiColours.Accent, $"{mode}: {name}"),
+        };
     }
 
     /// <summary>A character mode's aim menu entry, which opens its dialog when the track switches into it, and on the current mode a pencil that reopens it; disabled with <paramref name="refusal"/> as its tooltip.</summary>

@@ -212,7 +212,7 @@ internal sealed class GameSession
     {
         if (CameraPoint() is { } camera)
             return state.SetAim(aim, camera);
-        var placesFromCamera = aim == AimMode.LookAt && state.Track is { Points.Count: 0, LookAtPlaced: false };
+        var placesFromCamera = TrackEditing.LookAtFromCamera(state.Track, aim);
         return state.Mode == CameraMode.Editing && placesFromCamera
             ? "Cannot read the camera."
             : state.SetAim(aim, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));

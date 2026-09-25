@@ -85,6 +85,12 @@ public sealed class WorldView
     /// <summary>True when a track in the world watches or follows a named character who isn't found.</summary>
     public bool TargetLost(Track world) => AimTracker.TargetLost(world, aimTargets);
 
+    /// <summary>Whether a Watch or Follow track in the world has chosen its character, and whether it is found.</summary>
+    public TargetState StateOfTarget(Track world) =>
+        world.TargetName is null ? TargetState.Unchosen
+        : TargetLost(world) ? TargetState.Lost
+        : TargetState.Found;
+
     /// <summary>The aim point on the character a Watch or Follow track in the world names, or null unless found.</summary>
     public Vector3? TargetPoint(Track world) => AimTracker.TargetPoint(world, aimTargets);
 

@@ -50,6 +50,8 @@ public static class TrackEditing
     /// <summary>Why a point can't join a Follow Target track that has one.</summary>
     public const string FollowHasOnePoint = "A Follow Target track has one point";
 
+    private const string FollowNeedsOnePoint = "Follow Target needs a track with one point";
+
     /// <summary>A track with a new Id and no points at the default speed, playing forward once.</summary>
     public static Track Empty(AimMode aim = AimMode.AimKeys, string name = "Track 1") =>
         new(Guid.NewGuid(), name, [], [], DefaultSpeed, aim, PlaybackDirection.Forward, false);
@@ -254,6 +256,14 @@ public static class TrackEditing
     /// <summary>Sets whether the track loops; never touches points or timing.</summary>
     public static Track SetLoop(Track track, bool loop) => track.Loop == loop ? track : track with { Loop = loop };
 
+    /// <summary>Why <paramref name="track"/> can't take aim mode <paramref name="aim"/>, or null: Follow Target needs one point at most.</summary>
+    public static string? AimRefusal(Track track, AimMode aim) =>
+        aim == AimMode.FollowTarget && track.Points.Count > 1 ? FollowNeedsOnePoint : null;
+
+    /// <summary>True when setting <paramref name="aim"/> places the Look At point from the camera: the first Look At on a track with no points.</summary>
+    public static bool LookAtFromCamera(Track track, AimMode aim) =>
+        aim == AimMode.LookAt && track.Points.Count == 0 && !track.LookAtPlaced;
+
     /// <summary>Sets the aim mode; the first Look At places its point 10 yalms along the first point's aim, or <paramref name="camera"/>'s with no points.</summary>
     public static Track SetAim(Track track, AimMode aim, ControlPoint camera)
     {
@@ -263,7 +273,7 @@ public static class TrackEditing
         if (aim != AimMode.LookAt || track.LookAtPlaced)
             return result;
 
-        var from = track.Points.Count > 0 ? track.Points[0] : camera;
+        var from = LookAtFromCamera(track, aim) ? camera : track.Points[0];
         return result with
         {
             LookAt = FreeCamMotion.LookAtFrom(from.Position, from.Yaw, from.Pitch),

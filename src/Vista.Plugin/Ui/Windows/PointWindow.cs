@@ -186,7 +186,7 @@ internal sealed class PointWindow : Window
 
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
-        ImGui.BeginDisabled(session.Track.Aim is AimMode.PathTangent or AimMode.LookAt);
+        ImGui.BeginDisabled(!TrackAim.UsesPointAim(session.Track.Aim));
         PointField(
             $"pitch{index}",
             "Pitch",

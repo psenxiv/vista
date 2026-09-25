@@ -83,9 +83,7 @@ internal sealed class PointGizmo
                 : DrawRings(
                     view,
                     Preview?.Point ?? point,
-                    session.Track.Aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget
-                        ? AllRings
-                        : RollOnly
+                    TrackAim.UsesPointAim(session.Track.Aim) ? AllRings : RollOnly
                 );
         Hot = usingNow || over;
 

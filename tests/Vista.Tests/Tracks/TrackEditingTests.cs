@@ -668,4 +668,31 @@ public class TrackEditingTests
         Assert.Equal(0f, TrackEditing.HoldSeconds(result, 0), 0.0001f);
         Assert.Equal(2f, TrackEditing.HoldSeconds(result, 1), 0.0001f);
     }
+
+    // Follow Target takes a track with at most one point; every other mode takes any track.
+
+    [Fact]
+    public void FollowTargetRefusesATrackWithMoreThanOnePoint()
+    {
+        var two = TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(10f));
+        var one = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
+
+        Assert.Equal("Follow Target needs a track with one point", TrackEditing.AimRefusal(two, AimMode.FollowTarget));
+        Assert.Null(TrackEditing.AimRefusal(one, AimMode.FollowTarget));
+        Assert.Null(TrackEditing.AimRefusal(two, AimMode.LookAt));
+    }
+
+    // The camera places the Look At point only for Look At, with no points and no point placed yet.
+
+    [Fact]
+    public void OnlyTheFirstLookAtOnAnEmptyTrackPlacesFromTheCamera()
+    {
+        Assert.True(TrackEditing.LookAtFromCamera(TrackEditing.Empty(), AimMode.LookAt));
+        Assert.True(TrackEditing.LookAtFromCamera(TrackEditing.Empty(AimMode.LookAt), AimMode.LookAt));
+        Assert.False(TrackEditing.LookAtFromCamera(TrackEditing.Empty() with { LookAtPlaced = true }, AimMode.LookAt));
+        Assert.False(
+            TrackEditing.LookAtFromCamera(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), AimMode.LookAt)
+        );
+        Assert.False(TrackEditing.LookAtFromCamera(TrackEditing.Empty(), AimMode.AimKeys));
+    }
 }

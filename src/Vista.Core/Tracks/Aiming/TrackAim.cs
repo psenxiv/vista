@@ -16,6 +16,10 @@ public static class TrackAim
     /// <summary>How far to step off a segment boundary when the exact boundary derivative is degenerate: at either end of the path, or beside a collapsed segment's phantom point.</summary>
     private const float BoundaryNudge = 1e-3f;
 
+    /// <summary>True when the aim mode can use each point's own yaw and pitch: always for Recorded aim, while its character is lost for Watch Target, and unless it looks at its character for Follow Target.</summary>
+    public static bool UsesPointAim(AimMode aim) =>
+        aim is AimMode.AimKeys or AimMode.WatchTarget or AimMode.FollowTarget;
+
     /// <summary>Yaw and pitch of a view direction; the exact inverse of <c>FreeCamMotion</c>'s direction convention.</summary>
     public static (float Yaw, float Pitch) FromDirection(Vector3 direction)
     {

@@ -161,4 +161,15 @@ public class TrackAimTests
         Assert.Equal(endYaw, nearYaw, 0.01f * Deg);
         Assert.Equal(endPitch, nearPitch, 0.01f * Deg);
     }
+
+    // Recorded aim uses the points' aim always, Watch Target when its character is lost and Follow Target when it doesn't look at them; Direction of travel and Look At never do.
+
+    [Theory]
+    [InlineData(AimMode.AimKeys, true)]
+    [InlineData(AimMode.WatchTarget, true)]
+    [InlineData(AimMode.FollowTarget, true)]
+    [InlineData(AimMode.PathTangent, false)]
+    [InlineData(AimMode.LookAt, false)]
+    public void OnlyModesThatCanUseAPointsAimLetItBeEdited(AimMode aim, bool expected) =>
+        Assert.Equal(expected, TrackAim.UsesPointAim(aim));
 }

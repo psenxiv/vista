@@ -580,8 +580,8 @@ public sealed class SessionState
         var shown = ShownPoint;
         return ApplySetting(t =>
         {
-            if (aim == AimMode.FollowTarget && t.Points.Count > 1)
-                throw new ArgumentException("Follow Target needs a track with one point");
+            if (TrackEditing.AimRefusal(t, aim) is { } refusal)
+                throw new ArgumentException(refusal);
             if (t.Aim == aim)
                 return t;
             var leaving =

@@ -77,4 +77,22 @@ public class SessionAimTests
         Assert.True(state.World.TargetLost(state.Track));
         Assert.Null(state.World.TargetPoint(state.Track));
     }
+
+    // No name is Unchosen; a name with nobody of it loaded is Lost; once they load, Found.
+
+    [Fact]
+    public void TheTargetIsUnchosenThenLostThenFound()
+    {
+        var characters = new NearbyCharacters();
+        var state = new SessionState(null, characters);
+        state.Edit();
+        state.ChangeTrack(t => t with { Aim = AimMode.WatchTarget });
+        Assert.Equal(TargetState.Unchosen, state.World.StateOfTarget(state.Track));
+
+        state.SetTarget("Guard", null);
+        Assert.Equal(TargetState.Lost, state.World.StateOfTarget(state.Track));
+
+        GuardAt(characters, A);
+        Assert.Equal(TargetState.Found, state.World.StateOfTarget(state.Track));
+    }
 }
