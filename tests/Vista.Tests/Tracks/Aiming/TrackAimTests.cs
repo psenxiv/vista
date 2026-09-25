@@ -133,4 +133,9 @@ public class TrackAimTests
     [InlineData(AimMode.LookAt, false)]
     public void OnlyModesThatCanUseAPointsAimLetItBeEdited(AimMode aim, bool expected) =>
         Assert.Equal(expected, TrackAim.UsesPointAim(aim));
+
+    // A target exactly MinTargetDistance (0.1 yalms, straight ahead along −z) away is far enough to aim at: yaw 0, pitch 0.
+    [Fact]
+    public void ATargetExactlyTheShortestDistanceAwayGivesAnAim() =>
+        Assert.Equal((0f, 0f), TrackAim.Toward(Vector3.Zero, new Vector3(0f, 0f, -TrackAim.MinTargetDistance)));
 }

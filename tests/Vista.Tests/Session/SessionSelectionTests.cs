@@ -683,4 +683,33 @@ public class SessionSelectionTests
         Assert.Equal(first, state.EditedTrackId);
         Assert.Equal([0, 1], state.Selection.Points);
     }
+
+    // Three points (0, 1, 2): index 99 isn't one, so a list holding it is refused whole, and so is an empty list.
+    [Fact]
+    public void DeletingOrMovingPointsRefusesAnyIndexThatIsNotAPoint()
+    {
+        var state = EditingThreePoints();
+
+        Assert.Equal("There is no such point.", state.DeletePoints([0, 99]));
+        Assert.Equal("There is no such point.", state.DeletePoints([]));
+        Assert.Equal("There is no such point.", state.MovePointsTo([0, 99], null));
+        Assert.Equal("There is no such point.", state.MovePointsTo([], null));
+        Assert.Equal(3, state.Track.Points.Count);
+    }
+
+    [Fact]
+    public void AddingAfterTheSelectedPointIsRefusedOutsideEditing() =>
+        Assert.Equal("The track can only change while editing.", new SessionState().AddAfterSelected(Point(0f)));
+
+    // Renaming the only track to the name it has leaves the scene's values as they were, so no undo step is recorded.
+    [Fact]
+    public void ASceneChangeThatChangesNothingIsNotAnUndoStep()
+    {
+        var state = new SessionState();
+        state.Edit();
+
+        Assert.Null(state.RenameTrack(state.Scene.Tracks[0].Id, state.Scene.Tracks[0].Name));
+
+        Assert.False(state.CanUndo);
+    }
 }

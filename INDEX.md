@@ -98,7 +98,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Widgets/PoseGrid`: the Point and Camera windows' shared layout and fields.
 - `Ui/Widgets/BorderedField`, `PendingField`, `LiveDrag` and `TextEdit`: a bordered number field, a field applied on release, a field previewed live as one undo step, and text edited in place.
 - `Ui/Widgets/DragRows` and `RowText`: dragging list rows and reading their click, and a row's fitted name.
-- `Ui/Widgets/PopupStyle`, `CharacterPicker` and `Refusal`: the popup style, the character drop-down, and logging a refusal.
+- `Ui/Widgets/PopupStyle`, `CharacterPicker` and `Refusal`: the popup style, the character drop-down, and telling the player why an action was refused (the log and a notification).
 
 ### Colours
 

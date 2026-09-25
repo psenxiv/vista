@@ -270,7 +270,7 @@ internal sealed class TimingWindow : Window
             var y = graph.ToScreen(0f, d).Y;
             list.AddLine(new Vector2(right, y), new Vector2(right + TickLength, y), EditorColours.GraphGrid);
 
-            var label = $"{d.ToString(Ticks.Format(step), CultureInfo.InvariantCulture)} y";
+            var label = Units.Yalms(d, Ticks.Format(step));
             list.AddText(
                 new Vector2(right + TickLength + TickLabelGap, y - (ImGui.CalcTextSize(label).Y / 2f)),
                 text,

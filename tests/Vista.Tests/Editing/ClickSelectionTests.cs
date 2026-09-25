@@ -107,4 +107,16 @@ public class ClickSelectionTests
         clicks.Update(true, At, (-MathF.PI + 0.0001f, 0f), false, false, null);
         Assert.Equal(ClickKind.Deselect, clicks.Update(false, At, Level, false, false, null).Kind);
     }
+
+    // Pitch counts the change from where the press began: from 0.5 rad to 0.505 rad is 0.005, under MaxTurn (0.01), so the
+    // release still selects; measuring the pitch itself would read 0.505 and call it a turn.
+    [Fact]
+    public void ALookAlreadyPitchedCountsOnlyItsChange()
+    {
+        var clicks = new ClickSelection();
+        Assert.Equal(ClickKind.None, clicks.Update(true, At, (0f, 0.5f), false, false, 1).Kind);
+        Assert.Equal(ClickKind.None, clicks.Update(true, At, (0f, 0.505f), false, false, null).Kind);
+
+        Assert.Equal(new ClickOutcome(ClickKind.Select, 1), clicks.Update(false, At, (0f, 0.505f), false, false, null));
+    }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using static System.FormattableString;
 
 namespace Vista.Core.Display;
@@ -24,7 +25,11 @@ public static class Units
     public static string Seconds(double seconds) => Invariant($"{seconds:0.00} s");
 
     /// <summary><paramref name="yalms"/> as text with its unit, to <see cref="YalmsField"/>'s precision.</summary>
-    public static string Yalms(float yalms) => Invariant($"{yalms:0.00} y");
+    public static string Yalms(float yalms) => Yalms(yalms, "0.00");
+
+    /// <summary><paramref name="yalms"/> as text with its unit, in the .NET number <paramref name="format"/>.</summary>
+    public static string Yalms(float yalms, string format) =>
+        $"{yalms.ToString(format, CultureInfo.InvariantCulture)} y";
 
     /// <summary><paramref name="speed"/> in yalms per second as text with its unit, to <see cref="YalmsPerSecondField"/>'s precision.</summary>
     public static string YalmsPerSecond(float speed) => Invariant($"{speed:0.00} y/s");

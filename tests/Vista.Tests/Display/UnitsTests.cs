@@ -39,4 +39,8 @@ public class UnitsTests
         Assert.Equal("%.2f", Units.YalmsPerSecondField);
         Assert.Equal("%.1f°", Units.DegreesField);
     }
+
+    // The tick labels pass the step's own format: 1 yalm at a 0.5 step's "0.0" reads "1.0 y", with a full stop.
+    [Fact]
+    public void YalmsTakeTheFormatTheyAreGiven() => Assert.Equal("1.0 y", Units.Yalms(1f, "0.0"));
 }

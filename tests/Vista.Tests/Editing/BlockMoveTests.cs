@@ -117,4 +117,11 @@ public class BlockMoveTests
             )
         );
     }
+
+    [Fact]
+    public void ARowNotInTheOrderHasNoNewIndex()
+    {
+        var e = Assert.Throws<ArgumentException>(() => BlockMove.NewIndex([0, 2, 1], 5));
+        Assert.Equal("That row isn't in the order.", e.Message);
+    }
 }
