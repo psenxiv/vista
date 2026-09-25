@@ -6,4 +6,5 @@ public enum EditOutcome
     Unchanged,
     FromGame,
     FromLive,
+    Refused,
 }
