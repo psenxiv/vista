@@ -8,24 +8,6 @@ namespace Vista.Tests.Session;
 
 public class SessionStateTests
 {
-    // Two points, one 5 s leg.
-    private static SessionState EditingWithTrack()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
-        return state;
-    }
-
-    private static SessionState Live()
-    {
-        var state = EditingWithTrack();
-        state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
-        return state;
-    }
-
     [Fact]
     public void StartsInOffWithAnEmptyTrackAndNothingLocked()
     {
@@ -47,7 +29,7 @@ public class SessionStateTests
     [Fact]
     public void EditWhileEditingChangesNothing()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         Assert.Equal(EditOutcome.Unchanged, state.Edit());
         Assert.Equal(CameraMode.Editing, state.Mode);
     }
@@ -55,7 +37,7 @@ public class SessionStateTests
     [Fact]
     public void EditFromLiveTakesTheDirectorOffline()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         Assert.Equal(EditOutcome.FromLive, state.Edit());
         Assert.Equal(CameraMode.Editing, state.Mode);
         Assert.False(state.Director.IsLive);
@@ -78,7 +60,7 @@ public class SessionStateTests
     [Fact]
     public void CueThenPlayFromEditingGoesLive()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddToPlaylist([state.EditedTrackId]);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(PlayOutcome.Resumed, state.Play());
@@ -90,7 +72,7 @@ public class SessionStateTests
     [Fact]
     public void PlayFromViewSaysItStartedFromGame()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.Release();
         Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
@@ -100,7 +82,7 @@ public class SessionStateTests
     [Fact]
     public void PlayWhilePlayingOnlyReHides()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         state.Director.Tick(1f);
         Assert.Equal(PlayOutcome.ReHid, state.Play());
         Assert.Equal(1.0, state.Director.ShotTime, 5);
@@ -109,7 +91,7 @@ public class SessionStateTests
     [Fact]
     public void PlayWhilePausedResumes()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         state.Director.Tick(1f);
         state.Stop();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
@@ -120,7 +102,7 @@ public class SessionStateTests
     [Fact]
     public void PlayWhenFinishedStartsAgainFromZero()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         state.Director.Tick(6f);
         Assert.True(state.Director.IsFinished);
         Assert.Equal(PlayOutcome.Started, state.Play());
@@ -130,7 +112,7 @@ public class SessionStateTests
     [Fact]
     public void PlayWhenPausedAndFinishedStartsAgainFromZero()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         state.Director.Tick(6f);
         state.Stop();
         Assert.Equal(PlayOutcome.Started, state.Play());
@@ -141,7 +123,7 @@ public class SessionStateTests
     [Fact]
     public void CueFromEditingGoesLivePausedAtTheStart()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddToPlaylist([state.EditedTrackId]);
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(CameraMode.Live, state.Mode);
@@ -153,7 +135,7 @@ public class SessionStateTests
     [Fact]
     public void PlayAfterCueStartsTheShot()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.Cue();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
@@ -164,7 +146,7 @@ public class SessionStateTests
     [Fact]
     public void CueFromViewSaysItCuedFromGame()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.Release();
         Assert.Equal(PlayOutcome.CuedFromGame, state.Cue());
@@ -183,7 +165,7 @@ public class SessionStateTests
     [Fact]
     public void RestartWhileLiveStartsFromZero()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         state.Director.Tick(2f);
         Assert.Equal(PlayOutcome.Started, state.Restart());
         Assert.Equal(0.0, state.Director.ShotTime);
@@ -193,9 +175,9 @@ public class SessionStateTests
     public void StopPausesOnlyWhileLive()
     {
         Assert.False(new SessionState().Stop());
-        Assert.False(EditingWithTrack().Stop());
+        Assert.False(EditingTwoPoints().Stop());
 
-        var live = Live();
+        var live = LiveTwoPoints();
         Assert.True(live.Stop());
         Assert.True(live.Director.IsPaused);
         Assert.Equal(CameraMode.Live, live.Mode);
@@ -206,11 +188,11 @@ public class SessionStateTests
     {
         Assert.False(new SessionState().Release());
 
-        var editing = EditingWithTrack();
+        var editing = EditingTwoPoints();
         Assert.True(editing.Release());
         Assert.Equal(CameraMode.Off, editing.Mode);
 
-        var live = Live();
+        var live = LiveTwoPoints();
         Assert.True(live.Release());
         Assert.Equal(CameraMode.Off, live.Mode);
         Assert.False(live.Director.IsLive);
@@ -220,7 +202,7 @@ public class SessionStateTests
     [Fact]
     public void ReleaseKeepsTheTrack()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.Release();
         Assert.Equal(2, state.Track.Points.Count);
     }
@@ -234,7 +216,7 @@ public class SessionStateTests
         Assert.Equal(refused, view.ChangeTrack(t => TrackEditing.Append(t, Point(0f))));
         Assert.Empty(view.Track.Points);
 
-        var live = Live();
+        var live = LiveTwoPoints();
         Assert.Equal(refused, live.ChangeTrack(t => TrackEditing.Append(t, Point(20f))));
         Assert.Equal(2, live.Track.Points.Count);
 
@@ -245,7 +227,7 @@ public class SessionStateTests
     [Fact]
     public void ChangeTrackAppliesWhileEditing()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 1, 8f)));
         Assert.Equal(8f, state.World.Evaluator.LegSeconds(1), 3);
     }
@@ -253,7 +235,7 @@ public class SessionStateTests
     [Fact]
     public void ChangeTrackReturnsTheRefusalAndKeepsTheTrack()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         var before = state.Track;
 
         // Two points make one leg, leg 1.
@@ -267,7 +249,7 @@ public class SessionStateTests
     [Fact]
     public void ChangeTrackRefusesATrackThatCannotBePlayed()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         var before = state.Track;
         Assert.Contains("timing entry", state.ChangeTrack(t => t with { Timing = [] }));
         Assert.Same(before, state.Track);
@@ -276,7 +258,7 @@ public class SessionStateTests
     [Fact]
     public void ReleasingToViewAndBackToOffKeepsInputUnlocked()
     {
-        var editing = EditingWithTrack();
+        var editing = EditingTwoPoints();
         Assert.True(editing.Release(CameraMode.View));
         Assert.Equal(CameraMode.View, editing.Mode);
         Assert.False(editing.LocksInput);
@@ -294,7 +276,7 @@ public class SessionStateTests
     [Fact]
     public void LoadingASceneEditsItsFirstTrackAndStartsAfresh()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddTrack();
         state.AddToEnd(Point(5f));
         state.Selection.Select(0);
@@ -327,7 +309,7 @@ public class SessionStateTests
     [Fact]
     public void LoadingASceneIsRefusedWhileLive()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         var before = state.Scene;
 
         Assert.Equal("A scene can't be loaded while Live.", state.LoadScene(Loaded()));
@@ -337,7 +319,7 @@ public class SessionStateTests
     [Fact]
     public void LoadingASceneStopsAPreview()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.Play();
 
         state.LoadScene(Loaded());
@@ -348,7 +330,7 @@ public class SessionStateTests
     [Fact]
     public void LoadingASceneDropsALiveEditWithoutRecordingIt()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(20f));
         var loaded = Loaded();
@@ -393,7 +375,7 @@ public class SessionStateTests
     [Fact]
     public void IsPlayingFollowsAnEditPreview()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         Assert.False(state.IsPlaying);
 
         Assert.Equal(PlayOutcome.Previewed, state.Play());
@@ -406,7 +388,7 @@ public class SessionStateTests
     [Fact]
     public void IsPlayingFollowsALiveShot()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         Assert.Equal(CameraMode.Live, state.Mode);
         Assert.True(state.IsPlaying);
 
@@ -421,9 +403,9 @@ public class SessionStateTests
     [Fact]
     public void IsPlayingIsFalseOnceALiveShotFinishes()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
 
-        // EditingWithTrack is a single 5 s leg, so the cycle ends at 5 s.
+        // EditingTwoPoints is a single 2 s leg, so the cycle ends at 2 s.
         state.Director.Tick(6f);
 
         Assert.True(state.Director.IsFinished);
@@ -441,7 +423,7 @@ public class SessionStateTests
         state.Edit();
         Assert.False(state.CanStart);
 
-        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
+        state.ChangeTrack(WithTwoPoints);
         Assert.True(state.CanStart);
 
         state.Release();
@@ -452,13 +434,13 @@ public class SessionStateTests
         state.Release();
         Assert.True(state.CanStart);
 
-        Assert.True(Live().CanStart);
+        Assert.True(LiveTwoPoints().CanStart);
     }
 
     [Fact]
     public void CanRestartIsFalseWhileTheGameHasTheCamera()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         state.AddToPlaylist([state.EditedTrackId]);
         Assert.True(state.CanRestart);
 
@@ -468,7 +450,7 @@ public class SessionStateTests
         state.Release(CameraMode.View);
         Assert.False(state.CanRestart);
 
-        Assert.True(Live().CanRestart);
+        Assert.True(LiveTwoPoints().CanRestart);
     }
 
     [Fact]
@@ -483,7 +465,7 @@ public class SessionStateTests
         Assert.False(state.OverlayEditable);
 
         state.Edit();
-        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
+        state.ChangeTrack(WithTwoPoints);
         Assert.True(state.OverlayShown);
         Assert.True(state.OverlayEditable);
 
@@ -491,7 +473,7 @@ public class SessionStateTests
         Assert.False(state.OverlayShown);
         Assert.False(state.OverlayEditable);
 
-        var live = Live();
+        var live = LiveTwoPoints();
         Assert.False(live.OverlayShown);
         Assert.False(live.OverlayEditable);
     }
@@ -499,18 +481,18 @@ public class SessionStateTests
     [Fact]
     public void TheHeadIsOnTheEditedTrackUnlessLivePlaysAnother()
     {
-        var state = EditingWithTrack();
+        var state = EditingTwoPoints();
         var first = state.EditedTrackId;
         Assert.True(state.Transport.HeadOnEditedTrack);
 
         state.AddTrack();
-        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
+        state.ChangeTrack(WithTwoPoints);
         state.AddToPlaylist([state.EditedTrackId]);
         state.SwitchTrack(first);
         state.Cue();
         Assert.False(state.Transport.HeadOnEditedTrack);
 
-        var own = EditingWithTrack();
+        var own = EditingTwoPoints();
         own.AddToPlaylist([own.EditedTrackId]);
         own.Cue();
         Assert.True(own.Transport.HeadOnEditedTrack);

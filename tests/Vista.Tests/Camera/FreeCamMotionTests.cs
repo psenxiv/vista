@@ -1,7 +1,6 @@
 using System.Numerics;
 using CsCheck;
 using Vista.Core.Camera;
-using Vista.Core.Editing;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -250,16 +249,12 @@ public class FreeCamMotionTests
     {
         // Each frame as the plugin's free cam makes it: roll, then turn by the mouse, then fly, then the frame.
         (
-            from position in AnyPosition
-            from yaw in Gen.Float[-MathF.PI, MathF.PI]
-            from pitch in Gen.Float[-EditLimits.PitchLimit, EditLimits.PitchLimit]
-            from roll in Gen.Float[-MathF.PI, MathF.PI]
-            from fov in Gen.Float[EditLimits.MinFov, EditLimits.MaxFov]
+            from point in AnyPoint
             from flights in AnyFlight.Array[1, 200]
             select (
-                Position: position,
-                Rotation: CameraRotation.FromAngles(yaw, pitch, roll),
-                Fov: fov,
+                point.Position,
+                Rotation: CameraRotation.FromAngles(point.Yaw, point.Pitch, point.Roll),
+                point.Fov,
                 Flights: flights
             )
         ).Sample(

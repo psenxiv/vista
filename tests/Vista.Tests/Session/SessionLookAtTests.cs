@@ -4,6 +4,7 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
@@ -14,21 +15,10 @@ public class SessionLookAtTests
     // These tests put every point at head height, so y defaults to 5 here.
     private static ControlPoint Point(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
 
-    // Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 (y = 5), all aimed along −z.
-    private static SessionState Editing()
-    {
-        var state = new SessionState(_ => 1f);
-        state.Edit();
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
-        state.AddToEnd(Point(30f));
-        return state;
-    }
-
-    // Editing() set to Look At; its point sits 10 yalms along the first point's aim, at (10, 5, −10).
+    // EditingOverGround() set to Look At; its point sits 10 yalms along the first point's aim, at (10, 5, −10).
     private static SessionState Looking()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.SetAim(AimMode.LookAt, Camera);
         return state;
     }
@@ -36,7 +26,7 @@ public class SessionLookAtTests
     [Fact]
     public void ChoosingLookAtPlacesThePointAlongTheFirstPointsAimAsOneUndoStep()
     {
-        var state = Editing();
+        var state = EditingOverGround();
 
         Assert.Null(state.SetAim(AimMode.LookAt, Camera));
 
@@ -62,7 +52,7 @@ public class SessionLookAtTests
     [Fact]
     public void TheWatchSettingsAreEachOneUndoStep()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         Assert.Null(state.SetAim(AimMode.WatchTarget, Camera));
         Assert.Null(state.SetTarget("Guard", null));
         state.BeginLiveEdit();
@@ -85,7 +75,7 @@ public class SessionLookAtTests
     [Fact]
     public void ChoosingAPlayerIsOneUndoStepForNameAndWorld()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         Assert.Null(state.SetTarget("Aya", "Gilgamesh"));
         Assert.Null(state.SetTarget("Aya", "Cactuar"));
         Assert.Equal("Cactuar", state.Track.TargetWorld);
@@ -161,7 +151,7 @@ public class SessionLookAtTests
     [Fact]
     public void TheLookAtPointCanBeSelectedOnlyUnderLookAt()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.Select(1);
         Assert.NotNull(state.Selection.SelectLookAt(state.EditedTrackId));
 

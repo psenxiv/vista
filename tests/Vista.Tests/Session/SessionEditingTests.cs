@@ -3,27 +3,16 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionEditingTests
 {
-    // Editing at 2 yalms per second, three points at x = 0, 10, 20.
-    private static SessionState Editing()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
-        return state;
-    }
-
     [Fact]
     public void AddToEndKeepsTheSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         Assert.Null(state.AddToEnd(Point(30f)));
         Assert.Equal(1, state.Selection.Point);
@@ -36,7 +25,7 @@ public class SessionEditingTests
     [Fact]
     public void AddAfterSelectedSelectsTheNewPoint()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(0);
         var point = Point(5f);
 
@@ -52,7 +41,7 @@ public class SessionEditingTests
     [Fact]
     public void SelectedOnlyEditsNeedASelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         const string refused = "Select a point first.";
         Assert.Equal(refused, state.AddAfterSelected(Point(5f)));
         Assert.Equal(refused, state.OverwriteSelected(Point(5f)));
@@ -62,7 +51,7 @@ public class SessionEditingTests
     [Fact]
     public void OverwriteSelectedKeepsSelectionAndTiming()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         var timing = state.Track.Timing;
 
@@ -75,7 +64,7 @@ public class SessionEditingTests
     [Fact]
     public void OverwritingWithAnEqualPointRecordsNoUndoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         state.OverwriteSelected(state.Track.Points[1] with { });
 
@@ -88,7 +77,7 @@ public class SessionEditingTests
     [Fact]
     public void ReplacePointKeepsTheSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(2);
         Assert.Null(state.ReplacePoint(0, Point(-1f)));
         Assert.Equal(2, state.Selection.Point);
@@ -98,7 +87,7 @@ public class SessionEditingTests
     [Fact]
     public void DeleteSelectedClearsTheSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         Assert.Null(state.DeleteSelected());
         Assert.Null(state.Selection.Point);
@@ -112,7 +101,7 @@ public class SessionEditingTests
     [InlineData(null, 1, null)] // nothing selected
     public void DeletePointKeepsTheSelectionOnTheSamePoint(int? selected, int index, int? expected)
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(selected);
         Assert.Null(state.DeletePoints([index]));
         Assert.Equal(2, state.Track.Points.Count);
@@ -122,7 +111,7 @@ public class SessionEditingTests
     [Fact]
     public void UndoingADeleteRestoresTheSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(2);
         state.DeletePoints([0]);
         Assert.True(state.Undo());
@@ -133,7 +122,7 @@ public class SessionEditingTests
     [Fact]
     public void DeletePointOutOfRangeIsRefused()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.NotNull(state.DeletePoints([3]));
         Assert.Equal(3, state.Track.Points.Count);
     }
@@ -141,10 +130,9 @@ public class SessionEditingTests
     [Fact]
     public void EditFromLiveMovesTheScrubHeadToThePlaybackTime()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Director.Tick(2f);
         state.Edit();
         Assert.Equal(2.0, state.Transport.ScrubHead, 5);
@@ -153,7 +141,7 @@ public class SessionEditingTests
     [Fact]
     public void CueingAReverseShotPutsTheScrubHeadAtTheEnd()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
         state.Cue();
@@ -163,11 +151,10 @@ public class SessionEditingTests
     [Fact]
     public void EditFromALiveReverseShotTakesItsShotTime()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Director.Tick(2f);
         state.Edit();
         Assert.Equal(8.0, state.Transport.ScrubHead, 5);
@@ -176,11 +163,10 @@ public class SessionEditingTests
     [Fact]
     public void ScrubbingALivePingPongShotOnItsWayBackKeepsItGoingBack()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.PingPong));
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Director.Tick(13f);
         Assert.Equal(7.0, state.Transport.ScrubHead, 3);
 
@@ -198,7 +184,7 @@ public class SessionEditingTests
     [InlineData(1, 2, 3, 1)] // a move entirely after it
     public void MoveKeepsTheSelectionOnTheSamePoint(int selected, int from, int to, int expected)
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToEnd(Point(30f));
         state.Selection.Select(selected);
         var point = state.Track.Points[selected];
@@ -211,7 +197,7 @@ public class SessionEditingTests
     [Fact]
     public void ChangeTrackClearsASelectionThatNoLongerExists()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(2);
         state.ChangeTrack(TrackEditing.Clear);
         Assert.Null(state.Selection.Point);
@@ -222,7 +208,7 @@ public class SessionEditingTests
     [InlineData(5)]
     public void SelectOutOfRangeClears(int index)
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         state.Selection.Select(index);
         Assert.Null(state.Selection.Point);
@@ -231,7 +217,7 @@ public class SessionEditingTests
     [Fact]
     public void UndoAndRedoRestoreTrackAndSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(0);
         var before = state.Track;
         state.AddAfterSelected(Point(5f));
@@ -249,7 +235,7 @@ public class SessionEditingTests
     [Fact]
     public void UndoRestoresTheSelectionAfterAnOverwrite()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         state.OverwriteSelected(Point(12f));
 
@@ -261,7 +247,7 @@ public class SessionEditingTests
     [Fact]
     public void ANewChangeClearsRedo()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToEnd(Point(30f));
         state.Undo();
         state.AddToEnd(Point(40f));
@@ -282,7 +268,7 @@ public class SessionEditingTests
     [Fact]
     public void AChangeThatChangesNothingRecordsNothing()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.MovePoints([1], 1, 1);
 
         Assert.True(state.Undo());
@@ -292,11 +278,10 @@ public class SessionEditingTests
     [Fact]
     public void UndoRedoAndSelectWorkOnlyWhileEditing()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.Selection.Select(1);
-        state.Cue();
-        state.Play();
+        GoLive(state);
 
         Assert.False(state.CanUndo);
         Assert.False(state.Undo());
@@ -314,7 +299,7 @@ public class SessionEditingTests
         Assert.Null(new SessionState().World.FrameAt(1.0));
 
         // 2.5 s at 2 yalms per second is 5 yalms along, to within the arc-length table's resolution.
-        var frame = Editing().World.FrameAt(2.5)!.Value;
+        var frame = EditingThreePoints().World.FrameAt(2.5)!.Value;
 
         Assert.Equal(5f, frame.Position.X, 0.001f);
         Assert.Equal(0f, frame.Position.Y, 1e-4f);
@@ -332,7 +317,7 @@ public class SessionEditingTests
         var state = new SessionState();
         Assert.Equal(0.0, state.Duration);
 
-        state = Editing();
+        state = EditingThreePoints();
         Assert.Equal(10.0, state.Duration, 5);
 
         state.ChangeTrack(t => TrackEditing.SetHold(t, 2, 2f));
@@ -345,7 +330,7 @@ public class SessionEditingTests
     [Fact]
     public void TheScrubHeadWhileEditingIsTheLastScrubbedTimeWithinTheTrack()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Equal(0.0, state.Transport.ScrubHead);
         state.Transport.ScrubTo(4.0);
         Assert.Equal(4.0, state.Transport.ScrubHead);
@@ -358,7 +343,7 @@ public class SessionEditingTests
     [Fact]
     public void ScrubbingWhileEditingSetsScrubbingUntilItEnds()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Transport.BeginScrub();
         Assert.True(state.Transport.Scrubbing);
         state.Transport.EndScrub();
@@ -368,10 +353,9 @@ public class SessionEditingTests
     [Fact]
     public void ScrubbingLiveHoldsPlaybackThenResumesIt()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Transport.BeginScrub();
         Assert.True(state.Director.IsPaused);
         state.Transport.ScrubTo(6.0);
@@ -384,10 +368,9 @@ public class SessionEditingTests
     [Fact]
     public void ScrubbingAPausedShotLeavesItPaused()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Stop();
         state.Transport.BeginScrub();
         state.Transport.ScrubTo(2.0);
@@ -399,10 +382,9 @@ public class SessionEditingTests
     [Fact]
     public void ScrubbingAFinishedForwardShotBackUnfinishesIt()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Director.Tick(20f);
         Assert.True(state.Director.IsFinished);
 
@@ -416,11 +398,10 @@ public class SessionEditingTests
     [Fact]
     public void ModeChangesEndAScrub()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.Transport.BeginScrub();
-        state.Cue();
-        state.Play();
+        GoLive(state);
         Assert.False(state.Transport.Scrubbing);
 
         state.Transport.BeginScrub();
@@ -445,7 +426,7 @@ public class SessionEditingTests
     [Fact]
     public void TheScrubHeadStaysWithinATrackThatGotShorter()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Transport.ScrubTo(10.0);
         state.ChangeTrack(TrackEditing.Clear);
         Assert.Equal(0.0, state.Transport.ScrubHead);
@@ -454,7 +435,7 @@ public class SessionEditingTests
     [Fact]
     public void ALivePointEditIsOneUndoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var original = state.Track.Points[1];
         state.BeginLiveEdit();
         Assert.Null(state.PreviewPoint(1, Point(11f)));
@@ -471,7 +452,7 @@ public class SessionEditingTests
     [Fact]
     public void AnUnchangedLivePointEditRecordsNoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         state.EndLiveEdit();
         state.Undo();
@@ -481,7 +462,7 @@ public class SessionEditingTests
     [Fact]
     public void PreviewingWithoutALiveEditIsRefused()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.NotNull(state.PreviewPoint(1, Point(99f)));
         Assert.Equal(10f, state.Track.Points[1].Position.X);
     }
@@ -489,7 +470,7 @@ public class SessionEditingTests
     [Fact]
     public void UndoInTheMiddleOfALiveEditRevertsIt()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
         Assert.True(state.Undo());
@@ -500,11 +481,10 @@ public class SessionEditingTests
     [Fact]
     public void AModeChangeEndsALiveEditAsAStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
-        state.Cue();
-        state.Play();
+        GoLive(state);
         state.Edit();
         Assert.True(state.Undo());
         Assert.Equal(10f, state.Track.Points[1].Position.X);
@@ -513,7 +493,7 @@ public class SessionEditingTests
     [Fact]
     public void ALiveEditThatEndsWhereItStartedRecordsNoStepAndKeepsRedo()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Undo();
         Assert.True(state.CanRedo);
 
@@ -531,7 +511,7 @@ public class SessionEditingTests
     [Fact]
     public void AnEditInTheMiddleOfALiveEditMakesTwoSteps()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
         state.AddToEnd(Point(30f));

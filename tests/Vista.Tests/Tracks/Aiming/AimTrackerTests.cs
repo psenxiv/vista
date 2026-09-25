@@ -1,7 +1,6 @@
 using System.Numerics;
 using CsCheck;
 using Vista.Core.Camera;
-using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
@@ -19,19 +18,10 @@ public class AimTrackerTests
     private static Track Single(AimMode aim) => TrackEditing.Append(TrackEditing.Empty(aim), Camera);
 
     private static Track Watching(string? name = "Guard", float smoothing = 0f) =>
-        Single(AimMode.WatchTarget) with
+        WatchingGuard(smoothing, yaw: 0.5f) with
         {
             TargetName = name,
-            Smoothing = smoothing,
         };
-
-    // A guard whose aim point, 1.3 above the feet, is at (x, 0, −10).
-    private static NearbyCharacters GuardAt(float x)
-    {
-        var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
-        return characters;
-    }
 
     private static CameraState Frame(AimTracker tracker, Track track, float dt = 1f / 60f) =>
         tracker.Frame(new TrackEvaluator(track), track, 0.0, dt)!.Value;
@@ -58,8 +48,8 @@ public class AimTrackerTests
     {
         var characters = new NearbyCharacters();
         characters.Update([
-            new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f)),
-            new LoadedCharacter("Guard", null, new Vector3(20f, -1.3f, -10f)),
+            Guard(new Vector3(-20f, -TrackEditing.DefaultAimHeight, -10f)),
+            Guard(new Vector3(20f, -TrackEditing.DefaultAimHeight, -10f)),
         ]);
         var track = Watching() with { Anchor = new Anchor(new Vector3(15f, 0f, 0f), 0f) };
 
@@ -71,8 +61,8 @@ public class AimTrackerTests
     {
         var characters = new NearbyCharacters();
         characters.Update([
-            new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -1.3f, -10f)),
-            new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -1.3f, -10f)),
+            new LoadedCharacter("Aya", "Gilgamesh", new Vector3(-20f, -TrackEditing.DefaultAimHeight, -10f)),
+            new LoadedCharacter("Aya", "Cactuar", new Vector3(20f, -TrackEditing.DefaultAimHeight, -10f)),
         ]);
         var track = Watching("Aya") with
         {
@@ -109,7 +99,7 @@ public class AimTrackerTests
         var track = Watching(smoothing: 1f);
         Frame(tracker, track);
 
-        characters.Update(GuardAt(10f).All);
+        GuardAt(characters, 10f);
         AimsAt(
             Vector3.Lerp(new Vector3(0f, 0f, -10f), new Vector3(10f, 0f, -10f), 1f - MathF.Exp(-1f)),
             Frame(tracker, track, 0.5f),
@@ -128,7 +118,7 @@ public class AimTrackerTests
         var track = Watching(smoothing: 1f);
         Frame(tracker, track);
 
-        characters.Update(GuardAt(0f).All);
+        GuardAt(characters, 0f);
 
         AimsAt(Vector3.Lerp(Recorded, new Vector3(0f, 0f, -10f), 1f - MathF.Exp(-1f)), Frame(tracker, track, 0.5f), 3);
     }
@@ -146,7 +136,7 @@ public class AimTrackerTests
         CameraState frame = default;
         for (var i = 0; i <= 240; i++)
         {
-            characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f + (i / 6f), 10f - 1.3f, 0f))]);
+            GuardAt(characters, new Vector3(-20f + (i / 6f), 10f, 0f));
             frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
             if (last is { } previous)
                 Assert.InRange(
@@ -178,7 +168,7 @@ public class AimTrackerTests
         var evaluator = new TrackEvaluator(track);
         for (var i = 0; i <= 240; i++)
         {
-            characters.Update([new LoadedCharacter("Guard", null, new Vector3(-17f + (i / 6f), 10f - 1.3f, 0f))]);
+            GuardAt(characters, new Vector3(-17f + (i / 6f), 10f, 0f));
             var frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
             Assert.Equal(0f, Vector3.Dot(frame.Up, Vector3.Normalize(frame.LookAt - frame.Position)), 1e-5f);
         }
@@ -192,7 +182,7 @@ public class AimTrackerTests
         var characters = new NearbyCharacters();
         var tracker = new AimTracker(characters);
         var track = Watching();
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, 10f - 1.3f, 0f))]);
+        GuardAt(characters, new Vector3(0f, 10f, 0f));
         Frame(tracker, track);
 
         characters.Update([]);
@@ -242,13 +232,6 @@ public class AimTrackerTests
 
     private static readonly ControlPoint Behind = new(new Vector3(0f, 2f, 5f), 0f, 0f, 1f);
 
-    private static NearbyCharacters GuardStanding(Vector3 feet, float facing)
-    {
-        var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", null, feet, facing)]);
-        return characters;
-    }
-
     [Fact]
     public void FollowPlacesTheCameraAtTheOffsetFromTheCharacter()
     {
@@ -261,10 +244,9 @@ public class AimTrackerTests
     [Fact]
     public void FollowTurnsTheOffsetAndTheAimWithTheCharacter()
     {
-        var quarter = MathF.PI / 2f;
-        var frame = Frame(new AimTracker(GuardStanding(Vector3.Zero, quarter)), FollowingAt(Behind));
+        var frame = Frame(new AimTracker(GuardStanding(Vector3.Zero, QuarterTurn)), FollowingAt(Behind));
 
-        var expected = new Anchor(Vector3.Zero, quarter).ToWorld(Behind);
+        var expected = new Anchor(Vector3.Zero, QuarterTurn).ToWorld(Behind);
         Assert.Equal(expected.Position.X, frame.Position.X, 4);
         Assert.Equal(expected.Position.Z, frame.Position.Z, 4);
         AimsAt(expected.Position + (FreeCamMotion.LookAtFrom(Vector3.Zero, expected.Yaw, 0f) - Vector3.Zero), frame, 3);
@@ -278,7 +260,7 @@ public class AimTrackerTests
         var track = FollowingAt(Behind, turns: false);
         Frame(tracker, track);
 
-        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, MathF.PI / 2f)]);
+        characters.Update([Guard(Vector3.Zero, QuarterTurn)]);
         var frame = Frame(tracker, track);
 
         Near(new Anchor(Vector3.Zero, 0.7f).ToWorld(Behind.Position), frame.Position, 1e-4f);
@@ -321,7 +303,7 @@ public class AimTrackerTests
         var track = FollowingAt(Behind, smoothing: 1f);
         Frame(tracker, track, 0.5f);
 
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(10f, 0f, 0f), 0f)]);
+        characters.Update([Guard(new Vector3(10f, 0f, 0f), 0f)]);
         var eased = Frame(tracker, track, 0.5f);
         Assert.Equal(10f * (1f - MathF.Exp(-1f)), eased.Position.X, 3);
 
@@ -334,29 +316,27 @@ public class AimTrackerTests
     [Fact]
     public void SmoothingEasesTheRecordedAimAsTheCharacterTurns()
     {
-        var quarter = MathF.PI / 2f;
         var characters = GuardStanding(Vector3.Zero, 0f);
         var tracker = new AimTracker(characters);
         var track = FollowingAt(Behind, smoothing: 1f);
         Frame(tracker, track, 0.5f);
 
-        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, quarter)]);
+        characters.Update([Guard(Vector3.Zero, QuarterTurn)]);
 
-        Assert.Equal(quarter * (1f - MathF.Exp(-1f)), LookYaw(Frame(tracker, track, 0.5f)), 3);
+        Assert.Equal(QuarterTurn * (1f - MathF.Exp(-1f)), LookYaw(Frame(tracker, track, 0.5f)), 3);
     }
 
     [Fact]
     public void WithoutSmoothingTheRecordedAimTurnsExactly()
     {
-        var quarter = MathF.PI / 2f;
         var characters = GuardStanding(Vector3.Zero, 0f);
         var tracker = new AimTracker(characters);
         var track = FollowingAt(Behind);
         Frame(tracker, track, 0.5f);
 
-        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, quarter)]);
+        characters.Update([Guard(Vector3.Zero, QuarterTurn)]);
 
-        Assert.Equal(quarter, LookYaw(Frame(tracker, track, 0.5f)), 4);
+        Assert.Equal(QuarterTurn, LookYaw(Frame(tracker, track, 0.5f)), 4);
     }
 
     [Fact]
@@ -380,11 +360,11 @@ public class AimTrackerTests
         var tracker = new AimTracker(characters);
         var track = FollowingAt(Behind, turns: false);
         Frame(tracker, track);
-        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, 1.2f)]);
+        characters.Update([Guard(Vector3.Zero, 1.2f)]);
 
         tracker.Reset();
         Frame(tracker, track);
-        characters.Update([new LoadedCharacter("Guard", null, Vector3.Zero, 2f)]);
+        characters.Update([Guard(Vector3.Zero, 2f)]);
 
         Near(new Anchor(Vector3.Zero, 1.2f).ToWorld(Behind.Position), Frame(tracker, track).Position, 1e-4f);
     }
@@ -451,15 +431,10 @@ public class AimTrackerTests
 
                 var (from, to) = (Waypoints[leg], Waypoints[leg + 1]);
                 var t = (float)(time / Legs[leg]);
-                return new LoadedCharacter(
-                    "Guard",
-                    null,
-                    Vector3.Lerp(from.Feet, to.Feet, t),
-                    from.Facing + ((to.Facing - from.Facing) * t)
-                );
+                return Guard(Vector3.Lerp(from.Feet, to.Feet, t), from.Facing + ((to.Facing - from.Facing) * t));
             }
 
-            return new LoadedCharacter("Guard", null, Waypoints[^1].Feet, Waypoints[^1].Facing);
+            return Guard(Waypoints[^1].Feet, Waypoints[^1].Facing);
         }
 
         public override string ToString() =>
@@ -488,47 +463,28 @@ public class AimTrackerTests
     private static readonly Gen<Track> AnyWatchTrack =
         from track in AnyPathTrack
         from single in Gen.Bool
-        from aimHeight in Gen.Float[0f, TrackEditing.MaxAimHeight]
-        from smoothing in Gen.Float[0f, 1f]
+        from settings in AnyTargetSettings
         let cut = single ? TrackEditing.Delete(track, [.. Enumerable.Range(1, track.Points.Count - 1)]) : track
-        let watching = TrackEditing.SetAim(cut, AimMode.WatchTarget, track.Points[0])
-        select TrackEditing.SetSmoothing(
-            TrackEditing.SetAimHeight(TrackEditing.SetTarget(watching, "Guard", null), aimHeight),
-            smoothing
-        );
+        select WithTarget(TrackEditing.SetAim(cut, AimMode.WatchTarget, track.Points[0]), "Guard", null, settings);
 
     /// <summary>A Follow Target track on the guard at any offset, or straight over or under them, or on their aim point, with any aim height and smoothing, turning with them or not and looking at them or not.</summary>
     private static readonly Gen<Track> AnyFollowTrack =
-        from aimHeight in Gen.Float[0f, TrackEditing.MaxAimHeight]
+        from settings in AnyTargetSettings
         // 0 any offset, 1 straight over or under the guard's feet, 2 on their aim point.
         from kind in Gen.Int[0, 2]
-        from position in AnyPosition
+        from point in AnyPoint
         from height in Gen.Float[-5f, 5f]
-        from yaw in Gen.Float[-MathF.PI, MathF.PI]
-        from pitch in Gen.Float[-EditLimits.PitchLimit, EditLimits.PitchLimit]
-        from fov in Gen.Float[EditLimits.MinFov, EditLimits.MaxFov]
-        from roll in Gen.Float[-MathF.PI, MathF.PI]
-        from smoothing in Gen.Float[0f, 1f]
         from turns in Gen.Bool
         from looks in Gen.Bool
         let offset = kind switch
         {
-            0 => position,
+            0 => point.Position,
             1 => new Vector3(0f, height, 0f),
-            _ => new Vector3(0f, aimHeight, 0f),
+            _ => new Vector3(0f, settings.AimHeight, 0f),
         }
-        let track = TrackEditing.Append(
-            TrackEditing.Empty(AimMode.FollowTarget),
-            new ControlPoint(offset, yaw, pitch, fov, roll)
-        )
+        let track = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), point with { Position = offset })
         select TrackEditing.SetFollowLooks(
-            TrackEditing.SetFollowTurns(
-                TrackEditing.SetSmoothing(
-                    TrackEditing.SetAimHeight(TrackEditing.SetTarget(track, "Guard", null), aimHeight),
-                    smoothing
-                ),
-                turns
-            ),
+            TrackEditing.SetFollowTurns(WithTarget(track, "Guard", null, settings), turns),
             looks
         );
 

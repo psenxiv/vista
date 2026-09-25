@@ -16,6 +16,10 @@ public class CameraRotationTests
         { 3f, 1.5f },
     };
 
+    // The upright up at (yaw, pitch), worked out independently of CameraRotation: the pitch-derivative of the facing.
+    private static Vector3 UprightUp(float yaw, float pitch) =>
+        new(MathF.Sin(yaw) * MathF.Sin(pitch), MathF.Cos(pitch), MathF.Cos(yaw) * MathF.Sin(pitch));
+
     // FreeCamMotion is the existing convention for the view direction; FromAngles must keep it, so it is the reference
     // here rather than a derived literal. The upright up at (yaw, pitch) is the pitch-derivative of that direction,
     // (sin yaw·sin pitch, cos pitch, cos yaw·sin pitch), world up made square to the facing.
@@ -28,12 +32,7 @@ public class CameraRotationTests
         var expectedForward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
         Near(expectedForward, CameraRotation.Forward(rotation), 1e-5f);
 
-        var expectedUp = new Vector3(
-            MathF.Sin(yaw) * MathF.Sin(pitch),
-            MathF.Cos(pitch),
-            MathF.Cos(yaw) * MathF.Sin(pitch)
-        );
-        Near(expectedUp, CameraRotation.Up(rotation), 1e-5f);
+        Near(UprightUp(yaw, pitch), CameraRotation.Up(rotation), 1e-5f);
     }
 
     // Roll turns the upright up U about the facing f, positive rolling right: U cos r + (f × U) sin r.
@@ -48,11 +47,7 @@ public class CameraRotationTests
 
         var rotation = CameraRotation.FromAngles(yaw, pitch, roll);
         var forward = Vector3.Normalize(FreeCamMotion.LookAtFrom(Vector3.Zero, yaw, pitch));
-        var upright = new Vector3(
-            MathF.Sin(yaw) * MathF.Sin(pitch),
-            MathF.Cos(pitch),
-            MathF.Cos(yaw) * MathF.Sin(pitch)
-        );
+        var upright = UprightUp(yaw, pitch);
 
         var expectedUp = (upright * MathF.Cos(roll)) + (Vector3.Cross(forward, upright) * MathF.Sin(roll));
         Near(expectedUp, CameraRotation.Up(rotation), 1e-5f);

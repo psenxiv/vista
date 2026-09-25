@@ -13,14 +13,6 @@ public class TimedRotationTests
 
     private static float YawOf(Quaternion rotation) => CameraRotation.ToAngles(rotation).Yaw;
 
-    private static void Facing(Vector3 expected, Quaternion rotation, float tolerance)
-    {
-        var forward = CameraRotation.Forward(rotation);
-        Assert.Equal(expected.X, forward.X, tolerance);
-        Assert.Equal(expected.Y, forward.Y, tolerance);
-        Assert.Equal(expected.Z, forward.Z, tolerance);
-    }
-
     [Fact]
     public void AHoldKeepsItsPointsRotationExactly()
     {
@@ -38,11 +30,11 @@ public class TimedRotationTests
         // Yaws 0, 1, 3 reached at 0, 2 and 5 s: legs of 1/2 and 2/3 rad/s, each weighted by the other leg's time, so point
         // 1 turns at (1/2·3 + 2/3·2) / 5 = 0.56667 rad/s, from either side, as a timed channel does.
         var channel = new TimedRotation([At(0f), At(1f), At(3f)], [0f, 2f, 5f], [0f, 2f, 5f]);
-        const double h = 1e-3;
+        var (left, right) = Slopes(t => YawOf(channel.At(t)), 2.0, 1e-3);
 
         Assert.Equal(1f, YawOf(channel.At(2.0)), 1e-5f);
-        Assert.Equal(0.56667f, (float)((YawOf(channel.At(2.0)) - YawOf(channel.At(2.0 - h))) / h), 0.01f);
-        Assert.Equal(0.56667f, (float)((YawOf(channel.At(2.0 + h)) - YawOf(channel.At(2.0))) / h), 0.01f);
+        Assert.Equal(0.56667f, left, 0.01f);
+        Assert.Equal(0.56667f, right, 0.01f);
     }
 
     [Fact]
@@ -51,9 +43,7 @@ public class TimedRotationTests
         // Yaws 0, 1, 3 reached at 0, 2 and 3 s: the last leg turns 2 rad in 1 s, and an end point takes half its leg's
         // rate, 1 rad/s.
         var channel = new TimedRotation([At(0f), At(1f), At(3f)], [0f, 2f, 3f], [0f, 2f, 3f]);
-        const double h = 1e-3;
-
-        Assert.Equal(1f, (float)((YawOf(channel.At(3.0)) - YawOf(channel.At(3.0 - h))) / h), 0.02f);
+        Assert.Equal(1f, Slopes(t => YawOf(channel.At(t)), 3.0, 1e-3).Left, 0.02f);
     }
 
     [Fact]
@@ -82,7 +72,7 @@ public class TimedRotationTests
         // right, and a lone leg eases symmetrically, so halfway it's at pitch 90°: facing straight up.
         var channel = new TimedRotation([At(0f, 60f * Deg), At(MathF.PI, 60f * Deg, MathF.PI)], [0f, 2f], [0f, 2f]);
 
-        Facing(Vector3.UnitY, channel.At(1.0), 1e-4f);
+        Near(Vector3.UnitY, CameraRotation.Forward(channel.At(1.0)), 1e-4f);
     }
 
     [Theory]
@@ -94,7 +84,7 @@ public class TimedRotationTests
         // (∓1, 0, 0) by yaw = atan2(−x, −z).
         var channel = new TimedRotation([At(0f), At(direction * MathF.PI)], [0f, 2f], [0f, 2f]);
 
-        Facing(new Vector3(facingX, 0f, 0f), channel.At(1.0), 1e-4f);
+        Near(new Vector3(facingX, 0f, 0f), CameraRotation.Forward(channel.At(1.0)), 1e-4f);
     }
 
     [Fact]
@@ -105,7 +95,11 @@ public class TimedRotationTests
         var channel = new TimedRotation([At(0.7f, MathF.PI / 2f), At(0.7f)], [0f, 2f], [0f, 2f]);
         var halfway = MathF.Sqrt(0.5f);
 
-        Facing(new Vector3(-MathF.Sin(0.7f) * halfway, halfway, -MathF.Cos(0.7f) * halfway), channel.At(1.0), 1e-4f);
+        Near(
+            new Vector3(-MathF.Sin(0.7f) * halfway, halfway, -MathF.Cos(0.7f) * halfway),
+            CameraRotation.Forward(channel.At(1.0)),
+            1e-4f
+        );
         for (var t = 0.0; t <= 2.0; t += 0.05)
             Assert.True(float.IsFinite(channel.At(t).W));
     }

@@ -11,8 +11,6 @@ public class SessionFollowTests
 {
     private static readonly ControlPoint Camera = new(new Vector3(1f, 2f, 3f), 0f, 0f, 1f);
 
-    private static LoadedCharacter Guard(Vector3 feet, float facing = 0f) => new("Guard", null, feet, facing);
-
     // Editing with n recorded points, and Guard at (10, 0, 0) facing 0.
     private static (SessionState State, NearbyCharacters Characters) EditingWith(int points)
     {

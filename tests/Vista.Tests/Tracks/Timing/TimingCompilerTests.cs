@@ -1,22 +1,13 @@
-using System.Numerics;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 using Xunit;
+using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Timing.TimingFixtures;
 
 namespace Vista.Tests.Tracks.Timing;
 
 public class TimingCompilerTests
 {
-    private static ControlPoint P(float x) => new(new Vector3(x, 0f, 0f), 0f, 0f, 1f);
-
-    private static Track Three() =>
-        TrackEditing.Append(
-            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty() with { Speed = 2f }, P(0f)), P(10f)),
-            P(20f)
-        );
-
-    private static float[] Times(Track t) => new TrackEvaluator(t).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
-
     private static void AssertTimes(float[] expected, Track track)
     {
         var actual = Times(track);
@@ -28,15 +19,12 @@ public class TimingCompilerTests
             );
     }
 
-    private static void AssertNear(float expected, float actual, float within) =>
-        Assert.True(MathF.Abs(expected - actual) <= within, $"expected {expected}, got {actual}");
-
     // Compiler and evaluator
 
     [Fact]
     public void AStraightTrackCompilesAKeyPerPointAtTheTrackSpeed()
     {
-        var track = Three();
+        var track = Build3PointTrack();
         var keys = new TrackEvaluator(track).Keys;
 
         Assert.Equal(2f, track.Speed);
@@ -45,12 +33,13 @@ public class TimingCompilerTests
     }
 
     [Fact]
-    public void TheTrackSpeedSetsEveryUnpinnedLeg() => AssertTimes([0f, 2f, 4f], TrackEditing.SetSpeed(Three(), 5f));
+    public void TheTrackSpeedSetsEveryUnpinnedLeg() =>
+        AssertTimes([0f, 2f, 4f], TrackEditing.SetSpeed(Build3PointTrack(), 5f));
 
     [Fact]
     public void APinnedLegKeepsItsOwnSpeed()
     {
-        var track = TrackEditing.SetLegSpeed(Three(), 2, 1f);
+        var track = TrackEditing.SetLegSpeed(Build3PointTrack(), 2, 1f);
 
         AssertTimes([0f, 5f, 15f], track);
         Assert.True(TrackEditing.IsPinned(track, 2));
@@ -60,7 +49,7 @@ public class TimingCompilerTests
     [Fact]
     public void AHoldCompilesAHoldEnd()
     {
-        var track = TrackEditing.SetHold(Three(), 1, 3f);
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 3f);
         var keys = new TrackEvaluator(track).Keys;
 
         AssertTimes([0f, 5f, 8f, 13f], track);
@@ -75,7 +64,7 @@ public class TimingCompilerTests
     [Fact]
     public void AHoldPutsTheDepartureSideOnTheHoldEnd()
     {
-        var track = LegEasing.Set(TrackEditing.SetHold(Three(), 1, 3f), 2, Easing.EaseIn);
+        var track = LegEasing.Set(TrackEditing.SetHold(Build3PointTrack(), 1, 3f), 2, Easing.EaseIn);
         var keys = new TrackEvaluator(track).Keys;
 
         Assert.Equal(TangentMode.Flat, keys[2].OutMode);
@@ -85,19 +74,15 @@ public class TimingCompilerTests
     [Fact]
     public void ALegBetweenCoincidentPointsTakesTheShortestLeg()
     {
-        var track = TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(0f));
-        AssertNear(TrackEditing.MinLegSeconds, new TrackEvaluator(track).LegSeconds(1), 0.001f);
+        var track = TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(0f));
+        Assert.Equal(TrackEditing.MinLegSeconds, new TrackEvaluator(track).LegSeconds(1), 0.001f);
     }
 
     [Fact]
     public void ALegIsHeldAtTheLongestLeg()
     {
-        var track = TrackEditing.SetLegSpeed(
-            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)),
-            1,
-            0.01f
-        );
-        AssertNear(TrackEditing.MaxSeconds, new TrackEvaluator(track).LegSeconds(1), 0.01f);
+        var track = TrackEditing.SetLegSpeed(WithTwoPoints(TrackEditing.Empty()), 1, 0.01f);
+        Assert.Equal(TrackEditing.MaxSeconds, new TrackEvaluator(track).LegSeconds(1), 0.01f);
     }
 
     [Fact]
@@ -111,19 +96,19 @@ public class TimingCompilerTests
     [Fact]
     public void TheEvaluatorReadsLegsPointsAndTimes()
     {
-        var evaluator = new TrackEvaluator(Three());
-        AssertNear(5f, evaluator.LegSeconds(2), 0.01f);
-        AssertNear(10f, evaluator.PointSeconds(2), 0.01f);
+        var evaluator = new TrackEvaluator(Build3PointTrack());
+        Assert.Equal(5f, evaluator.LegSeconds(2), 0.01f);
+        Assert.Equal(10f, evaluator.PointSeconds(2), 0.01f);
         Assert.Equal(10f, evaluator.LegLength(1), 1);
         Assert.Equal(1, evaluator.LegAt(2f));
 
-        Assert.Null(new TrackEvaluator(TrackEditing.SetHold(Three(), 1, 3f)).LegAt(6f));
+        Assert.Null(new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 3f)).LegAt(6f));
     }
 
     [Fact]
     public void LegAtFindsTheLegAndSkipsHolds()
     {
-        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Three(), 1, 2f)); // keys at 0, 5, 7, 12
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f)); // keys at 0, 5, 7, 12
         Assert.Equal(1, evaluator.LegAt(2f));
         Assert.Null(evaluator.LegAt(6f));
         Assert.Equal(2, evaluator.LegAt(9f));
@@ -133,7 +118,7 @@ public class TimingCompilerTests
     [Fact]
     public void ALegHoldsBothItsEndKeysAndTheEarlierLegWinsATie()
     {
-        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Three(), 1, 2f)); // keys at 0, 5, 7, 12
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f)); // keys at 0, 5, 7, 12
         Assert.Equal(1, evaluator.LegAt(0f));
         Assert.Equal(1, evaluator.LegAt(5f));
         Assert.Equal(2, evaluator.LegAt(7f));
@@ -142,32 +127,32 @@ public class TimingCompilerTests
 
     [Fact]
     public void ATimingListThatDoesNotMatchThePointsIsRefused() =>
-        Assert.Throws<ArgumentException>(() => new TrackEvaluator(Three() with { Timing = [] }));
+        Assert.Throws<ArgumentException>(() => new TrackEvaluator(Build3PointTrack() with { Timing = [] }));
 
     // Duration
 
     [Fact]
     public void SetDurationSolvesForTheTrackSpeed()
     {
-        var track = TrackEditing.SetDuration(Three(), 20f);
-        AssertNear(1f, track.Speed, 0.01f);
+        var track = TrackEditing.SetDuration(Build3PointTrack(), 20f);
+        Assert.Equal(1f, track.Speed, 0.01f);
         AssertTimes([0f, 10f, 20f], track);
     }
 
     [Fact]
     public void SetDurationLeavesHoldsAndPinnedLegsAlone()
     {
-        var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Three(), 2, 2f), 1, 1f);
+        var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Build3PointTrack(), 2, 2f), 1, 1f);
         track = TrackEditing.SetDuration(track, 16f);
 
-        AssertNear(1f, track.Speed, 0.01f);
-        AssertNear(16f, (float)new TrackEvaluator(track).Duration, 0.05f);
+        Assert.Equal(1f, track.Speed, 0.01f);
+        Assert.Equal(16f, (float)new TrackEvaluator(track).Duration, 0.05f);
     }
 
     [Fact]
     public void SetDurationWithEveryLegPinnedChangesNothing()
     {
-        var track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(Three(), 1, 3f), 2, 4f);
+        var track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 3f), 2, 4f);
         Assert.True(TrackEditing.AllPinned(track));
         Assert.Same(track, TrackEditing.SetDuration(track, 30f));
     }
@@ -176,36 +161,33 @@ public class TimingCompilerTests
     public void ATrackWithFewerThanTwoPointsIsAllPinned()
     {
         Assert.True(TrackEditing.AllPinned(TrackEditing.Empty()));
-        Assert.True(TrackEditing.AllPinned(TrackEditing.Append(TrackEditing.Empty(), P(0f))));
-        Assert.False(TrackEditing.AllPinned(Three()));
+        Assert.True(TrackEditing.AllPinned(TrackEditing.Append(TrackEditing.Empty(), Point(0f))));
+        Assert.False(TrackEditing.AllPinned(Build3PointTrack()));
     }
 
     [Fact]
     public void SetDurationStopsAtTheShortestShot()
     {
-        var track = TrackEditing.SetDuration(Three(), 0f);
+        var track = TrackEditing.SetDuration(Build3PointTrack(), 0f);
         Assert.Equal(TrackEditing.MaxSpeed, track.Speed);
-        AssertNear(0.2f, (float)new TrackEvaluator(track).Duration, 0.01f);
+        Assert.Equal(0.2f, (float)new TrackEvaluator(track).Duration, 0.01f);
     }
 
     [Fact]
     public void SetDurationStopsAtTheShortestShotBeforeTheFastestSpeed()
     {
         // One 10 yalm leg takes 0.1 s at MaxSpeed, under the 0.2 s shortest shot, so 0 asks for 0.2 s: 10 / 0.2 = 50 yalms per second.
-        var track = TrackEditing.SetDuration(
-            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), P(0f)), P(10f)),
-            0f
-        );
-        AssertNear(50f, track.Speed, 0.01f);
-        AssertNear(0.2f, (float)new TrackEvaluator(track).Duration, 0.001f);
+        var track = TrackEditing.SetDuration(WithTwoPoints(TrackEditing.Empty()), 0f);
+        Assert.Equal(50f, track.Speed, 0.01f);
+        Assert.Equal(0.2f, (float)new TrackEvaluator(track).Duration, 0.001f);
     }
 
     [Fact]
     public void SetDurationStopsAtTheLongestLegs()
     {
-        var track = TrackEditing.SetDuration(Three(), 99999f);
+        var track = TrackEditing.SetDuration(Build3PointTrack(), 99999f);
         Assert.Equal(TrackEditing.MinSpeed, track.Speed);
-        AssertNear(1200f, (float)new TrackEvaluator(track).Duration, 0.01f);
+        Assert.Equal(1200f, (float)new TrackEvaluator(track).Duration, 0.01f);
     }
 
     // Legs
@@ -213,8 +195,8 @@ public class TimingCompilerTests
     [Fact]
     public void SetLegDurationPinsTheMatchingSpeed()
     {
-        var track = TrackEditing.SetLegDuration(Three(), 1, 2f);
-        AssertNear(5f, TrackEditing.LegSpeed(track, 1), 0.1f);
+        var track = TrackEditing.SetLegDuration(Build3PointTrack(), 1, 2f);
+        Assert.Equal(5f, TrackEditing.LegSpeed(track, 1), 0.1f);
         Assert.True(TrackEditing.IsPinned(track, 1));
         AssertTimes([0f, 2f, 7f], track);
     }
@@ -222,22 +204,28 @@ public class TimingCompilerTests
     [Fact]
     public void SetLegDurationClampsToTheShortestLeg()
     {
-        var track = TrackEditing.SetLegDuration(Three(), 1, 0f);
-        AssertNear(TrackEditing.MaxSpeed, TrackEditing.LegSpeed(track, 1), 0.01f);
-        AssertNear(0.1f, new TrackEvaluator(track).LegSeconds(1), 0.01f);
+        var track = TrackEditing.SetLegDuration(Build3PointTrack(), 1, 0f);
+        Assert.Equal(TrackEditing.MaxSpeed, TrackEditing.LegSpeed(track, 1), 0.01f);
+        Assert.Equal(0.1f, new TrackEvaluator(track).LegSeconds(1), 0.01f);
     }
 
     [Fact]
     public void SetLegSpeedClamps()
     {
-        Assert.Equal(TrackEditing.MaxSpeed, TrackEditing.LegSpeed(TrackEditing.SetLegSpeed(Three(), 1, 1000f), 1));
-        Assert.Equal(TrackEditing.MinSpeed, TrackEditing.LegSpeed(TrackEditing.SetLegSpeed(Three(), 1, 0f), 1));
+        Assert.Equal(
+            TrackEditing.MaxSpeed,
+            TrackEditing.LegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1000f), 1)
+        );
+        Assert.Equal(
+            TrackEditing.MinSpeed,
+            TrackEditing.LegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 0f), 1)
+        );
     }
 
     [Fact]
     public void ResetLegClearsThePin()
     {
-        var track = TrackEditing.ResetLeg(TrackEditing.SetLegSpeed(Three(), 1, 1f), 1);
+        var track = TrackEditing.ResetLeg(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 1);
         Assert.False(TrackEditing.IsPinned(track, 1));
         Assert.Equal(2f, TrackEditing.LegSpeed(track, 1));
         AssertTimes([0f, 5f, 10f], track);
@@ -246,21 +234,21 @@ public class TimingCompilerTests
     [Fact]
     public void ResettingAnUnpinnedLegChangesNothing()
     {
-        var track = Three();
+        var track = Build3PointTrack();
         Assert.Same(track, TrackEditing.ResetLeg(track, 1));
     }
 
     [Fact]
     public void SetSpeedClamps()
     {
-        Assert.Equal(TrackEditing.MaxSpeed, TrackEditing.SetSpeed(Three(), 500f).Speed);
-        Assert.Equal(TrackEditing.MinSpeed, TrackEditing.SetSpeed(Three(), -1f).Speed);
+        Assert.Equal(TrackEditing.MaxSpeed, TrackEditing.SetSpeed(Build3PointTrack(), 500f).Speed);
+        Assert.Equal(TrackEditing.MinSpeed, TrackEditing.SetSpeed(Build3PointTrack(), -1f).Speed);
     }
 
     [Fact]
     public void SettingTheSameSpeedReturnsTheSameTrack()
     {
-        var track = Three();
+        var track = Build3PointTrack();
         Assert.Same(track, TrackEditing.SetSpeed(track, 2f));
     }
 
@@ -269,7 +257,7 @@ public class TimingCompilerTests
     [Fact]
     public void MovingAPointKeepsItsLegsSpeed()
     {
-        var track = TrackEditing.Replace(Three(), 2, P(40f));
+        var track = TrackEditing.Replace(Build3PointTrack(), 2, Point(40f));
         Assert.False(TrackEditing.IsPinned(track, 2));
         AssertTimes([0f, 5f, 20f], track);
     }
@@ -277,7 +265,7 @@ public class TimingCompilerTests
     [Fact]
     public void InsertingSplitsAPinnedLegIntoTwoPinnedHalves()
     {
-        var track = TrackEditing.InsertAfter(TrackEditing.SetLegSpeed(Three(), 1, 1f), 0, P(5f));
+        var track = TrackEditing.InsertAfter(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 0, Point(5f));
         Assert.True(TrackEditing.IsPinned(track, 1));
         Assert.True(TrackEditing.IsPinned(track, 2));
         AssertTimes([0f, 5f, 10f, 15f], track);
@@ -286,7 +274,7 @@ public class TimingCompilerTests
     [Fact]
     public void InsertingSplitsTheEasingAcrossTheHalves()
     {
-        var track = TrackEditing.InsertAfter(LegEasing.Set(Three(), 1, Easing.EaseInOut), 0, P(5f));
+        var track = TrackEditing.InsertAfter(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseInOut), 0, Point(5f));
         Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 1));
         Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 2));
     }
@@ -294,7 +282,7 @@ public class TimingCompilerTests
     [Fact]
     public void DeletingAMiddlePointKeepsTheFirstLegsPin()
     {
-        var track = TrackEditing.Delete(TrackEditing.SetLegSpeed(Three(), 1, 1f), 1);
+        var track = TrackEditing.Delete(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 1);
         Assert.True(TrackEditing.IsPinned(track, 1));
         AssertTimes([0f, 20f], track);
     }
@@ -302,14 +290,17 @@ public class TimingCompilerTests
     [Fact]
     public void DeletingAMiddlePointJoinsTheOuterEasing()
     {
-        var track = LegEasing.Set(LegEasing.Set(Three(), 1, Easing.EaseIn), 2, Easing.EaseOut);
+        var track = LegEasing.Set(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseIn), 2, Easing.EaseOut);
         Assert.Equal(Easing.EaseInOut, LegEasing.Read(TrackEditing.Delete(track, 1), 1));
     }
 
     [Fact]
     public void DeletingTheFirstPointDropsItsLeg()
     {
-        var track = TrackEditing.Delete(TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(Three(), 1, 1f), 2, 2f), 0);
+        var track = TrackEditing.Delete(
+            TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 2, 2f),
+            0
+        );
         AssertTimes([0f, 5f], track);
         Assert.Null(track.Timing[0].LegSpeed);
     }
@@ -317,7 +308,7 @@ public class TimingCompilerTests
     [Fact]
     public void ReorderKeepsLegSpeedsInTheirSlotsAndCarriesHolds()
     {
-        var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Three(), 1, 1f), 2, 3f);
+        var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 2, 3f);
         track = TrackEditing.Reorder(track, [2, 0, 1]);
         var evaluator = new TrackEvaluator(track);
 
@@ -338,7 +329,7 @@ public class TimingCompilerTests
     [Fact]
     public void SetKeyModeOnAHoldSetsOneSidePerKey()
     {
-        var held = TrackEditing.SetHold(Three(), 1, 2f);
+        var held = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
 
         var arrival = TimingEditing.SetKeyMode(held, 1, TangentMode.Flat);
         Assert.Equal((TangentMode.Flat, TangentMode.Auto), (arrival.Timing[1].InMode, arrival.Timing[1].OutMode));
@@ -350,37 +341,34 @@ public class TimingCompilerTests
     [Fact]
     public void SetBrokenRoundTrips()
     {
-        var broken = TimingEditing.SetBroken(Three(), 1, true);
+        var broken = TimingEditing.SetBroken(Build3PointTrack(), 1, true);
         Assert.True(broken.Timing[1].Broken);
         Assert.False(TimingEditing.SetBroken(broken, 1, false).Timing[1].Broken);
     }
 
     // The key drag
 
-    private static Track Drag(Track track, int key, float time) =>
-        TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
-
     [Fact]
     public void DraggingAHoldingPointsKeyTradesTimeWithItsHold()
     {
-        var track = Drag(TrackEditing.SetHold(Three(), 1, 3f), 1, 6f);
-        AssertNear(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1), 0.01f);
-        AssertNear(2f, TrackEditing.HoldSeconds(track, 1), 0.01f);
+        var track = MoveKey(TrackEditing.SetHold(Build3PointTrack(), 1, 3f), 1, 6f);
+        Assert.Equal(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1), 0.01f);
+        Assert.Equal(2f, TrackEditing.HoldSeconds(track, 1), 0.01f);
         AssertTimes([0f, 6f, 8f, 13f], track);
     }
 
     [Fact]
     public void AHoldEndDragKeepsTheHoldAboveTheKeyGap() =>
-        AssertNear(
+        Assert.Equal(
             TrackEditing.MinKeyGap,
-            TrackEditing.HoldSeconds(Drag(TrackEditing.SetHold(Three(), 1, 3f), 2, 0f), 1),
+            TrackEditing.HoldSeconds(MoveKey(TrackEditing.SetHold(Build3PointTrack(), 1, 3f), 2, 0f), 1),
             0.001f
         );
 
     [Fact]
     public void DraggingAKeyToWhereItIsChangesNothing()
     {
-        var track = Three();
+        var track = Build3PointTrack();
         var evaluator = new TrackEvaluator(track);
         Assert.Same(track, TimingEditing.MoveKey(track, evaluator, 1, evaluator.Keys[1].Time));
     }
@@ -390,7 +378,7 @@ public class TimingCompilerTests
     [Fact]
     public void AHoldKeepsTheNextLegsEasing()
     {
-        var track = TrackEditing.SetHold(LegEasing.Set(Three(), 2, Easing.EaseIn), 1, 2f);
+        var track = TrackEditing.SetHold(LegEasing.Set(Build3PointTrack(), 2, Easing.EaseIn), 1, 2f);
         Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 2));
         Assert.Equal(Easing.EaseIn, LegEasing.Read(TrackEditing.SetHold(track, 1, 0f), 2));
     }

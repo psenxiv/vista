@@ -1,5 +1,4 @@
 using Vista.Core.Session;
-using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -7,22 +6,10 @@ namespace Vista.Tests.Session;
 
 public class SessionStopTests
 {
-    // Live with a playlist of one two-point track.
-    private static SessionState Live()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
-        state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
-        return state;
-    }
-
     [Fact]
     public void AFaultStopsVistaAndReleasesToOff()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         Assert.Equal(CameraMode.Live, state.Mode);
 
         Assert.True(state.ReportFault("camera update hook"));
@@ -47,7 +34,7 @@ public class SessionStopTests
     [Fact]
     public void APassedTouchPointLeavesVistaRunning()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
 
         Assert.False(state.ReportTouchPoint("movement lock", passed: true));
 
@@ -71,7 +58,7 @@ public class SessionStopTests
     [Fact]
     public void EditAndLiveAreRefusedOnceStopped()
     {
-        var state = Live();
+        var state = LiveTwoPoints();
         state.ReportFault("draw");
 
         Assert.False(state.CanGoLive);

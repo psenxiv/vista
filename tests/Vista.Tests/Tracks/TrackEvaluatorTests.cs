@@ -11,14 +11,6 @@ namespace Vista.Tests.Tracks;
 
 public class TrackEvaluatorTests
 {
-    private static Track Build(IEnumerable<ControlPoint> points, AimMode aim = AimMode.AimKeys)
-    {
-        var track = TrackEditing.Empty(aim) with { Speed = 2f };
-        foreach (var point in points)
-            track = TrackEditing.Append(track, point);
-        return track;
-    }
-
     [Fact]
     public void EvaluateReturnsNullForATrackWithNoPoints()
     {
@@ -35,7 +27,7 @@ public class TrackEvaluatorTests
     public void EvaluateOfASinglePointTrackSitsAtThatPointRegardlessOfTime(AimMode aim)
     {
         var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f, fov: 1.2f);
-        var evaluator = new TrackEvaluator(Build(new[] { point }, aim));
+        var evaluator = new TrackEvaluator(TrackThrough(new[] { point }, aim, 2f));
         var expectedLookAt = FreeCamMotion.LookAtFrom(point.Position, point.Yaw, point.Pitch);
 
         foreach (var time in new[] { -1.0, 0.0, 5.0 })
@@ -53,7 +45,7 @@ public class TrackEvaluatorTests
     {
         // Point 0 at 170deg, point 1 at -170deg: the short way is through 180deg, not 0.
         var points = new[] { Point(0f, 0f, 0f, yaw: 170f * Deg), Point(10f, 0f, 0f, yaw: -170f * Deg) };
-        var track = TrackEditing.SetLegDuration(Build(points), 1, 1f);
+        var track = TrackEditing.SetLegDuration(TrackThrough(points, speed: 2f), 1, 1f);
         var evaluator = new TrackEvaluator(track);
 
         var state = evaluator.Evaluate(0.5);
@@ -72,7 +64,7 @@ public class TrackEvaluatorTests
     public void PathTangentAimFollowsTheDirectionOfTravelOnAStraightLeg()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) };
-        var track = TrackEditing.SetSpeed(Build(points, AimMode.PathTangent), 5f);
+        var track = TrackEditing.SetSpeed(TrackThrough(points, AimMode.PathTangent, 2f), 5f);
         var evaluator = new TrackEvaluator(track);
 
         var state = evaluator.Evaluate(2.0);
@@ -99,7 +91,7 @@ public class TrackEvaluatorTests
             Point(30f, 0f, 0f, fov: 1f),
             Point(40f, 0f, 0f, fov: 1f),
         };
-        var track = TrackEditing.SetSpeed(Build(points), 10f);
+        var track = TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f);
         var evaluator = new TrackEvaluator(track);
 
         // Position 3.335 lands in segment 3 at fraction 0.335, where the raw spline
@@ -121,7 +113,7 @@ public class TrackEvaluatorTests
             Point(20f, 0f, 0f, fov: 3f),
             Point(30f, 0f, 0f, fov: 1f),
         };
-        var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(Build(points), 10f));
+        var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f));
 
         // At 1 s the camera is at point 1, with its own field of view.
         Assert.Equal(3f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-3f);
@@ -145,13 +137,16 @@ public class TrackEvaluatorTests
     {
         // Collinear points, so arc length is chord length: a 10 m leg then a 30 m leg, 5 s each.
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(40f, 0f, 0f) };
-        var track = TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(Build(points), 1, 5f), 2, 5f);
+        var track = TrackEditing.SetLegDuration(
+            TrackEditing.SetLegDuration(TrackThrough(points, speed: 2f), 1, 5f),
+            2,
+            5f
+        );
         var evaluator = new TrackEvaluator(track);
 
-        const double eps = 1e-2;
         var at = evaluator.Evaluate(5.0)!.Value.Position;
-        var before = Vector3.Distance(evaluator.Evaluate(5.0 - eps)!.Value.Position, at) / eps;
-        var after = Vector3.Distance(at, evaluator.Evaluate(5.0 + eps)!.Value.Position) / eps;
+        var (velocityBefore, velocityAfter) = Slopes(t => evaluator.Evaluate(t)!.Value.Position, 5.0, 1e-2);
+        var (before, after) = (velocityBefore.Length(), velocityAfter.Length());
 
         Assert.True(
             Math.Abs(before - after) < 0.05 * after,
@@ -164,7 +159,7 @@ public class TrackEvaluatorTests
     public void AStraightTimingCurveGivesConstantWorldSpeedAcrossUnequalSegments()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(40f, 0f, 0f) };
-        var track = TrackEditing.SetSpeed(Build(points), 4f);
+        var track = TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 4f);
         var evaluator = new TrackEvaluator(track);
 
         for (var i = 0; i <= 10; i++)
@@ -175,7 +170,7 @@ public class TrackEvaluatorTests
     public void ALegBetweenCoincidentPointsStillTurnsOverItsDuration()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(10f, 0f, 0f, yaw: 90f * Deg) };
-        var track = TrackEditing.SetLegDuration(Build(points), 2, 5f);
+        var track = TrackEditing.SetLegDuration(TrackThrough(points, speed: 2f), 2, 5f);
         var evaluator = new TrackEvaluator(track);
 
         // Leg 2 runs from 5 s to 10 s. The yaw channel is a Hermite through 0 and 90 degrees whose
@@ -205,7 +200,7 @@ public class TrackEvaluatorTests
     public void RollBlendsBetweenPointsInEitherAimMode(AimMode aim)
     {
         var track = TrackEditing.SetLegDuration(
-            Build(new[] { Point(0f, 0f, 0f, roll: 0f), Point(10f, 0f, 0f, roll: 90f * Deg) }, aim),
+            TrackThrough(new[] { Point(0f, 0f, 0f, roll: 0f), Point(10f, 0f, 0f, roll: 90f * Deg) }, aim, 2f),
             1,
             10f
         );
@@ -221,7 +216,7 @@ public class TrackEvaluatorTests
     {
         var rolls = new[] { 0f, 90f, 180f, -90f, 0f };
         var points = rolls.Select((r, i) => Point(i * 10f, 0f, 0f, roll: r * Deg)).ToArray();
-        var evaluator = new TrackEvaluator(Build(points));
+        var evaluator = new TrackEvaluator(TrackThrough(points, speed: 2f));
 
         // A frame's roll reads back wrapped to half a turn, so add up each step's turn the short way round.
         var previous = evaluator.Evaluate(0.0)!.Value.Roll;
@@ -241,7 +236,7 @@ public class TrackEvaluatorTests
     [Fact]
     public void ASinglePointTrackKeepsItsRoll()
     {
-        var track = Build(new[] { Point(1f, 2f, 3f, roll: 0.3f) });
+        var track = TrackThrough(new[] { Point(1f, 2f, 3f, roll: 0.3f) }, speed: 2f);
 
         // Roll reads back through a rotation, so within float round-off.
         Assert.Equal(0.3f, new TrackEvaluator(track).Evaluate(0.0)!.Value.Roll, 1e-6f);
@@ -251,7 +246,7 @@ public class TrackEvaluatorTests
     private static TrackEvaluator StraightLinear()
     {
         var points = new[] { 0f, 10f, 20f }.Select(x => new ControlPoint(new Vector3(x, 0f, 0f), 0f, 0f, 1f)).ToArray();
-        var track = Build(points);
+        var track = TrackThrough(points, speed: 2f);
         for (var key = 0; key < 3; key++)
             track = TimingEditing.SetKeyMode(track, key, TangentMode.Linear);
         return new TrackEvaluator(track);
@@ -296,7 +291,7 @@ public class TrackEvaluatorTests
     public void AOnePointTrackHasNoDistance()
     {
         var point = new ControlPoint(Vector3.Zero, 0f, 0f, 1f);
-        var evaluator = new TrackEvaluator(Build(new[] { point }));
+        var evaluator = new TrackEvaluator(TrackThrough(new[] { point }, speed: 2f));
         Assert.Equal(0f, evaluator.TotalDistance);
         Assert.Equal(0f, evaluator.DistanceAt(1.0));
         Assert.Equal(0f, evaluator.PositionOf(3f));
@@ -310,18 +305,12 @@ public class TrackEvaluatorTests
     public void ATargetAimsTheCameraAtIt(AimMode aim)
     {
         var track = TrackEditing.SetSpeed(
-            Build(new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) }, aim),
+            TrackThrough(new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) }, aim, 2f),
             5f
         );
         var target = new Vector3(10f, 5f, -30f);
 
-        var state = new TrackEvaluator(track).Evaluate(2.0, target)!.Value;
-
-        var look = Vector3.Normalize(state.LookAt - state.Position);
-        var toTarget = Vector3.Normalize(target - state.Position);
-        Assert.Equal(toTarget.X, look.X, 3);
-        Assert.Equal(toTarget.Y, look.Y, 3);
-        Assert.Equal(toTarget.Z, look.Z, 3);
+        AimsAt(target, new TrackEvaluator(track).Evaluate(2.0, target)!.Value, 3);
     }
 
     [Theory]
@@ -331,7 +320,7 @@ public class TrackEvaluatorTests
     {
         var points = new[] { Point(0f, 0f, 0f, yaw: 90f * Deg), Point(10f, 0f, 0f, yaw: 90f * Deg) };
 
-        var state = new TrackEvaluator(Build(points, aim)).Evaluate(1.0)!.Value;
+        var state = new TrackEvaluator(TrackThrough(points, aim, 2f)).Evaluate(1.0)!.Value;
 
         Assert.Equal(90f * Deg, TrackAim.FromDirection(state.LookAt - state.Position).Yaw, 3);
     }
@@ -343,7 +332,9 @@ public class TrackEvaluatorTests
     {
         var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f, fov: 1.2f, roll: 0.3f);
 
-        var state = new TrackEvaluator(Build(new[] { point }, aim)).Evaluate(0.0, new Vector3(1f, 2f, -7f))!.Value;
+        var state = new TrackEvaluator(TrackThrough(new[] { point }, aim, 2f))
+            .Evaluate(0.0, new Vector3(1f, 2f, -7f))!
+            .Value;
 
         var (yaw, pitch) = TrackAim.FromDirection(state.LookAt - state.Position);
         Assert.Equal(point.Position, state.Position);
@@ -359,7 +350,7 @@ public class TrackEvaluatorTests
     {
         var point = Point(1f, 2f, 3f, yaw: 0.5f, pitch: 0.1f);
 
-        var state = new TrackEvaluator(Build(new[] { point }, AimMode.LookAt))
+        var state = new TrackEvaluator(TrackThrough(new[] { point }, AimMode.LookAt, 2f))
             .Evaluate(0.0, new Vector3(1.05f, 2f, 3f))!
             .Value;
 
@@ -373,21 +364,14 @@ public class TrackEvaluatorTests
         return Vector3.Normalize(frame.LookAt - frame.Position);
     }
 
-    private static void Along(Vector3 expected, Vector3 actual, float tolerance)
-    {
-        Assert.Equal(expected.X, actual.X, tolerance);
-        Assert.Equal(expected.Y, actual.Y, tolerance);
-        Assert.Equal(expected.Z, actual.Z, tolerance);
-    }
-
     [Fact]
     public void LookingAheadOnAStraightPathFacesAlongIt()
     {
-        var evaluator = new TrackEvaluator(Build([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent));
+        var evaluator = new TrackEvaluator(TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, 2f));
 
-        Along(Vector3.UnitX, Facing(evaluator, 1.0), 1e-3f);
-        Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration - 0.1), 1e-3f);
-        Along(Vector3.UnitX, Facing(evaluator, evaluator.Duration), 1e-3f);
+        Near(Vector3.UnitX, Facing(evaluator, 1.0), 1e-3f);
+        Near(Vector3.UnitX, Facing(evaluator, evaluator.Duration - 0.1), 1e-3f);
+        Near(Vector3.UnitX, Facing(evaluator, evaluator.Duration), 1e-3f);
     }
 
     [Fact]
@@ -395,12 +379,12 @@ public class TrackEvaluatorTests
     {
         // The first leg takes 1 s and the look runs 1 s ahead, so at the start the camera faces point 2 exactly: (10, 0, 5).
         var track = TrackEditing.SetLookAhead(
-            Build([Point(0f), Point(10f, z: 5f), Point(20f, z: -20f)], AimMode.PathTangent),
+            TrackThrough([Point(0f), Point(10f, z: 5f), Point(20f, z: -20f)], AimMode.PathTangent, 2f),
             1f
         );
         var evaluator = new TrackEvaluator(TrackEditing.SetLegDuration(track, 1, 1f));
 
-        Along(Vector3.Normalize(new Vector3(10f, 0f, 5f)), Facing(evaluator, 0.0), 1e-3f);
+        Near(Vector3.Normalize(new Vector3(10f, 0f, 5f)), Facing(evaluator, 0.0), 1e-3f);
     }
 
     [Fact]
@@ -409,14 +393,14 @@ public class TrackEvaluatorTests
         // Symmetric about the middle point, the path runs parallel to x there. With the last leg taking 0.5 s,
         // the default look 0.5 s ahead instead faces the last point: (10, 0, -10) away.
         var track = TrackEditing.SetLegDuration(
-            Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent),
+            TrackThrough([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent, 2f),
             2,
             0.5f
         );
         var middle = new TrackEvaluator(track).PointSeconds(1);
 
-        Along(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle), 1e-3f);
-        Along(Vector3.Normalize(new Vector3(10f, 0f, -10f)), Facing(new TrackEvaluator(track), middle), 1e-3f);
+        Near(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle), 1e-3f);
+        Near(Vector3.Normalize(new Vector3(10f, 0f, -10f)), Facing(new TrackEvaluator(track), middle), 1e-3f);
     }
 
     [Fact]
@@ -425,11 +409,11 @@ public class TrackEvaluatorTests
         // Out to x = 10 and back to 5 at 2 yalms a second, the path turns round at 10 at 5 s: the camera is at 2t and
         // the spot 1 s ahead at 20 − 2(t + 1). They pass at 4.5 s, so the facing flips from +x to −x there at once.
         var evaluator = new TrackEvaluator(
-            TrackEditing.SetLookAhead(Build([Point(0f), Point(10f), Point(5f)], AimMode.PathTangent), 1f)
+            TrackEditing.SetLookAhead(TrackThrough([Point(0f), Point(10f), Point(5f)], AimMode.PathTangent, 2f), 1f)
         );
 
-        Along(Vector3.UnitX, Facing(evaluator, 4.49), 1e-3f);
-        Along(-Vector3.UnitX, Facing(evaluator, 4.51), 1e-3f);
+        Near(Vector3.UnitX, Facing(evaluator, 4.49), 1e-3f);
+        Near(-Vector3.UnitX, Facing(evaluator, 4.51), 1e-3f);
 
         // The snap turns about the current up, so the picture stays upright.
         Near(Vector3.UnitY, evaluator.Evaluate(4.51)!.Value.Up, 1e-4f);
@@ -443,9 +427,10 @@ public class TrackEvaluatorTests
     {
         // Far from the origin, a look-ahead chord this short is mostly float rounding, so it falls back to the path's own
         // direction and matches the look at the very end to within a degree (cos 1° ≈ 0.99985).
-        var track = Build(
+        var track = TrackThrough(
             [Point(612f, 42f, -488f), Point(620f, 42f, -480f), Point(631f, 43f, -489f)],
-            AimMode.PathTangent
+            AimMode.PathTangent,
+            2f
         );
         var evaluator = new TrackEvaluator(track);
 
@@ -460,14 +445,14 @@ public class TrackEvaluatorTests
     public void LookingAheadTurnsTowardsTheNextLegBeforeAHoldEnds()
     {
         // Point 2 holds 1 to 3 s, then a 0.3 s leg to point 3. At 2.8 s, still holding, 0.5 s on is point 3: (0, 0, 10) away.
-        var track = Build([Point(0f), Point(10f), Point(10f, z: 10f)], AimMode.PathTangent);
+        var track = TrackThrough([Point(0f), Point(10f), Point(10f, z: 10f)], AimMode.PathTangent, 2f);
         track = TrackEditing.SetHold(
             TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 1f), 2, 0.3f),
             1,
             2f
         );
 
-        Along(Vector3.UnitZ, Facing(new TrackEvaluator(track), 2.8), 1e-3f);
+        Near(Vector3.UnitZ, Facing(new TrackEvaluator(track), 2.8), 1e-3f);
     }
 
     [Fact]
@@ -476,7 +461,7 @@ public class TrackEvaluatorTests
         // Point 2 holds for 2 s. Leaving it, the turn peaks near 20 deg/s, 0.02° a millisecond; snapping between the path's
         // own direction and the spot ahead at 0.1 yalm stepped 1.7° at once. 0.1° allows the turn five times over.
         var track = TrackEditing.SetHold(
-            Build([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent),
+            TrackThrough([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent, 2f),
             1,
             2f
         );
@@ -496,7 +481,7 @@ public class TrackEvaluatorTests
         // The path turns back 0.2 yalm from itself. At 1.5 s the spot 2 s on is 4 yalms further along the path, so the
         // camera faces straight at it, where the camera will be at 3.5 s, though it's under a yalm away across the gap.
         var track = TrackEditing.SetLookAhead(
-            Build([Point(0f), Point(5f), Point(5f, z: 0.2f), Point(0f, z: 0.2f)], AimMode.PathTangent),
+            TrackThrough([Point(0f), Point(5f), Point(5f, z: 0.2f), Point(0f, z: 0.2f)], AimMode.PathTangent, 2f),
             2f
         );
         var evaluator = new TrackEvaluator(track);
@@ -533,13 +518,14 @@ public class TrackEvaluatorTests
         // +z leg, at 90° from +x towards +z; the arrival, from 0.5 yalm before the spot, (-0.5, 0, 0), to it, (0, 0, 0.4),
         // is at atan2(0.4, 0.5) = 38.66°. Two unit vectors weighed evenly sum along their bisector, 64.33°. The arc-length
         // table places those points to about 1e-4 yalm, well inside the 1e-3 allowed.
-        var track = Build(
+        var track = TrackThrough(
             [Point(-2f), Point(-1f), Point(0f), Point(0f), Point(0f, z: 1f), Point(0f, z: 2f)],
-            AimMode.PathTangent
+            AimMode.PathTangent,
+            2f
         );
         var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetSpeed(track, 1f), 0.5f));
 
-        Along(new Vector3(0.43318873f, 0f, 0.90130324f), Facing(evaluator, 2.0), 1e-3f);
+        Near(new Vector3(0.43318873f, 0f, 0.90130324f), Facing(evaluator, 2.0), 1e-3f);
     }
 
     [Fact]
@@ -548,13 +534,13 @@ public class TrackEvaluatorTests
         // Along +x into the origin, held 3 s, then off along -z; the doubled origin keeps the last yalm in straight. Until
         // the look ahead reaches past the hold's end the spot ahead is the held point, so the camera faces the way in, +x.
         var track = TrackEditing.SetHold(
-            Build([Point(-10f), Point(0f), Point(0f), Point(0f, z: -10f)], AimMode.PathTangent),
+            TrackThrough([Point(-10f), Point(0f), Point(0f), Point(0f, z: -10f)], AimMode.PathTangent, 2f),
             1,
             3f
         );
         var evaluator = new TrackEvaluator(track);
 
-        Along(Vector3.UnitX, Facing(evaluator, evaluator.PointSeconds(1) + 1.0), 1e-6f);
+        Near(Vector3.UnitX, Facing(evaluator, evaluator.PointSeconds(1) + 1.0), 1e-6f);
     }
 
     [Fact]
@@ -562,23 +548,24 @@ public class TrackEvaluatorTests
     {
         // Legs of 10 and 5 yalms at 5 a second take 2 s and 1 s; yaw 0, 1, 3 gives (1/2·1 + 2/1·2) / 3 = 1.5 rad/s at the middle.
         var evaluator = new TrackEvaluator(
-            Build([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(15f, yaw: 3f)]) with
-            {
-                Speed = 5f,
-            }
+            TrackThrough([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(15f, yaw: 3f)], speed: 5f)
         );
         float Yaw(double time) => TrackAim.FromDirection(Facing(evaluator, time)).Yaw;
-        const double h = 1e-3;
+        var (left, right) = Slopes(Yaw, 2.0, 1e-3);
 
-        Assert.Equal(1.5f, (float)((Yaw(2.0) - Yaw(2.0 - h)) / h), 0.02f);
-        Assert.Equal(1.5f, (float)((Yaw(2.0 + h) - Yaw(2.0)) / h), 0.02f);
+        Assert.Equal(1.5f, left, 0.02f);
+        Assert.Equal(1.5f, right, 0.02f);
     }
 
     [Fact]
     public void RecordedAimHoldsStillThroughAHold()
     {
         // Point 2 holds for 2 s: through the hold the camera keeps point 2's yaw, 1.
-        var track = TrackEditing.SetHold(Build([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(20f, yaw: 2f)]), 1, 2f);
+        var track = TrackEditing.SetHold(
+            TrackThrough([Point(0f, yaw: 0f), Point(10f, yaw: 1f), Point(20f, yaw: 2f)], speed: 2f),
+            1,
+            2f
+        );
         var evaluator = new TrackEvaluator(track);
         var arrive = evaluator.PointSeconds(1);
 
@@ -607,7 +594,7 @@ public class TrackEvaluatorTests
         // follows the bow, well under 0.05° a millisecond, and up turns once through the vertical passage, so the picture
         // never whips.
         var track = TrackEditing.SetLookAhead(
-            Build([Point(0f), Point(0.2f, 5f), Point(0f, 10f)], AimMode.PathTangent),
+            TrackThrough([Point(0f), Point(0.2f, 5f), Point(0f, 10f)], AimMode.PathTangent, 2f),
             lookAhead
         );
         var evaluator = new TrackEvaluator(track);
@@ -625,7 +612,7 @@ public class TrackEvaluatorTests
         // Along -z, straight up, then along +x. FromDirection's yaw is atan2(-x, -z): 0 heading -z and -π/2 heading +x.
         // The first leg lies in the plane x = 0 and the last two in z = -10, so the headings are exact there.
         var track = TrackEditing.SetLookAhead(
-            Build(
+            TrackThrough(
                 [
                     Point(0f),
                     Point(0f, 0f, -10f),
@@ -634,7 +621,8 @@ public class TrackEvaluatorTests
                     Point(10f, 20f, -10f),
                     Point(20f, 20f, -10f),
                 ],
-                AimMode.PathTangent
+                AimMode.PathTangent,
+                2f
             ),
             lookAhead
         );
@@ -656,9 +644,10 @@ public class TrackEvaluatorTests
         // Points 1 to 3 stand in a vertical line, so Catmull-Rom's tangent at point 2, (point 3 - point 1) / 2, is straight up,
         // with no cap on the pitch any more.
         var evaluator = new TrackEvaluator(
-            Build(
+            TrackThrough(
                 [Point(0f), Point(0f, 0f, -10f), Point(0f, 10f, -10f), Point(0f, 20f, -10f), Point(10f, 20f, -10f)],
-                AimMode.PathTangent
+                AimMode.PathTangent,
+                2f
             ) with
             {
                 LookAhead = 0f,
@@ -673,7 +662,9 @@ public class TrackEvaluatorTests
     {
         // Straight up from the start: there's no upright to start from, so the picture's top points along the first
         // point's heading at yaw 0.3, (sin 0.3, 0, cos 0.3), as FromAngles gives at pitch 90°.
-        var evaluator = new TrackEvaluator(Build([Point(0f, yaw: 0.3f), Point(0f, 10f)], AimMode.PathTangent));
+        var evaluator = new TrackEvaluator(
+            TrackThrough([Point(0f, yaw: 0.3f), Point(0f, 10f)], AimMode.PathTangent, 2f)
+        );
         var frame = evaluator.Evaluate(1.0)!.Value;
 
         Near(Vector3.UnitY, Facing(evaluator, 1.0), 1e-4f);
@@ -688,7 +679,7 @@ public class TrackEvaluatorTests
         // in, so up is the level up inverted: (0, -1, 0). Down the far side the second passage rights it, and along the
         // last leg, straight along +x (points 7 to 9 in a line), up is (0, 1, 0). The look-at point sits 10 yalms along the facing.
         var track = TrackEditing.SetLookAhead(
-            Build(
+            TrackThrough(
                 [
                     Point(-20f),
                     Point(-6f),
@@ -701,7 +692,8 @@ public class TrackEvaluatorTests
                     Point(20f),
                     Point(34f),
                 ],
-                AimMode.PathTangent
+                AimMode.PathTangent,
+                2f
             ),
             0f
         );
@@ -837,7 +829,7 @@ public class TrackEvaluatorTests
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
         var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 4, 2f), 1.5f));
 
-        Along(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-6f);
+        Near(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-6f);
         Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
     }
 
@@ -854,7 +846,7 @@ public class TrackEvaluatorTests
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
         var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 0, 1f), 1.75f));
 
-        Along(Vector3.UnitX, Facing(evaluator, 0.0), 1e-6f);
+        Near(Vector3.UnitX, Facing(evaluator, 0.0), 1e-6f);
         Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
     }
 
@@ -873,7 +865,7 @@ public class TrackEvaluatorTests
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
         var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), 1.25f));
 
-        Along(Vector3.UnitX, Facing(evaluator, 0.75), 1e-6f);
+        Near(Vector3.UnitX, Facing(evaluator, 0.75), 1e-6f);
     }
 
     [Fact]
@@ -941,7 +933,7 @@ public class TrackEvaluatorTests
         // where the facing turns 0.0115° (2/10 rad a second): the share of the 30° passage off by up to twice that, eased at
         // up to 1.5 times, puts the turn up to 180° × 1.5 × 0.023 / 30 ≈ 0.2° out, and sin 0.2° ≈ 0.0036.
         var track = TrackEditing.SetLookAt(
-            Build([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt),
+            TrackThrough([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt, 2f),
             new Vector3(0f, 10f, 0f)
         );
         var evaluator = new TrackEvaluator(track);
@@ -964,7 +956,7 @@ public class TrackEvaluatorTests
         // picture's top points along the first point's heading at yaw 0.3, (sin 0.3, 0, cos 0.3), as FromAngles gives
         // at pitch 90°.
         var track = TrackEditing.SetLookAt(
-            Build([Point(0f, -10f, yaw: 0.3f), Point(0f, 0f)], AimMode.LookAt),
+            TrackThrough([Point(0f, -10f, yaw: 0.3f), Point(0f, 0f)], AimMode.LookAt, 2f),
             new Vector3(0f, 10f, 0f)
         );
         var evaluator = new TrackEvaluator(track);
@@ -978,7 +970,7 @@ public class TrackEvaluatorTests
         // The Look At track passes under its point (0, 10, 0) at x = 0; aimed instead at (1, 10, 0) there, the camera
         // faces (1, 10, 0)/√101 and stays upright: square to the facing in the x-y plane, leaning back, (-10, 1, 0)/√101.
         var track = TrackEditing.SetLookAt(
-            Build([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt),
+            TrackThrough([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt, 2f),
             new Vector3(0f, 10f, 0f)
         );
         var evaluator = new TrackEvaluator(track);
@@ -997,7 +989,7 @@ public class TrackEvaluatorTests
             .Range(0, 8)
             .Select(i => Point(10f * MathF.Cos(i * MathF.PI / 4f), 0f, 10f * MathF.Sin(i * MathF.PI / 4f)));
         var track = TrackEditing.SetLookAt(
-            Build(ring, AimMode.LookAt),
+            TrackThrough(ring, AimMode.LookAt, 2f),
             new Vector3(0f, 10f * MathF.Tan(30f * Deg), 0f)
         );
         var evaluator = new TrackEvaluator(track);
@@ -1015,13 +1007,14 @@ public class TrackEvaluatorTests
     {
         // Every point coincides, so the path has no direction: (-sin 1.1 cos 0.2, sin -0.2, -cos 1.1 cos 0.2).
         var evaluator = new TrackEvaluator(
-            Build(
+            TrackThrough(
                 [Point(3f, 3f, 3f, yaw: 1.1f, pitch: -0.2f), Point(3f, 3f, 3f), Point(3f, 3f, 3f)],
-                AimMode.PathTangent
+                AimMode.PathTangent,
+                2f
             )
         );
 
-        Along(new Vector3(-0.87344255f, -0.19866933f, -0.44455440f), Facing(evaluator, 0.05), 1e-4f);
+        Near(new Vector3(-0.87344255f, -0.19866933f, -0.44455440f), Facing(evaluator, 0.05), 1e-4f);
     }
 
     /// <summary>The most frames a property samples from one track, so a run of zero steps still ends.</summary>

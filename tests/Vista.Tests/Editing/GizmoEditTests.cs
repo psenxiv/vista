@@ -3,6 +3,7 @@ using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Editing;
 
@@ -12,8 +13,6 @@ public class GizmoEditTests
 
     // ImGuizmo's local rotation: turn the frame about one of its own axes, keeping its origin.
     private static Matrix4x4 Turn(Matrix4x4 frame, Matrix4x4 localRotation) => localRotation * frame;
-
-    private static float Delta(float a, float b) => MathF.IEEERemainder(a - b, MathF.Tau);
 
     [Fact]
     public void AnUnmovedMoveReturnsTheOriginal()
@@ -57,7 +56,7 @@ public class GizmoEditTests
         var dragged = Turn(GizmoEdit.RingFrame(Original, GimbalRing.Yaw), Matrix4x4.CreateRotationY(0.3f));
         var edited = GizmoEdit.Rotate(Original, GimbalRing.Yaw, dragged);
         // Ry(t) * frame turns forward about up by +t, so the yaw rises by the drag angle.
-        Assert.Equal(0.3f, Delta(edited.Yaw, Original.Yaw), 4);
+        Assert.Equal(0.3f, Angles.Delta(Original.Yaw, edited.Yaw), 4);
         Assert.Equal(Original with { Yaw = edited.Yaw }, edited);
     }
 
@@ -74,18 +73,15 @@ public class GizmoEditTests
     [Fact]
     public void ThePitchRingGoesOverTheTopPastVertical()
     {
-        var original = new ControlPoint(new Vector3(4f, -1f, 2f), 0f, 80f * MathF.PI / 180f, 0.4f);
-        var dragged = Turn(
-            GizmoEdit.RingFrame(original, GimbalRing.Pitch),
-            Matrix4x4.CreateRotationX(20f * MathF.PI / 180f)
-        );
+        var original = new ControlPoint(new Vector3(4f, -1f, 2f), 0f, 80f * Deg, 0.4f);
+        var dragged = Turn(GizmoEdit.RingFrame(original, GimbalRing.Pitch), Matrix4x4.CreateRotationX(20f * Deg));
         var edited = GizmoEdit.Rotate(original, GimbalRing.Pitch, dragged);
 
         // 80 deg + 20 deg = 100 deg, past vertical: ToAngles normalises it to the mirror image,
         // pitch back at 80 deg with yaw and roll each turned by a half turn.
-        Assert.Equal(80f * MathF.PI / 180f, edited.Pitch, 4);
-        Assert.Equal(MathF.PI, MathF.Abs(Delta(edited.Yaw, original.Yaw)), 3);
-        Assert.Equal(MathF.PI, MathF.Abs(Delta(edited.Roll, original.Roll)), 3);
+        Assert.Equal(80f * Deg, edited.Pitch, 4);
+        Assert.Equal(MathF.PI, MathF.Abs(Angles.Delta(original.Yaw, edited.Yaw)), 3);
+        Assert.Equal(MathF.PI, MathF.Abs(Angles.Delta(original.Roll, edited.Roll)), 3);
 
         // The picture itself is unchanged: the edited angles' forward matches the dragged matrix's forward.
         var draggedForward = -new Vector3(dragged.M31, dragged.M32, dragged.M33);
@@ -100,7 +96,7 @@ public class GizmoEditTests
         var edited = GizmoEdit.Rotate(Original, GimbalRing.Roll, dragged);
         // Row 3 is back, not forward, so a +psi turn about the frame's own Z is a -psi turn
         // about the view direction, which is what ToPose measures the roll against.
-        Assert.Equal(-0.5f, Delta(edited.Roll, Original.Roll), 4);
+        Assert.Equal(-0.5f, Angles.Delta(Original.Roll, edited.Roll), 4);
         Assert.Equal(Original with { Roll = edited.Roll }, edited);
     }
 

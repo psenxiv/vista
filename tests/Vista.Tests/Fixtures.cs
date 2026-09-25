@@ -4,9 +4,9 @@ using CsCheck;
 using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
+using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
-using Vista.Core.Tracks.Playback;
 using Xunit;
 
 namespace Vista.Tests;
@@ -40,6 +40,9 @@ internal static class Fixtures
     /// <summary>Radians in a degree.</summary>
     internal const float Deg = MathF.PI / 180f;
 
+    /// <summary>A quarter turn in radians.</summary>
+    internal const float QuarterTurn = MathF.PI / 2f;
+
     /// <summary>The fewest seconds Direction of travel looks ahead in a generated track, since with none it turns at once where the path doubles back, by design.</summary>
     private const float MinGeneratedLookAhead = 0.1f;
 
@@ -55,7 +58,7 @@ internal static class Fixtures
     );
 
     /// <summary>A control point anywhere in <see cref="AnyPosition"/>, facing any way and rolled any way, with any field of view the editor allows.</summary>
-    private static readonly Gen<ControlPoint> AnyPoint = Gen.Select(
+    internal static readonly Gen<ControlPoint> AnyPoint = Gen.Select(
         AnyPosition,
         Gen.Float[-MathF.PI, MathF.PI],
         Gen.Float[-MathF.PI / 2f, MathF.PI / 2f],
@@ -100,9 +103,7 @@ internal static class Fixtures
         (int Kind, float Hold, float Leg)[] timing
     )
     {
-        var track = TrackEditing.SetSpeed(TrackEditing.Empty(aim), speed);
-        foreach (var point in points)
-            track = TrackEditing.Append(track, point);
+        var track = TrackThrough(points, aim, speed);
         for (var i = 0; i < points.Length; i++)
         {
             if ((timing[i].Kind & 1) != 0)
@@ -146,16 +147,114 @@ internal static class Fixtures
         return track;
     }
 
-    // Points at x = 0, 5, 10 in two 5 s legs: a 10 s track.
-    internal static Track StraightTrack(bool loop = false, PlaybackDirection direction = PlaybackDirection.Forward)
+    /// <summary>A track through <paramref name="points"/>, aimed by <paramref name="aim"/>, at <paramref name="speed"/> yalms a second, appended as the editor appends them.</summary>
+    internal static Track TrackThrough(
+        IEnumerable<ControlPoint> points,
+        AimMode aim = AimMode.AimKeys,
+        float speed = TrackEditing.DefaultSpeed
+    )
     {
-        var track = TrackEditing.SetDirection(
-            TrackEditing.SetLoop(TrackEditing.Empty(AimMode.PathTangent), loop),
-            direction
+        var track = TrackEditing.SetSpeed(TrackEditing.Empty(aim), speed);
+        foreach (var point in points)
+            track = TrackEditing.Append(track, point);
+        return track;
+    }
+
+    /// <summary><paramref name="track"/> with points at x = 0 and 10 appended: one 10-yalm leg.</summary>
+    internal static Track WithTwoPoints(Track track) =>
+        TrackEditing.Append(TrackEditing.Append(track, Point(0f)), Point(10f));
+
+    /// <summary>Goes live with the playlist and plays it from the start: Cue, then Play.</summary>
+    internal static void GoLive(SessionState state)
+    {
+        state.Cue();
+        state.Play();
+    }
+
+    /// <summary>Editing a new session whose track has points at x = 0 and 10: one 2 s leg at the default speed.</summary>
+    internal static SessionState EditingTwoPoints()
+    {
+        var state = new SessionState();
+        state.Edit();
+        state.ChangeTrack(WithTwoPoints);
+        return state;
+    }
+
+    /// <summary>Live with a playlist of <paramref name="state"/>'s edited track, first given points at x = 0 and 10.</summary>
+    internal static SessionState LiveTwoPoints(SessionState? state = null)
+    {
+        if (state is null)
+            state = EditingTwoPoints();
+        else
+            state.ChangeTrack(WithTwoPoints);
+        state.AddToPlaylist([state.EditedTrackId]);
+        GoLive(state);
+        return state;
+    }
+
+    /// <summary>Guard, the character tests watch and follow, with feet at <paramref name="feet"/>, facing <paramref name="facing"/>.</summary>
+    internal static LoadedCharacter Guard(Vector3 feet, float facing = 0f) => new("Guard", null, feet, facing);
+
+    /// <summary>Nearby characters holding only Guard, feet at <paramref name="feet"/>, facing <paramref name="facing"/>.</summary>
+    internal static NearbyCharacters GuardStanding(Vector3 feet, float facing = 0f)
+    {
+        var characters = new NearbyCharacters();
+        characters.Update([Guard(feet, facing)]);
+        return characters;
+    }
+
+    /// <summary>Puts Guard in <paramref name="characters"/> with their aim point, the default aim height above their feet, at <paramref name="aim"/>.</summary>
+    internal static void GuardAt(NearbyCharacters characters, Vector3 aim) =>
+        characters.Update([Guard(aim - new Vector3(0f, TrackEditing.DefaultAimHeight, 0f))]);
+
+    /// <summary>Puts Guard's aim point at (x, 0, −10), in front of a camera at the origin facing along −z.</summary>
+    internal static void GuardAt(NearbyCharacters characters, float x) => GuardAt(characters, new Vector3(x, 0f, -10f));
+
+    /// <summary>Nearby characters holding only Guard, with their aim point at (x, 0, −10).</summary>
+    internal static NearbyCharacters GuardAt(float x)
+    {
+        var characters = new NearbyCharacters();
+        GuardAt(characters, x);
+        return characters;
+    }
+
+    /// <summary>A track of one point at the origin, recorded aim yaw <paramref name="yaw"/>, watching Guard with <paramref name="smoothing"/>, held <paramref name="hold"/> seconds.</summary>
+    internal static Track WatchingGuard(float smoothing = 0f, float hold = 0f, float yaw = 0f)
+    {
+        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, yaw: yaw));
+        return TrackEditing.SetHold(track, 0, hold) with { TargetName = "Guard", Smoothing = smoothing };
+    }
+
+    /// <summary>Any aim height and smoothing a track can be set to.</summary>
+    internal static readonly Gen<(float AimHeight, float Smoothing)> AnyTargetSettings = Gen.Select(
+        Gen.Float[0f, TrackEditing.MaxAimHeight],
+        Gen.Float[0f, 1f]
+    );
+
+    /// <summary><paramref name="track"/> naming its character and taking <paramref name="settings"/>, set as the editor sets them.</summary>
+    internal static Track WithTarget(
+        Track track,
+        string? name,
+        string? world,
+        (float AimHeight, float Smoothing) settings
+    ) =>
+        TrackEditing.SetSmoothing(
+            TrackEditing.SetAimHeight(TrackEditing.SetTarget(track, name, world), settings.AimHeight),
+            settings.Smoothing
         );
-        foreach (var x in new[] { 0f, 5f, 10f })
-            track = TrackEditing.Append(track, Point(x));
-        return TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 5f), 2, 5f);
+
+    /// <summary>The rate of change of <paramref name="value"/> at <paramref name="t"/>, from the left and from the right, each over <paramref name="step"/>.</summary>
+    internal static (float Left, float Right) Slopes(Func<double, float> value, double t, double step)
+    {
+        var at = value(t);
+        return ((float)((at - value(t - step)) / step), (float)((value(t + step) - at) / step));
+    }
+
+    /// <summary>The rate of change of <paramref name="value"/> at <paramref name="t"/>, from the left and from the right, each over <paramref name="step"/>.</summary>
+    internal static (Vector3 Left, Vector3 Right) Slopes(Func<double, Vector3> value, double t, double step)
+    {
+        var at = value(t);
+        return ((at - value(t - step)) / (float)step, (value(t + step) - at) / (float)step);
     }
 
     /// <summary>Asserts the frame looks toward <paramref name="target"/>, comparing unit directions to <paramref name="precision"/> decimal places.</summary>
@@ -256,7 +355,7 @@ internal static class Fixtures
     internal const float PictureSpinLimit = 6f * Deg;
 
     /// <summary>How many times as far as the view itself turns the picture may turn to keep level near straight up: 10, above the 9 of a half turn planned over a vertical passage (half a turn over 30° of view, peaking at 1.5 times that average as it eases).</summary>
-    private const float SpinPerTurn = 10f;
+    internal const float SpinPerTurn = 10f;
 
     /// <summary>The unsigned angle, in radians, the picture turns about its own centre between two frames: <paramref name="upA"/> carried square to <paramref name="forwardB"/> by the minimal rotation from <paramref name="forwardA"/>, against <paramref name="upB"/>.</summary>
     internal static float Twist(Vector3 forwardA, Vector3 upA, Vector3 forwardB, Vector3 upB)

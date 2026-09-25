@@ -1,7 +1,7 @@
-using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Timing.TimingFixtures;
 
 namespace Vista.Tests.Tracks.Timing;
 
@@ -62,6 +62,6 @@ public class LegEasingTests
     public void EasingNeverChangesTimes()
     {
         var track = LegEasing.Set(Build3PointTrack(), 1, Easing.EaseInOut);
-        Assert.Equal(new[] { 0f, 5f, 10f }, new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)));
+        Assert.Equal(new[] { 0f, 5f, 10f }, Times(track));
     }
 }

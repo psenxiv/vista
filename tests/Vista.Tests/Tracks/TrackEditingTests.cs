@@ -704,7 +704,7 @@ public class TrackEditingTests
     [Fact]
     public void FollowTargetRefusesATrackWithMoreThanOnePoint()
     {
-        var two = TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(10f));
+        var two = WithTwoPoints(TrackEditing.Empty());
         var one = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
 
         Assert.Equal("Follow Target needs a track with one point.", TrackEditing.AimRefusal(two, AimMode.FollowTarget));

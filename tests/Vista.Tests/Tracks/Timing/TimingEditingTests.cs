@@ -3,17 +3,12 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Timing.TimingFixtures;
 
 namespace Vista.Tests.Tracks.Timing;
 
 public class TimingEditingTests
 {
-    private static Track MoveKey(Track track, int key, float time) =>
-        TimingEditing.MoveKey(track, new TrackEvaluator(track), key, time);
-
-    private static float[] Times(Track track) =>
-        new TrackEvaluator(track).Keys.Select(k => MathF.Round(k.Time, 2)).ToArray();
-
     private static Track RippleKey(Track track, int key, float time) =>
         TimingEditing.RippleKey(track, new TrackEvaluator(track), key, time);
 

@@ -161,13 +161,8 @@ internal static class RegressionScene
     private static ControlPoint P(float x, float y, float z) => new(new Vector3(x, y, z), 0f, 0f, Fov);
 
     /// <summary>A Direction of travel track through <paramref name="points"/> at the default speed.</summary>
-    private static Track Travel(ControlPoint[] points, float lookAhead = TrackEditing.DefaultLookAhead)
-    {
-        var track = TrackEditing.Empty(AimMode.PathTangent);
-        foreach (var point in points)
-            track = TrackEditing.Append(track, point);
-        return TrackEditing.SetLookAhead(track, lookAhead);
-    }
+    private static Track Travel(ControlPoint[] points, float lookAhead = TrackEditing.DefaultLookAhead) =>
+        TrackEditing.SetLookAhead(Fixtures.TrackThrough(points, AimMode.PathTangent), lookAhead);
 
     /// <summary>A gentle curve whose last leg eases out into a hold at the end.</summary>
     private static Track EasingIntoTheEnd()

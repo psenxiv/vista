@@ -1,6 +1,7 @@
 using System.Numerics;
 using Vista.Core.Tracks.Spline;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks.Spline;
 
@@ -30,8 +31,8 @@ public class CatmullRomTests
         var segments = CatmullRom.SegmentCount(FivePoints.Length);
         for (var segment = 0; segment < segments; segment++)
         {
-            AssertClose(FivePoints[segment], CatmullRom.Evaluate(FivePoints, segment, 0f), 3);
-            AssertClose(FivePoints[segment + 1], CatmullRom.Evaluate(FivePoints, segment, 1f), 3);
+            Near(FivePoints[segment], CatmullRom.Evaluate(FivePoints, segment, 0f), 5e-4f);
+            Near(FivePoints[segment + 1], CatmullRom.Evaluate(FivePoints, segment, 1f), 5e-4f);
         }
     }
 
@@ -51,8 +52,8 @@ public class CatmullRomTests
             Assert.True(cross.Length() < 0.001f, $"t={t}: {p} is not on the line from {a} to {b}");
         }
 
-        AssertClose(a, CatmullRom.Evaluate(points, 0, 0f), 3);
-        AssertClose(b, CatmullRom.Evaluate(points, 0, 1f), 3);
+        Near(a, CatmullRom.Evaluate(points, 0, 0f), 5e-4f);
+        Near(b, CatmullRom.Evaluate(points, 0, 1f), 5e-4f);
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public class CatmullRomTests
         var points = new[] { p, p };
 
         var value = CatmullRom.Evaluate(points, 0, 0.5f);
-        AssertClose(p, value, 3);
+        Near(p, value, 5e-4f);
         Assert.False(float.IsNaN(value.X) || float.IsNaN(value.Y) || float.IsNaN(value.Z));
 
         var deriv = CatmullRom.Derivative(points, 0, 0.5f);
@@ -96,7 +97,7 @@ public class CatmullRomTests
             for (var t = 0f; t <= 1f; t += 0.25f)
             {
                 var value = CatmullRom.Evaluate(points, segment, t);
-                AssertClose(p, value, 3);
+                Near(p, value, 5e-4f);
                 var deriv = CatmullRom.Derivative(points, segment, t);
                 Assert.False(float.IsNaN(deriv.X) || float.IsNaN(deriv.Y) || float.IsNaN(deriv.Z));
             }
@@ -121,7 +122,6 @@ public class CatmullRomTests
     [Fact]
     public void DerivativeMatchesAFiniteDifference()
     {
-        const float h = 0.0005f;
         var segments = CatmullRom.SegmentCount(FivePoints.Length);
 
         for (var segment = 0; segment < segments; segment++)
@@ -129,9 +129,8 @@ public class CatmullRomTests
             for (var t = 0.1f; t <= 0.9f; t += 0.2f)
             {
                 var analytic = CatmullRom.Derivative(FivePoints, segment, t);
-                var plus = CatmullRom.Evaluate(FivePoints, segment, t + h);
-                var minus = CatmullRom.Evaluate(FivePoints, segment, t - h);
-                var finite = (plus - minus) / (2f * h);
+                var (left, right) = Slopes(u => CatmullRom.Evaluate(FivePoints, segment, (float)u), t, 5e-4);
+                var finite = (left + right) / 2f;
 
                 Assert.True(
                     (analytic - finite).Length() < 0.01f,
@@ -139,12 +138,5 @@ public class CatmullRomTests
                 );
             }
         }
-    }
-
-    private static void AssertClose(Vector3 expected, Vector3 actual, int precision)
-    {
-        Assert.Equal(expected.X, actual.X, precision);
-        Assert.Equal(expected.Y, actual.Y, precision);
-        Assert.Equal(expected.Z, actual.Z, precision);
     }
 }

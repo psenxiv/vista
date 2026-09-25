@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Xunit;
 
@@ -51,13 +52,10 @@ public class PoseMatrixTests
         var (p, y, pi, r) = PoseMatrix.ToPose(PoseMatrix.From(position, yaw, pitch, roll));
 
         Assert.Equal(position, p);
-        Assert.True(MathF.Abs(WrappedDifference(yaw, y)) < 1e-4f);
-        Assert.True(MathF.Abs(WrappedDifference(pitch, pi)) < 1e-4f);
-        Assert.True(MathF.Abs(WrappedDifference(roll, r)) < 1e-4f);
+        Assert.True(MathF.Abs(Angles.Delta(y, yaw)) < 1e-4f);
+        Assert.True(MathF.Abs(Angles.Delta(pi, pitch)) < 1e-4f);
+        Assert.True(MathF.Abs(Angles.Delta(r, roll)) < 1e-4f);
     }
-
-    private static float WrappedDifference(float expected, float actual) =>
-        MathF.IEEERemainder(expected - actual, MathF.Tau);
 
     [Fact]
     public void ToPoseIgnoresScale()

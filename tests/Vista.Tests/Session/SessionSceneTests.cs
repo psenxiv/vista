@@ -4,25 +4,12 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionSceneTests
 {
-    // Editing; Track 1 has points at x = 0, 10, 20 at 2 yalms per second (two 5 s legs).
-    private static SessionState Editing()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
-        return state;
-    }
-
-    private static Guid First(SessionState state) => state.Scene.Tracks[0].Id;
-
     [Fact]
     public void StartsEditingTheOnlyTrack()
     {
@@ -35,7 +22,7 @@ public class SessionSceneTests
     [Fact]
     public void TrackEditsChangeOnlyTheEditedTrack()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.AddTrack());
         state.AddToEnd(Point(50f));
 
@@ -47,7 +34,7 @@ public class SessionSceneTests
     [Fact]
     public void AddTrackSwitchesToItAndClearsTheSelectionAndScrubHead()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         state.Transport.ScrubTo(3.0);
 
@@ -62,11 +49,11 @@ public class SessionSceneTests
     [Fact]
     public void SwitchingIsNotAnUndoStepAndClearsTheSelectionAndScrubHead()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
-        state.SwitchTrack(First(state));
+        state.SwitchTrack(TrackId(state, 0));
         state.Selection.Select(2);
         state.Transport.ScrubTo(4.0);
 
@@ -82,8 +69,8 @@ public class SessionSceneTests
     [Fact]
     public void UndoingAChangeInAnotherTrackSwitchesBackToIt()
     {
-        var state = Editing();
-        var first = First(state);
+        var state = EditingThreePoints();
+        var first = TrackId(state, 0);
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
@@ -107,8 +94,8 @@ public class SessionSceneTests
     [Fact]
     public void UndoAndRedoCoverSceneEdits()
     {
-        var state = Editing();
-        var first = First(state);
+        var state = EditingThreePoints();
+        var first = TrackId(state, 0);
         state.RenameTrack(first, "Crane");
         Assert.Equal("Crane", state.Track.Name);
 
@@ -121,8 +108,8 @@ public class SessionSceneTests
     [Fact]
     public void DuplicateSwitchesToTheCopy()
     {
-        var state = Editing();
-        Assert.Null(state.DuplicateTrack(First(state)));
+        var state = EditingThreePoints();
+        Assert.Null(state.DuplicateTrack(TrackId(state, 0)));
 
         Assert.Equal(2, state.Scene.Tracks.Count);
         Assert.Equal(state.Scene.Tracks[1].Id, state.EditedTrackId);
@@ -132,7 +119,7 @@ public class SessionSceneTests
     [Fact]
     public void DeletingTheEditedTrackSwitchesToTheOneTakingItsPlace()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         state.AddTrack();
         var third = state.Scene.Tracks[2].Id;
@@ -146,8 +133,8 @@ public class SessionSceneTests
     [Fact]
     public void DeletingTheEditedTrackShowsAHiddenNeighbourTakingItsPlace()
     {
-        var state = Editing();
-        var first = First(state);
+        var state = EditingThreePoints();
+        var first = TrackId(state, 0);
         state.AddTrack();
         var second = state.EditedTrackId;
         state.SwitchTrack(first);
@@ -166,22 +153,22 @@ public class SessionSceneTests
     [Fact]
     public void DeletingAnotherTrackKeepsTheEditedTrackAndSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
-        state.SwitchTrack(First(state));
+        state.SwitchTrack(TrackId(state, 0));
         state.Selection.Select(1);
 
         Assert.Null(state.DeleteTracks([second]));
 
-        Assert.Equal(First(state), state.EditedTrackId);
+        Assert.Equal(TrackId(state, 0), state.EditedTrackId);
         Assert.Equal(1, state.Selection.Point);
     }
 
     [Fact]
     public void MoveReordersTracksAsAnUndoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         var second = state.Scene.Tracks[1].Id;
 
@@ -194,7 +181,7 @@ public class SessionSceneTests
     [Fact]
     public void MovingAnUnknownTrackSaysThereIsNoSuchTrack()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var first = state.Scene.Tracks[0].Id;
 
         Assert.Equal("There is no such track.", state.MoveTracks([Guid.NewGuid()], first, null));
@@ -204,10 +191,10 @@ public class SessionSceneTests
     [Fact]
     public void TheEditedTrackCannotBeHiddenButOthersCan()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         var second = state.EditedTrackId;
-        var first = First(state);
+        var first = TrackId(state, 0);
 
         Assert.NotNull(state.SetTracksHidden([second], true));
         Assert.Null(state.SetTracksHidden([first], true));
@@ -217,8 +204,8 @@ public class SessionSceneTests
     [Fact]
     public void SwitchingToAHiddenTrackShowsItAsAnUndoStep()
     {
-        var state = Editing();
-        var first = First(state);
+        var state = EditingThreePoints();
+        var first = TrackId(state, 0);
         state.AddTrack();
         state.SetTracksHidden([first], true);
 
@@ -233,7 +220,7 @@ public class SessionSceneTests
     [Fact]
     public void ClearKeepsTheTracksIdAndName()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var id = state.EditedTrackId;
         state.RenameTrack(id, "Crane");
 
@@ -247,7 +234,7 @@ public class SessionSceneTests
     [Fact]
     public void AChangeThatSwapsTheTrackIsRefused()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var before = state.Scene;
 
         Assert.NotNull(state.ChangeTrack(_ => TrackEditing.Empty()));
@@ -261,14 +248,13 @@ public class SessionSceneTests
         const string refused = "The scene can only change while editing.";
         const string noSwitch = "Tracks can only be switched while editing.";
 
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
-        var first = First(state);
+        var first = TrackId(state, 0);
         var second = state.Scene.Tracks[1].Id;
         state.SwitchTrack(first);
         state.AddToPlaylist([first]);
-        state.Cue();
-        state.Play();
+        GoLive(state);
         Assert.Equal(CameraMode.Live, state.Mode);
 
         Assert.Equal(refused, state.AddTrack());
@@ -294,11 +280,11 @@ public class SessionSceneTests
     [Fact]
     public void LiveCuesAndPlaysThePlaylistEntryNotTheEditedTrack()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
-        var first = First(state);
+        var first = TrackId(state, 0);
         state.AddToPlaylist([first]);
         Assert.NotEqual(first, state.EditedTrackId);
 
@@ -347,7 +333,7 @@ public class SessionSceneTests
     {
         var state = new SessionState();
         state.Edit();
-        var first = First(state);
+        var first = TrackId(state, 0);
         state.AddPreset(Crane(), new Vector3(10f, 5f, 20f));
 
         Assert.True(state.Undo());
@@ -361,8 +347,8 @@ public class SessionSceneTests
     [Fact]
     public void HidingSeveralSkipsTheEditedTrack()
     {
-        var state = Editing();
-        var first = First(state);
+        var state = EditingThreePoints();
+        var first = TrackId(state, 0);
         state.AddTrack();
         var second = state.EditedTrackId;
 
@@ -374,7 +360,7 @@ public class SessionSceneTests
     [Fact]
     public void DeletingSeveralIsOneUndoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddTrack();
         state.AddTrack();
         var ids = state.Scene.Tracks.Select(t => t.Id).ToArray();

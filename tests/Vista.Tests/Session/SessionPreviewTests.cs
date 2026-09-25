@@ -4,27 +4,16 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionPreviewTests
 {
-    // Editing; three points at x = 0, 10, 20 at 2 yalms per second: a 10 s shot.
-    private static SessionState Editing()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
-        return state;
-    }
-
     [Fact]
     public void PlayInEditPreviewsFromTheScrubHeadAndStaysInEdit()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Transport.ScrubTo(4.0);
 
         Assert.Equal(PlayOutcome.Previewed, state.Play());
@@ -47,7 +36,7 @@ public class SessionPreviewTests
         double start
     )
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.ChangeTrack(t => TrackEditing.SetDirection(t, direction));
         state.Transport.ScrubTo(finish);
 
@@ -59,7 +48,7 @@ public class SessionPreviewTests
     [Fact]
     public void RestartInEditPreviewsFromTheBeginning()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Transport.ScrubTo(6.0);
 
         Assert.Equal(PlayOutcome.Previewed, state.Restart());
@@ -71,7 +60,7 @@ public class SessionPreviewTests
     [Fact]
     public void StopKeepsTheScrubHeadWhereThePreviewWas()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Play();
         state.Transport.AdvancePreview(3f);
 
@@ -85,7 +74,7 @@ public class SessionPreviewTests
     [Fact]
     public void ATrackThatDoesNotLoopStopsAtTheEndAndALoopingOneCarriesOn()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Play();
         Assert.NotNull(state.Transport.AdvancePreview(15f));
         Assert.False(state.Transport.Previewing);
@@ -101,7 +90,7 @@ public class SessionPreviewTests
     [Fact]
     public void EditsStopThePreview()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
 
         state.Play();
         state.AddToEnd(Point(30f));
@@ -132,7 +121,7 @@ public class SessionPreviewTests
     [Fact]
     public void SwitchingTracksAndScrubbingStopThePreview()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var first = state.EditedTrackId;
         state.AddTrack();
         state.SwitchTrack(first);
@@ -155,7 +144,7 @@ public class SessionPreviewTests
     [Fact]
     public void ReselectingTheEditedTrackKeepsThePreviewButSwitchingAwayStopsIt()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var first = state.EditedTrackId;
         state.AddTrack();
         state.SwitchTrack(first);
@@ -174,7 +163,7 @@ public class SessionPreviewTests
     [Fact]
     public void MovingTheAnchorStopsThePreview()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
 
         state.Play();
         Assert.Null(state.Selection.SelectSceneAnchor());
@@ -195,7 +184,7 @@ public class SessionPreviewTests
     [Fact]
     public void APreviewRecordsNoUndoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Play();
         state.Transport.AdvancePreview(15f);
 
@@ -206,7 +195,7 @@ public class SessionPreviewTests
     [Fact]
     public void LeavingEditEndsThePreview()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToPlaylist([state.EditedTrackId]);
         state.Play();
 

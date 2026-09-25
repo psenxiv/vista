@@ -1,9 +1,9 @@
 using System.Numerics;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Playback.PlaybackFixtures;
 
 namespace Vista.Tests.Tracks.Playback;
 
@@ -280,21 +280,12 @@ public class PlaylistPlaybackTests
     }
 
     // A single point at the origin, held 1 s, watching Guard with heavy smoothing.
-    private static Track Watch() =>
-        TrackEditing.SetHold(TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)), 0, 1f) with
-        {
-            TargetName = "Guard",
-            Smoothing = 1f,
-        };
-
-    private static void GuardAt(NearbyCharacters characters, float x) =>
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
+    private static Track Watch() => WatchingGuard(smoothing: 1f, hold: 1f);
 
     [Fact]
     public void ACutOrASeekStartsTheSmoothingAfresh()
     {
-        var characters = new NearbyCharacters();
-        GuardAt(characters, 0f);
+        var characters = GuardAt(0f);
         var playback = new PlaylistPlayback([Item(Watch()), Item(Watch())], targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value, 3);
 
@@ -313,8 +304,7 @@ public class PlaylistPlaybackTests
     [Fact]
     public void AWrapStartsTheSmoothingAfresh()
     {
-        var characters = new NearbyCharacters();
-        GuardAt(characters, 0f);
+        var characters = GuardAt(0f);
         var playback = new PlaylistPlayback([Item(Watch())], loops: true, targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value, 3);
 
@@ -329,13 +319,8 @@ public class PlaylistPlaybackTests
     [Fact]
     public void AZeroLengthEntryStartsTheSmoothingAfresh()
     {
-        var characters = new NearbyCharacters();
-        GuardAt(characters, 0f);
-        var zero = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f)) with
-        {
-            TargetName = "Guard",
-            Smoothing = 1f,
-        };
+        var characters = GuardAt(0f);
+        var zero = WatchingGuard(smoothing: 1f);
         var playback = new PlaylistPlayback([Item(Watch()), Item(zero), Item(Watch())], targets: characters);
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(0.1f)!.Value, 3);
 

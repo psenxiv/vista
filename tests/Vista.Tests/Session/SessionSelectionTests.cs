@@ -6,6 +6,7 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
@@ -25,10 +26,6 @@ public class SessionSelectionTests
         state.AddToPlaylist(state.Scene.Tracks.Select(t => t.Id).ToArray());
         return state;
     }
-
-    private static Guid Track(SessionState state, int index) => state.Scene.Tracks[index].Id;
-
-    private static Guid Entry(SessionState state, int index) => state.Scene.Playlist[index].Id;
 
     [Fact]
     public void CtrlClickingPointsSelectsSeveralAndClearsTheTimingSelection()
@@ -63,11 +60,11 @@ public class SessionSelectionTests
         state.Selection.Select(0);
         state.Selection.ClickPoint(1, RowClick.Toggle);
 
-        Assert.Null(state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle));
-        Assert.Null(state.Selection.ClickEntry(Entry(state, 0), RowClick.Range));
+        Assert.Null(state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle));
+        Assert.Null(state.Selection.ClickEntry(EntryId(state, 0), RowClick.Range));
 
         Assert.Equal([0, 1], state.Selection.Points);
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
         Assert.Empty(state.Selection.Entries);
     }
 
@@ -77,51 +74,51 @@ public class SessionSelectionTests
         var state = Editing();
         state.Selection.Select(2);
 
-        Assert.Null(state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle));
+        Assert.Null(state.Selection.ClickTrack(TrackId(state, 2), RowClick.Toggle));
 
         Assert.Empty(state.Selection.Points);
-        Assert.Equal([Track(state, 0), Track(state, 2)], state.Selection.Tracks);
-        Assert.Equal(Track(state, 0), state.EditedTrackId);
+        Assert.Equal([TrackId(state, 0), TrackId(state, 2)], state.Selection.Tracks);
+        Assert.Equal(TrackId(state, 0), state.EditedTrackId);
     }
 
     [Fact]
     public void TwoTracksBlockCtrlClickingAPointOrAnEntry()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
 
         state.Selection.ClickPoint(0, RowClick.Toggle);
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Toggle);
 
         Assert.Empty(state.Selection.Points);
         Assert.Empty(state.Selection.Entries);
-        Assert.Equal([Track(state, 0), Track(state, 1)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0), TrackId(state, 1)], state.Selection.Tracks);
     }
 
     [Fact]
     public void TwoEntriesBlockCtrlClickingAPointOrATrack()
     {
         var state = Editing();
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Plain);
-        state.Selection.ClickEntry(Entry(state, 2), RowClick.Toggle);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Plain);
+        state.Selection.ClickEntry(EntryId(state, 2), RowClick.Toggle);
 
         state.Selection.ClickPoint(0, RowClick.Toggle);
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
 
-        Assert.Equal([Entry(state, 0), Entry(state, 2)], state.Selection.Entries);
+        Assert.Equal([EntryId(state, 0), EntryId(state, 2)], state.Selection.Entries);
         Assert.Empty(state.Selection.Points);
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
     }
 
     [Fact]
     public void CtrlClickingTheEditedTrackLeavesItSelected()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
 
-        state.Selection.ClickTrack(Track(state, 0), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 0), RowClick.Toggle);
 
-        Assert.Equal([Track(state, 0), Track(state, 1)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0), TrackId(state, 1)], state.Selection.Tracks);
     }
 
     [Fact]
@@ -130,7 +127,7 @@ public class SessionSelectionTests
         var state = Editing();
         state.Selection.Select(1);
 
-        state.Selection.ClickTrack(Track(state, 0), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 0), RowClick.Toggle);
 
         Assert.Equal([1], state.Selection.Points);
     }
@@ -151,37 +148,37 @@ public class SessionSelectionTests
     public void ShiftClickingAnEntryAfterCtrlClickingTheLastOneOffStartsAfresh()
     {
         var state = Editing();
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Plain);
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Plain);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Toggle);
 
-        state.Selection.ClickEntry(Entry(state, 2), RowClick.Range);
+        state.Selection.ClickEntry(EntryId(state, 2), RowClick.Range);
 
-        Assert.Equal([Entry(state, 2)], state.Selection.Entries);
+        Assert.Equal([EntryId(state, 2)], state.Selection.Entries);
     }
 
     [Fact]
     public void ShiftClickingATrackRangesFromTheEditedOneOnceTheTracksWereCleared()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
         state.Selection.Select(0);
 
-        state.Selection.ClickTrack(Track(state, 2), RowClick.Range);
+        state.Selection.ClickTrack(TrackId(state, 2), RowClick.Range);
 
-        Assert.Equal([Track(state, 0), Track(state, 1), Track(state, 2)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0), TrackId(state, 1), TrackId(state, 2)], state.Selection.Tracks);
     }
 
     [Fact]
     public void APlainClickOnATrackEditsItAndClearsTheRest()
     {
         var state = Editing();
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Plain);
-        state.Selection.ClickEntry(Entry(state, 1), RowClick.Toggle);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Plain);
+        state.Selection.ClickEntry(EntryId(state, 1), RowClick.Toggle);
 
-        Assert.Null(state.Selection.ClickTrack(Track(state, 1), RowClick.Plain));
+        Assert.Null(state.Selection.ClickTrack(TrackId(state, 1), RowClick.Plain));
 
-        Assert.Equal(Track(state, 1), state.EditedTrackId);
-        Assert.Equal([Track(state, 1)], state.Selection.Tracks);
+        Assert.Equal(TrackId(state, 1), state.EditedTrackId);
+        Assert.Equal([TrackId(state, 1)], state.Selection.Tracks);
         Assert.Empty(state.Selection.Entries);
     }
 
@@ -201,24 +198,24 @@ public class SessionSelectionTests
     public void APlainClickOnAPointSelectsItOverTwoTracks()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
 
         state.Selection.ClickPoint(2, RowClick.Plain);
 
         Assert.Equal([2], state.Selection.Points);
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
     }
 
     [Fact]
     public void APlainClickOnTheEditedTrackSelectsOnlyIt()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
 
-        Assert.Null(state.Selection.ClickTrack(Track(state, 0), RowClick.Plain));
+        Assert.Null(state.Selection.ClickTrack(TrackId(state, 0), RowClick.Plain));
 
-        Assert.Equal(Track(state, 0), state.EditedTrackId);
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal(TrackId(state, 0), state.EditedTrackId);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
     }
 
     [Fact]
@@ -237,21 +234,21 @@ public class SessionSelectionTests
         state.Selection.Select(0);
         state.Selection.ClickPoint(1, RowClick.Toggle);
 
-        Assert.Null(state.Selection.ClickEntry(Entry(state, 1), RowClick.Plain));
+        Assert.Null(state.Selection.ClickEntry(EntryId(state, 1), RowClick.Plain));
 
         Assert.Empty(state.Selection.Points);
-        Assert.Equal([Entry(state, 1)], state.Selection.Entries);
+        Assert.Equal([EntryId(state, 1)], state.Selection.Entries);
     }
 
     [Fact]
     public void SelectingNothingClearsEveryKind()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 2), RowClick.Toggle);
 
         state.Selection.Select(null);
 
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
     }
 
     [Fact]
@@ -260,7 +257,7 @@ public class SessionSelectionTests
         var state = Editing();
         Assert.Null(state.Selection.SelectSceneAnchor());
 
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Toggle);
 
         Assert.Null(state.Selection.Anchor);
     }
@@ -276,11 +273,11 @@ public class SessionSelectionTests
 
         Assert.Equal(
             "Tracks can only be selected while editing.",
-            state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle)
+            state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle)
         );
         Assert.Equal(
             "Playlist entries can only be selected while editing.",
-            state.Selection.ClickEntry(Entry(state, 0), RowClick.Toggle)
+            state.Selection.ClickEntry(EntryId(state, 0), RowClick.Toggle)
         );
         state.Selection.SelectKey(2);
         state.Selection.SelectLeg(2);
@@ -374,7 +371,7 @@ public class SessionSelectionTests
     public void MovingPointsToAHiddenTrackShowsIt()
     {
         var state = Editing();
-        var hidden = Track(state, 1);
+        var hidden = TrackId(state, 1);
         state.SetTracksHidden([hidden], true);
 
         Assert.Null(state.MovePointsTo([0], hidden));
@@ -391,7 +388,7 @@ public class SessionSelectionTests
         state.Selection.Select(0);
         state.Selection.ClickPoint(2, RowClick.Toggle);
 
-        Assert.Null(state.MovePointsTo(state.Selection.Points, Track(state, 2)));
+        Assert.Null(state.MovePointsTo(state.Selection.Points, TrackId(state, 2)));
         Assert.True(state.Undo());
 
         Assert.Equal([0, 2], state.Selection.Points);
@@ -402,11 +399,11 @@ public class SessionSelectionTests
     {
         var state = Editing();
         var first = state.EditedTrackId;
-        state.SwitchTrack(Track(state, 1));
+        state.SwitchTrack(TrackId(state, 1));
         state.SetAim(AimMode.FollowTarget, new ControlPoint(Vector3.Zero, 0f, 0f, 1f));
         state.SwitchTrack(first);
 
-        Assert.Equal(TrackEditing.FollowHasOnePoint, state.MovePointsTo([0], Track(state, 1)));
+        Assert.Equal(TrackEditing.FollowHasOnePoint, state.MovePointsTo([0], TrackId(state, 1)));
         Assert.Equal(first, state.EditedTrackId);
     }
 
@@ -414,9 +411,9 @@ public class SessionSelectionTests
     public void GoingLiveDropsGroupsButKeepsOnePoint()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
         state.Cue();
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
 
         state.Edit();
         state.Selection.Select(2);
@@ -440,25 +437,25 @@ public class SessionSelectionTests
     public void DeletedTracksAndEntriesLeaveTheSelection()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
-        state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle);
-        var gone = Track(state, 2);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 2), RowClick.Toggle);
+        var gone = TrackId(state, 2);
 
         Assert.Null(state.DeleteTracks([gone]));
 
-        Assert.Equal([Track(state, 0), Track(state, 1)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0), TrackId(state, 1)], state.Selection.Tracks);
     }
 
     [Fact]
     public void RemovedEntriesLeaveTheSelection()
     {
         var state = Editing();
-        state.Selection.ClickEntry(Entry(state, 0), RowClick.Plain);
-        state.Selection.ClickEntry(Entry(state, 1), RowClick.Toggle);
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Plain);
+        state.Selection.ClickEntry(EntryId(state, 1), RowClick.Toggle);
 
-        Assert.Null(state.RemoveFromPlaylist([Entry(state, 0)]));
+        Assert.Null(state.RemoveFromPlaylist([EntryId(state, 0)]));
 
-        Assert.Equal([Entry(state, 0)], state.Selection.Entries);
+        Assert.Equal([EntryId(state, 0)], state.Selection.Entries);
     }
 
     [Fact]
@@ -477,12 +474,12 @@ public class SessionSelectionTests
     public void SelectingAPointKeyClearsATrackSelection()
     {
         var state = Editing();
-        state.Selection.ClickTrack(Track(state, 1), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
 
         state.Selection.SelectKey(TrackEditing.PointKey(state.StoredTrack, 0));
 
         Assert.Equal([0], state.Selection.Points);
-        Assert.Equal([Track(state, 0)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
     }
 
     [Fact]
@@ -530,12 +527,12 @@ public class SessionSelectionTests
         var first = state.EditedTrackId;
         state.AddTrack();
         state.SwitchTrack(first);
-        state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 2), RowClick.Toggle);
 
-        state.Selection.ClickTrack(Track(state, 3), RowClick.Range);
+        state.Selection.ClickTrack(TrackId(state, 3), RowClick.Range);
 
         // The range runs from Track 3, the last clicked, not from the edited Track 1, so Track 2 stays out.
-        Assert.Equal([Track(state, 0), Track(state, 2), Track(state, 3)], state.Selection.Tracks);
+        Assert.Equal([TrackId(state, 0), TrackId(state, 2), TrackId(state, 3)], state.Selection.Tracks);
     }
 
     [Fact]
@@ -574,10 +571,10 @@ public class SessionSelectionTests
         var first = state.EditedTrackId;
         state.AddTrack();
         state.SwitchTrack(first);
-        state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle);
-        state.Selection.ClickTrack(Track(state, 2), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 2), RowClick.Toggle);
+        state.Selection.ClickTrack(TrackId(state, 2), RowClick.Toggle);
 
-        state.Selection.ClickTrack(Track(state, 3), RowClick.Range);
+        state.Selection.ClickTrack(TrackId(state, 3), RowClick.Range);
 
         Assert.Equal(state.Scene.Tracks.Select(t => t.Id), state.Selection.Tracks);
     }
@@ -588,7 +585,7 @@ public class SessionSelectionTests
         var state = Editing();
         state.Selection.Select(0);
 
-        Assert.Null(state.MovePointsTo([2], Track(state, 1)));
+        Assert.Null(state.MovePointsTo([2], TrackId(state, 1)));
         Assert.True(state.Undo());
 
         Assert.Equal([2], state.Selection.Points);
@@ -599,7 +596,7 @@ public class SessionSelectionTests
     {
         var state = Editing();
         var first = state.EditedTrackId;
-        state.SwitchTrack(Track(state, 1));
+        state.SwitchTrack(TrackId(state, 1));
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(10f));
         state.SwitchTrack(first);
@@ -613,9 +610,9 @@ public class SessionSelectionTests
     {
         var state = TwoWithPoints();
 
-        Assert.Null(state.Selection.ClickMarker(new TrackMarker(Track(state, 1), 1, null), RowClick.Plain));
+        Assert.Null(state.Selection.ClickMarker(new TrackMarker(TrackId(state, 1), 1, null), RowClick.Plain));
 
-        Assert.Equal(Track(state, 1), state.EditedTrackId);
+        Assert.Equal(TrackId(state, 1), state.EditedTrackId);
         Assert.Equal([1], state.Selection.Points);
     }
 
@@ -625,7 +622,7 @@ public class SessionSelectionTests
         var state = TwoWithPoints();
         state.Selection.Select(0);
 
-        state.Selection.ClickMarker(new TrackMarker(Track(state, 0), 2, null), RowClick.Plain);
+        state.Selection.ClickMarker(new TrackMarker(TrackId(state, 0), 2, null), RowClick.Plain);
 
         Assert.Equal([2], state.Selection.Points);
     }
@@ -636,7 +633,7 @@ public class SessionSelectionTests
     public void APlainClickOnAnAnchorOrTheLookAtPointSelectsIt()
     {
         var state = TwoWithPoints();
-        var first = Track(state, 0);
+        var first = TrackId(state, 0);
 
         state.Selection.ClickMarker(new TrackMarker(Guid.Empty, -1, null, MarkerKind.SceneAnchor), RowClick.Plain);
         Assert.Equal(AnchorKind.Scene, state.Selection.Anchor);
@@ -651,7 +648,7 @@ public class SessionSelectionTests
         Assert.Equal(
             "A track's anchor is placed with its first point.",
             state.Selection.ClickMarker(
-                new TrackMarker(Track(state, 2), -1, null, MarkerKind.TrackAnchor),
+                new TrackMarker(TrackId(state, 2), -1, null, MarkerKind.TrackAnchor),
                 RowClick.Plain
             )
         );
@@ -674,13 +671,13 @@ public class SessionSelectionTests
     public void AModifiedClickActsOnlyOnTheEditedTracksPoints()
     {
         var state = TwoWithPoints();
-        var first = Track(state, 0);
+        var first = TrackId(state, 0);
         state.Selection.Select(0);
 
         state.Selection.ClickMarker(new TrackMarker(first, 1, null), RowClick.Toggle);
         Assert.Equal([0, 1], state.Selection.Points);
 
-        Assert.Null(state.Selection.ClickMarker(new TrackMarker(Track(state, 1), 0, null), RowClick.Toggle));
+        Assert.Null(state.Selection.ClickMarker(new TrackMarker(TrackId(state, 1), 0, null), RowClick.Toggle));
         state.Selection.ClickMarker(null, RowClick.Range);
 
         Assert.Equal(first, state.EditedTrackId);

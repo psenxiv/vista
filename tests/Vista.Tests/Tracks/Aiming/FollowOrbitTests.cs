@@ -8,8 +8,6 @@ namespace Vista.Tests.Tracks.Aiming;
 
 public class FollowOrbitTests
 {
-    private const float Quarter = MathF.PI / 2f;
-
     // Five yalms behind and two up, looking the way the character faces (yaw 0).
     private static readonly ControlPoint Behind = new(new Vector3(0f, 2f, 5f), 0f, 0.1f, 1f, 0.2f);
 
@@ -26,18 +24,18 @@ public class FollowOrbitTests
     [Fact]
     public void AnglesRunRoundToTheRightThenInFrontAndStayPositive()
     {
-        Assert.Equal(Quarter, FollowOrbit.Of(Behind with { Position = new Vector3(5f, 0f, 0f) }).Angle, 4);
+        Assert.Equal(QuarterTurn, FollowOrbit.Of(Behind with { Position = new Vector3(5f, 0f, 0f) }).Angle, 4);
         Assert.Equal(MathF.PI, FollowOrbit.Of(Behind with { Position = new Vector3(0f, 0f, -5f) }).Angle, 4);
-        Assert.Equal(3f * Quarter, FollowOrbit.Of(Behind with { Position = new Vector3(-5f, 0f, 0f) }).Angle, 4);
+        Assert.Equal(3f * QuarterTurn, FollowOrbit.Of(Behind with { Position = new Vector3(-5f, 0f, 0f) }).Angle, 4);
     }
 
     [Fact]
     public void ChangingTheAngleSwingsThePointAndTurnsItsYaw()
     {
-        var moved = FollowOrbit.With(Behind, new Orbit(5f, Quarter, 2f));
+        var moved = FollowOrbit.With(Behind, new Orbit(5f, QuarterTurn, 2f));
 
         Near(new Vector3(5f, 2f, 0f), moved.Position, 1e-4f);
-        Assert.Equal(Quarter, moved.Yaw, 4);
+        Assert.Equal(QuarterTurn, moved.Yaw, 4);
         Assert.Equal(Behind.Pitch, moved.Pitch);
         Assert.Equal(Behind.Roll, moved.Roll);
         Assert.Equal(Behind.Fov, moved.Fov);

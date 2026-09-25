@@ -11,10 +11,6 @@ public class SessionAimTests
     private static readonly Vector3 A = new(0f, 0f, -10f);
     private static readonly Vector3 B = new(10f, 0f, -10f);
 
-    // Puts Guard's aim point, 1.3 above the feet, at <paramref name="aim"/>.
-    private static void GuardAt(NearbyCharacters characters, Vector3 aim) =>
-        characters.Update([new LoadedCharacter("Guard", null, aim - new Vector3(0f, 1.3f, 0f))]);
-
     // Editing a 2 s track, x = 0 to 10, watching Guard with heavy smoothing; Guard aimed at A.
     private static (SessionState State, NearbyCharacters Characters) Watching()
     {
@@ -53,8 +49,7 @@ public class SessionAimTests
     {
         var (state, characters) = Watching();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.Cue();
-        state.Play();
+        GoLive(state);
         AimsAt(A, state.Director.Tick(1f / 60f)!.Value, 3);
 
         GuardAt(characters, B);

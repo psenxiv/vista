@@ -13,8 +13,10 @@ public class LevelUpTests
     // Facing at yaw 0 (along -z) pitched up by angle a, turning over the top past a = π/2: (0, sin a, -cos a).
     private static Vector3 OverTheTop(double a) => new(0f, (float)Math.Sin(a), -(float)Math.Cos(a));
 
-    // The largest angle, in degrees, up turns between samples a millisecond apart. Each test's facing turns 90° a second,
-    // 0.09° a millisecond, and keeping level may turn up at most 10 times that (Fixtures.SpinPerTurn), 0.9°.
+    // Each test's facing turns 90° a second, 0.09° a millisecond, and keeping level may turn up at most SpinPerTurn (10) times that, 0.9°.
+    private const float MostStepDegrees = 0.09f * SpinPerTurn;
+
+    // The largest angle, in degrees, up turns between samples a millisecond apart.
     private static float LargestStep(LevelUp level, Func<double, Vector3> facing, double duration)
     {
         var largest = 0f;
@@ -72,7 +74,7 @@ public class LevelUpTests
 
         Near(-Vector3.UnitY, level.At(2.0, OverTheTop(Math.PI)), 1e-6f);
         Near(Vector3.UnitY, level.At(4.0, OverTheTop(2 * Math.PI)), 1e-6f);
-        Assert.InRange(LargestStep(level, t => OverTheTop(t * Math.PI / 2), 4.0), 0f, 0.9f);
+        Assert.InRange(LargestStep(level, t => OverTheTop(t * Math.PI / 2), 4.0), 0f, MostStepDegrees);
     }
 
     [Fact]
@@ -97,7 +99,7 @@ public class LevelUpTests
         var level = LevelUp.Along(t => Crane(t), 4f, allowInverted: true, Vector3.UnitY);
 
         Near(Vector3.UnitY, level.At(4.0, Crane(4.0)), 1e-6f);
-        Assert.InRange(LargestStep(level, Crane, 4.0), 0f, 0.9f);
+        Assert.InRange(LargestStep(level, Crane, 4.0), 0f, MostStepDegrees);
     }
 
     [Fact]
@@ -112,7 +114,7 @@ public class LevelUpTests
         Assert.Equal(1f, MathF.Abs(middle.X), 1e-3f);
         Assert.Equal(0f, middle.Z, 1e-3f);
         Near(Vector3.UnitY, level.At(2.0, OverTheTop(Math.PI)), 1e-6f);
-        Assert.InRange(LargestStep(level, t => OverTheTop(t * Math.PI / 2), 2.0), 0f, 0.9f);
+        Assert.InRange(LargestStep(level, t => OverTheTop(t * Math.PI / 2), 2.0), 0f, MostStepDegrees);
     }
 
     [Fact]

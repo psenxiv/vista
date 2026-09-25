@@ -19,9 +19,12 @@ public class SceneGeometryTests
             Anchor = new Anchor(new Vector3(100f, 2f, 50f), 1f),
             AnchorPlaced = true,
         };
-        var track = scene.Tracks[0] with { Anchor = new Anchor(new Vector3(5f, 0f, 0f), 0.5f), AnchorPlaced = true };
-        foreach (var x in new[] { 0f, 10f, 20f })
-            track = TrackEditing.Append(track, Point(x));
+        var track = TrackThrough([Point(0f), Point(10f), Point(20f)]) with
+        {
+            Id = scene.Tracks[0].Id,
+            Anchor = new Anchor(new Vector3(5f, 0f, 0f), 0.5f),
+            AnchorPlaced = true,
+        };
         return SceneEditing.Replace(scene, track);
     }
 

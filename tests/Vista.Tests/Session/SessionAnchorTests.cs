@@ -4,6 +4,7 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
@@ -12,21 +13,10 @@ public class SessionAnchorTests
     // These tests put every point at head height, so y defaults to 5 here.
     private static ControlPoint Point(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
 
-    // Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 (y = 5).
-    private static SessionState Editing()
-    {
-        var state = new SessionState(_ => 1f);
-        state.Edit();
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
-        state.AddToEnd(Point(30f));
-        return state;
-    }
-
     [Fact]
     public void TheFirstPointPlacesBothAnchorsOnTheGroundUnderIt()
     {
-        var state = Editing();
+        var state = EditingOverGround();
 
         Assert.True(state.Scene.AnchorPlaced);
         Assert.Equal(new Anchor(new Vector3(10f, 1f, 0f), 0f), state.Scene.Anchor);
@@ -39,7 +29,7 @@ public class SessionAnchorTests
     [Fact]
     public void ALaterTracksAnchorIsPlacedUnderItsOwnFirstPoint()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.AddTrack();
         state.AddToEnd(Point(50f, 7f, 5f));
 
@@ -51,7 +41,7 @@ public class SessionAnchorTests
     [Fact]
     public void WorldOfKeepsTheSameInstanceUntilSomethingChanges()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         Assert.Same(state.Track, state.Track);
         Assert.Same(state.World.WorldOf(state.Scene.Tracks[0]), state.Track);
     }
@@ -59,7 +49,7 @@ public class SessionAnchorTests
     [Fact]
     public void SelectingAnAnchorClearsThePointAndSelectingAPointClearsTheAnchor()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.Select(1);
 
         Assert.Null(state.Selection.SelectSceneAnchor());
@@ -78,7 +68,7 @@ public class SessionAnchorTests
     [Fact]
     public void SelectingAnotherTracksAnchorSwitchesToIt()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         var first = state.EditedTrackId;
         state.AddTrack();
         state.AddToEnd(Point(40f));
@@ -101,7 +91,7 @@ public class SessionAnchorTests
     [Fact]
     public void AnchorsAreSelectedOnlyWhileEditingOnATrackThatExists()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         Assert.Equal("There is no such track.", state.Selection.SelectTrackAnchor(Guid.NewGuid()));
 
         state.Release();
@@ -117,7 +107,7 @@ public class SessionAnchorTests
     [Fact]
     public void SelectingAnAnchorEndsALiveEdit()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.BeginLiveEdit();
         Assert.Null(state.PreviewPoint(1, Point(25f)));
 
@@ -133,7 +123,7 @@ public class SessionAnchorTests
     [Fact]
     public void UndoingAnAnchorDragKeepsTheAnchorSelected()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(12f, 1f, 0f), 0f), carry: true);
@@ -147,7 +137,7 @@ public class SessionAnchorTests
     [Fact]
     public void MovingTheSceneAnchorCarriesThePointsAsOneUndoStep()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
         var before = state.Track.Points[2].Position;
 
@@ -163,7 +153,7 @@ public class SessionAnchorTests
     [Fact]
     public void MovingAnAnchorAloneLeavesThePointsInTheWorld()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
         var before = state.Track.Points.Select(p => p.Position).ToList();
 
@@ -179,7 +169,7 @@ public class SessionAnchorTests
     [Fact]
     public void APointReplacedInTheWorldLandsWhereItWasPut()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(3f, 0f, -2f), 0.9f), carry: true);
@@ -195,7 +185,7 @@ public class SessionAnchorTests
     [Fact]
     public void AnAnchorDragIsOneUndoStepAndADragBackIsNone()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
         var start = state.Scene.Anchor;
 
@@ -272,7 +262,7 @@ public class SessionAnchorTests
     [Fact]
     public void ClearKeepsTheAnchorSoTheNextPointIsNotReplaced()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(0f, 0f, 0f), 0f), carry: false);
@@ -289,7 +279,7 @@ public class SessionAnchorTests
     [Fact]
     public void ADuplicateSitsOnTheOriginal()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.DuplicateTrack(state.EditedTrackId);
 
         for (var i = 0; i < 3; i++)
@@ -316,7 +306,7 @@ public class SessionAnchorTests
     [Fact]
     public void UndoingALaterTracksFirstPointDropsItsAnchorSelection()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.AddTrack();
         state.AddToEnd(Point(40f));
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
@@ -330,7 +320,7 @@ public class SessionAnchorTests
     [Fact]
     public void MovingAnAnchorToWhereItIsRecordsNoStep()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
 
         state.BeginLiveEdit();
@@ -344,7 +334,7 @@ public class SessionAnchorTests
     [Fact]
     public void DeletingAnotherTrackLeavesTheEditedTrackWhereItIs()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         var first = state.EditedTrackId;
         state.AddTrack();
         state.AddToEnd(Point(40f));
@@ -363,10 +353,10 @@ public class SessionAnchorTests
             Near(before[i], state.Track.Points[i].Position, 1e-4f);
     }
 
-    // Editing() with both anchors moved and turned by different, non-zero yaws.
+    // EditingOverGround() with both anchors moved and turned by different, non-zero yaws.
     private static SessionState EditingWithTurnedAnchors()
     {
-        var state = Editing();
+        var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
         state.BeginLiveEdit();
         state.PreviewAnchor(new Anchor(new Vector3(100f, 1f, 20f), 0.7f), carry: true);

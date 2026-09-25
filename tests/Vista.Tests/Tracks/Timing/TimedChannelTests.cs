@@ -1,5 +1,6 @@
 using Vista.Core.Tracks.Timing;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks.Timing;
 
@@ -7,13 +8,6 @@ public class TimedChannelTests
 {
     private static TimedChannel Channel(float[] values, float[] arrive, float[]? depart = null) =>
         new(values, arrive, depart ?? arrive);
-
-    // The slope at t from either side, over a millisecond.
-    private static (float Left, float Right) Slopes(TimedChannel channel, float t)
-    {
-        const float h = 1e-3f;
-        return ((channel.At(t) - channel.At(t - h)) / h, (channel.At(t + h) - channel.At(t)) / h);
-    }
 
     [Fact]
     public void EveryPointIsHitAtItsTime()
@@ -31,7 +25,7 @@ public class TimedChannelTests
         // Legs of 2 s and 1 s rising 10 and 20: the slope at the middle is (10/2·1 + 20/1·2) / 3 = 15 per second, from both sides.
         var channel = Channel([0f, 10f, 30f], [0f, 2f, 3f]);
 
-        var (left, right) = Slopes(channel, 2f);
+        var (left, right) = Slopes(channel.At, 2.0, 1e-3);
 
         Assert.Equal(15f, left, 0.05f);
         Assert.Equal(15f, right, 0.05f);
@@ -52,8 +46,8 @@ public class TimedChannelTests
         var channel = Channel([0f, 10f, 20f], [0f, 2f, 5f], [0f, 3f, 5f]);
 
         Assert.Equal(10f, channel.At(2.5), 1e-5f);
-        Assert.Equal(0f, Slopes(channel, 2f).Left, 0.05f);
-        Assert.Equal(0f, Slopes(channel, 3f).Right, 0.05f);
+        Assert.Equal(0f, Slopes(channel.At, 2.0, 1e-3).Left, 0.05f);
+        Assert.Equal(0f, Slopes(channel.At, 3.0, 1e-3).Right, 0.05f);
     }
 
     [Fact]

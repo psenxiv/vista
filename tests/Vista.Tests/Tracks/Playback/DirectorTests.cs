@@ -3,10 +3,10 @@ using CsCheck;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Playback.PlaybackFixtures;
 
 namespace Vista.Tests.Tracks.Playback;
 
@@ -290,48 +290,27 @@ public class DirectorTests
     [Fact]
     public void LiveWatchesACharacterTheDirectorWasGiven()
     {
-        var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, -1.3f, -10f))]);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with
-        {
-            TargetName = "Guard",
-        };
-        var director = new Director(characters);
-        director.GoLive(new TrackShot(track));
+        var director = new Director(GuardAt(0f));
+        director.GoLive(new TrackShot(WatchingGuard()));
 
-        var frame = director.Tick(1f / 60f)!.Value;
-
-        var look = Vector3.Normalize(frame.LookAt - frame.Position);
-        Assert.Equal(0f, look.X, 4);
-        Assert.Equal(0f, look.Y, 4);
-        Assert.Equal(-1f, look.Z, 4);
+        AimsAt(new Vector3(0f, 0f, -10f), director.Tick(1f / 60f)!.Value, 4);
     }
 
     [Fact]
     public void APausedLiveTickHoldsTheEasedAimAfterTheCharacterMoves()
     {
-        var characters = new NearbyCharacters();
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(0f, -1.3f, -10f))]);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with
-        {
-            TargetName = "Guard",
-            Smoothing = 1f,
-        };
+        var characters = GuardAt(0f);
         var director = new Director(characters);
-        director.GoLive(new TrackShot(track));
+        director.GoLive(new TrackShot(WatchingGuard(smoothing: 1f)));
         director.Tick(1f / 60f);
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(10f, -1.3f, -10f))]);
+        GuardAt(characters, 10f);
         var eased = director.Tick(0.5f)!.Value;
 
         director.Pause();
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(-20f, -1.3f, -10f))]);
+        GuardAt(characters, -20f);
         var held = director.Tick(1f / 60f)!.Value;
 
-        var want = Vector3.Normalize(eased.LookAt - eased.Position);
-        var got = Vector3.Normalize(held.LookAt - held.Position);
-        Assert.Equal(want.X, got.X, 4);
-        Assert.Equal(want.Y, got.Y, 4);
-        Assert.Equal(want.Z, got.Z, 4);
+        Near(Vector3.Normalize(eased.LookAt - eased.Position), Vector3.Normalize(held.LookAt - held.Position), 5e-5f);
     }
 
     // StraightTrack's control points sit at x = 0, 5 and 10 with two legs of 5 s, so the shot runs

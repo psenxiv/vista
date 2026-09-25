@@ -24,16 +24,6 @@ public sealed class SceneLibraryTests : IDisposable
 
     private void RenameFirstTrack(string name) => Assert.Null(state.RenameTrack(state.Scene.Tracks[0].Id, name));
 
-    private void GoLive()
-    {
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToPlaylist([state.Scene.Tracks[0].Id]);
-        state.Cue();
-        state.Play();
-        Assert.Equal(CameraMode.Live, state.Mode);
-    }
-
     private void Save(string scene, string trackName) => temp.Folder.SaveScene(scene, Named(trackName));
 
     [Fact]
@@ -132,7 +122,8 @@ public sealed class SceneLibraryTests : IDisposable
         Save("Dawn", "Crane");
         Save("Dusk", "Dolly");
         library.Open("Dawn");
-        GoLive();
+        LiveTwoPoints(state);
+        Assert.Equal(CameraMode.Live, state.Mode);
 
         Assert.Equal("A scene can't be loaded while Live.", library.Switch("Dusk"));
 
@@ -276,7 +267,8 @@ public sealed class SceneLibraryTests : IDisposable
         Save("Dawn", "Crane");
         Save("Dusk", "Dolly");
         library.Open("Dawn");
-        GoLive();
+        LiveTwoPoints(state);
+        Assert.Equal(CameraMode.Live, state.Mode);
 
         Assert.Equal("A scene can't be loaded while Live.", library.Delete());
 

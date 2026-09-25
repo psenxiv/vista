@@ -1,6 +1,7 @@
 using System.Numerics;
 using Vista.Core.Editing;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Editing;
 
@@ -27,10 +28,9 @@ public class EditLimitsTests
     [Fact]
     public void FovClampsToFiveToOneHundredAndTwentyDegrees()
     {
-        const float degree = MathF.PI / 180f;
-        Assert.Equal(5f * degree, EditLimits.Fov(1f * degree, 0.7f), 5);
-        Assert.Equal(120f * degree, EditLimits.Fov(200f * degree, 0.7f), 5);
-        Assert.Equal(90f * degree, EditLimits.Fov(90f * degree, 0.7f), 5);
+        Assert.Equal(5f * Deg, EditLimits.Fov(1f * Deg, 0.7f), 5);
+        Assert.Equal(120f * Deg, EditLimits.Fov(200f * Deg, 0.7f), 5);
+        Assert.Equal(90f * Deg, EditLimits.Fov(90f * Deg, 0.7f), 5);
     }
 
     [Theory]

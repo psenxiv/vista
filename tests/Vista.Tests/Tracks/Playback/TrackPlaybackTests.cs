@@ -5,6 +5,7 @@ using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Playback.PlaybackFixtures;
 
 namespace Vista.Tests.Tracks.Playback;
 
@@ -338,20 +339,11 @@ public class TrackPlaybackTests
         Assert.False(playback.IsFinished);
     }
 
-    private static void GuardAt(NearbyCharacters characters, float x) =>
-        characters.Update([new LoadedCharacter("Guard", null, new Vector3(x, -1.3f, -10f))]);
-
     [Fact]
     public void AWatchedCharacterIsAimedAtAndASeekOrRestartSnapsBackOntoThem()
     {
-        var characters = new NearbyCharacters();
-        GuardAt(characters, 0f);
-        var track = TrackEditing.Append(TrackEditing.Empty(AimMode.WatchTarget), Point(0f, 0f, 0f)) with
-        {
-            TargetName = "Guard",
-            Smoothing = 1f,
-        };
-        var playback = new TrackPlayback(track, characters);
+        var characters = GuardAt(0f);
+        var playback = new TrackPlayback(WatchingGuard(smoothing: 1f), characters);
 
         AimsAt(new Vector3(0f, 0f, -10f), playback.Advance(1f / 60f)!.Value, 3);
 

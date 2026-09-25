@@ -187,8 +187,7 @@ public class SceneJsonTests
     }
 
     // Two points 10 yalms apart, every value in range.
-    private static Track Plain() =>
-        TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), Point(10f));
+    private static Track Plain() => WithTwoPoints(TrackEditing.Empty());
 
     private static string SceneOf(Track track, int? loops = null) =>
         SceneJson.Write(new Scene([track], new HashSet<Guid>(), [new PlaylistEntry(Guid.NewGuid(), track.Id, loops)]));
@@ -306,7 +305,7 @@ public class SceneJsonTests
         AnyPathTrack,
         Gen.Select(Gen.Guid, AnyName, Gen.Enum<AimMode>(), Gen.Enum<PlaybackDirection>(), Gen.Bool),
         Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool, AnyPosition, Gen.Bool),
-        Gen.Select(AnyName.Null(), AnyName.Null(), Gen.Float[0f, TrackEditing.MaxAimHeight], Gen.Float[0f, 1f]),
+        Gen.Select(AnyName.Null(), AnyName.Null(), AnyTargetSettings),
         Gen.Select(Gen.Bool, Gen.Bool),
         (track, identity, places, target, follow) =>
         {
@@ -319,9 +318,7 @@ public class SceneJsonTests
                 track = TrackEditing.SetLookAt(track, lookAt);
             track = TrackEditing.SetDirection(track, direction);
             track = TrackEditing.SetLoop(track, loop);
-            track = TrackEditing.SetTarget(track, target.Item1, target.Item2);
-            track = TrackEditing.SetAimHeight(track, target.Item3);
-            track = TrackEditing.SetSmoothing(track, target.Item4);
+            track = WithTarget(track, target.Item1, target.Item2, target.Item3);
             track = TrackEditing.SetFollowTurns(track, follow.Item1);
             track = TrackEditing.SetFollowLooks(track, follow.Item2);
             return track with { Id = id, Name = name, Anchor = new Anchor(anchor, yaw), AnchorPlaced = anchorPlaced };

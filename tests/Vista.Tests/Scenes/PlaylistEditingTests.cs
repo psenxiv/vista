@@ -11,10 +11,7 @@ public class PlaylistEditingTests
     private static Scene TwoTracks()
     {
         var scene = SceneEditing.New();
-        scene = SceneEditing.Replace(
-            scene,
-            TrackEditing.Append(TrackEditing.Append(scene.Tracks[0], Point(0f)), Point(10f))
-        );
+        scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
         return SceneEditing.Add(scene).Scene;
     }
 

@@ -10,13 +10,8 @@ namespace Vista.Tests.Display;
 public class TurnHeatTests
 {
     // Recorded aim along x at 10 yalms a second, a point every second, looking level at the given yaws.
-    private static TrackEvaluator Turning(params float[] yaws)
-    {
-        var track = TrackEditing.Empty() with { Speed = 10f };
-        for (var i = 0; i < yaws.Length; i++)
-            track = TrackEditing.Append(track, Point(i * 10f, yaw: yaws[i]));
-        return new TrackEvaluator(track);
-    }
+    private static TrackEvaluator Turning(params float[] yaws) =>
+        new(TrackThrough(yaws.Select((yaw, i) => Point(i * 10f, yaw: yaw)), speed: 10f));
 
     [Fact]
     public void AnEvenTurnReadsAsItsAngularSpeed()
@@ -48,12 +43,7 @@ public class TurnHeatTests
     {
         // 30.05 yalms at a steady 10 a second is 3.005 s: ceil(3.005 × 30) = 91 steps of 0.33022 yalms each, the last one
         // too, rather than 90 of a thirtieth of a second and a 0.05-yalm sliver whose float noise would read as a whip.
-        var track = TrackEditing.Empty() with
-        {
-            Speed = 10f,
-        };
-        foreach (var x in new[] { 0f, 10f, 20f, 30.05f })
-            track = TrackEditing.Append(track, Point(x));
+        var track = TrackThrough([Point(0f), Point(10f), Point(20f), Point(30.05f)], speed: 10f);
         var samples = TurnHeat.Samples(new TrackEvaluator(track));
 
         Assert.Equal(92, samples.Count);
@@ -64,9 +54,7 @@ public class TurnHeatTests
     [Fact]
     public void AStraightPathReadsAsZero()
     {
-        var track = TrackEditing.Empty(AimMode.PathTangent) with { Speed = 10f };
-        foreach (var x in new[] { 0f, 10f, 20f })
-            track = TrackEditing.Append(track, Point(x));
+        var track = TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, 10f);
 
         Assert.All(TurnHeat.Samples(new TrackEvaluator(track)), s => Assert.Equal(0f, s.DegreesPerSecond, 1e-2f));
     }

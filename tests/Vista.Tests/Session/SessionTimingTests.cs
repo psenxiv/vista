@@ -1,31 +1,19 @@
 using System.Numerics;
 using Vista.Core.Editing;
-using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
 public class SessionTimingTests
 {
-    // Editing, three points at x = 0, 10, 20 with keys at 0, 5 and 10 s, nothing selected.
-    private static SessionState Editing()
-    {
-        var state = new SessionState();
-        state.Edit();
-        state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
-        return state;
-    }
-
     [Fact]
     public void SelectingAPointSelectsItsKeyAndAPointKeySelectsItsPoint()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         Assert.Equal(1, state.Selection.Key);
 
@@ -40,7 +28,7 @@ public class SessionTimingTests
     [Fact]
     public void SelectingAHoldEndLeavesThePointSelectionAlone()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
         state.Selection.Select(2);
         state.Selection.SelectKey(2);
@@ -51,7 +39,7 @@ public class SessionTimingTests
     [Fact]
     public void DeselectingAPointClearsItsKeyButNotALeg()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         state.Selection.Select(null);
         Assert.Null(state.Selection.Key);
@@ -64,7 +52,7 @@ public class SessionTimingTests
     [Fact]
     public void DeselectingKeepsASelectedHoldEnd()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f)));
 
         // The hold makes keys 0 and 1 for points 0 and 1, 2 for point 1's hold end, and 3 for point 2.
@@ -77,7 +65,7 @@ public class SessionTimingTests
     [Fact]
     public void AKeyOrLegPastTheEndSelectsNothing()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
 
         // Three points: keys 0 to 2 and legs 1 and 2.
@@ -92,7 +80,7 @@ public class SessionTimingTests
     [Fact]
     public void ATimingChangeKeepsTheSelectedKey()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
 
         Assert.Null(state.SetTrackSpeed(4f));
@@ -103,7 +91,7 @@ public class SessionTimingTests
     [Fact]
     public void UndoingToASelectionWithNoPointDropsThePointKey()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.AddToEnd(Point(30f)));
         state.Selection.Select(1);
 
@@ -116,7 +104,7 @@ public class SessionTimingTests
     [Fact]
     public void ALegSelectedBesideAPointStaysWhenThePointsDoNotChange()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(1);
         state.Selection.SelectLeg(2);
 
@@ -129,7 +117,7 @@ public class SessionTimingTests
     [Fact]
     public void ALegStaysSelectedWhenAnEditLeavesThePointsEqual()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.SelectLeg(2);
 
         Assert.Null(state.ChangeTrack(t => t with { Points = t.Points.ToList() }));
@@ -140,7 +128,7 @@ public class SessionTimingTests
     [Fact]
     public void APointEditClearsALegSelectedBesideSeveralPoints()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.Select(0);
         state.Selection.ClickPoint(1, RowClick.Toggle);
         state.Selection.SelectLeg(2);
@@ -153,7 +141,7 @@ public class SessionTimingTests
     [Fact]
     public void DeletingAPointClearsTheSelectedLeg()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.AddToEnd(Point(30f));
         state.Selection.SelectLeg(2);
 
@@ -164,7 +152,7 @@ public class SessionTimingTests
     [Fact]
     public void LegAndHoldFieldEditsKeepTheSelectedLeg()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.SelectLeg(2);
 
         Assert.Null(state.ChangeTrack(t => TrackEditing.SetLegDuration(t, 2, 8f)));
@@ -175,7 +163,7 @@ public class SessionTimingTests
     [Fact]
     public void EasingIsOneUndoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.SetEasing(1, Easing.EaseOut));
         Assert.Equal(Easing.EaseOut, LegEasing.Read(state.Track, 1));
         Assert.True(state.Undo());
@@ -185,7 +173,7 @@ public class SessionTimingTests
     [Fact]
     public void RemovingAHoldClearsTheTimingSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f));
         state.Selection.SelectKey(2);
         Assert.Null(state.RemoveHold(2));
@@ -196,7 +184,7 @@ public class SessionTimingTests
     [Fact]
     public void RemovingAHoldFromAPointKeyIsRefused()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var before = state.Track;
         Assert.Equal("Only a hold end can remove its hold.", state.RemoveHold(1));
         Assert.Same(before, state.Track);
@@ -205,7 +193,7 @@ public class SessionTimingTests
     [Fact]
     public void AKeyDragIsOneStepComputedFromTheStart()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         Assert.Null(state.PreviewKeyMove(1, 3f));
         Assert.Null(state.PreviewKeyMove(1, 4f));
@@ -221,7 +209,7 @@ public class SessionTimingTests
     [Fact]
     public void AKeyDragBackToTheStartIsNoStep()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         var before = state.Track;
         var start = state.World.Evaluator.Keys[1].Time;
         state.BeginLiveEdit();
@@ -237,7 +225,7 @@ public class SessionTimingTests
     [Fact]
     public void AnUnbrokenHandleDragKeepsBothSidesCollinearInTheGraph()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         Assert.Null(state.PreviewHandle(1, KeySide.Out, 3f));
         state.EndLiveEdit();
@@ -251,7 +239,7 @@ public class SessionTimingTests
     [Fact]
     public void AHandleDragKeepsItsShapeWhenTheTrackSpeedChanges()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BeginLiveEdit();
         state.PreviewHandle(1, KeySide.Out, 3f);
         state.EndLiveEdit();
@@ -263,7 +251,7 @@ public class SessionTimingTests
     [Fact]
     public void ABrokenHandleDragMovesOneSide()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.BreakHandles(1));
         state.BeginLiveEdit();
         state.PreviewHandle(1, KeySide.Out, 3f);
@@ -276,7 +264,7 @@ public class SessionTimingTests
     [Fact]
     public void UnifyGivesBothSidesTheChosenSidesSlope()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.BreakHandles(1);
         state.BeginLiveEdit();
         state.PreviewHandle(1, KeySide.Out, 3f);
@@ -290,7 +278,7 @@ public class SessionTimingTests
     [Fact]
     public void PointEditsClearAHoldEndSelection()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.ChangeTrack(t => TrackEditing.SetHold(t, 1, 2f));
         state.Selection.SelectKey(2);
         state.AddToEnd(new ControlPoint(new Vector3(30f, 0f, 0f), 0f, 0f, 1f));
@@ -300,7 +288,7 @@ public class SessionTimingTests
     [Fact]
     public void SetTrackSpeedChangesDurationAndOneUndoRestoresIt()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.SetTrackSpeed(5f));
         Assert.Equal(4.0, state.Duration, 3);
         Assert.True(state.Undo());
@@ -310,7 +298,7 @@ public class SessionTimingTests
     [Fact]
     public void SetTrackDurationSetsTheTrackSpeed()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.SetTrackDuration(20f));
         Assert.Equal(1f, state.Track.Speed, 3);
     }
@@ -318,7 +306,7 @@ public class SessionTimingTests
     [Fact]
     public void SetLegDurationPinsTheLegAndResetLegUnpinsIt()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.SetLegDuration(1, 2f));
         Assert.True(TrackEditing.IsPinned(state.Track, 1));
         Assert.Equal(2f, state.World.Evaluator.LegSeconds(1), 3);
@@ -331,7 +319,7 @@ public class SessionTimingTests
     [Fact]
     public void SetLegSpeedSetsTheLegsSeconds()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         Assert.Null(state.SetLegSpeed(2, 10f));
         Assert.Equal(1f, state.World.Evaluator.LegSeconds(2), 3);
     }
@@ -339,7 +327,7 @@ public class SessionTimingTests
     [Fact]
     public void SetLegDurationKeepsTheSelectedLeg()
     {
-        var state = Editing();
+        var state = EditingThreePoints();
         state.Selection.SelectLeg(2);
         Assert.Null(state.SetLegDuration(2, 3f));
         Assert.Equal(2, state.Selection.Leg);

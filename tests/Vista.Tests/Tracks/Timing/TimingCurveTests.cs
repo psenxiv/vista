@@ -1,5 +1,6 @@
 using Vista.Core.Tracks.Timing;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks.Timing;
 
@@ -333,7 +334,8 @@ public class TimingCurveTests
         var curve = new TimingCurve(new[] { Key(0f, 0f), Key(2f, 4f), Key(5f, 5f), Key(6f, 9f) });
         foreach (var t in new[] { 0.5, 1.7, 3.2, 5.5 })
         {
-            var estimate = (curve.PositionAt(t + 1e-3) - curve.PositionAt(t - 1e-3)) / 2e-3f;
+            var (left, right) = Slopes(curve.PositionAt, t, 1e-3);
+            var estimate = (left + right) / 2f;
             Assert.Equal(estimate, curve.SlopeAt(t), 2);
         }
     }
