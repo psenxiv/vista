@@ -52,6 +52,8 @@ Everything targets .NET 10, as Dalamud does.
 
 **One owner per constant.** Declare a limit, default or list once and reference it everywhere else, making it public if another project needs it.
 
+**Reuse a helper before writing one.** Before adding helper or utility logic, check `INDEX.md`'s helper homes, and grep for the logic itself; use what exists. If the logic is general, put it in the home for its kind, or move it there when a second caller appears, rather than keeping it private to one class. Reviewers check both. Keep `INDEX.md` current when a package or helper home is added, moved or removed.
+
 **No interface without two implementations, a test double, or a crossing of the Core/Dalamud boundary.** The boundary is where game types appear, not where the `interface` keyword does. Judge each member the same way.
 
 **Code with no production caller doesn't outlive the phase that added it.** Tests don't count. Core may land ahead of its UI if the commit names the phase that will use it; whatever is still uncalled when that phase closes is deleted, with a `FEATURES.md` entry if the idea is still wanted. Framework entry points (window overrides, command handlers, `Dispose`) only look dead.
