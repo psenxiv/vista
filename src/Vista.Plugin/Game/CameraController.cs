@@ -1,43 +1,55 @@
+using System.Runtime.CompilerServices;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Vista.Core.Camera;
 
 namespace Vista.Plugin.Game;
 
-/// <summary>Owns the game camera by hooking CameraBase.Update (vfunc 3).</summary>
+/// <summary>Owns the game camera by hooking CameraBase.Update.</summary>
 internal sealed unsafe class CameraController : IDisposable
 {
-    private const int UpdateVFuncIndex = 3;
-
     private delegate void CameraUpdateDelegate(CameraBase* camera);
 
     private readonly Func<CameraState?> stateSource;
+    private readonly Faults faults;
     private Hook<CameraUpdateDelegate>? updateHook;
 
     public long UpdateCount { get; private set; }
 
-    /// <summary>True after the update hook caught an exception; it writes nothing until <see cref="ClearFault"/>.</summary>
-    public bool Faulted { get; private set; }
-
-    /// <summary>Lets the update hook write again.</summary>
-    public void ClearFault() => Faulted = false;
-
-    public CameraController(Func<CameraState?> stateSource)
+    public CameraController(Func<CameraState?> stateSource, Faults faults)
     {
         this.stateSource = stateSource;
+        this.faults = faults;
         TryInstallHook();
     }
 
-    /// <summary>Installs the hook if a camera exists yet. Safe to call repeatedly.</summary>
+    /// <summary>Whether the update hook installed: null until the world camera exists and it's been tried.</summary>
+    public bool? Hooked { get; private set; }
+
+    /// <summary>Installs the hook once a camera exists, trying only once. Safe to call repeatedly.</summary>
     public void TryInstallHook()
     {
-        if (updateHook != null)
-            return;
-        if (!CameraAccess.TryGetWorldCamera(out var camera))
+        if (Hooked is not null)
             return;
 
-        var vtable = *(nint**)camera;
-        var updateAddress = vtable[UpdateVFuncIndex];
+        try
+        {
+            if (!CameraAccess.TryGetWorldCamera(out var camera))
+                return;
+            Install(camera);
+            Hooked = true;
+        }
+        catch (Exception ex)
+        {
+            Hooked = false;
+            Plugin.Log.Error(ex, "[camera] update hook did not install");
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void Install(Camera* camera)
+    {
+        var updateAddress = (nint)camera->CameraBase.VirtualTable->Update;
         Plugin.Log.Debug("[camera] hooking Update at 0x{Addr:X}", updateAddress);
 
         updateHook = Plugin.Hooks.HookFromAddress<CameraUpdateDelegate>(updateAddress, UpdateDetour);
@@ -48,22 +60,24 @@ internal sealed unsafe class CameraController : IDisposable
     {
         updateHook!.Original(camera);
         UpdateCount++;
-        if (Faulted)
+        if (faults.Any)
             return;
 
         try
         {
-            var desired = stateSource();
-            if (desired is null)
-                return;
-
-            CameraAccess.WriteState(desired.Value);
+            Write();
         }
         catch (Exception ex)
         {
-            Faulted = true;
-            Plugin.Log.Error(ex, "[camera] update hook failed; releasing on the next framework update.");
+            faults.Record("camera update hook", ex);
         }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void Write()
+    {
+        if (stateSource() is { } desired)
+            CameraAccess.WriteState(desired);
     }
 
     public void Dispose()

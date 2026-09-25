@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 
@@ -36,16 +37,31 @@ internal sealed unsafe class InputBlocker : IDisposable
 
     private readonly Func<bool> shouldBlock;
     private readonly Func<bool> shouldBlockEscape;
+    private readonly Faults faults;
 
-    public InputBlocker(Func<bool> shouldBlock, Func<bool> shouldBlockEscape)
+    public InputBlocker(Func<bool> shouldBlock, Func<bool> shouldBlockEscape, Faults faults)
     {
         this.shouldBlock = shouldBlock;
         this.shouldBlockEscape = shouldBlockEscape;
+        this.faults = faults;
 
-        longPressHook = Hook(InputData.MemberFunctionPointers.IsInputIdHeld, LongPressDetour, "IsInputIdHeld");
-        pressedHook = Hook(InputData.MemberFunctionPointers.IsInputIdPressed, PressedDetour, "IsInputIdPressed");
-        downHook = Hook(InputData.MemberFunctionPointers.IsInputIdDown, DownDetour, "IsInputIdDown");
-        releasedHook = Hook(InputData.MemberFunctionPointers.IsInputIdReleased, ReleasedDetour, "IsInputIdReleased");
+        // Each address is read in its own lambda, so a ClientStructs member that's gone throws inside Hook's try.
+        longPressHook = Hook(
+            () => (nint)InputData.MemberFunctionPointers.IsInputIdHeld,
+            LongPressDetour,
+            "IsInputIdHeld"
+        );
+        pressedHook = Hook(
+            () => (nint)InputData.MemberFunctionPointers.IsInputIdPressed,
+            PressedDetour,
+            "IsInputIdPressed"
+        );
+        downHook = Hook(() => (nint)InputData.MemberFunctionPointers.IsInputIdDown, DownDetour, "IsInputIdDown");
+        releasedHook = Hook(
+            () => (nint)InputData.MemberFunctionPointers.IsInputIdReleased,
+            ReleasedDetour,
+            "IsInputIdReleased"
+        );
 
         mouseWheelHook = HookBySignature<GetMouseWheelDelegate>(
             MouseWheelSignature,
@@ -53,6 +69,12 @@ internal sealed unsafe class InputBlocker : IDisposable
             "getMouseWheelStatus"
         );
     }
+
+    /// <summary>True when all four input queries resolved and hooked.</summary>
+    public bool QueriesHooked => Hooks.All(hook => hook is not null);
+
+    /// <summary>True when the mouse wheel reader resolved and hooked.</summary>
+    public bool WheelHooked => mouseWheelHook is not null;
 
     /// <summary>Scans for a function and hooks it. ScanText already follows a call or jmp match.</summary>
     private static Hook<T>? HookBySignature<T>(string signature, T detour, string name)
@@ -70,12 +92,23 @@ internal sealed unsafe class InputBlocker : IDisposable
         }
 
         Plugin.Log.Debug("[input] {Name} resolved to 0x{Addr:X}", name, address);
-        return Plugin.Hooks.HookFromAddress<T>(address, detour);
+        return Install(address, detour, name);
     }
 
-    private static Hook<IsInputIdDelegate>? Hook(void* address, IsInputIdDelegate detour, string name)
+    private static Hook<IsInputIdDelegate>? Hook(Func<nint> address, IsInputIdDelegate detour, string name)
     {
-        if (address == null)
+        nint resolved;
+        try
+        {
+            resolved = address();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[input] {Name} address did not resolve; not hooked.", name);
+            return null;
+        }
+
+        if (resolved == 0)
         {
             Plugin.Log.Error("[input] {Name} address did not resolve; not hooked.", name);
             return null;
@@ -83,7 +116,22 @@ internal sealed unsafe class InputBlocker : IDisposable
 
         // Left disabled. These fire thousands of times a second, so they are only
         // enabled while we are flying.
-        return Plugin.Hooks.HookFromAddress<IsInputIdDelegate>((nint)address, detour);
+        return Install(resolved, detour, name);
+    }
+
+    /// <summary>Creates a hook at <paramref name="address"/>, left disabled, or null if it can't be.</summary>
+    private static Hook<T>? Install<T>(nint address, T detour, string name)
+        where T : Delegate
+    {
+        try
+        {
+            return Plugin.Hooks.HookFromAddress<T>(address, detour);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[input] {Name} did not hook.", name);
+            return null;
+        }
     }
 
     private byte LongPressDetour(InputData* self, InputId id) => Filter(longPressHook!, self, id);
@@ -100,13 +148,39 @@ internal sealed unsafe class InputBlocker : IDisposable
         // Always call through, then discard. Skipping the original could leave the
         // wheel delta unconsumed for the next reader.
         var value = mouseWheelHook!.Original();
-        return shouldBlock() ? (sbyte)0 : value;
+        if (faults.Any)
+            return value;
+        try
+        {
+            return shouldBlock() ? (sbyte)0 : value;
+        }
+        catch (Exception ex)
+        {
+            faults.Record("mouse wheel hook", ex);
+            return value;
+        }
     }
 
-    private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id) =>
-        shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()))
-            ? (byte)0
-            : hook.Original(self, id);
+    private byte Filter(Hook<IsInputIdDelegate> hook, InputData* self, InputId id)
+    {
+        if (faults.Any)
+            return hook.Original(self, id);
+        try
+        {
+            if (Blocks(id))
+                return 0;
+        }
+        catch (Exception ex)
+        {
+            faults.Record("input query hooks", ex);
+        }
+
+        return hook.Original(self, id);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool Blocks(InputId id) =>
+        shouldBlock() && (Blocked.Contains(id) || (id == InputId.ESC && shouldBlockEscape()));
 
     /// <summary>Enables the hooks only while they can do something. Call every frame.</summary>
     public void SyncHookState()
@@ -129,6 +203,14 @@ internal sealed unsafe class InputBlocker : IDisposable
             mouseWheelHook.Enable();
         else if (!wanted && mouseWheelHook.IsEnabled)
             mouseWheelHook.Disable();
+    }
+
+    /// <summary>Disables every hook until the next <see cref="SyncHookState"/> wants them.</summary>
+    public void DisableHooks()
+    {
+        foreach (var hook in Hooks)
+            hook?.Disable();
+        mouseWheelHook?.Disable();
     }
 
     private IEnumerable<Hook<IsInputIdDelegate>?> Hooks

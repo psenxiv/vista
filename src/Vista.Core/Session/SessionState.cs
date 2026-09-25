@@ -81,8 +81,34 @@ public sealed class SessionState
     /// <summary>True while editing with a step to redo.</summary>
     public bool CanRedo => Mode == CameraMode.Editing && history.CanRedo;
 
-    /// <summary>True when the playlist has an entry whose track has points.</summary>
-    public bool CanGoLive => PlaylistEditing.CanPlay(Scene);
+    /// <summary>True when Vista hasn't stopped and the playlist has an entry whose track has points.</summary>
+    public bool CanGoLive => !Stopped && PlaylistEditing.CanPlay(Scene);
+
+    /// <summary>What the player is told once Vista has stopped, and why Edit and Live are refused.</summary>
+    public const string StopMessage =
+        "Vista has stopped. Reload it in /xlplugins, or check for an update if that doesn't help.";
+
+    /// <summary>True once a fault or a failed touch point has stopped Vista; only reloading the plugin clears it.</summary>
+    public bool Stopped => StopReason is not null;
+
+    /// <summary>Why Vista first stopped, for the log; null until it stops.</summary>
+    public string? StopReason { get; private set; }
+
+    /// <summary>Stops Vista after a fault at <paramref name="where"/>. True when this is the first stop, so the player is told.</summary>
+    public bool ReportFault(string where) => Halt($"fault in {where}");
+
+    /// <summary>Takes a touch point's startup check; a failed one stops Vista. True when this is the first stop, so the player is told.</summary>
+    public bool ReportTouchPoint(string name, bool passed) => !passed && Halt($"{name} unavailable");
+
+    /// <summary>Releases to Off and refuses Edit and Live from now on, keeping the first reason.</summary>
+    private bool Halt(string reason)
+    {
+        Release();
+        if (Stopped)
+            return false;
+        StopReason = reason;
+        return true;
+    }
 
     /// <summary>True when Play has something to play: the edited track's points in Edit, otherwise a playlist that can go live.</summary>
     public bool CanStart => Mode == CameraMode.Editing ? Local.Points.Count > 0 : CanGoLive;
@@ -114,9 +140,11 @@ public sealed class SessionState
             ? Tracks.Aiming.FollowOrbit.Of(local.Points[0])
             : null;
 
-    /// <summary>Enters editing; from live, takes the Director offline.</summary>
+    /// <summary>Enters editing; from live, takes the Director offline. Refused once Vista has stopped.</summary>
     public EditOutcome Edit()
     {
+        if (Stopped)
+            return EditOutcome.Refused;
         Transport.StopPreview();
         switch (Mode)
         {
@@ -153,10 +181,10 @@ public sealed class SessionState
         return GoLive();
     }
 
-    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start. Refused when nothing can play.</summary>
+    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start. Refused when nothing can play or Vista has stopped.</summary>
     public PlayOutcome Restart() => Mode == CameraMode.Editing ? StartPreview(fromStart: true) : GoLive();
 
-    /// <summary>Goes live with the playlist paused at its start. Refused when nothing can play.</summary>
+    /// <summary>Goes live with the playlist paused at its start. Refused when nothing can play or Vista has stopped.</summary>
     public PlayOutcome Cue()
     {
         var outcome = GoLive();
@@ -196,9 +224,11 @@ public sealed class SessionState
         return owned;
     }
 
-    /// <summary>Goes live with the playlist from its start. Refused when nothing can play.</summary>
+    /// <summary>Goes live with the playlist from its start. Refused when nothing can play or Vista has stopped.</summary>
     private PlayOutcome GoLive()
     {
+        if (Stopped)
+            return PlayOutcome.Refused;
         var items = Scene
             .Playlist.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
             .Where(x => x.Track.Points.Count > 0)

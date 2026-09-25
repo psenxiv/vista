@@ -1,4 +1,7 @@
 using System.Numerics;
+using CsCheck;
+using Vista.Core.Scenes;
+using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
@@ -400,5 +403,57 @@ public class DirectorTests
         Assert.Equal(2.5, reverse.ShotTime, 5);
         Assert.Equal(2.5f, XAfter(forward, 0f), 3);
         Assert.Equal(2.5f, XAfter(reverse, 0f), 3);
+    }
+
+    /// <summary>A generated path track, looping or not, played any way round.</summary>
+    private static readonly Gen<Track> AnyPlayedTrack =
+        from track in AnyPathTrack
+        from loop in Gen.Bool
+        from direction in Gen.Enum<PlaybackDirection>()
+        select TrackEditing.SetDirection(TrackEditing.SetLoop(track, loop), direction);
+
+    /// <summary>One to three generated tracks and a playlist of one to five of them, each playing once, repeated or following its track, looping or not, built as the Playlist panel builds it.</summary>
+    private static readonly Gen<Scene> AnyPlaylistScene =
+        from tracks in AnyPlayedTrack.Array[1, 3]
+        // Per entry: which track, and 0 to follow the track or a repeat count.
+        from entries in Gen.Select(Gen.Int[0, tracks.Length - 1], Gen.Int[0, 3]).Array[1, 5]
+        from loops in Gen.Bool
+        select PlaylistScene(tracks, entries, loops);
+
+    private static Scene PlaylistScene(Track[] tracks, (int Track, int Loops)[] entries, bool loops)
+    {
+        var scene = new Scene(tracks, new HashSet<Guid>(), []);
+        foreach (var (track, count) in entries)
+        {
+            scene = PlaylistEditing.Add(scene, [tracks[track].Id]);
+            scene = PlaylistEditing.SetLoops(scene, scene.Playlist[^1].Id, count == 0 ? null : count);
+        }
+
+        return PlaylistEditing.SetPlaylistLoops(scene, loops);
+    }
+
+    /// <summary>The most frames a live playlist is ticked for.</summary>
+    private const int FrameBudget = 600;
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void EveryLiveFrameIsWellFormed()
+    {
+        Gen.Select(AnyPlaylistScene, AnyFrameStep.Array[1, 32])
+            .Sample(
+                (scene, steps) =>
+                {
+                    var state = new SessionState();
+                    state.LoadScene(scene);
+                    state.Restart();
+                    for (var i = 0; i < FrameBudget && !state.Director.IsFinished; i++)
+                        if (state.Director.Tick(steps[i % steps.Length]) is { } frame)
+                            AssertWellFormed(frame, $"Frame {i} at {state.Director.ShotTime:0.######} s");
+                },
+                iter: 500,
+                print: Kept<(Scene Scene, float[] Steps)>(x =>
+                    $"{SceneJson.Write(x.Scene)}\nSteps: {string.Join(", ", x.Steps)}"
+                )
+            );
     }
 }
