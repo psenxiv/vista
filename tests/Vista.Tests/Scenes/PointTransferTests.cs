@@ -256,4 +256,16 @@ public class PointTransferTests
         Assert.False(PointTransfer.CanTake(source, source.Id));
         Assert.False(PointTransfer.CanTake(other with { Aim = AimMode.FollowTarget }, source.Id));
     }
+
+    // Track A has points 0 to 3: a list naming 0 and 99 is refused whole, even when called without the session's check.
+    [Fact]
+    public void MovingAListWithAnyIndexThatIsNotAPointIsRefused()
+    {
+        var scene = TwoTracks();
+
+        var e = Assert.Throws<ArgumentException>(() =>
+            PointTransfer.Move(scene, scene.Tracks[0].Id, [0, 99], [W1, W2], null, _ => 1.5f)
+        );
+        Assert.Equal("There is no such point.", e.Message);
+    }
 }

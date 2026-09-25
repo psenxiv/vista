@@ -528,4 +528,19 @@ public class AimTrackerTests
             )
         );
     }
+
+    // With no time passed, the eased Follow yaw stays at 0, where the first frame left it, without looking at the character's
+    // facing, so even a facing that isn't finite can't leave it NaN.
+    [Fact]
+    public void NoTimePassedKeepsTheFollowYawWhateverTheFacing()
+    {
+        var characters = GuardStanding(Vector3.Zero, 0f);
+        var tracker = new AimTracker(characters);
+        var track = FollowingAt(Behind, smoothing: 1f);
+        Frame(tracker, track, 0.5f);
+
+        characters.Update([Guard(Vector3.Zero, float.PositiveInfinity)]);
+
+        Assert.Equal(0f, LookYaw(Frame(tracker, track, 0f)), 6);
+    }
 }
