@@ -104,6 +104,18 @@ public class SelfTestDryRunTests
     }
 
     [Fact]
+    public void AMalformedFrameIsNamedForItsBrokenRuleBeforeItsReadBack()
+    {
+        var scene = TwoEntries();
+        var run = new SelfTestDryRun(scene);
+
+        // Written with a 3 rad field of view, read back as 1 rad: both wrong, and the broken rule comes first.
+        run.Check(scene.Playlist[0].Id, 0.0, Good with { Fov = 3f }, Good);
+
+        Assert.Equal("entry 1 (Opening) at 0.00 s: the field of view is out of range (3)", run.FirstFailure);
+    }
+
+    [Fact]
     public void OnlyTheFirstFailureIsKeptButEveryFrameIsCounted()
     {
         var scene = TwoEntries();

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Xunit;
 
 namespace Vista.Tests.Camera;
@@ -16,6 +17,26 @@ public class WellFormedTests
 
     [Fact]
     public void AWellFormedFrameBreaksNoRule() => Assert.Null(WellFormed.FirstBroken(Good));
+
+    // Each limit itself is allowed: a look-at exactly 0.01 yalms from a position at the origin, and a field of view of
+    // exactly 5° or 120°.
+    public static TheoryData<CameraState> AtTheLimits =>
+        new()
+        {
+            new CameraState(Vector3.Zero, new Vector3(0f, 0f, -0.01f), Vector3.UnitY, 1f),
+            Good with
+            {
+                Fov = EditLimits.MinFov,
+            },
+            Good with
+            {
+                Fov = EditLimits.MaxFov,
+            },
+        };
+
+    [Theory]
+    [MemberData(nameof(AtTheLimits))]
+    public void AFrameAtALimitBreaksNoRule(CameraState frame) => Assert.Null(WellFormed.FirstBroken(frame));
 
     public static TheoryData<CameraState, string> Broken =>
         new()

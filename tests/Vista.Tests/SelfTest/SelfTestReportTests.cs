@@ -13,26 +13,27 @@ public class SelfTestReportTests
             SelfTestReport.StartLine("0.9.0.1", new DateTime(2026, 9, 25, 14, 3, 7))
         );
 
-    // Two passes, one fail and one skip.
+    // Three passes, one fail and one skip.
     private static readonly SelfTestResult[] Results =
     [
         SelfTestResult.Pass("touch points", "4 of 4 installed"),
         SelfTestResult.Fail("movement lock", "counter 2 then 2, expected 3"),
         SelfTestResult.Skip("game UI", "the game UI was already hidden"),
         SelfTestResult.Pass("input hooks", "5 of 5 enabled while held, 0 after release"),
+        SelfTestResult.Pass("scene dry run", "12 frames well-formed and read back exactly"),
     ];
 
     [Fact]
     public void TheEndLineCountsEachOutcome() =>
         Assert.Equal(
-            "[selftest] ===== END: 2 passed, 1 failed, 1 skipped =====",
+            "[selftest] ===== END: 3 passed, 1 failed, 1 skipped =====",
             SelfTestReport.EndLine(Results, stopped: false)
         );
 
     [Fact]
     public void TheEndLineSaysWhenTheRunLeftVistaStopped() =>
         Assert.Equal(
-            "[selftest] ===== END: 2 passed, 1 failed, 1 skipped ===== Vista has stopped until it's reloaded.",
+            "[selftest] ===== END: 3 passed, 1 failed, 1 skipped ===== Vista has stopped until it's reloaded.",
             SelfTestReport.EndLine(Results, stopped: true)
         );
 

@@ -121,6 +121,31 @@ public class SelfTestRulesTests
     public void AReadBackOffByOneBitNamesThePartAndBothValues(CameraState read, string mismatch) =>
         Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read));
 
+    // Position, look-at, up and field of view are compared in that order, and the first that differs is named.
+    public static TheoryData<CameraState, string> FirstMismatches =>
+        new()
+        {
+            {
+                new CameraState(new Vector3(1f, 2.5f, 3f), new Vector3(1f, 2f, -6f), -Vector3.UnitY, 2f),
+                "the position read back as (1, 2.5, 3), written (1, 2, 3)"
+            },
+            {
+                Before with
+                {
+                    LookAt = new Vector3(1f, 2f, -6f),
+                    Up = -Vector3.UnitY,
+                    Fov = 2f,
+                },
+                "the look-at read back as (1, 2, -6), written (1, 2, -7)"
+            },
+            { Before with { Up = -Vector3.UnitY, Fov = 2f }, "the up read back as (-0, -1, -0), written (0, 1, 0)" },
+        };
+
+    [Theory]
+    [MemberData(nameof(FirstMismatches))]
+    public void TheFirstPartThatDiffersIsNamed(CameraState read, string mismatch) =>
+        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read));
+
     [Fact]
     public void ANotANumberReadBackWithTheSameBitsMatches()
     {
@@ -229,6 +254,22 @@ public class SelfTestRulesTests
                 }
             )
         );
+
+    [Fact]
+    public void ACameraHandedBackExactlyOneCentimetreAwayPasses()
+    {
+        // At the origin looking 10 yalms along -Z, then moved 0.01 yalms along X: exactly the 1 cm limit.
+        var origin = new CameraState(Vector3.Zero, new Vector3(0f, 0f, -10f), Vector3.UnitY, 1f);
+        var moved = origin with { Position = new Vector3(0.01f, 0f, 0f), LookAt = new Vector3(0.01f, 0f, -10f) };
+
+        Assert.Equal(
+            SelfTestResult.Pass(
+                "camera round trip",
+                "3 frames read back exactly; handed back 1.00 cm and 0.000° from where it was"
+            ),
+            SelfTestRules.CameraRoundTrip(Exact(SelfTestRules.RoundTripFrames(origin)), 3, origin, moved)
+        );
+    }
 
     [Fact]
     public void ACameraUnreadableAfterReleaseFails() =>
