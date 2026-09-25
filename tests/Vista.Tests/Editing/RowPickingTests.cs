@@ -81,4 +81,26 @@ public class RowPickingTests
     [InlineData(true, true, RowClick.Range)]
     public void ShiftWinsOverCtrl(bool shift, bool ctrl, RowClick expected) =>
         Assert.Equal(expected, RowPicking.FromKeys(shift, ctrl));
+
+    // A group is a selected row with at least one other selected beside it.
+
+    [Fact]
+    public void ARowIsInAGroupWhenSelectedWithAnother()
+    {
+        Assert.True(RowPicking.IsGroup([1, 2], 1));
+        Assert.False(RowPicking.IsGroup([1], 1));
+        Assert.False(RowPicking.IsGroup([1, 2], 3));
+    }
+
+    // A group drag carries the selection; a single one carries the grabbed row while the list still has it.
+
+    [Fact]
+    public void ADragCarriesTheGroupOrTheGrabbedRow()
+    {
+        int[] rows = [10, 20, 30];
+
+        Assert.Equal([10, 30], RowPicking.Carried(rows, [10, 30], 1, group: true));
+        Assert.Equal([20], RowPicking.Carried(rows, [10, 30], 1, group: false));
+        Assert.Empty(RowPicking.Carried(rows, [10, 30], 3, group: false));
+    }
 }

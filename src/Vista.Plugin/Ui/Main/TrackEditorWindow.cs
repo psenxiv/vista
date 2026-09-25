@@ -760,7 +760,7 @@ internal sealed class TrackEditorWindow : Window
         var top = ImGui.GetCursorScreenPos().Y - CellPadding.Y;
         var rowFlags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap;
         var picked = selected.Contains(index);
-        var group = picked && selected.Count >= 2;
+        var group = RowPicking.IsGroup(selected, index);
         if (ImGui.Selectable($"##row{index}", picked, rowFlags, new Vector2(0f, ImGui.GetFrameHeight())))
             session.Selection.ClickPoint(index, DragRows.Click());
         var rowHovered =

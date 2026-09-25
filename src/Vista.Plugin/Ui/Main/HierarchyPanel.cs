@@ -367,7 +367,7 @@ internal sealed class HierarchyPanel
     )
     {
         var picked = selected.Contains(track.Id);
-        var group = picked && selected.Count >= 2;
+        var group = RowPicking.IsGroup(selected, track.Id);
         if (
             ImGui.Selectable(
                 "##name",

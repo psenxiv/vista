@@ -43,6 +43,21 @@ public static class RowPicking
         }
     }
 
+    /// <summary>True when <paramref name="row"/> is one of two or more selected, so dragging it or its menu acts on them all.</summary>
+    public static bool IsGroup<T>(IReadOnlyCollection<T> selected, T row) =>
+        selected.Contains(row) && selected.Count >= 2;
+
+    /// <summary>The rows a drag carries: the selection for a group, else the grabbed row while it is still in the list.</summary>
+    public static IReadOnlyList<T> Carried<T>(
+        IReadOnlyList<T> rows,
+        IReadOnlyList<T> selected,
+        int grabbed,
+        bool group
+    ) =>
+        group ? selected
+        : grabbed < rows.Count ? [rows[grabbed]]
+        : [];
+
     private static int IndexOf<T>(IReadOnlyList<T> order, T row)
     {
         for (var i = 0; i < order.Count; i++)

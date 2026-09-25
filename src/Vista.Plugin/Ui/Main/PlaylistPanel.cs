@@ -130,7 +130,7 @@ internal sealed class PlaylistPanel
         var name = track.Name;
         var rowStart = ImGui.GetCursorPosX();
         var picked = selected.Contains(entry.Id);
-        var group = picked && selected.Count >= 2;
+        var group = RowPicking.IsGroup(selected, entry.Id);
         if (
             ImGui.Selectable(
                 "##entry",
