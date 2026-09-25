@@ -492,28 +492,12 @@ internal sealed class HierarchyPanel
     /// <summary>The name as a text field; Enter or clicking away renames, Escape cancels.</summary>
     private void DrawRename(Track track, float width)
     {
-        if (focusRename)
-        {
-            ImGui.SetKeyboardFocusHere();
-            focusRename = false;
-        }
-
-        ImGui.SetNextItemWidth(width);
-        var entered = ImGui.InputText(
-            "##rename",
-            ref renameText,
-            64,
-            ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll
-        );
-        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
-        {
-            renaming = null;
+        var result = TextEdit.Draw("##rename", ref renameText, 64, width, focusRename);
+        focusRename = false;
+        if (result == TextEdit.Result.Editing)
             return;
-        }
-
-        if (!entered && !ImGui.IsItemDeactivated())
-            return;
-        Report(session.RenameTrack(track.Id, renameText));
+        if (result == TextEdit.Result.Apply)
+            Report(session.RenameTrack(track.Id, renameText));
         renaming = null;
     }
 

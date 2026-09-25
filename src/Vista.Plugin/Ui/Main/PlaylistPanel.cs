@@ -248,27 +248,18 @@ internal sealed class PlaylistPanel
     /// <summary>The repeat count as text: Enter or clicking away applies it, blank or 0 follows the track, Escape cancels.</summary>
     private void DrawLoopsText(Scene scene, PlaylistEntry entry, (Guid Id, string Text, bool Focus) typing)
     {
-        if (typing.Focus)
-            ImGui.SetKeyboardFocusHere();
         var text = typing.Text;
-        ImGui.SetNextItemWidth(LoopWidth);
-        var entered = ImGui.InputText(
+        var result = TextEdit.Draw(
             "##loops-text",
             ref text,
             8,
-            ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.CharsDecimal
+            LoopWidth,
+            typing.Focus,
+            ImGuiInputTextFlags.CharsDecimal
         );
-        loopsTyping = (entry.Id, text, false);
-        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
-        {
-            loopsTyping = null;
-            return;
-        }
-
-        if (!entered && !ImGui.IsItemDeactivated())
-            return;
-        loopsTyping = null;
-        ApplyTyped(scene, entry.Id, text);
+        loopsTyping = result == TextEdit.Result.Editing ? (entry.Id, text, false) : null;
+        if (result == TextEdit.Result.Apply)
+            ApplyTyped(scene, entry.Id, text);
     }
 
     /// <summary>Sets entry <paramref name="id"/>'s repeat count from typed <paramref name="text"/>, when it reads as a count and changes it.</summary>
