@@ -1,5 +1,7 @@
 using System.Numerics;
+using CsCheck;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -217,5 +219,66 @@ public class FreeCamMotionTests
         var level = FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0f);
         var raised = FreeCamMotion.LookAtFrom(Vector3.Zero, 0f, 0.5f);
         Assert.True(raised.Y > level.Y);
+    }
+
+    /// <summary>One frame of free cam input: keys held (-1, 0 or 1 along forward, up and right), how far the mouse turned it, how far it rolled, its speed and the frame's seconds.</summary>
+    private readonly record struct Flight(
+        Vector3 Input,
+        float Yaw,
+        float Pitch,
+        float Roll,
+        float Speed,
+        float Seconds
+    );
+
+    private static readonly Gen<float> AnyKey = Gen.Int[-1, 1].Select(k => (float)k);
+
+    // Speed up to 128 yalms a second: the free cam's 8, times its fastest step of 4, times 4 for Shift.
+    private static readonly Gen<Flight> AnyFlight = Gen.Select(
+        Gen.Select(AnyKey, AnyKey, AnyKey, (f, u, r) => new Vector3(f, u, r)),
+        Gen.Float[-MathF.PI, MathF.PI],
+        Gen.Float[-MathF.PI / 2f, MathF.PI / 2f],
+        Gen.Float[-MathF.PI, MathF.PI],
+        Gen.Float[0f, 128f],
+        AnyFrameStep,
+        (input, yaw, pitch, roll, speed, seconds) => new Flight(input, yaw, pitch, roll, speed, seconds)
+    );
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void EveryFreeCamFrameIsWellFormed()
+    {
+        // Each frame as the plugin's free cam makes it: roll, then turn by the mouse, then fly, then the frame.
+        (
+            from position in AnyPosition
+            from yaw in Gen.Float[-MathF.PI, MathF.PI]
+            from pitch in Gen.Float[-EditLimits.PitchLimit, EditLimits.PitchLimit]
+            from roll in Gen.Float[-MathF.PI, MathF.PI]
+            from fov in Gen.Float[EditLimits.MinFov, EditLimits.MaxFov]
+            from flights in AnyFlight.Array[1, 200]
+            select (
+                Position: position,
+                Rotation: CameraRotation.FromAngles(yaw, pitch, roll),
+                Fov: fov,
+                Flights: flights
+            )
+        ).Sample(
+            start =>
+            {
+                var (position, rotation) = (start.Position, start.Rotation);
+                for (var i = 0; i < start.Flights.Length; i++)
+                {
+                    var flight = start.Flights[i];
+                    rotation = FreeCamMotion.Roll(rotation, flight.Roll);
+                    rotation = FreeCamMotion.Turn(rotation, flight.Yaw, flight.Pitch);
+                    position = FreeCamMotion.Step(position, flight.Input, rotation, flight.Speed, flight.Seconds);
+                    AssertWellFormed(CameraState.FromRotation(position, rotation, start.Fov), $"Frame {i}");
+                }
+            },
+            iter: 1000,
+            print: Kept<(Vector3 Position, Quaternion Rotation, float Fov, Flight[] Flights)>(start =>
+                $"Start: {start.Position}, {start.Rotation}, {start.Fov}\nFlights: {string.Join("\n", start.Flights)}"
+            )
+        );
     }
 }
