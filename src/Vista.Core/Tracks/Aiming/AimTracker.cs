@@ -36,7 +36,7 @@ public sealed class AimTracker
     public static Vector3? AimPoint(Track world, NearbyCharacters? targets) =>
         world switch
         {
-            { Aim: AimMode.LookAt, LookAtPlaced: true } => world.LookAt,
+            _ when world.UsesLookAt => world.LookAt,
             { Aim: AimMode.WatchTarget } or { Aim: AimMode.FollowTarget, FollowLooks: true } => TargetPoint(
                 world,
                 targets

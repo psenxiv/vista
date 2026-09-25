@@ -207,10 +207,8 @@ public sealed class SelectionState
         if (SceneEditing.IndexOf(session.Scene, id) < 0)
             return "There is no such track.";
         var track = SceneEditing.Get(session.Scene, id);
-        if (track.Aim == AimMode.FollowTarget)
-            return FollowAnchorHidden;
-        if (!track.AnchorPlaced)
-            return TrackAnchorUnplaced;
+        if (!track.ShowsAnchor)
+            return track.Aim == AimMode.FollowTarget ? FollowAnchorHidden : TrackAnchorUnplaced;
         if (session.SwitchTrack(id) is { } refusal)
             return refusal;
         SelectAnchor(AnchorKind.Track);
@@ -224,7 +222,7 @@ public sealed class SelectionState
             return "The Look At point can only be selected while editing.";
         if (SceneEditing.IndexOf(session.Scene, id) < 0)
             return "There is no such track.";
-        if (SceneEditing.Get(session.Scene, id) is not { Aim: AimMode.LookAt, LookAtPlaced: true })
+        if (!SceneEditing.Get(session.Scene, id).UsesLookAt)
             return LookAtUnused;
         if (session.SwitchTrack(id) is { } refusal)
             return refusal;
@@ -239,10 +237,10 @@ public sealed class SelectionState
         return kind switch
         {
             AnchorKind.Scene => session.Scene.AnchorPlaced ? null : SceneAnchorUnplaced,
-            AnchorKind.Track => local.Aim == AimMode.FollowTarget ? FollowAnchorHidden
-            : local.AnchorPlaced ? null
+            AnchorKind.Track => local.ShowsAnchor ? null
+            : local.Aim == AimMode.FollowTarget ? FollowAnchorHidden
             : TrackAnchorUnplaced,
-            _ => local is { Aim: AimMode.LookAt, LookAtPlaced: true } ? null : LookAtUnused,
+            _ => local.UsesLookAt ? null : LookAtUnused,
         };
     }
 

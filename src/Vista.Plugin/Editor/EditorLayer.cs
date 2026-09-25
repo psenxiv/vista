@@ -8,7 +8,6 @@ using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
 
@@ -169,7 +168,7 @@ internal sealed class EditorLayer
         List<TrackMarker> markers
     )
     {
-        if (local is { AnchorPlaced: true, Aim: not AimMode.FollowTarget })
+        if (local.ShowsAnchor)
             markers.Add(
                 new TrackMarker(
                     local.Id,
@@ -185,7 +184,7 @@ internal sealed class EditorLayer
                     MarkerKind.TrackAnchor
                 )
             );
-        if (local is { Aim: AimMode.LookAt, LookAtPlaced: true })
+        if (local.UsesLookAt)
             markers.Add(
                 new TrackMarker(
                     local.Id,

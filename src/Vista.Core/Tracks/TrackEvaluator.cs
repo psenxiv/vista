@@ -130,9 +130,7 @@ public sealed class TrackEvaluator
         {
             var toward = at - cameraPosition;
             var up =
-                _track is { Aim: AimMode.LookAt, LookAtPlaced: true } && at == _track.LookAt
-                    ? LookAtUp().At(time, toward)
-                    : CameraRotation.Upright(toward);
+                _track.UsesLookAt && at == _track.LookAt ? LookAtUp().At(time, toward) : CameraRotation.Upright(toward);
             return Framed(time, cameraPosition, toward, up, fov);
         }
 

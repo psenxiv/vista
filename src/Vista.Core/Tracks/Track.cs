@@ -26,4 +26,11 @@ public sealed record Track(
     bool FollowTurns = true,
     bool FollowLooks = true,
     float LookAhead = TrackEditing.DefaultLookAhead
-);
+)
+{
+    /// <summary>True when the track's anchor is placed and it doesn't follow a character, so the anchor is drawn and selectable.</summary>
+    public bool ShowsAnchor => AnchorPlaced && Aim != AimMode.FollowTarget;
+
+    /// <summary>True when the track aims at its placed Look At point.</summary>
+    public bool UsesLookAt => Aim == AimMode.LookAt && LookAtPlaced;
+}

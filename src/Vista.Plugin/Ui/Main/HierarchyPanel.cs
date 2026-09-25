@@ -331,7 +331,7 @@ internal sealed class HierarchyPanel
         ImGui.SetCursorPosX(rowStart + nameWidth + ImGui.GetStyle().ItemSpacing.X);
 
         var follows = track.Aim == AimMode.FollowTarget;
-        ImGui.BeginDisabled(!track.AnchorPlaced || follows);
+        ImGui.BeginDisabled(!track.ShowsAnchor);
         var anchorTip = follows ? "Follow Target tracks move with their character" : "Select track anchor";
         if (IconButton.RowAction("anchor", FontAwesomeIcon.Anchor, anchorTip, rowHovered))
             Report(session.Selection.SelectTrackAnchor(track.Id));
