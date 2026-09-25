@@ -10,6 +10,7 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
+using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Editor;
 
@@ -214,11 +215,5 @@ internal sealed class EditorLayer
     {
         for (var i = 0; i < screens.Count; i++)
             markers.Add(new TrackMarker(track, i, screens[i]));
-    }
-
-    private static void Report(string? refusal)
-    {
-        if (refusal is not null)
-            Plugin.Log.Warning("[editor] {Refusal}", refusal);
     }
 }

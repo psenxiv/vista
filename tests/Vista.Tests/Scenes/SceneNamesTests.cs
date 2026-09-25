@@ -72,6 +72,23 @@ public class SceneNamesTests
     }
 
     [Fact]
+    public void NumberedKeepsAFreeNameAndOtherwiseNumbersFromTwo()
+    {
+        // Free: kept as it is.
+        Assert.Equal("Crane", SceneNames.Numbered("Crane", ["Dolly"]));
+        // Taken: "Crane 2" is the first number tried.
+        Assert.Equal("Crane 2", SceneNames.Numbered("Crane", ["Crane"]));
+        // Taken ignoring case, both the name and "Crane 2".
+        Assert.Equal("Crane 3", SceneNames.Numbered("Crane", ["CRANE", "crane 2"]));
+        // Several taken in a row.
+        Assert.Equal("Crane 4", SceneNames.Numbered("Crane", ["Crane", "Crane 2", "Crane 3"]));
+        // A gap: "Crane 2" is free though "Crane 3" is taken.
+        Assert.Equal("Crane 2", SceneNames.Numbered("Crane", ["Crane", "Crane 3"]));
+        // Only a numbered name taken: the plain name is still free.
+        Assert.Equal("Crane", SceneNames.Numbered("Crane", ["Crane 2"]));
+    }
+
+    [Fact]
     public void CopyOfAddsCopyThenNumbersFromTwo()
     {
         Assert.Equal("Dolly copy", SceneNames.CopyOf("Dolly", ["Dolly"]));

@@ -32,16 +32,16 @@ public sealed record CameraGlyph(Vector3 Apex, Vector3[] Corners, Vector3 TabLef
         {
             var facing = at - point.Position;
             var up = CameraRotation.RollUp(CameraRotation.Upright(facing), Vector3.Normalize(facing), point.Roll);
-            return (facing, up, point.Fov);
+            return (facing, up, point.PlayedFov);
         }
 
         if (track.Aim != AimMode.PathTangent)
-            return (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
+            return (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.PlayedFov);
 
         var path = evaluator();
         return path.Evaluate(path.PointSeconds(index)) is { } frame
-            ? (frame.LookAt - frame.Position, frame.Up, point.Fov)
-            : (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.Fov);
+            ? (frame.LookAt - frame.Position, frame.Up, point.PlayedFov)
+            : (CameraRotation.Forward(recorded), CameraRotation.Up(recorded), point.PlayedFov);
     }
 
     /// <summary>Builds the glyph at <paramref name="apex"/>; <paramref name="fov"/> is vertical, in radians, and <paramref name="depth"/> in yalms.</summary>

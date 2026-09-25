@@ -4,6 +4,7 @@ using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
+using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Editor;
 
@@ -122,8 +123,8 @@ internal sealed class PointGizmo
             dragRing = null;
             Preview = null;
             dragTrack = null;
-            if (!ReferenceEquals(edited, start) && session.ReplacePoint(dragIndex, edited) is { } refusal)
-                Plugin.Log.Warning("[editor] gizmo edit refused: {Refusal}", refusal);
+            if (!ReferenceEquals(edited, start))
+                Report(session.ReplacePoint(dragIndex, edited));
         }
     }
 

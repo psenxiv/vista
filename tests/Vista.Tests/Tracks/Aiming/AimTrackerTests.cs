@@ -1,6 +1,7 @@
 using System.Numerics;
 using CsCheck;
 using Vista.Core.Camera;
+using Vista.Core.Editing;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
@@ -289,6 +290,16 @@ public class AimTrackerTests
 
         var fresh = Frame(new AimTracker(characters), track);
         Assert.Equal(Behind.Position, fresh.Position);
+    }
+
+    [Fact]
+    public void FollowPlaysAFieldOfViewPastTheEditorsRangeAtItsEdge()
+    {
+        // The offset recorded at 2.5 radians, about 143°, past the editor's 120°: found or never found, the frame plays at 120°.
+        var track = FollowingAt(Behind with { Fov = 2.5f });
+
+        Assert.Equal(EditLimits.MaxFov, Frame(new AimTracker(GuardStanding(Vector3.Zero, 0f)), track).Fov, 0f);
+        Assert.Equal(EditLimits.MaxFov, Frame(new AimTracker(new NearbyCharacters()), track).Fov, 0f);
     }
 
     [Fact]

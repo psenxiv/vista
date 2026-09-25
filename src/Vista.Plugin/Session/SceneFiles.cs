@@ -25,7 +25,7 @@ internal sealed class SceneFiles
         this.game = game;
         session = game.State;
         if (config.SaveFolder is { } parent && Directory.Exists(SceneFolder.RootFor(parent)))
-            Use(parent, config.LastScene);
+            Logged(Use(parent, config.LastScene));
     }
 
     /// <summary>Raised when the folder is missing and Setup should be shown.</summary>
@@ -71,7 +71,7 @@ internal sealed class SceneFiles
         // The same folder, gone from disk: put the open scene back in it rather than start empty.
         if (!changed && library is { } lost && lost.CurrentName.Length > 0)
         {
-            var refusal = Report(lost.Recreate());
+            var refusal = Checked(lost.Recreate());
             if (refusal is null)
                 AddDemo(lost.Folder);
             return refusal;
@@ -102,7 +102,7 @@ internal sealed class SceneFiles
             return;
         var refusal = library.Tick(clock.Elapsed.TotalSeconds);
         if (refusal != tickRefusal && refusal is not null)
-            Report(refusal);
+            Logged(refusal);
         tickRefusal = refusal;
     }
 
@@ -125,7 +125,7 @@ internal sealed class SceneFiles
         }
         catch (Exception e) when (SceneFolder.IsUnreadable(e))
         {
-            return Report($"Could not add preset {name}: {e.Message}");
+            return Checked($"Could not add preset {name}: {e.Message}");
         }
         return game.AddPreset(preset);
     }
@@ -152,7 +152,7 @@ internal sealed class SceneFiles
         }
         catch (Exception e) when (SceneFolder.IsFileError(e))
         {
-            return Report($"Could not create {folder.Root}: {e.Message}");
+            return Checked($"Could not create {folder.Root}: {e.Message}");
         }
 
         library = new SceneLibrary(folder, () => session.Scene, session.LoadScene);
@@ -183,7 +183,7 @@ internal sealed class SceneFiles
             }
             catch (Exception e) when (SceneFolder.IsFileError(e))
             {
-                Report($"Could not add the demo scene: {e.Message}");
+                Logged($"Could not add the demo scene: {e.Message}");
                 return;
             }
         }
@@ -196,7 +196,7 @@ internal sealed class SceneFiles
     {
         if (library is not { } l)
             return NoFolder;
-        var refusal = Report(action(l));
+        var refusal = Checked(action(l));
         if (l.CurrentName.Length > 0 && config.LastScene != l.CurrentName)
         {
             config.LastScene = l.CurrentName;
@@ -218,18 +218,23 @@ internal sealed class SceneFiles
         }
         catch (Exception e) when (SceneFolder.IsFileError(e))
         {
-            return Report($"Could not {doing}: {e.Message}");
+            return Checked($"Could not {doing}: {e.Message}");
         }
     }
 
-    /// <summary>Logs a refusal, and asks for Setup when the folder has gone.</summary>
-    private string? Report(string? refusal)
+    /// <summary>Asks for Setup when a refusal comes with the folder gone; the caller reports the refusal.</summary>
+    private string? Checked(string? refusal)
     {
-        if (refusal is null)
-            return null;
-        Plugin.Log.Warning("[scenes] {Refusal}", refusal);
-        if (library is { } l && !l.Folder.Exists)
+        if (refusal is not null && library is { } l && !l.Folder.Exists)
             SetupNeeded?.Invoke(this, EventArgs.Empty);
         return refusal;
+    }
+
+    /// <summary>Logs a refusal no caller reports, from loading or saving on its own, and asks for Setup when the folder has gone.</summary>
+    private void Logged(string? refusal)
+    {
+        if (refusal is not null)
+            Plugin.Log.Warning("[scenes] {Refusal}", refusal);
+        Checked(refusal);
     }
 }

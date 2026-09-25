@@ -479,6 +479,30 @@ public class SessionEditingTests
     }
 
     [Fact]
+    public void ALiveEditRunsFromItsBeginUntilItEndsOrAnUndoEndsIt()
+    {
+        var state = EditingThreePoints();
+        Assert.False(state.LiveEditing);
+        state.BeginLiveEdit();
+        Assert.True(state.LiveEditing);
+        state.EndLiveEdit();
+        Assert.False(state.LiveEditing);
+
+        state.BeginLiveEdit();
+        state.PreviewPoint(1, Point(11f));
+        state.Undo();
+        Assert.False(state.LiveEditing);
+    }
+
+    [Fact]
+    public void NoLiveEditBeginsOutsideEdit()
+    {
+        var state = new SessionState();
+        state.BeginLiveEdit();
+        Assert.False(state.LiveEditing);
+    }
+
+    [Fact]
     public void AModeChangeEndsALiveEditAsAStep()
     {
         var state = EditingThreePoints();

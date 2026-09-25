@@ -56,12 +56,15 @@ public static class SceneEditing
         return track.Name == name ? scene : Replace(scene, track with { Name = name });
     }
 
-    /// <summary>Inserts a copy of track <paramref name="id"/> after it, with a new Id and the first free "copy" name.</summary>
+    /// <summary>Inserts a copy of track <paramref name="id"/> after it, with a new Id and the first free "copy" name; a name too long is refused.</summary>
     public static (Scene Scene, Guid Copy) Duplicate(Scene scene, Guid id)
     {
         var index = Require(scene, id);
         var original = scene.Tracks[index];
-        var copy = original with { Id = Guid.NewGuid(), Name = SceneNames.CopyOf(original.Name, Names(scene)) };
+        var name = SceneNames.CopyOf(original.Name, Names(scene));
+        if (name.Length > SceneNames.MaxLength)
+            throw new ArgumentException("The copy's name would be too long. Shorten the track's name first.");
+        var copy = original with { Id = Guid.NewGuid(), Name = name };
         return (scene with { Tracks = ListEdit.Insert(scene.Tracks, index + 1, copy) }, copy.Id);
     }
 
@@ -133,7 +136,8 @@ public static class SceneEditing
     public static bool CanHide(Scene scene, IReadOnlyCollection<Guid> ids, Guid edited) =>
         ids.Any(id => id != edited && !scene.Hidden.Contains(id));
 
-    private static IEnumerable<string> Names(Scene scene) => scene.Tracks.Select(t => t.Name);
+    /// <summary>The scene's track names, in order.</summary>
+    internal static IEnumerable<string> Names(Scene scene) => scene.Tracks.Select(t => t.Name);
 
     /// <summary>The index of track <paramref name="id"/>, refusing an unknown one.</summary>
     public static int Require(Scene scene, Guid id) =>

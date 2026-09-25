@@ -4,10 +4,12 @@
 
 - If something goes wrong inside Vista, or a game update breaks part of it, Vista gives the camera back and stops until you reload it, instead of risking a crash.
 - Fixed dragging a key up to the end of its hold sometimes removing the hold.
-- New tracks and copies no longer share a name with an existing track.
+- New tracks, copies and tracks placed from a preset no longer share a name with an existing track.
 - Error messages say what failed, such as deleting a scene, instead of always saying it couldn't save.
 - Fixed Direction of travel facing the wrong way for a moment as a shot starts, when its path comes back to where it began within the look ahead.
 - Times show to a hundredth of a second everywhere, and the Follow Target angle to a tenth of a degree, so a number reads the same in every window.
+- When Vista can't do something you asked, it now tells you why.
+- A point recorded with a field of view under 5° or over 120° now plays at 5° or 120°, the range the Point window allows.
 
 ## 0.9.0.1
 

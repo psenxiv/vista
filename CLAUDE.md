@@ -42,7 +42,7 @@ Everything targets .NET 10, as Dalamud does.
 
 **Property tests (CsCheck) are for invariants over any valid input**, such as continuity and round trips. They add to derived examples and never replace them. Generators build inputs through the same editing calls the UI makes. A failure is a real counterexample: never rerun for a pass; fix the cause and keep the case as an example test. Pass each property's `print` through `Fixtures.Kept` and tag it `[Trait("Category", "Property")]`.
 
-**Soak and mutation-test a feature once, in its final review:** `make soak`, then `make mutate SINCE=<plan's base commit>`. Each survivor gets a test or a line in the plan saying why it changes nothing. There's no score to reach.
+**Mutation testing is slow: it runs once per piece of work, by whoever does the final review, never by an implementer or a fixer.** Implementers and fixers run `make verify` and `make soak` and stop there. The final reviewer runs `make mutate SINCE=<base commit>` once over all the changed Core files. Each survivor gets a test or a line in the plan saying why it changes nothing. There's no score to reach.
 
 **Every fixed camera bug gets a case in the camera regression scene** (`tests/Vista.Tests/Regression/RegressionScene.cs`) with its expected number of snaps. Run `make regression-scene` and commit the rewritten file with it.
 
