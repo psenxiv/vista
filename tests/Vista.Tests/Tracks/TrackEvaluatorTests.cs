@@ -823,6 +823,60 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelStartsFacingBackAtTheSpotWaitingWhereItStarts()
+    {
+        // Found by TheAimNeverSteps as a 180° step at 0 s: the path comes back to its start within the look ahead, so at
+        // 0 s the spot 1.5 s ahead, in the 2 s hold from 1 s at the last point, is where the camera is. The first leg
+        // lies along -z (its spline's points are all on the z axis), so the chord to the waiting spot opens along +z.
+        var track = TrackEditing.Empty(AimMode.PathTangent);
+        foreach (
+            var point in new[] { Point(0f), Point(0f, 0f, -5f), Point(0f, 0f, -10f), Point(10f, 0f, -10f), Point(0f) }
+        )
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg <= 4; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 4, 2f), 1.5f));
+
+        Along(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-6f);
+        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+    }
+
+    [Fact]
+    public void DirectionOfTravelStartsFacingTheSpotPassingWhereTheCameraWaits()
+    {
+        // The camera holds 1 s at the origin, then legs of 0.25 s reach the origin again at 1.75 s, the look ahead, so at
+        // 0 s the spot passes through the camera. It passes between (-5, 0, 0) and (5, 0, 0), equally far either side,
+        // so the path there runs along +x, and the chord opens that way.
+        var track = TrackEditing.Empty(AimMode.PathTangent);
+        foreach (var point in new[] { Point(0f), Point(0f, 0f, -5f), Point(-5f), Point(0f), Point(5f) })
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg <= 4; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 0, 1f), 1.75f));
+
+        Along(Vector3.UnitX, Facing(evaluator, 0.0), 1e-6f);
+        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+    }
+
+    [Fact]
+    public void DirectionOfTravelFacesTheWayTheSpotLeavesAsItPassesThroughTheHoldingCamera()
+    {
+        // Legs of 0.25 s: the camera holds at the origin from 0.25 s to 1.25 s, and reaches it again at 2 s. At 0.75 s,
+        // with the look ahead at 1.25 s, the spot passes through the holding camera, between (-5, 0, 0) and (5, 0, 0),
+        // equally far either side, so along +x. Only the spot moves, so the chord opens that way.
+        var track = TrackEditing.Empty(AimMode.PathTangent);
+        foreach (
+            var point in new[] { Point(0f, 0f, 5f), Point(0f), Point(0f, 0f, -5f), Point(-5f), Point(0f), Point(5f) }
+        )
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg <= 5; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), 1.25f));
+
+        Along(Vector3.UnitX, Facing(evaluator, 0.75), 1e-6f);
+    }
+
+    [Fact]
     public void LookAtStartingStraightUnderItsPointDoesNotWhip()
     {
         // Found by ThePictureNeverWhips as a 7.6° excess in a frame: starting 0.1° from straight under the point, the
