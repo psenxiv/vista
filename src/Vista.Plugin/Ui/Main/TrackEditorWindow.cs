@@ -453,11 +453,15 @@ internal sealed class TrackEditorWindow : Window
             fields.Commit();
             game.Release("window", CameraMode.View);
         }
+        ImGui.BeginDisabled(session.Stopped);
         if (ImGui.Selectable(ModeNames[2], current == 2) && current != 2)
         {
             fields.Commit();
             game.EnterEdit();
         }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && session.Stopped)
+            ImGui.SetTooltip(SessionState.StopMessage);
+        ImGui.EndDisabled();
         ImGui.BeginDisabled(!session.CanGoLive);
         if (ImGui.Selectable(ModeNames[3], current == 3) && current != 3)
         {
@@ -465,7 +469,7 @@ internal sealed class TrackEditorWindow : Window
             game.CueLive();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !session.CanGoLive)
-            ImGui.SetTooltip("Add a track with points to the playlist");
+            ImGui.SetTooltip(session.Stopped ? SessionState.StopMessage : "Add a track with points to the playlist");
         ImGui.EndDisabled();
         ImGui.EndCombo();
     }

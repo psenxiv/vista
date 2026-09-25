@@ -171,26 +171,28 @@ internal sealed class GameSession
             Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
     }
 
-    /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back.</summary>
+    /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back. Every step is attempted, whatever the others do.</summary>
     public void Release(string reason, CameraMode to = CameraMode.Off)
     {
-        if (!state.Release(to) && !owned)
+        var changed = true;
+        Faults.Attempt("releasing the session", () => changed = state.Release(to));
+        if (!changed && !owned)
             return;
 
-        freeCam.Disable();
-        GameUi.Restore();
-        movement.Release();
+        var snapshot = snapshotBeforeTakeover;
         lastFrame = null;
         previewedLastFrame = false;
         owned = false;
+        snapshotBeforeTakeover = null;
 
+        Faults.Attempt("turning the free cam off", freeCam.Disable);
+        Faults.Attempt("restoring the game UI", GameUi.Restore);
+        Faults.Attempt("releasing the movement lock", movement.Release);
         // Without this the game carries on from our values rather than its own,
         // which leaves the camera wrong long after we stop writing.
-        if (snapshotBeforeTakeover is { } snapshot)
-        {
-            CameraAccess.Restore(snapshot);
-            snapshotBeforeTakeover = null;
-        }
+        if (snapshot is { } taken)
+            Faults.Attempt("restoring the camera", () => CameraAccess.Restore(taken));
+        Faults.Attempt("disabling the input hooks", () => Plugin.Input.DisableHooks());
 
         Plugin.Log.Information("[vista] camera released: {Reason}", reason);
     }

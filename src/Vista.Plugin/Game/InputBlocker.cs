@@ -160,6 +160,14 @@ internal sealed unsafe class InputBlocker : IDisposable
             mouseWheelHook.Disable();
     }
 
+    /// <summary>Disables every hook until the next <see cref="SyncHookState"/> wants them.</summary>
+    public void DisableHooks()
+    {
+        foreach (var hook in Hooks)
+            hook?.Disable();
+        mouseWheelHook?.Disable();
+    }
+
     private IEnumerable<Hook<IsInputIdDelegate>?> Hooks
     {
         get

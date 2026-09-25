@@ -25,4 +25,30 @@ internal sealed class Faults(Func<CameraMode> mode)
 
     /// <summary>Takes the next waiting fault, oldest first.</summary>
     public bool TryTake(out Fault fault) => waiting.TryDequeue(out fault);
+
+    /// <summary>Runs <paramref name="step"/>, recording a fault at <paramref name="where"/> if it throws.</summary>
+    public void Guard(string where, Action step)
+    {
+        try
+        {
+            step();
+        }
+        catch (Exception ex)
+        {
+            Record(where, ex);
+        }
+    }
+
+    /// <summary>Runs one step of a sequence that must finish, logging it by name if it throws so the rest still run.</summary>
+    public static void Attempt(string name, Action step)
+    {
+        try
+        {
+            step();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[vista] {Step} failed", name);
+        }
+    }
 }

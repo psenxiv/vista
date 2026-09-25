@@ -23,14 +23,30 @@ internal sealed unsafe class CameraController : IDisposable
         TryInstallHook();
     }
 
-    /// <summary>Installs the hook if a camera exists yet. Safe to call repeatedly.</summary>
+    /// <summary>Whether the update hook installed: null until the world camera exists and it's been tried.</summary>
+    public bool? Hooked { get; private set; }
+
+    /// <summary>Installs the hook once a camera exists, trying only once. Safe to call repeatedly.</summary>
     public void TryInstallHook()
     {
-        if (updateHook != null)
-            return;
-        if (!CameraAccess.TryGetWorldCamera(out var camera))
+        if (Hooked is not null || !CameraAccess.TryGetWorldCamera(out var camera))
             return;
 
+        try
+        {
+            Install(camera);
+            Hooked = true;
+        }
+        catch (Exception ex)
+        {
+            Hooked = false;
+            Plugin.Log.Error(ex, "[camera] update hook did not install");
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void Install(Camera* camera)
+    {
         var updateAddress = (nint)camera->CameraBase.VirtualTable->Update;
         Plugin.Log.Debug("[camera] hooking Update at 0x{Addr:X}", updateAddress);
 
