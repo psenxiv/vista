@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -41,4 +42,21 @@ public class FixturesTests
 
         Assert.Equal(0.3f, Twist(forward, upA, forward, upB), 1e-5f);
     }
+
+    // Looking along -Z with up +Y until 0.5 s, then with an up that isn't a number.
+    private static CameraState UpLostAtHalfASecond(double t) =>
+        new(
+            Vector3.Zero,
+            new Vector3(0f, 0f, -10f),
+            t < 0.5 ? Vector3.UnitY : new Vector3(float.NaN, float.NaN, float.NaN),
+            1f
+        );
+
+    [Fact]
+    public void AnUpThatIsNotANumberIsAPictureStep() =>
+        Assert.Contains(PictureSteps(UpLostAtHalfASecond, 1.0), step => float.IsNaN(step.Size));
+
+    [Fact]
+    public void AnUpThatIsNotANumberMakesTheLargestTwistNotANumber() =>
+        Assert.True(float.IsNaN(LargestTwist(UpLostAtHalfASecond, 1.0)));
 }

@@ -974,6 +974,33 @@ public class TrackEvaluatorTests
     // A generated track as a scene file, so a failure prints something to paste into a test.
     private static string Print(Track track) => SceneJson.Write(new Scene([track], new HashSet<Guid>(), []));
 
+    /// <summary>The most frames a property samples from one track, so a run of zero steps still ends.</summary>
+    private const int FrameBudget = 5000;
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void EveryFrameOfAPathTrackIsWellFormed()
+    {
+        Gen.Select(AnyPathTrack, AnyFrameStep.Array[1, 32])
+            .Sample(
+                (track, steps) =>
+                {
+                    var evaluator = new TrackEvaluator(track);
+                    var target = AimTracker.AimPoint(track, null);
+                    var time = 0.0;
+                    for (var i = 0; time < evaluator.Duration && i < FrameBudget; i++)
+                    {
+                        AssertWellFormed(evaluator.Evaluate(time, target)!.Value, $"At {time:0.######} s");
+                        time += steps[i % steps.Length];
+                    }
+
+                    AssertWellFormed(evaluator.Evaluate(evaluator.Duration, target)!.Value, "At the end");
+                },
+                iter: 1000,
+                print: Kept<(Track Track, float[] Steps)>(x => $"{Print(x.Track)}\nSteps: {string.Join(", ", x.Steps)}")
+            );
+    }
+
     [Fact]
     [Trait("Category", "Property")]
     public void TheAimNeverSteps()
@@ -1020,7 +1047,7 @@ public class TrackEvaluatorTests
                     var evaluator = new TrackEvaluator(track);
                     var target = AimTracker.AimPoint(track, null);
                     var twist = Fixtures.LargestTwist(t => evaluator.Evaluate(t, target)!.Value, evaluator.Duration);
-                    if (twist > PictureSpinLimit)
+                    if (!(twist <= PictureSpinLimit))
                         Assert.Fail(
                             $"The picture turns {twist / Deg:0.###}° in a frame of {evaluator.Duration:0.###} s"
                         );
@@ -1050,6 +1077,8 @@ public class TrackEvaluatorTests
                     double end = evaluator.Keys[TrackEditing.PointKey(track, point) + 1].Time;
                     var still = track.Aim == AimMode.PathTangent ? end - track.LookAhead : end;
                     var arrived = evaluator.Evaluate(start, target)!.Value;
+                    // Equal treats NaN as equal to NaN, so the frame held to must be finite for the checks below to mean anything.
+                    AssertWellFormed(arrived, $"the hold at point {point}");
                     for (var i = 0; i <= samples; i++)
                     {
                         var time = start + ((end - start) * i / samples);

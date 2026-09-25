@@ -197,7 +197,7 @@ internal static class Fixtures
                         Vector3.Normalize(a.LookAt - a.Position),
                         Vector3.Normalize(b.LookAt - b.Position)
                     );
-                    return turn * SpinPerTurn < step.Size;
+                    return !(step.Size <= turn * SpinPerTurn);
                 }),
         ];
     }
@@ -215,7 +215,7 @@ internal static class Fixtures
     {
         // A smooth change shrinks with the interval it's measured over; a step doesn't. Wherever the channel changes more
         // than its floor in 10 ms, halve the interval 8 times, keeping the half that changes more: a smooth change falls to
-        // about 1/256 of what it was, a step stays whole. Anything above a quarter is a step.
+        // about 1/256 of what it was, a step stays whole. Anything above a quarter, or not a number, is a step.
         var steps = new List<Step>();
         var from = sample(0.0);
         for (var i = 0; i * StepWindow < duration; i++)
@@ -223,7 +223,7 @@ internal static class Fixtures
             var (a, b) = (i * StepWindow, Math.Min((i + 1) * StepWindow, duration));
             var to = sample(b);
             var change = distance(from, to);
-            if (change >= floor)
+            if (!(change < floor))
             {
                 var (sa, sb) = (from, to);
                 for (var h = 0; h < StepHalvings; h++)
@@ -234,7 +234,7 @@ internal static class Fixtures
                 }
 
                 var left = distance(sa, sb);
-                if (left > change / 4)
+                if (!(left <= change / 4))
                 {
                     if (steps.Count > 0 && a - steps[^1].Time <= StepWindow)
                         steps[^1] = steps[^1] with { Size = MathF.Max(steps[^1].Size, left) };
@@ -263,7 +263,7 @@ internal static class Fixtures
         return MathF.Acos(dot);
     }
 
-    /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds beyond <see cref="SpinPerTurn"/> times the facing's own turn, in radians: a whip, where the picture turns though the view barely does.</summary>
+    /// <summary>The most the picture turns about its own centre between 60 fps frames over <paramref name="duration"/> seconds beyond <see cref="SpinPerTurn"/> times the facing's own turn, in radians: a whip, where the picture turns though the view barely does. Not a number once any frame isn't.</summary>
     internal static float LargestTwist(Func<double, CameraState> frame, double duration)
     {
         const double frameSeconds = 1.0 / 60.0;
@@ -283,6 +283,45 @@ internal static class Fixtures
 
         return largest;
     }
+
+    /// <summary>The closest a well-formed frame's look-at may be to its position, in yalms: 1 cm.</summary>
+    internal const float MinLookAtDistance = 0.01f;
+
+    /// <summary>How far a well-formed frame's up may be from unit length, and its dot with the unit view from 0.</summary>
+    internal const float UpTolerance = 1e-3f;
+
+    /// <summary>Fails, naming <paramref name="where"/>, the first rule broken and the value that broke it, unless the frame is finite, looks at least 1 cm ahead, has a unit up square to the view, and a field of view the editor allows.</summary>
+    internal static void AssertWellFormed(CameraState frame, string where)
+    {
+        void Fail(string rule, object value) => Assert.Fail($"{where}: {rule} ({value})");
+
+        if (!IsFinite(frame.Position))
+            Fail("the position isn't finite", frame.Position);
+        if (!IsFinite(frame.LookAt))
+            Fail("the look-at isn't finite", frame.LookAt);
+        if (!IsFinite(frame.Up))
+            Fail("the up isn't finite", frame.Up);
+        if (!float.IsFinite(frame.Fov))
+            Fail("the field of view isn't finite", frame.Fov);
+        var view = frame.LookAt - frame.Position;
+        if (!(view.Length() >= MinLookAtDistance))
+            Fail("the look-at is too close to the position", view.Length());
+        if (!(MathF.Abs(frame.Up.Length() - 1f) <= UpTolerance))
+            Fail("the up isn't unit length", frame.Up.Length());
+        var square = Vector3.Dot(frame.Up, Vector3.Normalize(view));
+        if (!(MathF.Abs(square) <= UpTolerance))
+            Fail("the up isn't square to the view", square);
+        if (!(frame.Fov >= EditLimits.MinFov && frame.Fov <= EditLimits.MaxFov))
+            Fail("the field of view is out of range", frame.Fov);
+    }
+
+    private static bool IsFinite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
+
+    /// <summary>A frame step in seconds: mostly up to two 60 fps frames, sometimes up to a 2 s hitch.</summary>
+    internal static readonly Gen<float> AnyFrameStep = Gen.Frequency(
+        (4, Gen.Float[0f, 1f / 30f]),
+        (1, Gen.Float[0f, 2f])
+    );
 
     /// <summary>Asserts two vectors agree on every component within the given tolerance.</summary>
     internal static void Near(Vector3 expected, Vector3 actual, float tolerance)
