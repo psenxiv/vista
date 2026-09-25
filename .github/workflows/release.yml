@@ -87,7 +87,7 @@ jobs:
       - name: Check no self-test code shipped
         if: steps.tag.outputs.promote == 'false'
         run: |
-          foreach ($dll in 'Vista.dll', 'Vista.Core.dll') {
+          foreach ($dll in 'Vista.dll', 'Vista.Core.dll', 'Vista.Core.pdb') {
             $text = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes("src/Vista.Plugin/bin/Release/$dll"))
             if ($text -match 's\x00?e\x00?l\x00?f\x00?t\x00?e\x00?s\x00?t') { throw "$dll contains self-test code; it must stay inside #if DEBUG." }
           }
