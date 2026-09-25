@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
 
@@ -44,6 +45,16 @@ public static class EditLimits
     /// <summary>A field of view in radians, 5° to 120°; not a number becomes the minimum.</summary>
     public static float Fov(float radians) => float.IsFinite(radians) ? Math.Clamp(radians, MinFov, MaxFov) : MinFov;
 
+    /// <summary><paramref name="position"/> with axis 0, 1 or 2 (X, Y or Z) set to <paramref name="value"/>, kept when it is not finite.</summary>
+    public static Vector3 Coordinate(Vector3 position, int axis, float value) =>
+        axis switch
+        {
+            0 => position with { X = Coordinate(value, position.X) },
+            1 => position with { Y = Coordinate(value, position.Y) },
+            2 => position with { Z = Coordinate(value, position.Z) },
+            _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, "An axis is 0, 1 or 2."),
+        };
+
     /// <summary>A position coordinate, or <paramref name="current"/> when the value is not finite.</summary>
-    public static float Coordinate(float value, float current) => float.IsFinite(value) ? value : current;
+    private static float Coordinate(float value, float current) => float.IsFinite(value) ? value : current;
 }

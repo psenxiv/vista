@@ -14,6 +14,14 @@ internal static class PoseGrid
     public const float AngleSpeed = 0.25f;
     public const float FovSpeed = 0.1f;
 
+    /// <summary>The position axes in order: each field's id, name and border colour.</summary>
+    public static readonly (string Id, string Name, uint Border)[] Axes =
+    [
+        ("x", "X", EditorColours.AxisX),
+        ("y", "Y", EditorColours.AxisY),
+        ("z", "Z", EditorColours.AxisZ),
+    ];
+
     /// <summary>Which clipboard button was pressed this frame.</summary>
     public enum Clip
     {

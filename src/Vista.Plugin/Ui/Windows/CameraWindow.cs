@@ -112,33 +112,20 @@ internal sealed class CameraWindow : Window
     /// <summary>X, Y and Z: where the camera is in the world.</summary>
     private void DrawWorld(Vector3 position)
     {
-        Field(
-            "cam-x",
-            "X",
-            EditorColours.AxisX,
-            position.X,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            v => game.CameraPosition = position with { X = EditLimits.Coordinate(v, position.X) }
-        );
-        Field(
-            "cam-y",
-            "Y",
-            EditorColours.AxisY,
-            position.Y,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            v => game.CameraPosition = position with { Y = EditLimits.Coordinate(v, position.Y) }
-        );
-        Field(
-            "cam-z",
-            "Z",
-            EditorColours.AxisZ,
-            position.Z,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            v => game.CameraPosition = position with { Z = EditLimits.Coordinate(v, position.Z) }
-        );
+        for (var axis = 0; axis < PoseGrid.Axes.Length; axis++)
+        {
+            var (id, name, border) = PoseGrid.Axes[axis];
+            var at = axis;
+            Field(
+                $"cam-{id}",
+                name,
+                border,
+                position[at],
+                PoseGrid.PositionSpeed,
+                "%.2f",
+                v => game.CameraPosition = EditLimits.Coordinate(position, at, v)
+            );
+        }
     }
 
     /// <summary>Right, Up and Forward, which read 0 and move the camera by what is dragged or typed, along the axes the fly keys use.</summary>

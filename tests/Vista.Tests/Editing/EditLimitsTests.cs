@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Editing;
 using Xunit;
 
@@ -69,10 +70,16 @@ public class EditLimitsTests
         Assert.Equal(5f * degree, EditLimits.Fov(float.NaN), 5);
     }
 
+    // Axis 0, 1 and 2 are X, Y and Z; a value that isn't finite keeps the coordinate it had.
+
     [Fact]
-    public void CoordinatesKeepTheCurrentValueWhenNotFinite()
+    public void ACoordinateSetsOneAxisAndKeepsItWhenNotFinite()
     {
-        Assert.Equal(-137.1f, EditLimits.Coordinate(-137.1f, 3f));
-        Assert.Equal(3f, EditLimits.Coordinate(float.PositiveInfinity, 3f));
+        var position = new Vector3(1f, 2f, 3f);
+
+        Assert.Equal(new Vector3(-137.1f, 2f, 3f), EditLimits.Coordinate(position, 0, -137.1f));
+        Assert.Equal(position, EditLimits.Coordinate(position, 1, float.PositiveInfinity));
+        Assert.Equal(new Vector3(1f, 2f, 5f), EditLimits.Coordinate(position, 2, 5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => EditLimits.Coordinate(position, 3, 5f));
     }
 }

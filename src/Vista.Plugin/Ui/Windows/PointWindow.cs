@@ -142,36 +142,21 @@ internal sealed class PointWindow : Window
     {
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
-        PointField(
-            $"x{index}",
-            "X",
-            EditorColours.AxisX,
-            index,
-            point.Position.X,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            (p, v) => p with { Position = p.Position with { X = EditLimits.Coordinate(v, p.Position.X) } }
-        );
-        PointField(
-            $"y{index}",
-            "Y",
-            EditorColours.AxisY,
-            index,
-            point.Position.Y,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            (p, v) => p with { Position = p.Position with { Y = EditLimits.Coordinate(v, p.Position.Y) } }
-        );
-        PointField(
-            $"z{index}",
-            "Z",
-            EditorColours.AxisZ,
-            index,
-            point.Position.Z,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            (p, v) => p with { Position = p.Position with { Z = EditLimits.Coordinate(v, p.Position.Z) } }
-        );
+        for (var axis = 0; axis < PoseGrid.Axes.Length; axis++)
+        {
+            var (id, name, border) = PoseGrid.Axes[axis];
+            var at = axis;
+            PointField(
+                $"{id}{index}",
+                name,
+                border,
+                index,
+                point.Position[at],
+                PoseGrid.PositionSpeed,
+                "%.2f",
+                (p, v) => p with { Position = EditLimits.Coordinate(p.Position, at, v) }
+            );
+        }
 
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
@@ -234,33 +219,20 @@ internal sealed class PointWindow : Window
     {
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
-        AnchorField(
-            "anchor-x",
-            "X",
-            EditorColours.AxisX,
-            anchor.Position.X,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            (a, v) => a with { Position = a.Position with { X = EditLimits.Coordinate(v, a.Position.X) } }
-        );
-        AnchorField(
-            "anchor-y",
-            "Y",
-            EditorColours.AxisY,
-            anchor.Position.Y,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            (a, v) => a with { Position = a.Position with { Y = EditLimits.Coordinate(v, a.Position.Y) } }
-        );
-        AnchorField(
-            "anchor-z",
-            "Z",
-            EditorColours.AxisZ,
-            anchor.Position.Z,
-            PoseGrid.PositionSpeed,
-            "%.2f",
-            (a, v) => a with { Position = a.Position with { Z = EditLimits.Coordinate(v, a.Position.Z) } }
-        );
+        for (var axis = 0; axis < PoseGrid.Axes.Length; axis++)
+        {
+            var (id, name, border) = PoseGrid.Axes[axis];
+            var at = axis;
+            AnchorField(
+                $"anchor-{id}",
+                name,
+                border,
+                anchor.Position[at],
+                PoseGrid.PositionSpeed,
+                "%.2f",
+                (a, v) => a with { Position = EditLimits.Coordinate(a.Position, at, v) }
+            );
+        }
 
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
@@ -291,27 +263,12 @@ internal sealed class PointWindow : Window
     {
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.ArrowsAlt, "Position");
-        LookAtField(
-            "look-x",
-            "X",
-            EditorColours.AxisX,
-            lookAt.X,
-            (p, v) => p with { X = EditLimits.Coordinate(v, p.X) }
-        );
-        LookAtField(
-            "look-y",
-            "Y",
-            EditorColours.AxisY,
-            lookAt.Y,
-            (p, v) => p with { Y = EditLimits.Coordinate(v, p.Y) }
-        );
-        LookAtField(
-            "look-z",
-            "Z",
-            EditorColours.AxisZ,
-            lookAt.Z,
-            (p, v) => p with { Z = EditLimits.Coordinate(v, p.Z) }
-        );
+        for (var axis = 0; axis < PoseGrid.Axes.Length; axis++)
+        {
+            var (id, name, border) = PoseGrid.Axes[axis];
+            var at = axis;
+            LookAtField($"look-{id}", name, border, lookAt[at], (p, v) => EditLimits.Coordinate(p, at, v));
+        }
 
         ImGui.TableNextRow();
         PoseGrid.Label(FontAwesomeIcon.SyncAlt, "Rotation");
