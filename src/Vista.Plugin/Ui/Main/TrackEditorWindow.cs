@@ -397,7 +397,7 @@ internal sealed class TrackEditorWindow : Window
     private void DrawTransport()
     {
         var playing = session.IsPlaying;
-        ImGui.BeginDisabled(session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive);
+        ImGui.BeginDisabled(!session.CanStart);
         if (
             IconButton.Draw(
                 "play-pause",
@@ -416,10 +416,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndDisabled();
 
         ImGui.SameLine();
-        ImGui.BeginDisabled(
-            session.Released
-                || (session.Mode == CameraMode.Editing ? session.Track.Points.Count == 0 : !session.CanGoLive)
-        );
+        ImGui.BeginDisabled(!session.CanRestart);
         if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart"))
         {
             fields.Commit();

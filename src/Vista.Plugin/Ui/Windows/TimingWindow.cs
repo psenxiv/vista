@@ -337,7 +337,7 @@ internal sealed class TimingWindow : Window
     /// <summary>A vertical line at the scrub head, across the plot and the strip; none while Live plays another track.</summary>
     private void DrawPlayhead(ImDrawListPtr list, TimingGraph graph, float stripBottom)
     {
-        if (session.Mode == CameraMode.Live && session.PlayingEntry?.TrackId != session.EditedTrackId)
+        if (!session.Transport.HeadOnEditedTrack)
             return;
         if (!InViewTime(graph, (float)session.Transport.ScrubHead))
             return;

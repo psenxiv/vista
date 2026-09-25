@@ -49,14 +49,14 @@ internal sealed class EditorLayer
     /// <summary>Draws the editor for this frame. Call from UiBuilder.Draw.</summary>
     public void Draw()
     {
-        var editing = session.Mode == CameraMode.Editing && !session.Transport.Previewing;
+        var editing = session.OverlayEditable;
         if (!editing)
         {
             clicks.Reset();
             gizmo.Cancel();
             anchorGizmo.Cancel(session);
         }
-        if (!editing && session.Mode != CameraMode.View)
+        if (!session.OverlayShown)
             return;
         if (EditorView.Read() is not { } view)
             return;

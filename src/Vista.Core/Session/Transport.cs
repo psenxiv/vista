@@ -25,6 +25,10 @@ public sealed class Transport
             ? session.Director.ShotTime
             : preview?.ShotTime ?? Math.Min(scrubTime, session.Duration);
 
+    /// <summary>True unless Live is playing a track other than the edited one, so the scrub head's time is the edited track's.</summary>
+    public bool HeadOnEditedTrack =>
+        session.Mode != CameraMode.Live || session.PlayingEntry?.TrackId == session.EditedTrackId;
+
     /// <summary>The scrub bar's length: the playing entry's while live, otherwise the edited track's.</summary>
     public double ScrubLength => session.Mode == CameraMode.Live ? session.Director.ShotLength : session.Duration;
 

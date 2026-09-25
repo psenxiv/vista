@@ -84,6 +84,24 @@ public sealed class SessionState
     /// <summary>True when the playlist has an entry whose track has points.</summary>
     public bool CanGoLive => PlaylistEditing.CanPlay(Scene);
 
+    /// <summary>True when Play has something to play: the edited track's points in Edit, otherwise a playlist that can go live.</summary>
+    public bool CanStart => Mode == CameraMode.Editing ? Local.Points.Count > 0 : CanGoLive;
+
+    /// <summary>True when Restart has something to play, which Off and View never do.</summary>
+    public bool CanRestart => !Released && CanStart;
+
+    /// <summary>True in Edit while no preview plays: the overlay takes clicks and shows the gizmo.</summary>
+    public bool OverlayEditable => Mode == CameraMode.Editing && !Transport.Previewing;
+
+    /// <summary>True when the tracks are drawn over the game: in View, and in Edit while no preview plays.</summary>
+    public bool OverlayShown => Mode == CameraMode.View || OverlayEditable;
+
+    /// <summary>Why a point can't be taken from the camera now, or null.</summary>
+    public string? AddPointRefusal =>
+        Mode != CameraMode.Editing ? "Points can only be added while editing."
+        : Transport.Scrubbing ? "Points cannot be added while scrubbing."
+        : null;
+
     /// <summary>The entry playing while live, or null.</summary>
     public PlaylistEntry? PlayingEntry =>
         Mode == CameraMode.Live && Director.Playlist is { } playing
@@ -202,7 +220,7 @@ public sealed class SessionState
     /// <summary>Starts an Edit preview from the scrub head, or from the beginning when asked or when the scrub head is where the shot finishes.</summary>
     private PlayOutcome StartPreview(bool fromStart)
     {
-        if (Local.Points.Count == 0)
+        if (!CanStart)
             return PlayOutcome.Refused;
         EndLiveEdit();
         Transport.DropScrub();

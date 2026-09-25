@@ -425,4 +425,103 @@ public class SessionStateTests
         Assert.True(state.Director.IsFinished);
         Assert.False(state.IsPlaying);
     }
+
+    // CanStart is the edited track's points in Edit, else CanGoLive; CanRestart adds that Off and View can't.
+
+    [Fact]
+    public void CanStartNeedsPointsInEditAndAPlayablePlaylistElsewhere()
+    {
+        var state = new SessionState();
+        Assert.False(state.CanStart);
+
+        state.Edit();
+        Assert.False(state.CanStart);
+
+        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
+        Assert.True(state.CanStart);
+
+        state.Release();
+        Assert.False(state.CanStart);
+
+        state.Edit();
+        state.AddToPlaylist([state.EditedTrackId]);
+        state.Release();
+        Assert.True(state.CanStart);
+
+        Assert.True(Live().CanStart);
+    }
+
+    [Fact]
+    public void CanRestartIsFalseWhileTheGameHasTheCamera()
+    {
+        var state = EditingWithTrack();
+        state.AddToPlaylist([state.EditedTrackId]);
+        Assert.True(state.CanRestart);
+
+        state.Release();
+        Assert.False(state.CanRestart);
+
+        state.Release(CameraMode.View);
+        Assert.False(state.CanRestart);
+
+        Assert.True(Live().CanRestart);
+    }
+
+    [Fact]
+    public void TheOverlayShowsInViewAndInEditWithoutAPreview()
+    {
+        var state = new SessionState();
+        Assert.False(state.OverlayShown);
+        Assert.False(state.OverlayEditable);
+
+        state.Release(CameraMode.View);
+        Assert.True(state.OverlayShown);
+        Assert.False(state.OverlayEditable);
+
+        state.Edit();
+        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
+        Assert.True(state.OverlayShown);
+        Assert.True(state.OverlayEditable);
+
+        state.Play();
+        Assert.False(state.OverlayShown);
+        Assert.False(state.OverlayEditable);
+
+        var live = Live();
+        Assert.False(live.OverlayShown);
+        Assert.False(live.OverlayEditable);
+    }
+
+    [Fact]
+    public void TheHeadIsOnTheEditedTrackUnlessLivePlaysAnother()
+    {
+        var state = EditingWithTrack();
+        var first = state.EditedTrackId;
+        Assert.True(state.Transport.HeadOnEditedTrack);
+
+        state.AddTrack();
+        state.ChangeTrack(t => TrackEditing.Append(TrackEditing.Append(t, Point(0f)), Point(10f)));
+        state.AddToPlaylist([state.EditedTrackId]);
+        state.SwitchTrack(first);
+        state.Cue();
+        Assert.False(state.Transport.HeadOnEditedTrack);
+
+        var own = EditingWithTrack();
+        own.AddToPlaylist([own.EditedTrackId]);
+        own.Cue();
+        Assert.True(own.Transport.HeadOnEditedTrack);
+    }
+
+    [Fact]
+    public void PointsAreAddedOnlyWhileEditingAndNotScrubbing()
+    {
+        var state = new SessionState();
+        Assert.Equal("Points can only be added while editing.", state.AddPointRefusal);
+
+        state.Edit();
+        Assert.Null(state.AddPointRefusal);
+
+        state.Transport.BeginScrub();
+        Assert.Equal("Points cannot be added while scrubbing.", state.AddPointRefusal);
+    }
 }

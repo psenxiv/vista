@@ -266,10 +266,8 @@ internal sealed class GameSession
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
-        if (state.Mode != CameraMode.Editing)
-            return "Points can only be added while editing.";
-        if (state.Transport.Scrubbing)
-            return "Points cannot be added while scrubbing.";
+        if (state.AddPointRefusal is { } refusal)
+            return refusal;
         return CameraPoint() is { } point ? edit(point) : "Cannot read the camera.";
     }
 

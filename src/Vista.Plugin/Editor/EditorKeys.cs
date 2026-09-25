@@ -65,7 +65,7 @@ internal sealed class EditorKeys
             PhysicalKeys.IsDown(VirtualKey.CONTROL)
             || PhysicalKeys.IsDown(VirtualKey.SHIFT)
             || PhysicalKeys.IsDown(VirtualKey.MENU);
-        var shown = mode == CameraMode.View || (mode == CameraMode.Editing && !session.Transport.Previewing);
+        var shown = session.OverlayShown;
         var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
         if (down && !heatHeld)
             layer.Heat = !layer.Heat;
