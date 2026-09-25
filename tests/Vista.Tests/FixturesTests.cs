@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Tests.Regression;
 using Xunit;
 using Xunit.Sdk;
 using static Vista.Tests.Fixtures;
@@ -70,5 +71,24 @@ public class FixturesTests
         var failure = Assert.Throws<FailException>(() => AssertWellFormed(frame, "Frame 3"));
 
         Assert.Equal("Frame 3: the field of view is out of range (0)", failure.Message);
+    }
+
+    [Fact]
+    public void AGeneratedTrackWhoseSpotPassesThroughTheMovingCameraIsLeftOut()
+    {
+        var crossing = RegressionScene.Cases.Single(c =>
+            c.Name.StartsWith("Hairpin crossing", StringComparison.Ordinal)
+        );
+        Assert.True(SpotPassesThroughCamera(crossing.Track));
+    }
+
+    [Fact]
+    public void ASpotWaitingWhereTheCameraStartsIsKept()
+    {
+        // At the start of the lap, the spot 2 s ahead waits in the hold where the camera is: it isn't moving, so it counts.
+        var lap = RegressionScene.Cases.Single(c =>
+            c.Name.StartsWith("Lap back to the start", StringComparison.Ordinal)
+        );
+        Assert.False(SpotPassesThroughCamera(lap.Track));
     }
 }

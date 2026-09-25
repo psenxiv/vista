@@ -62,7 +62,9 @@ internal static class Fixtures
         AnyPosition,
         Gen.Float[-MathF.PI, MathF.PI],
         Gen.Float[-MathF.PI / 2f, MathF.PI / 2f],
-        Gen.Float[EditLimits.MinFov, EditLimits.MaxFov],
+        // CsCheck's Float[start, finish] can land a few float steps below start, so the FoV is clamped into the editor's range.
+        Gen.Float[EditLimits.MinFov, EditLimits.MaxFov]
+            .Select(fov => Math.Clamp(fov, EditLimits.MinFov, EditLimits.MaxFov)),
         Gen.Float[-MathF.PI, MathF.PI],
         (position, yaw, pitch, fov, roll) => new ControlPoint(position, yaw, pitch, fov, roll)
     );
@@ -85,15 +87,58 @@ internal static class Fixtures
                 )
         );
 
-    /// <summary>A track through <see cref="AnyPoints"/> aimed along its path, by its aim keys or at <see cref="GeneratedLookAt"/>, with random speed, holds, leg times and look ahead, built as the editor builds it.</summary>
-    internal static readonly Gen<Track> AnyPathTrack =
+    /// <summary>A track through <see cref="AnyPoints"/> aimed along its path, by its aim keys or at <see cref="GeneratedLookAt"/>, with random speed, holds, leg times and look ahead, built as the editor builds it; a Direction of travel track whose look-ahead spot passes through the moving camera (<see cref="SpotPassesThroughCamera"/>) is left out.</summary>
+    internal static readonly Gen<Track> AnyPathTrack = (
         from points in AnyPoints
         from aim in Gen.OneOfConst(AimMode.PathTangent, AimMode.AimKeys, AimMode.LookAt)
         from speed in Gen.Float[2f, 20f]
         from lookAhead in Gen.Float[aim == AimMode.PathTangent ? MinGeneratedLookAhead : 0f, TrackEditing.MaxLookAhead]
         // Per point: 0 nothing, 1 a hold, 2 a timed leg into it, 3 both; then the hold and the leg's seconds.
         from timing in Gen.Select(Gen.Int[0, 3], Gen.Float[0f, 3f], Gen.Float[0.5f, 10f]).Array[points.Length]
-        select PathTrack(points, aim, speed, lookAhead, timing);
+        select PathTrack(points, aim, speed, lookAhead, timing)
+    ).Where(track => !SpotPassesThroughCamera(track));
+
+    /// <summary>How close, in yalms, a Direction of travel camera may come to its look-ahead spot mid-shot in a generated track: nearer, the spot passes through it where a hairpin's sides cross within the look ahead, and the aim turns round at once, by design.</summary>
+    private const float ClosestGeneratedSpot = 0.05f;
+
+    /// <summary>Seconds between the times the camera and its look-ahead spot are compared.</summary>
+    private const double SpotStep = 0.01;
+
+    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot while both move: neither in a hold, and the spot short of the end, where it waits. A spot waiting for the camera, as at the start of a lap back to where it began, doesn't count; the gap is taken as straight between the times compared.</summary>
+    internal static bool SpotPassesThroughCamera(Track track)
+    {
+        if (track.Aim != AimMode.PathTangent || track.LookAhead <= 0f)
+            return false;
+        var evaluator = new TrackEvaluator(track with { Aim = AimMode.AimKeys });
+        var ahead = track.LookAhead;
+        Vector3 Place(double t) => evaluator.Evaluate(t)!.Value.Position;
+
+        Vector3? before = null;
+        for (var t = SpotStep; t + ahead < evaluator.Duration; t += SpotStep)
+        {
+            if (!(evaluator.SlopeAt(t) > 0f && evaluator.SlopeAt(t + ahead) > 0f))
+            {
+                before = null;
+                continue;
+            }
+
+            var gap = Place(t + ahead) - Place(t);
+            if (before is { } last && ClosestToZero(last, gap) < ClosestGeneratedSpot)
+                return true;
+            before = gap;
+        }
+
+        return false;
+    }
+
+    /// <summary>The shortest distance from the origin to the straight line from <paramref name="a"/> to <paramref name="b"/>.</summary>
+    private static float ClosestToZero(Vector3 a, Vector3 b)
+    {
+        var along = b - a;
+        var length = along.LengthSquared();
+        var share = length > 0f ? Fraction.Clamp(-Vector3.Dot(a, along) / length) : 0f;
+        return (a + (along * share)).Length();
+    }
 
     private static Track PathTrack(
         ControlPoint[] points,
