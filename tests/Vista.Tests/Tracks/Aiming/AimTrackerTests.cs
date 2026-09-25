@@ -2,7 +2,6 @@ using System.Numerics;
 using CsCheck;
 using Vista.Core.Camera;
 using Vista.Core.Editing;
-using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
@@ -562,7 +561,7 @@ public class AimTrackerTests
             },
             iter: 1000,
             print: Kept<(Track Track, Walk Walk, float[] Steps)>(x =>
-                $"{SceneJson.Write(new Scene([x.Track], new HashSet<Guid>(), []))}\n{x.Walk}\nSteps: {string.Join(", ", x.Steps)}"
+                $"{PrintTrack(x.Track)}\n{x.Walk}\nSteps: {string.Join(", ", x.Steps)}"
             )
         );
     }

@@ -1,3 +1,4 @@
+using CsCheck;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Timing;
 using Xunit;
@@ -69,6 +70,44 @@ public class TimingEditingTests
         Assert.Equal(new[] { 0f, 5f, 8f, 13f }, Times(track));
         Assert.Equal(1f, new TrackEvaluator(track).Keys[2].Position);
         Assert.Equal(3f, TrackEditing.HoldSeconds(track, 1), 2);
+    }
+
+    [Fact]
+    public void DraggingAKeyOntoItsHoldEndKeepsTheShortestHold()
+    {
+        // At 0.37 y/s the 10-yalm legs take 10 / 0.37 = 27.027027 s, so with a 1.3 s hold the keys sit at 0, 27.027027,
+        // 28.327026 and 55.354053. Dragged past the hold end, key 1 stops MinKeyGap short of it: 28.327026 - 0.05 = 28.277026.
+        // Between 16 and 32 s floats are 2^-19 s apart and 0.05 s is 26214.4 of those steps, so key 1 lands 26214 steps short,
+        // 0.04999924 s, which SetHold would round to no hold. The hold stays at its shortest, MinKeyGap, and every key stays.
+        var track = TrackEditing.SetHold(TrackEditing.SetSpeed(Build3PointTrack(), 0.37f), 1, 1.3f);
+
+        var moved = MoveKey(track, 1, 1000f);
+
+        Assert.Equal(TrackEditing.MinKeyGap, TrackEditing.HoldSeconds(moved, 1), 1e-6f);
+        Assert.Equal(new[] { 0f, 28.28f, 28.33f, 55.35f }, Times(moved));
+    }
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void DraggingAPointKeyKeepsEveryHold()
+    {
+        // A drag retimes legs and holds but never adds or removes one, so the key count stays too.
+        Gen.Select(AnyPathTrack, Gen.Int[0, 5], Gen.Float[-10f, 1000f])
+            .Select((track, point, time) => (Track: track, Point: point % track.Points.Count, Time: time))
+            .Sample(
+                x =>
+                {
+                    var moved = MoveKey(x.Track, TrackEditing.PointKey(x.Track, x.Point), x.Time);
+                    Assert.Equal(
+                        x.Track.Timing.Select(t => t.Hold > 0f).ToArray(),
+                        moved.Timing.Select(t => t.Hold >= TrackEditing.MinKeyGap).ToArray()
+                    );
+                },
+                iter: 2000,
+                print: Kept<(Track Track, int Point, float Time)>(x =>
+                    $"{PrintTrack(x.Track)}\nPoint {x.Point} dragged to {x.Time:R} s"
+                )
+            );
     }
 
     [Fact]

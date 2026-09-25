@@ -111,8 +111,9 @@ public static class TimingEditing
             return track;
 
         var result = TrackEditing.SetLegSpeed(track, point, length / (target - start));
+        // next - target can round to just under MinKeyGap, which SetHold would read as no hold.
         if (holds)
-            return TrackEditing.SetHold(result, point, next - target);
+            return TrackEditing.SetHold(result, point, MathF.Max(next - target, TrackEditing.MinKeyGap));
         return hasNext
             ? TrackEditing.SetLegSpeed(result, point + 1, evaluator.LegLength(point + 1) / (next - target))
             : result;

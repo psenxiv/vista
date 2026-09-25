@@ -3,6 +3,7 @@
 ## X.Y.Z.N
 
 - If something goes wrong inside Vista, or a game update breaks part of it, Vista gives the camera back and stops until you reload it, instead of risking a crash.
+- Fixed dragging a key up to the end of its hold sometimes removing the hold.
 
 ## 0.9.0.1
 

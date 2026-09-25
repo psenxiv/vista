@@ -115,6 +115,9 @@ internal static class Fixtures
         return aim == AimMode.LookAt ? TrackEditing.SetLookAt(track, GeneratedLookAt) : track;
     }
 
+    /// <summary>A track as a scene file, so a failing property prints something to paste into a test.</summary>
+    internal static string PrintTrack(Track track) => SceneJson.Write(new Scene([track], new HashSet<Guid>(), []));
+
     /// <summary>A control point at the given position, aim and field of view.</summary>
     internal static ControlPoint Point(
         float x,

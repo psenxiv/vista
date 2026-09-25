@@ -1,7 +1,6 @@
 using System.Numerics;
 using CsCheck;
 using Vista.Core.Camera;
-using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Timing;
@@ -971,9 +970,6 @@ public class TrackEvaluatorTests
         Along(new Vector3(-0.87344255f, -0.19866933f, -0.44455440f), Facing(evaluator, 0.05), 1e-4f);
     }
 
-    // A generated track as a scene file, so a failure prints something to paste into a test.
-    private static string Print(Track track) => SceneJson.Write(new Scene([track], new HashSet<Guid>(), []));
-
     /// <summary>The most frames a property samples from one track, so a run of zero steps still ends.</summary>
     private const int FrameBudget = 5000;
 
@@ -997,7 +993,9 @@ public class TrackEvaluatorTests
                     AssertWellFormed(evaluator.Evaluate(evaluator.Duration, target)!.Value, "At the end");
                 },
                 iter: 1000,
-                print: Kept<(Track Track, float[] Steps)>(x => $"{Print(x.Track)}\nSteps: {string.Join(", ", x.Steps)}")
+                print: Kept<(Track Track, float[] Steps)>(x =>
+                    $"{PrintTrack(x.Track)}\nSteps: {string.Join(", ", x.Steps)}"
+                )
             );
     }
 
@@ -1027,7 +1025,7 @@ public class TrackEvaluatorTests
                     );
             },
             iter: 3000,
-            print: Kept<Track>(Print)
+            print: Kept<Track>(PrintTrack)
         );
     }
 
@@ -1053,7 +1051,7 @@ public class TrackEvaluatorTests
                         );
                 },
                 iter: 1000,
-                print: Kept<Track>(Print)
+                print: Kept<Track>(PrintTrack)
             );
     }
 
@@ -1093,7 +1091,7 @@ public class TrackEvaluatorTests
                 }
             },
             iter: 5000,
-            print: Kept<Track>(Print)
+            print: Kept<Track>(PrintTrack)
         );
     }
 
