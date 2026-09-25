@@ -102,6 +102,8 @@ public class TimingViewTests
         Assert.Equal(new TimingView(2f, 4f), new TimingView(2f, 4f).UnlessWhole(10f));
     }
 
+    // Whole seconds are exact in float, so the views compare exactly.
+
     [Fact]
     public void DraggingMovesTheViewByTheShareOfThePlotDragged()
     {

@@ -224,6 +224,17 @@ public class TimingEditingTests
         Assert.Equal(new KeyActions(false, false, true, KeySide.Out), TimingEditing.ActionsFor(plain, 0));
     }
 
+    // Any is true when the menu offers even one thing: breaking alone, or unifying alone.
+
+    [Fact]
+    public void AKeyOfferingOneThingOffersSomething()
+    {
+        var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+
+        Assert.True(TimingEditing.ActionsFor(track, 1).Any);
+        Assert.True(TimingEditing.ActionsFor(TimingEditing.SetBroken(track, 1, true), 1).Any);
+    }
+
     [Fact]
     public void TheOnlyKeyOfAOnePointTrackOffersNothing() =>
         Assert.False(TimingEditing.ActionsFor(TrackEditing.Append(TrackEditing.Empty(), Point(0f)), 0).Any);

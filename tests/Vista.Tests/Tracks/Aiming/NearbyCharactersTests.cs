@@ -147,4 +147,17 @@ public class NearbyCharactersTests
         Assert.Equal("Guard · NPC", NearbyCharacters.Label("Guard", null));
         Assert.Equal("Ann · Ultros", NearbyCharacters.Label("Ann", "Ultros"));
     }
+
+    // An NPC sorts as an empty world, so it comes before a player of the same name.
+
+    [Fact]
+    public void AnNpcComesBeforeAPlayerOfTheSameName()
+    {
+        var characters = With(
+            new LoadedCharacter("Guard", "Adamantoise", Vector3.Zero),
+            new LoadedCharacter("Guard", null, Vector3.Zero)
+        );
+
+        Assert.Equal([null, "Adamantoise"], characters.Listed("").Select(c => c.World));
+    }
 }

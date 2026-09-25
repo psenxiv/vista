@@ -112,7 +112,7 @@ public class TimingGraphTests
             DistanceTo = distanceTo,
         };
 
-    // Ticks run from ⌈from / step − 1e-4⌉ steps while k · step ≤ to + 1e-4, so a tick on either edge stays.
+    // Ticks run from ⌈from / step − 1e-4⌉ steps while k · step ≤ to + 1e-4, so a tick on either edge stays. Halves are exact in float, so the lists compare exactly.
 
     [Fact]
     public void TimeTicksCoverTheViewAtTheStep()
@@ -122,6 +122,8 @@ public class TimingGraphTests
         Assert.Equal([0.5f, 1f], Viewing(0.3f, 1.2f, 0f, 20f).TickTimes(0.5f));
         // 2 ≤ 1.99995 + 1e-4.
         Assert.Equal(2f, Viewing(0f, 1.99995f, 0f, 20f).TickTimes(0.5f)[^1]);
+        // ⌈1.5 / 0.5 − 1e-4⌉ = 3, so the first tick is on the edge at 1.5.
+        Assert.Equal([1.5f, 2f, 2.5f], Viewing(1.5f, 2.5f, 0f, 20f).TickTimes(0.5f));
     }
 
     [Fact]
@@ -130,6 +132,10 @@ public class TimingGraphTests
         Assert.Equal([1f, 2f, 3f], Viewing(0f, 10f, 0f, 3f).TickDistances(1f));
         // max(1, ⌈1.5 − 1e-4⌉ = 2) = 2.
         Assert.Equal([2f, 3f], Viewing(0f, 10f, 1.5f, 3.2f).TickDistances(1f));
+        // ⌈2 − 1e-4⌉ = 2: a tick on the bottom edge stays.
+        Assert.Equal([2f, 3f], Viewing(0f, 10f, 2f, 3.2f).TickDistances(1f));
+        // ⌈1.5 / 0.5 − 1e-4⌉ = 3 steps of 0.5: 1.5, then on to 2.5.
+        Assert.Equal([1.5f, 2f, 2.5f], Viewing(0f, 10f, 1.5f, 2.6f).TickDistances(0.5f));
     }
 
     // In view means within 1e-4 of the view's range.
@@ -146,6 +152,8 @@ public class TimingGraphTests
         Assert.False(graph.ShowsTime(float.NaN));
         Assert.True(graph.ShowsDistance(10.00005f));
         Assert.False(graph.ShowsDistance(-0.0002f));
+        Assert.True(graph.ShowsDistance(-0.00005f));
+        Assert.True(graph.ShowsDistance(0.00005f));
         Assert.True(graph.ShowsDistance(float.NaN));
     }
 

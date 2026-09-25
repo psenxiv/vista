@@ -131,6 +131,16 @@ public class TimingCompilerTests
     }
 
     [Fact]
+    public void ALegHoldsBothItsEndKeysAndTheEarlierLegWinsATie()
+    {
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Three(), 1, 2f)); // keys at 0, 5, 7, 12
+        Assert.Equal(1, evaluator.LegAt(0f));
+        Assert.Equal(1, evaluator.LegAt(5f));
+        Assert.Equal(2, evaluator.LegAt(7f));
+        Assert.Equal(2, evaluator.LegAt(12f));
+    }
+
+    [Fact]
     public void ATimingListThatDoesNotMatchThePointsIsRefused() =>
         Assert.Throws<ArgumentException>(() => new TrackEvaluator(Three() with { Timing = [] }));
 

@@ -102,6 +102,10 @@ public class CameraGlyphTests
 
         // Turning π/2 about −Z is turning −π/2 about +Z, which takes (0, 1) to (sin π/2, cos π/2) = (1, 0).
         Near(Vector3.UnitX, CameraGlyph.Pose(rolled, 0, new Vector3(0f, 0f, -10f), Unused).Up, 1e-6f);
+
+        // From (1, 2, 3) the aim point (1, 2, −7) is (0, 0, −10) away.
+        var moved = TrackEditing.Append(TrackEditing.Empty(), Point(1f, 2f, 3f));
+        Assert.Equal(new Vector3(0f, 0f, -10f), CameraGlyph.Pose(moved, 0, new Vector3(1f, 2f, -7f), Unused).Forward);
     }
 
     // An aim point closer than TrackAim.MinTargetDistance (0.1) gives no aim, so the recorded one is drawn.
@@ -140,13 +144,16 @@ public class CameraGlyphTests
         Assert.Equal(0, calls);
     }
 
-    // Direction of travel along +x with no look ahead faces along the path, level.
+    // Direction of travel along +x at height 5 with no look ahead faces along the path, level.
 
     [Fact]
     public void DirectionOfTravelFacesAlongThePath()
     {
         var track = TrackEditing.SetLookAhead(
-            TrackEditing.Append(TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f)), Point(10f)),
+            TrackEditing.Append(
+                TrackEditing.Append(TrackEditing.Empty(AimMode.PathTangent), Point(0f, 5f)),
+                Point(10f, 5f)
+            ),
             0f
         );
         var calls = 0;

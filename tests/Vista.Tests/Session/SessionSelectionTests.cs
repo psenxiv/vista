@@ -630,7 +630,7 @@ public class SessionSelectionTests
         Assert.Equal([2], state.Selection.Points);
     }
 
-    // Anchors and the Look At point route to their own Select calls, so a Follow track's anchor is refused as SelectTrackAnchor refuses it.
+    // Anchors and the Look At point route to their own Select calls, so Track 3's anchor, unplaced with no points, is refused as SelectTrackAnchor refuses it.
 
     [Fact]
     public void APlainClickOnAnAnchorOrTheLookAtPointSelectsIt()
@@ -648,10 +648,12 @@ public class SessionSelectionTests
         state.Selection.ClickMarker(new TrackMarker(first, -1, null, MarkerKind.LookAt), RowClick.Plain);
         Assert.Equal(AnchorKind.LookAt, state.Selection.Anchor);
 
-        state.ChangeTrack(t => t with { Aim = AimMode.FollowTarget });
         Assert.Equal(
-            "A Follow Target track's anchor is hidden",
-            state.Selection.ClickMarker(new TrackMarker(first, -1, null, MarkerKind.TrackAnchor), RowClick.Plain)
+            "A track's anchor is placed with its first point.",
+            state.Selection.ClickMarker(
+                new TrackMarker(Track(state, 2), -1, null, MarkerKind.TrackAnchor),
+                RowClick.Plain
+            )
         );
     }
 
