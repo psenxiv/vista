@@ -106,16 +106,15 @@ internal static class RegressionScene
     /// <summary>Recorded aim east 45° up, straight up with the picture's top to the north, west 45° up, 2 s a leg: the shot that found the turn-rate jump at a middle point (spec:7).</summary>
     private static Track RecordedAimUpAndOverAMiddlePoint()
     {
+        (float Yaw, float Pitch)[] looks =
+        [
+            (-MathF.PI / 2f, MathF.PI / 4f),
+            (MathF.PI, MathF.PI / 2f),
+            (MathF.PI / 2f, MathF.PI / 4f),
+        ];
         var track = TrackEditing.Empty(AimMode.AimKeys);
-        track = TrackEditing.Append(
-            track,
-            new ControlPoint(new Vector3(-10f, 0f, 0f), -MathF.PI / 2f, MathF.PI / 4f, Fov)
-        );
-        track = TrackEditing.Append(track, new ControlPoint(new Vector3(0f, 0f, 0f), MathF.PI, MathF.PI / 2f, Fov));
-        track = TrackEditing.Append(
-            track,
-            new ControlPoint(new Vector3(10f, 0f, 0f), MathF.PI / 2f, MathF.PI / 4f, Fov)
-        );
+        foreach (var (position, (yaw, pitch)) in PathShapes.UpAndOver.Zip(looks))
+            track = TrackEditing.Append(track, new ControlPoint(position, yaw, pitch, Fov));
         track = TrackEditing.SetLegDuration(track, 1, 2f);
         return TrackEditing.SetLegDuration(track, 2, 2f);
     }

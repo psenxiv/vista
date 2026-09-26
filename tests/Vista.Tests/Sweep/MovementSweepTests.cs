@@ -219,7 +219,7 @@ public class MovementSweepTests
     /// <summary>The central-difference half-window each turn rate is measured over, in seconds.</summary>
     private const double RateWindow = 1e-3;
 
-    /// <summary>How far apart, in rad/s, the world turn rate just before and just after a point may be, each side extrapolated to the point from <see cref="RateOffset"/> and twice it, and still count as one rate. Extrapolating misses by the rate's second derivative times RateOffset², 4e-6 s². For recorded aim that's the timed rotation's cubic, at most 12φ/T³ + 6(|m₀| + |m₁|)/T² over a leg of T seconds turning φ between end rates m: the sweep's shortest legs, a yalm at 5 yalms a second, take 0.2 s and turn at most 72° (pan 40° with roll swinging 60°, 1.26 rad) between rates of at most φ/T = 6.3 rad/s, under 3800 rad/s³ and 0.015 rad/s a side. Look At and the look ahead turn no faster than 5 yalms a second over the 2 yalms they come closest, 2.5 rad/s, whose second derivative is about 2.5³ = 16 rad/s³, 6e-5 rad/s a side. Rounding moves a position by about 1e-5 yalm (as for <see cref="SpeedAgreement"/>), a facing 2 yalms away by 5e-6 rad and a turn rate across a 2 ms window by 5e-3 rad/s, tripled by extrapolating (2a − b): 0.015 a side. Under 0.03 across both sides; 0.04 rad/s (2.3°/s) keeps margin.</summary>
+    /// <summary>How far apart, in rad/s, the world turn rate just before and just after a point may be, each side extrapolated to the point from <see cref="RateOffset"/> and twice it, and still count as one rate. Extrapolating misses by the rate's second derivative times RateOffset², 4e-6 s². For recorded aim that's the timed rotation's cubic, at most 12φ/T³ + 6(|m₀| + |m₁|)/T² over a leg of T seconds turning φ between end rates m: the sweep's shortest legs, a yalm at 5 yalms a second, take 0.2 s and turn at most 72° (pan 40° with roll swinging 60°, 1.26 rad) between rates of at most φ/T = 6.3 rad/s, under 3800 rad/s³ and 0.015 rad/s a side. Look At's point and the look ahead's spot come no closer than 2 yalms, and the chord to them swings at most as fast as the camera's 5 yalms a second plus the spot's own 5, which moves too: 10 yalms a second over 2 yalms, 5 rad/s. A straight fly-by turning at ω at its closest has a rate whose second derivative peaks there at 2ω³, 250 rad/s³, 1e-3 rad/s a side. Rounding moves a position by about 1e-5 yalm (as for <see cref="SpeedAgreement"/>), a facing 2 yalms away by 5e-6 rad and a turn rate across a 2 ms window by 5e-3 rad/s, tripled by extrapolating (2a − b): 0.015 a side. At most 0.032 across both sides, recorded aim's 0.015 or the chord's 1e-3 a side with rounding; 0.04 rad/s (2.3°/s) keeps margin.</summary>
     private const float RateAgreement = 0.04f;
 
     /// <summary>The most a check's count or measure may be: <see cref="Check.WellFormed"/> and <see cref="Check.Snaps"/> count frames and snaps.</summary>
@@ -673,12 +673,19 @@ public class MovementSweepTests
         string Figure(float? value, float scale, string format) =>
             value is { } v ? (v * scale).ToString(format, CultureInfo.InvariantCulture) : "–";
 
+        string Tally(IEnumerable<Status> statuses) =>
+            string.Join(
+                ", ",
+                Enum.GetValues<Status>().Select(s => $"{statuses.Count(x => x == s)} {s.ToString().ToLowerInvariant()}")
+            );
+
+        var checks = outcomes.SelectMany(o => o.Verdicts).Select(v => v.Status).ToList();
         var text = new StringBuilder();
         text.AppendLine("# Movement sweep")
             .AppendLine()
             .AppendLine(
                 CultureInfo.InvariantCulture,
-                $"{outcomes.Count} combinations: {string.Join(", ", Enum.GetValues<Status>().Select(s => $"{outcomes.Count(o => o.Status == s)} {s.ToString().ToLowerInvariant()}"))}."
+                $"{outcomes.Count} combinations, each counted by its worst check: {Tally(outcomes.Select(o => o.Status))}. {checks.Count} checks: {Tally(checks)}."
             )
             .AppendLine()
             .AppendLine(
