@@ -97,6 +97,8 @@ public sealed class LevelUp
             Refine(from, fromFacing, steps[k], FacingAt(steps[k], fromFacing), 0);
         }
 
+        if (points is { } timed)
+            AddSplits(samples, FacingAt, timed, duration);
         var sampleTimes = samples.Select(s => s.Time).ToArray();
         var sampleFacings = samples.Select(s => s.Facing).ToArray();
         var sampleTurned = new float[sampleTimes.Length];
@@ -111,6 +113,31 @@ public sealed class LevelUp
         );
     }
 
+    /// <summary>Adds a sample at each <see cref="Split"/> in <paramref name="samples"/>, so neighbouring turn spans meet exactly there.</summary>
+    private static void AddSplits(
+        List<(float Time, Vector3 Facing)> samples,
+        Func<float, Vector3, Vector3> facingAt,
+        (float[] Arrive, float[] Depart) points,
+        float duration
+    )
+    {
+        var sampledTimes = samples.Select(s => s.Time).ToArray();
+        var sampledFacings = samples.Select(s => s.Facing).ToArray();
+        var extents = Extents(sampledFacings);
+        var reaches = Reaches(sampledTimes, sampledFacings, extents, points, duration);
+        foreach (
+            var split in Enumerable
+                .Range(0, extents.Count)
+                .Select(i => Split(sampledTimes, extents, reaches, i))
+                .OfType<float>()
+        )
+        {
+            var before = samples.FindLastIndex(s => s.Time <= split);
+            if (samples[before].Time < split)
+                samples.Insert(before + 1, (split, facingAt(split, samples[before].Facing)));
+        }
+    }
+
     /// <summary>Each passage's planned turn along the sampled <paramref name="times"/> and <paramref name="facings"/>, over its turn span when <paramref name="points"/>' times are given.</summary>
     private static Passage[] Plan(
         float[] times,
@@ -121,22 +148,8 @@ public sealed class LevelUp
         (float[] Arrive, float[] Depart)? points
     )
     {
-        var extents = new List<(int Start, int? End, float Pole, bool Inside)>();
-        for (var k = 0; k < times.Length; k++)
-        {
-            if (!InPassage(facings[k]))
-                continue;
-            var end = k;
-            while (end < times.Length && InPassage(facings[end]))
-                end++;
-            extents.Add((k == 0 ? 0 : k - 1, end == times.Length ? null : end, MathF.Sign(facings[k].Y), k == 0));
-            k = end;
-        }
-
-        // The sample at a point's time: every point time within the shot is one of the steps.
-        int SampleAt(float time) => Search.LastAtOrBelow(times, time, 0, times.Length);
-        bool Steep(int sample, float pole) => InSpanReach(facings[sample]) && MathF.Sign(facings[sample].Y) == pole;
-
+        var extents = Extents(facings);
+        var reaches = points is { } timed ? Reaches(times, facings, extents, timed, duration) : null;
         var found = new List<Passage>();
         var inverted = false;
         var previousEnd = 0;
@@ -171,19 +184,14 @@ public sealed class LevelUp
                 continue;
             }
 
-            if (points is { } pointTimes)
+            if (reaches?[i] is { } reach)
             {
-                var nextStart = i + 1 < extents.Count ? extents[i + 1].Start : times.Length - 1;
-                var reachStart = start;
-                while (reachStart > 0 && Steep(reachStart, pole) && Steep(reachStart - 1, pole))
-                    reachStart--;
-                var reachEnd = last;
-                while (reachEnd < times.Length - 1 && Steep(reachEnd, pole) && Steep(reachEnd + 1, pole))
-                    reachEnd++;
-                var departed = SampleAt(pointTimes.Depart.Where(t => t <= times[start]).DefaultIfEmpty(0f).Max());
-                var arrived = SampleAt(pointTimes.Arrive.Where(t => t >= times[last]).DefaultIfEmpty(duration).Min());
-                start = Math.Max(Math.Max(departed, reachStart), previousEnd);
-                last = Math.Min(Math.Min(arrived, reachEnd), nextStart);
+                var next =
+                    Split(times, extents, reaches, i) is { } split ? SampleAt(times, split)
+                    : i + 1 < extents.Count ? extents[i + 1].Start
+                    : times.Length - 1;
+                start = Math.Max(reach.Start, previousEnd);
+                last = Math.Min(reach.End, next);
             }
 
             var from = Level(facings[start], inverted, pole);
@@ -203,6 +211,64 @@ public sealed class LevelUp
 
         return [.. found];
     }
+
+    /// <summary>The vertical passages along the sampled <paramref name="facings"/>.</summary>
+    private static List<Extent> Extents(Vector3[] facings)
+    {
+        var extents = new List<Extent>();
+        for (var k = 0; k < facings.Length; k++)
+        {
+            if (!InPassage(facings[k]))
+                continue;
+            var end = k;
+            while (end < facings.Length && InPassage(facings[end]))
+                end++;
+            extents.Add(
+                new Extent(k == 0 ? 0 : k - 1, end == facings.Length ? null : end, MathF.Sign(facings[k].Y), k == 0)
+            );
+            k = end;
+        }
+
+        return extents;
+    }
+
+    /// <summary>Each passage's turn span before its neighbours limit it: from the last point left before it to the first reached after, within 60° of its pole; null for one the shot starts inside or never leaves.</summary>
+    private static (int Start, int End)?[] Reaches(
+        float[] times,
+        Vector3[] facings,
+        List<Extent> extents,
+        (float[] Arrive, float[] Depart) points,
+        float duration
+    )
+    {
+        bool Steep(int sample, float pole) => InSpanReach(facings[sample]) && MathF.Sign(facings[sample].Y) == pole;
+        var reaches = new (int Start, int End)?[extents.Count];
+        for (var i = 0; i < extents.Count; i++)
+        {
+            if (extents[i] is not { Inside: false, End: { } end } extent)
+                continue;
+            var start = extent.Start;
+            while (start > 0 && Steep(start, extent.Pole) && Steep(start - 1, extent.Pole))
+                start--;
+            var last = end;
+            while (last < times.Length - 1 && Steep(last, extent.Pole) && Steep(last + 1, extent.Pole))
+                last++;
+            var departed = points.Depart.Where(t => t <= times[extent.Start]).DefaultIfEmpty(0f).Max();
+            var arrived = points.Arrive.Where(t => t >= times[end]).DefaultIfEmpty(duration).Min();
+            reaches[i] = (Math.Max(SampleAt(times, departed), start), Math.Min(SampleAt(times, arrived), last));
+        }
+
+        return reaches;
+    }
+
+    /// <summary>Where passage <paramref name="i"/>'s turn span and the next one's meet when they'd overlap: halfway from its end to the next one's start; null when they don't overlap.</summary>
+    private static float? Split(float[] times, List<Extent> extents, (int Start, int End)?[] reaches, int i) =>
+        i + 1 < extents.Count && reaches[i] is { } first && reaches[i + 1] is { } second && first.End > second.Start
+            ? (times[extents[i].End!.Value] + times[extents[i + 1].Start]) / 2f
+            : null;
+
+    /// <summary>The sample at or just before <paramref name="time"/>: exactly at it for a point's time or a split, which are always sampled.</summary>
+    private static int SampleAt(float[] times, float time) => Search.LastAtOrBelow(times, time, 0, times.Length);
 
     /// <summary>The up at <paramref name="time"/> facing <paramref name="facing"/>.</summary>
     public Vector3 At(double time, Vector3 facing)
@@ -253,6 +319,9 @@ public sealed class LevelUp
 
     /// <summary><paramref name="v"/>'s level part as a unit vector; straight up or down, yaw 0's heading, −z.</summary>
     private static Vector3 Flat(Vector3 v) => Vectors.FlatOr(v, new Vector3(0f, 0f, -1f));
+
+    /// <summary>A vertical passage from the sample before it, <see cref="Start"/>, to the first after it, <see cref="End"/> (null if the shot ends in it), toward <see cref="Pole"/> (1 up, -1 down); <see cref="Inside"/> when the shot starts in it.</summary>
+    private readonly record struct Extent(int Start, int? End, float Pole, bool Inside);
 
     /// <summary>A vertical passage's turn from sample <see cref="Start"/> to sample <see cref="End"/> (null if the shot ends in it), over the passage or its turn span, turning up about the vertical by <see cref="Turn"/> from leaning along <see cref="From"/>; <see cref="FromLevel"/> when it starts from a level sample.</summary>
     private readonly record struct Passage(

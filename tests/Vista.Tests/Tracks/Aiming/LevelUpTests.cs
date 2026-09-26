@@ -187,33 +187,44 @@ public class LevelUpTests
     }
 
     [Fact]
-    public void TurnSpansThatWouldOverlapAreClippedAtEachOther()
+    public void TurnSpansThatWouldOverlapSplitAtTheMidpointBetweenThePassages()
     {
         // Over the top from 45° up along -z to 45° up along +z in the first second, then back: two passages (1/3 to 2/3 s
         // and 4/3 to 5/3 s) with the view within 60° of straight up throughout, and points only at the ends. Merged, the
-        // lean would turn from +z and back to +z, not at all. Instead the first span runs from the start to the second
-        // passage's start, 105° over at 4/3 s, and the second from there to the end.
+        // lean would turn from +z and back to +z, not at all. Instead the time between the first passage's end (2/3 s)
+        // and the second's start (4/3 s) splits at its midpoint, 1 s, 135° over: the first span runs 0 to 1 s and the
+        // second 1 to 2 s, each over 90° of view, each a half turn of the lean (+z to -z, then back).
         static Vector3 Facing(double t) => OverTheTop((t < 1 ? 45 + (90 * t) : 135 - (90 * (t - 1))) * Deg);
         float[] times = [0f, 2f];
         var level = LevelUp.Along(t => Facing(t), 2f, allowInverted: false, Vector3.UnitY, (times, times));
 
-        // At 1 s, 135° over, the first span has turned 90° of its 120°: share 0.75, eased 0.84375, θ = 151.875°; the lean
-        // (±sin θ, 0, cos θ) = (±0.47140, 0, -0.88192) squared to (0, sin 135°, -cos 135°) is (±0.60301, 0.56408, -0.56408).
-        // Each span's edge at a passage is found within 0.78 ms (0.1 s halved 7 times), 0.07°. Here that puts the share out
-        // by up to 0.75 × 0.07 / 120 = 4.4e-4, eased at 6s(1 - s) = 1.125 times, turning the lean up to π × 4.9e-4 = 1.5e-3
-        // rad, and the squared up, over 0.78 long, up to 2e-3.
-        var first = level.At(1.0, Facing(1.0));
-        Assert.Equal(0.60301f, MathF.Abs(first.X), 2e-3f);
-        Assert.Equal(0.56408f, first.Y, 2e-3f);
-        Assert.Equal(-0.56408f, first.Z, 2e-3f);
+        // Each passage edge is found within 0.78 ms (0.1 s halved 7 times) outside the gap, so the split lies within 0.39
+        // ms, 0.035°, of 135°. At 0.25 s, 67.5° over, the first span has turned 22.5° of its 90°: share 0.25 (out by up to
+        // 0.25 × 0.035 / 90 = 1e-4), eased 3s² - 2s³ = 0.15625 (slope 1.125), θ = 28.125° (out by up to π × 1.1e-4 = 3.5e-4
+        // rad). The lean (±sin θ, 0, cos θ) = (±0.47140, 0, 0.88192) squared to (0, sin 67.5°, -cos 67.5°) is
+        // (±0.50078, 0.33124, 0.79969).
+        var first = level.At(0.25, Facing(0.25));
+        Assert.Equal(0.50078f, MathF.Abs(first.X), 1e-3f);
+        Assert.Equal(0.33124f, first.Y, 1e-3f);
+        Assert.Equal(0.79969f, first.Z, 1e-3f);
 
-        // At 1.5 s, straight up, the second span has turned 15° of its 60° from -z: share 0.25, eased 0.15625, θ = 28.125°;
-        // facing straight up the lean is the up, (∓sin θ, 0, -cos θ) = (∓0.47140, 0, -0.88192). The span's start is found up
-        // to 0.07° early, putting the share out by up to 0.07 × 45 / 60² = 8.8e-4, eased at 1.125 times, turning the lean up
-        // to π × 9.8e-4 = 3.1e-3 rad.
+        // At the split, 135° over, both turns are done or not begun: upright, (0, √½, -√½). Within 0.035° of it, the
+        // eased share is within 3 × (0.035 / 90)² = 5e-7 of 0 or 1.
+        Near(new Vector3(0f, MathF.Sqrt(0.5f), -MathF.Sqrt(0.5f)), level.At(1.0, Facing(1.0)), 1e-5f);
+
+        // At 1.5 s, straight up, the second span has turned 45° of its 90° from -z: share 0.5 (out by up to 0.035 × 45 / 90²
+        // = 2e-4), eased 0.5 (slope 1.5), a quarter turn (out by up to π × 3e-4 = 1e-3 rad); facing straight up the lean
+        // is the up, (±1, 0, 0). Clipped at the second passage's start instead, it would be 28° from -z.
         var second = level.At(1.5, Facing(1.5));
-        Assert.Equal(0.47140f, MathF.Abs(second.X), 4e-3f);
-        Assert.Equal(-0.88192f, second.Z, 4e-3f);
+        Assert.Equal(1f, MathF.Abs(second.X), 2e-3f);
+        Assert.Equal(0f, second.Z, 2e-3f);
+
+        // At 1.75 s, 67.5° over again, the second span has turned 67.5° of 90°: share 0.75, eased 0.84375, θ = 151.875°
+        // from -z, the lean (∓sin θ, 0, -cos θ) = (∓0.47140, 0, 0.88192), squared as at 0.25 s: (∓0.50078, 0.33124, 0.79969).
+        var late = level.At(1.75, Facing(1.75));
+        Assert.Equal(0.50078f, MathF.Abs(late.X), 1e-3f);
+        Assert.Equal(0.33124f, late.Y, 1e-3f);
+        Assert.Equal(0.79969f, late.Z, 1e-3f);
 
         // At the end, 45° over along -z, upright: (0, cos 45°, sin 45°).
         Near(new Vector3(0f, MathF.Sqrt(0.5f), MathF.Sqrt(0.5f)), level.At(2.0, Facing(2.0)), 1e-5f);
