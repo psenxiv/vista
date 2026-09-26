@@ -63,6 +63,26 @@ public class TrackRunsTests
         Assert.True(float.IsNaN(new Run(UpLostAtHalfASecond, 1.0).LargestTwist()));
 
     [Fact]
+    public void LargestAtGivesThePeakAndWhenItWasTaken()
+    {
+        // -(t - 0.5)² at 0, 0.25, 0.5, 0.75 and 1 s: -0.25, -0.0625, 0, -0.0625, -0.25, largest at 0.5 s.
+        var peak = LargestAt(Every(0.25, 0.0, 1.0), t => -(float)((t - 0.5) * (t - 0.5)));
+
+        Assert.Equal(0f, peak.Value, 1e-6f);
+        Assert.Equal(0.5, peak.Time, 1e-9);
+    }
+
+    [Fact]
+    public void LargestChangeAtGivesTheLaterTimeOfTheLargestChange()
+    {
+        // t² at 0, 0.25, 0.5, 0.75 and 1 s changes by 0.0625, 0.1875, 0.3125 and 0.4375, the last ending at 1 s.
+        var peak = LargestChangeAt(Every(0.25, 0.0, 1.0), t => (float)(t * t), (a, b) => b - a);
+
+        Assert.Equal(0.4375f, peak.Value, 1e-6f);
+        Assert.Equal(1.0, peak.Time, 1e-9);
+    }
+
+    [Fact]
     public void AClockPlaysEachTimeReachedAndEndsAtTheEnd()
     {
         // A 1 s run stepped by 0.4 s: frames at 0, 0.4 and 0.8 s, then at the end, 1 s, rather than 1.2 s, then nothing.

@@ -42,6 +42,9 @@ internal static class TrackRuns
     /// <summary>A sudden change in a channel: when it happens and how far it jumps.</summary>
     internal readonly record struct Step(double Time, float Size);
 
+    /// <summary>The largest value a measure took and when, in seconds; not a number when it isn't.</summary>
+    internal readonly record struct Peak(float Value, double Time);
+
     /// <summary>A frame a clock played, if the player gave one, and the time it was played at.</summary>
     internal readonly record struct Played(CameraState? Frame, double Time);
 
@@ -148,8 +151,11 @@ internal static class TrackRuns
             ];
 
         /// <summary>The most the picture turns about its own centre between 60 fps frames beyond <see cref="SpinPerTurn"/> times the facing's own turn, in radians: a whip, where the picture turns though the view barely does. Not a number once any frame isn't.</summary>
-        internal float LargestTwist() =>
-            LargestChange(
+        internal float LargestTwist() => LargestTwistAt().Value;
+
+        /// <summary><see cref="LargestTwist"/> and the later frame's time.</summary>
+        internal Peak LargestTwistAt() =>
+            LargestChangeAt(
                 Every(FrameSeconds, 0.0, Duration),
                 At,
                 (a, b) =>
@@ -194,7 +200,7 @@ internal static class TrackRuns
     }
 
     /// <summary>The angle, in degrees, between unit directions <paramref name="distance"/> apart.</summary>
-    private static float DistanceDegrees(float distance) => 2f * MathF.Asin(MathF.Min(distance / 2f, 1f)) / Deg;
+    internal static float DistanceDegrees(float distance) => 2f * MathF.Asin(MathF.Min(distance / 2f, 1f)) / Deg;
 
     /// <summary>Times <paramref name="step"/> apart from <paramref name="from"/> while short of <paramref name="to"/>, then <paramref name="to"/> itself.</summary>
     internal static IEnumerable<double> Every(double step, double from, double to)
@@ -217,25 +223,52 @@ internal static class TrackRuns
     }
 
     /// <summary>The largest <paramref name="change"/> between <paramref name="sample"/>s at consecutive <paramref name="times"/>, taken in order; not a number once any change isn't.</summary>
-    internal static float LargestChange<T>(IEnumerable<double> times, Func<double, T> sample, Func<T, T, float> change)
+    internal static float LargestChange<T>(
+        IEnumerable<double> times,
+        Func<double, T> sample,
+        Func<T, T, float> change
+    ) => LargestChangeAt(times, sample, change).Value;
+
+    /// <summary>The largest <paramref name="change"/> between <paramref name="sample"/>s at consecutive <paramref name="times"/> and the later time of the two, or the first change that isn't a number.</summary>
+    internal static Peak LargestChangeAt<T>(IEnumerable<double> times, Func<double, T> sample, Func<T, T, float> change)
     {
-        var largest = 0f;
+        var peak = new Peak(0f, double.NaN);
         var started = false;
         T last = default!;
         foreach (var time in times)
         {
             var next = sample(time);
-            if (started)
-                largest = MathF.Max(largest, change(last, next));
+            if (started && Raises(peak, change(last, next)) is { } value)
+                peak = new Peak(value, time);
+            if (float.IsNaN(peak.Value))
+                return peak;
             (last, started) = (next, true);
         }
 
-        return largest;
+        return peak;
     }
 
     /// <summary>The largest <paramref name="value"/> at <paramref name="times"/>, taken in order; not a number once any value isn't.</summary>
     internal static float Largest(IEnumerable<double> times, Func<double, float> value) =>
-        times.Aggregate(float.NegativeInfinity, (largest, time) => MathF.Max(largest, value(time)));
+        LargestAt(times, value).Value;
+
+    /// <summary>The largest <paramref name="value"/> at <paramref name="times"/> and when it was taken, or the first value that isn't a number.</summary>
+    internal static Peak LargestAt(IEnumerable<double> times, Func<double, float> value)
+    {
+        var peak = new Peak(float.NegativeInfinity, double.NaN);
+        foreach (var time in times)
+        {
+            if (Raises(peak, value(time)) is { } next)
+                peak = new Peak(next, time);
+            if (float.IsNaN(peak.Value))
+                return peak;
+        }
+
+        return peak;
+    }
+
+    /// <summary><paramref name="value"/> when it's larger than <paramref name="peak"/>'s or not a number, else null.</summary>
+    private static float? Raises(Peak peak, float value) => !(value <= peak.Value) ? value : null;
 
     /// <summary>Every step in <paramref name="sample"/> over its first <paramref name="duration"/> seconds, steps within 10 ms of each other counting once at the larger size.</summary>
     private static List<Step> Steps<T>(Func<double, T> sample, Func<T, T, float> distance, float floor, double duration)

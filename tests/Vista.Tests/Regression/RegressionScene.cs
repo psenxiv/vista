@@ -24,8 +24,8 @@ internal static class RegressionScene
     /// <summary>Track anchors in each row of the grid.</summary>
     private const int GridColumns = 4;
 
-    /// <summary>The field of view of every point whose case doesn't vary it, as the demo scene's points have.</summary>
-    private const float Fov = 0.78f;
+    /// <summary>The field of view of every point whose case doesn't vary it.</summary>
+    private const float Fov = PathShapes.Fov;
 
     /// <summary>The cases in playlist order.</summary>
     internal static IReadOnlyList<RegressionCase> Cases { get; } =
@@ -36,8 +36,8 @@ internal static class RegressionScene
             TrackEditing.SetHold(Travel(RunIntoASharpTurn, lookAhead: 0f), 4, 2f),
             0
         ),
-        new("Crane shot, look ahead 0: looks straight up, no spin", Travel(Crane, lookAhead: 0f), 0),
-        new("Crane shot, look ahead 0.5: looks straight up, no spin", Travel(Crane), 0),
+        new("Crane shot, look ahead 0: looks straight up, no spin", Travel(Placed(PathShapes.Crane), lookAhead: 0f), 0),
+        new("Crane shot, look ahead 0.5: looks straight up, no spin", Travel(Placed(PathShapes.Crane)), 0),
         new(
             "Climb drifting across straight up: no flip, no spin",
             Travel([P(0f, -10f, 0f), P(0.4f, 0f, 0f), P(0f, 10f, 0f)]),
@@ -48,7 +48,11 @@ internal static class RegressionScene
             Travel([P(8f, 5f, 0f), P(-7f, 0f, 0f), P(8f, -6f, 0f)]),
             0
         ),
-        new("Hold partway up a climb: still through the hold", TrackEditing.SetHold(Travel(Crane), 2, 2f), 0),
+        new(
+            "Hold partway up a climb: still through the hold",
+            TrackEditing.SetHold(Travel(Placed(PathShapes.Crane)), 2, 2f),
+            0
+        ),
         new("Hairpin: turns smoothly", Travel([P(7f, 0f, -2.5f), P(-8f, 0f, 0f), P(7f, 0f, 2.5f)]), 0),
         new(
             "Into and out of a hold: smooth",
@@ -57,13 +61,17 @@ internal static class RegressionScene
         ),
         new("Easing into the last point: settles without a step", EasingIntoTheEnd(), 0),
         new("Recorded aim with field of view and roll: no pop on arrival", RecordedAim(), 0),
-        new("Straight doubleback, look ahead 0.5: snaps round once", Travel(Doubleback), 1),
-        new("Straight doubleback, look ahead 0: snaps round once", Travel(Doubleback, lookAhead: 0f), 1),
-        new("Vertical loop: upside down over the top, smooth", Travel(Loop), 0),
+        new("Straight doubleback, look ahead 0.5: snaps round once", Travel(Placed(PathShapes.Doubleback)), 1),
+        new(
+            "Straight doubleback, look ahead 0: snaps round once",
+            Travel(Placed(PathShapes.Doubleback), lookAhead: 0f),
+            1
+        ),
+        new("Vertical loop: upside down over the top, smooth", Travel(Placed(PathShapes.Loop)), 0),
         new("Recorded aim over the top: straight up, no swing", OverTheTop(), 0),
         new("Recorded aim up and over through a middle point: one steady turn", RecordedAimUpAndOverAMiddlePoint(), 0),
         new("Look At straight overhead: turns round from point to point, no flip", PassingUnder(), 0),
-        new("Climbing turn: horizon stays level", Travel(ClimbingTurn), 0),
+        new("Climbing turn: horizon stays level", Travel(Placed(PathShapes.ClimbingTurn)), 0),
         new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
         new("Hairpin crossing its own path, look ahead 1.74: one expected flip", HairpinCrossing(), 1),
         new("Field of view recorded at 3° and 143°: zooms from 5° to 120° and back, no pop", PastTheFovRange(), 0),
@@ -83,28 +91,6 @@ internal static class RegressionScene
             1
         ),
     ];
-
-    /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
-    private static ControlPoint[] Loop =>
-        [
-            P(-20f, 0f, 0f),
-            P(-6f, 0f, 0f),
-            P(4f, 3f, 0f),
-            P(7f, 10f, 0f),
-            P(0f, 16f, 0f),
-            P(-7f, 10f, 0f),
-            P(-4f, 3f, 0f),
-            P(6f, 0f, 0f),
-            P(20f, 0f, 0f),
-        ];
-
-    /// <summary>A quarter turn round a 10-yalm circle at a time, rising 3 yalms each: a steady climbing turn.</summary>
-    private static ControlPoint[] ClimbingTurn =>
-        [
-            .. Enumerable
-                .Range(0, 9)
-                .Select(i => P(10f * MathF.Cos(i * MathF.PI / 2f), 3f * i, 10f * MathF.Sin(i * MathF.PI / 2f))),
-        ];
 
     /// <summary>Recorded aim from pitch 60° to 120° over a 10-yalm leg: yaw 180°, pitch 60°, roll 180° is pitch 120°, so the shortest turn passes straight up.</summary>
     private static Track OverTheTop()
@@ -147,13 +133,6 @@ internal static class RegressionScene
     private static ControlPoint[] RunIntoASharpTurn =>
         [P(0f, 0f, -70f), P(0f, 0f, -50f), P(0f, 0f, -30f), P(0f, 0f, -10f), P(0f, 0f, 10f), P(0.26f, 0f, -5f)];
 
-    /// <summary>Level along -z, straight up 20 yalms, then level along +x, in legs of 10.</summary>
-    private static ControlPoint[] Crane =>
-        [P(0f, -10f, 10f), P(0f, -10f, 0f), P(0f, 0f, 0f), P(0f, 10f, 0f), P(10f, 10f, 0f)];
-
-    /// <summary>Out 15 yalms along +x and straight back 10.</summary>
-    private static ControlPoint[] Doubleback => [P(-8f, 0f, 0f), P(7f, 0f, 0f), P(-3f, 0f, 0f)];
-
     /// <summary>The scene as the builder makes it, with fixed ids so its file only changes when a case does.</summary>
     internal static Scene Build()
     {
@@ -191,6 +170,10 @@ internal static class RegressionScene
             (row - ((rows - 1) / 2f)) * GridSpacing
         );
     }
+
+    /// <summary>Points at <paramref name="positions"/>, local to their track anchor, with no recorded aim or roll.</summary>
+    private static ControlPoint[] Placed(Vector3[] positions) =>
+        [.. positions.Select(p => new ControlPoint(p, 0f, 0f, Fov))];
 
     /// <summary>A point at a place local to its track anchor, with no recorded aim or roll.</summary>
     private static ControlPoint P(float x, float y, float z) => new(new Vector3(x, y, z), 0f, 0f, Fov);
