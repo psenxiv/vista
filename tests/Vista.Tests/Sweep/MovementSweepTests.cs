@@ -50,13 +50,16 @@ public class MovementSweepTests
     }
 
     /// <summary>What a check measured on a combination: a count, or the worst value of a bounded measure, and where it was worst.</summary>
-    private sealed record Measure(Check Check, float Value, string Where);
+    private sealed record Measure(Check Check, float Value, string Where, IReadOnlyList<PointMeasure>? Points = null);
+
+    /// <summary>What a check measured at one point, and what was seen there.</summary>
+    private sealed record PointMeasure(int Point, float Value, string Where);
 
     /// <summary>A failure a spec implies: the shape, the aim setting (every aim when null), the check, the count it has or the bound it stays within, why, and the spec it follows from.</summary>
     private sealed record Declared(Shape Shape, Aim? Aim, Check Check, float Expected, string Reason, string Spec);
 
-    /// <summary>A failure waiting for the user's triage: the shape, the aim setting (every aim when null), the check, the value measured when it was listed, and what's seen. It fails if the measure moves further than the check's own limit from that value.</summary>
-    private sealed record Pending(Shape Shape, Aim? Aim, Check Check, float Measured, string Seen);
+    /// <summary>A failure waiting for the user's triage: the shape, the aim setting (every aim when null), the check, the point it was found at (the whole measure when null), the value measured when it was listed, and what's seen. It fails if that value moves further than the check's own limit or falls within the limit, and every other point is held to the limit.</summary>
+    private sealed record Pending(Shape Shape, Aim? Aim, Check Check, int? Point, float Measured, string Seen);
 
     /// <summary>The seconds the middle-hold shape holds its middle point.</summary>
     private const float HoldSeconds = 2f;
@@ -158,9 +161,9 @@ public class MovementSweepTests
             )
         );
 
-    /// <summary>Point <paramref name="point"/>'s look in degrees: pitch 45°, then 90°, then yaw turned 180° at 45°, each cycle of three carrying on from the last one's yaw so the camera keeps turning over the same way.</summary>
+    /// <summary>Point <paramref name="point"/>'s look in degrees: 45° up, straight up, then 45° up with yaw turned 180°, straight up again, and so on, so the camera keeps turning over the top the same way.</summary>
     private static (float Yaw, float Pitch, float Roll) OverTheTopLook(int point) =>
-        ((180f * (point / 3)) + (point % 3 == 2 ? 180f : 0f), point % 3 == 1 ? 90f : 45f, 0f);
+        (180f * (point / 2), point % 2 == 1 ? 90f : 45f, 0f);
 
     /// <summary>Direction of travel through <paramref name="positions"/>, looking <paramref name="lookAhead"/> seconds ahead.</summary>
     private static Track Travel(Vector3[] positions, float lookAhead) =>
@@ -204,12 +207,6 @@ public class MovementSweepTests
     /// <summary>How far the horizon may lean where it's level, in radians. Outside vertical passages and Look At's turn spans the up is exactly upright or, over a loop, inverted (full-freedom camera §3 and §4, aim-flow §2), and both have a level right vector: only rounding leans it, the facing's (7.6e-7 rad, as for <see cref="AimMiss"/>) and a few 6e-8 steps in the cross product, normalising and arcsine. Under 1e-6 in all; 1e-5 keeps tenfold margin.</summary>
     private const float TiltLimit = 1e-5f;
 
-    /// <summary>How near a passage's or turn span's edge a frame may be and still count as level: LevelUp finds each edge to within a millisecond of where the facing crosses it, so a frame counts only when the facing is outside a millisecond either side too.</summary>
-    private const double EdgeSlop = Millisecond;
-
-    /// <summary>A Look At turn span reaches no further than 60° from straight up or down (aim-flow §2), as a facing's sideways part.</summary>
-    private static readonly float SpanReach = MathF.Sin(60f * Deg);
-
     /// <summary>Seconds each side's speed is measured over, as <see cref="Run.Speed(double, double)"/>'s half-window: each side's chord spans 10 ms, 0.05 yalm at 5 yalms a second, from the point outward.</summary>
     private const double SpeedWindow = 5e-3;
 
@@ -252,7 +249,7 @@ public class MovementSweepTests
             Check.Snaps,
             1f,
             "facing along the path, it turns round at once where the path runs straight back (3 s)",
-            "full-freedom camera §3; regression case \"Straight doubleback, look ahead 0: snaps round once\""
+            "smooth turns §2 (look ahead 0 is the exact tangent), as movement sweep spec:64's example; full-freedom camera §3 (line 48: a straight doubleback reverses a level facing); regression case \"Straight doubleback, look ahead 0: snaps round once\""
         ),
         new(
             Doubleback,
@@ -260,7 +257,7 @@ public class MovementSweepTests
             Check.Snaps,
             1f,
             "the spot ahead passes back through the camera and the aim turns round at once (2.75 s)",
-            "full-freedom camera §6, changes of 2026-09-25; regression case \"Straight doubleback, look ahead 0.5: snaps round once\""
+            "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there); regression case \"Straight doubleback, look ahead 0.5: snaps round once\""
         ),
         new(
             Doubleback,
@@ -268,135 +265,106 @@ public class MovementSweepTests
             Check.Snaps,
             1f,
             "the spot ahead passes back through the camera and the aim turns round at once (2 s)",
-            "full-freedom camera §6, changes of 2026-09-25: a camera passing through the moving spot flips by the look ahead's definition"
+            "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there)"
         ),
     ];
 
-    /// <summary>Speed steps at a point found by the first sweep, on every aim since it's the path's.</summary>
+    /// <summary>Speed steps at a point found by the sweep, on every aim since speed is the path's.</summary>
     private static readonly Pending[] PendingSpeed =
     [
-        new(
-            Straight,
-            null,
-            Check.SpeedContinuous,
-            0.056458f,
-            "slows to 4.944 yalms/s just before point 1 (2 s) and is back to 5 just after"
-        ),
-        new(
-            GentleCurve,
-            null,
-            Check.SpeedContinuous,
-            0.045897f,
-            "4.996 yalms/s just before point 3 (4.705 s), 4.950 just after"
-        ),
-        new(
-            SCurve,
-            null,
-            Check.SpeedContinuous,
-            0.047042f,
-            "5.000 yalms/s just before point 3 (4.632 s), 4.953 just after"
-        ),
-        new(
-            Hairpin,
-            null,
-            Check.SpeedContinuous,
-            0.13664f,
-            "4.863 yalms/s just before point 1 (3.028 s), 5.000 just after"
-        ),
-        new(
-            Doubleback,
-            null,
-            Check.SpeedContinuous,
-            0.16694f,
-            "4.979 yalms/s into the turn-back point 1 (3 s), 4.812 out of it"
-        ),
-        new(
-            Loop,
-            null,
-            Check.SpeedContinuous,
-            0.068163f,
-            "4.991 yalms/s just before point 7 (14.042 s), 4.923 just after"
-        ),
-        new(
-            Crane,
-            null,
-            Check.SpeedContinuous,
-            0.049431f,
-            "4.948 yalms/s just before point 1 (2.04 s), 4.998 just after"
-        ),
-        new(
-            Orbit,
-            null,
-            Check.SpeedContinuous,
-            0.037662f,
-            "4.947 yalms/s just before point 1 (1.853 s), 4.984 just after"
-        ),
-        new(
-            Uneven,
-            null,
-            Check.SpeedContinuous,
-            0.2943f,
-            "5.005 yalms/s at the end of the 1-yalm leg into point 3 (4.4 s), 4.710 at the start of the 20-yalm leg out"
-        ),
+        new(Straight, null, Check.SpeedContinuous, 1, 0.056458f, SpeedStep("2", 4.944f, 5f)),
+        new(Straight, null, Check.SpeedContinuous, 2, 0.056458f, SpeedStep("4", 5f, 4.943f)),
+        new(GentleCurve, null, Check.SpeedContinuous, 1, 0.045676f, SpeedStep("1.565", 4.951f, 4.996f)),
+        new(GentleCurve, null, Check.SpeedContinuous, 3, 0.045897f, SpeedStep("4.705", 4.996f, 4.95f)),
+        new(SCurve, null, Check.SpeedContinuous, 1, 0.046873f, SpeedStep("1.544", 4.953f, 5f)),
+        new(SCurve, null, Check.SpeedContinuous, 3, 0.047042f, SpeedStep("4.632", 5f, 4.953f)),
+        new(Hairpin, null, Check.SpeedContinuous, 1, 0.13664f, SpeedStep("3.028", 4.863f, 5f)),
+        new(Hairpin, null, Check.SpeedContinuous, 2, 0.13664f, SpeedStep("3.679", 5f, 4.863f)),
+        new(Doubleback, null, Check.SpeedContinuous, 1, 0.16694f, SpeedStep("3", 4.979f, 4.812f)),
+        new(Loop, null, Check.SpeedContinuous, 1, 0.068068f, SpeedStep("2.803", 4.924f, 4.992f)),
+        new(Loop, null, Check.SpeedContinuous, 3, 0.030149f, SpeedStep("6.498", 4.986f, 4.956f)),
+        new(Loop, null, Check.SpeedContinuous, 5, 0.030728f, SpeedStep("10.347", 4.956f, 4.986f)),
+        new(Loop, null, Check.SpeedContinuous, 7, 0.068163f, SpeedStep("14.042", 4.991f, 4.923f)),
+        new(Crane, null, Check.SpeedContinuous, 1, 0.049431f, SpeedStep("2.04", 4.948f, 4.998f)),
+        new(Crane, null, Check.SpeedContinuous, 3, 0.049113f, SpeedStep("6.126", 4.998f, 4.949f)),
+        new(Orbit, null, Check.SpeedContinuous, 1, 0.037662f, SpeedStep("1.853", 4.947f, 4.984f)),
+        new(Orbit, null, Check.SpeedContinuous, 7, 0.036651f, SpeedStep("13.113", 4.984f, 4.947f)),
+        new(Uneven, null, Check.SpeedContinuous, 1, 0.24588f, SpeedStep("0.2", 5.001f, 4.755f)),
+        new(Uneven, null, Check.SpeedContinuous, 2, 0.24929f, SpeedStep("4.2", 4.755f, 5.005f)),
+        new(Uneven, null, Check.SpeedContinuous, 3, 0.2943f, SpeedStep("4.4", 5.005f, 4.71f)),
     ];
 
-    /// <summary>Turn-rate jumps at a point found by the first sweep.</summary>
+    /// <summary>Turn-rate jumps at a point found by the sweep.</summary>
     private static readonly Pending[] PendingTurnRate =
     [
-        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 0.15708f, SpanEdge("3 (4.705 s)", 28.2f, 0.32f, 0.324f)),
-        new(
-            GentleCurve,
-            UnderAPoint,
-            Check.TurnRateContinuous,
-            0.15708f,
-            SpanEdge("3 (4.705 s)", 28.2f, 0.32f, 0.324f)
-        ),
-        new(SCurve, Above, Check.TurnRateContinuous, 0.31151f, SpanEdge("1 (1.544 s)", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, Below, Check.TurnRateContinuous, 0.31151f, SpanEdge("1 (1.544 s)", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, OverAPoint, Check.TurnRateContinuous, 0.31151f, SpanEdge("1 (1.544 s)", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 0.31151f, SpanEdge("1 (1.544 s)", 50.6f, 0.378f, 0.349f)),
-        new(Hairpin, Above, Check.TurnRateContinuous, 0.67216f, SpanEdge("1 (3.028 s)", 83.2f, 0.43f, 0.57f)),
-        new(Hairpin, Below, Check.TurnRateContinuous, 0.67216f, SpanEdge("1 (3.028 s)", 83.2f, 0.43f, 0.57f)),
-        new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1.1766f, SpanEdge("1 (3.028 s)", 79.7f, 1.164f, 0.478f)),
-        new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1.1766f, SpanEdge("1 (3.028 s)", 79.7f, 1.164f, 0.478f)),
-        new(Crane, Above, Check.TurnRateContinuous, 0.37404f, SpanEdge("1 (2.04 s)", 70f, 0.205f, 0.391f)),
-        new(Crane, Below, Check.TurnRateContinuous, 0.37394f, SpanEdge("3 (6.126 s)", 70.1f, 0.39f, 0.205f)),
-        new(Spiral, OverAPoint, Check.TurnRateContinuous, 0.34834f, SpanEdge("3 (9.016 s)", 86.5f, 0.244f, 0.264f)),
-        new(Spiral, UnderAPoint, Check.TurnRateContinuous, 0.34839f, SpanEdge("5 (15.085 s)", 86.5f, 0.264f, 0.244f)),
-        new(Orbit, OverAPoint, Check.TurnRateContinuous, 0.28161f, SpanEdge("5 (9.36 s)", 52.3f, 0.314f, 0.325f)),
-        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 0.28161f, SpanEdge("5 (9.36 s)", 52.3f, 0.314f, 0.325f)),
-        new(Doubleback, Above, Check.TurnRateContinuous, 0.86573f, TurnsBack(0.519f, 0.346f)),
-        new(Doubleback, Below, Check.TurnRateContinuous, 0.86573f, TurnsBack(0.519f, 0.346f)),
-        new(Doubleback, Beside, Check.TurnRateContinuous, 0.86552f, TurnsBack(0.519f, 0.346f)),
-        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1.3524f, TurnsBack(0.811f, 0.541f)),
-        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1.3524f, TurnsBack(0.811f, 0.541f)),
-        new(Uneven, Above, Check.TurnRateContinuous, 0.13286f, WithSpeed("3 (4.4 s)", 1.218f, 1.085f)),
-        new(Uneven, Below, Check.TurnRateContinuous, 0.13286f, WithSpeed("3 (4.4 s)", 1.218f, 1.085f)),
-        new(Uneven, OverAPoint, Check.TurnRateContinuous, 0.13286f, WithSpeed("3 (4.4 s)", 1.218f, 1.085f)),
-        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 0.13286f, WithSpeed("3 (4.4 s)", 1.218f, 1.085f)),
-        new(Uneven, Beside, Check.TurnRateContinuous, 0.054605f, WithSpeed("3 (4.4 s)", 0.504f, 0.45f)),
-        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 0.053182f, WithSpeed("1 (3.028 s)", 2.156f, 2.209f)),
+        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 1, 0.15702f, SpanEdge("1.565", 28.2f, 0.324f, 0.32f)),
+        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 3, 0.15708f, SpanEdge("4.705", 28.2f, 0.32f, 0.324f)),
+        new(GentleCurve, UnderAPoint, Check.TurnRateContinuous, 1, 0.15702f, SpanEdge("1.565", 28.2f, 0.324f, 0.32f)),
+        new(GentleCurve, UnderAPoint, Check.TurnRateContinuous, 3, 0.15708f, SpanEdge("4.705", 28.2f, 0.32f, 0.324f)),
+        new(SCurve, Above, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
+        new(SCurve, Above, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
+        new(SCurve, Below, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
+        new(SCurve, Below, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
+        new(SCurve, OverAPoint, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
+        new(SCurve, OverAPoint, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
+        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
+        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
+        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 1, 0.053182f, WithSpeed("3.028", 2.156f, 2.209f)),
+        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 2, 0.046849f, WithSpeed("3.679", 1.384f, 1.338f)),
+        new(Hairpin, Above, Check.TurnRateContinuous, 1, 0.67216f, SpanEdge("3.028", 83.2f, 0.43f, 0.57f)),
+        new(Hairpin, Above, Check.TurnRateContinuous, 2, 0.67192f, SpanEdge("3.679", 83.1f, 0.57f, 0.43f)),
+        new(Hairpin, Below, Check.TurnRateContinuous, 1, 0.67216f, SpanEdge("3.028", 83.2f, 0.43f, 0.57f)),
+        new(Hairpin, Below, Check.TurnRateContinuous, 2, 0.67192f, SpanEdge("3.679", 83.1f, 0.57f, 0.43f)),
+        new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1, 1.1766f, SpanEdge("3.028", 79.7f, 1.164f, 0.478f)),
+        new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1, 1.1766f, SpanEdge("3.028", 79.7f, 1.164f, 0.478f)),
+        new(Doubleback, Above, Check.TurnRateContinuous, 1, 0.86573f, TurnsBack(0.519f, 0.346f)),
+        new(Doubleback, Below, Check.TurnRateContinuous, 1, 0.86573f, TurnsBack(0.519f, 0.346f)),
+        new(Doubleback, Beside, Check.TurnRateContinuous, 1, 0.86552f, TurnsBack(0.519f, 0.346f)),
+        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1, 1.3524f, TurnsBack(0.811f, 0.541f)),
+        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1, 1.3524f, TurnsBack(0.811f, 0.541f)),
+        new(Crane, Above, Check.TurnRateContinuous, 1, 0.37404f, SpanEdge("2.04", 70.0f, 0.205f, 0.391f)),
+        new(Crane, Below, Check.TurnRateContinuous, 3, 0.37394f, SpanEdge("6.126", 70.1f, 0.39f, 0.205f)),
+        new(Spiral, OverAPoint, Check.TurnRateContinuous, 3, 0.34834f, SpanEdge("9.016", 86.5f, 0.244f, 0.264f)),
+        new(Spiral, UnderAPoint, Check.TurnRateContinuous, 5, 0.34839f, SpanEdge("15.085", 86.5f, 0.264f, 0.244f)),
+        new(Orbit, OverAPoint, Check.TurnRateContinuous, 3, 0.2813f, SpanEdge("5.606", 52.3f, 0.325f, 0.313f)),
+        new(Orbit, OverAPoint, Check.TurnRateContinuous, 5, 0.28161f, SpanEdge("9.36", 52.3f, 0.314f, 0.325f)),
+        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 3, 0.2813f, SpanEdge("5.606", 52.3f, 0.325f, 0.313f)),
+        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 5, 0.28161f, SpanEdge("9.36", 52.3f, 0.314f, 0.325f)),
+        new(Uneven, Above, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
+        new(Uneven, Above, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
+        new(Uneven, Below, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
+        new(Uneven, Below, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
+        new(Uneven, Beside, Check.TurnRateContinuous, 2, 0.048447f, WithSpeed("4.2", 0.461f, 0.51f)),
+        new(Uneven, Beside, Check.TurnRateContinuous, 3, 0.054605f, WithSpeed("4.4", 0.504f, 0.45f)),
+        new(Uneven, OverAPoint, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
+        new(Uneven, OverAPoint, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
+        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
+        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
     ];
 
+    /// <summary>What's seen where the speed steps at a point <paramref name="time"/> seconds in.</summary>
+    private static string SpeedStep(string time, float before, float after) =>
+        string.Create(CultureInfo.InvariantCulture, $"at {time} s: {before} yalms/s just before, {after} just after");
+
     /// <summary>What's seen where Look At's turn rate swings its axis at a point, as it does where the up rejoins upright at a turn span's end.</summary>
-    private static string SpanEdge(string point, float axes, float before, float after) =>
+    private static string SpanEdge(string time, float axes, float before, float after) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"the turn rate's axis swings {axes}° at point {point}, {before} rad/s before and {after} after; the camera passes under or over the Look At point next to it, so a turn span (aim-flow §2) likely starts or ends there, as on the crane, where the up is seen meeting upright at an angle at point 1"
+            $"at {time} s the turn rate's axis swings {axes}°, {before} rad/s before and {after} after; the camera passes under or over the Look At point next to it, so a turn span (aim-flow §2) likely starts or ends there, as on the crane, where the up is seen meeting upright at an angle at point 1"
         );
 
     /// <summary>What's seen where Look At's turn rate reverses at the doubleback's turn-back point.</summary>
     private static string TurnsBack(float before, float after) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"the turn rate reverses at the turn-back point 1 (3 s), {before} rad/s before and {after} after, axes 180° apart: the camera reverses at full speed there, which constant speed along a path that runs straight back seems to imply, but no spec says so for Look At"
+            $"the turn rate reverses at the turn-back point (3 s), {before} rad/s before and {after} after, axes 180° apart: the camera reverses at full speed there, which constant speed along a path that runs straight back seems to imply, but no spec says so for Look At"
         );
 
     /// <summary>What's seen where the turn rate keeps its axis but changes size at a point, with the speed step there.</summary>
-    private static string WithSpeed(string point, float before, float after) =>
+    private static string WithSpeed(string time, float before, float after) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"the turn rate keeps its axis but goes from {before} to {after} rad/s at point {point}, where the speed steps too (pending above)"
+            $"at {time} s the turn rate keeps its axis but goes from {before} to {after} rad/s, where the speed steps too"
         );
 
     /// <summary>Failures waiting for the user's triage.</summary>
@@ -440,9 +408,8 @@ public class MovementSweepTests
         else
         {
             measures.Add(AtPeak(Check.Whips, run.LargestTwistAt()));
-            var reach = track.Aim == AimMode.LookAt ? SpanReach : LevelUp.PassageSideways;
-            var level = frames.Where(t => new[] { -EdgeSlop, 0.0, EdgeSlop }.All(d => Outside(run, t + d, reach)));
-            measures.Add(AtPeak(Check.HorizonLevel, LargestAt(level, run.HorizonTilt)));
+            // Loops' inverted stretches are checked too, beyond what the spec asks: an inverted picture's right vector stays level.
+            measures.Add(AtPeak(Check.HorizonLevel, LargestAt(LevelFrames(run, track, frames), run.HorizonTilt)));
         }
 
         // Direction of travel with no look ahead faces along the path, whose curvature changes at each point by construction.
@@ -452,6 +419,56 @@ public class MovementSweepTests
             measures.Add(AtPeak(Check.LookAtCentred, LargestAt(frames, t => run.Centring(t, track.LookAt))));
         return measures;
     }
+
+    /// <summary>The <paramref name="frames"/> where the horizon is level: outside vertical passages for Direction of travel, and outside every stretch a turn span may take for Look At (<see cref="SpanStretches"/>). LevelUp finds each passage's and span's edge to within <see cref="LevelUp.EdgeSeconds"/> of where the facing crosses it, so a frame near an edge counts only when the facing is outside that far either side too.</summary>
+    private static IEnumerable<double> LevelFrames(Run run, Track track, double[] frames)
+    {
+        if (track.Aim != AimMode.LookAt)
+            return frames.Where(t => Beyond(run, t, LevelUp.PassageSideways));
+        var span = SpanStretches(run, track.Points.Count, frames);
+        return frames.Where((_, i) => !span[i]);
+    }
+
+    /// <summary>Which <paramref name="frames"/> a Look At turn span may cover (aim-flow §2): around each vertical passage, from leaving the last point at or before it to reaching the first point at or after it, and never beyond 60° from straight up or down. The sweep's Look At points are at least 2 yalms from its paths, so a passage, 30° of view, takes at least 0.2 s at 5 yalms a second (2.5 rad/s), more than ten frames: none falls between frames.</summary>
+    private static bool[] SpanStretches(Run run, int points, double[] frames)
+    {
+        var slop = (double)LevelUp.EdgeSeconds;
+        bool InPassage(int i) => !Outside(run, frames[i], LevelUp.PassageSideways);
+        bool InReach(int i) => !Beyond(run, frames[i], LevelUp.SpanSideways);
+        var span = new bool[frames.Length];
+        for (var i = 0; i < frames.Length; i++)
+        {
+            if (!InPassage(i))
+                continue;
+            var j = i;
+            while (j + 1 < frames.Length && InPassage(j + 1))
+                j++;
+
+            // The passage starts after the frame before this run of passage frames and ends before the frame after it.
+            var (enter, leave) = (i > 0 ? frames[i - 1] : 0.0, j + 1 < frames.Length ? frames[j + 1] : run.Duration);
+            var from = Enumerable.Range(0, points).Select(run.Depart).Where(t => t <= enter).DefaultIfEmpty(0.0).Max();
+            var to = Enumerable
+                .Range(0, points)
+                .Select(run.Arrive)
+                .Where(t => t >= leave)
+                .DefaultIfEmpty(run.Duration)
+                .Min();
+            var (a, b) = (i, j);
+            while (a > 0 && InReach(a - 1))
+                a--;
+            while (b + 1 < frames.Length && InReach(b + 1))
+                b++;
+            for (var k = a; k <= b; k++)
+                span[k] |= frames[k] >= from - slop && frames[k] <= to + slop;
+            i = j;
+        }
+
+        return span;
+    }
+
+    /// <summary>Whether the facing has a sideways part of at least <paramref name="reach"/> at <paramref name="time"/> and <see cref="LevelUp.EdgeSeconds"/> either side.</summary>
+    private static bool Beyond(Run run, double time, float reach) =>
+        new[] { -LevelUp.EdgeSeconds, 0.0, LevelUp.EdgeSeconds }.All(d => Outside(run, time + d, reach));
 
     /// <summary>Whether the facing at <paramref name="time"/>, kept within the run, has a sideways part of at least <paramref name="reach"/>.</summary>
     private static bool Outside(Run run, double time, float reach) =>
@@ -471,17 +488,15 @@ public class MovementSweepTests
         Func<int, (float Value, string Detail)> measure
     )
     {
-        var worst = points
-            .Select(p => (Point: p, Result: measure(p)))
-            .DefaultIfEmpty((Point: -1, Result: (Value: 0f, Detail: "")))
-            .MaxBy(w => float.IsNaN(w.Result.Value) ? float.PositiveInfinity : w.Result.Value);
-        return worst.Point < 0
-            ? new Measure(check, 0f, "")
-            : new Measure(
-                check,
-                worst.Result.Value,
-                $"at point {worst.Point} ({run.Arrive(worst.Point):0.###} s){worst.Result.Detail}"
-            );
+        var each = points
+            .Select(p =>
+            {
+                var (value, detail) = measure(p);
+                return new PointMeasure(p, value, $"at point {p} ({run.Arrive(p):0.###} s){detail}");
+            })
+            .ToList();
+        var worst = each.MaxBy(m => float.IsNaN(m.Value) ? float.PositiveInfinity : m.Value);
+        return worst is null ? new Measure(check, 0f, "", each) : new Measure(check, worst.Value, worst.Where, each);
     }
 
     /// <summary>How far apart the speed is just before and just after <paramref name="time"/>, in yalms a second, with each.</summary>
@@ -556,21 +571,57 @@ public class MovementSweepTests
                 );
         }
 
-        if (PendingTriage.FirstOrDefault(p => Matches(p.Shape, p.Aim, p.Check, combination, check)) is { } pending)
+        var pending = PendingTriage.Where(p => Matches(p.Shape, p.Aim, p.Check, combination, check)).ToArray();
+        if (pending.Length > 0)
+            return JudgePending(measure, pending);
+
+        if (value <= limit)
+            return new Verdict(measure, Status.Pass, "");
+        var over = (measure.Points ?? [])
+            .Where(m => !(m.Value <= limit))
+            .Select(m => $"{m.Value:G5} {m.Where}")
+            .ToList();
+        return new Verdict(
+            measure,
+            Status.Fail,
+            over.Count == 0
+                ? $"{check} {value:G5} over {limit:G5} {measure.Where}"
+                : $"{check} over {limit:G5}: {string.Join("; ", over)}"
+        );
+    }
+
+    /// <summary>How <paramref name="measure"/> comes out against its <paramref name="pending"/> entries: each still where it was listed and still over the limit, and every other point within the limit.</summary>
+    private static Verdict JudgePending(Measure measure, Pending[] pending)
+    {
+        var check = measure.Check;
+        var limit = Limit(check);
+        var points = measure.Points ?? [];
+        var problems = new List<string>();
+        foreach (var entry in pending)
         {
-            var holds = Counts(check) ? value == pending.Measured : MathF.Abs(value - pending.Measured) <= limit;
-            return holds
-                ? new Verdict(measure, Status.Pending, $"{check}: {pending.Seen}")
-                : new Verdict(
-                    measure,
-                    Status.Fail,
-                    $"{check} {value:G5}, pending at {pending.Measured:G5} ({pending.Seen}) {measure.Where}"
-                );
+            var at = entry.Point is { } p ? points.FirstOrDefault(m => m.Point == p) : null;
+            var (value, where) = at is null ? (measure.Value, measure.Where) : (at.Value, at.Where);
+            if (entry.Point is not null && at is null)
+                problems.Add($"{check} has no point {entry.Point}, pending ({entry.Seen})");
+            else if (value <= limit)
+                problems.Add($"{check} {value:G5} {where} is within {limit:G5}: drop the pending entry ({entry.Seen})");
+            else if (!(Counts(check) ? value == entry.Measured : MathF.Abs(value - entry.Measured) <= limit))
+                problems.Add($"{check} {value:G5}, pending at {entry.Measured:G5} ({entry.Seen}) {where}");
         }
 
-        return value <= limit
-            ? new Verdict(measure, Status.Pass, "")
-            : new Verdict(measure, Status.Fail, $"{check} {value:G5} over {limit:G5} {measure.Where}");
+        if (pending.All(e => e.Point is not null))
+        {
+            var listed = pending.Select(e => e.Point!.Value).ToHashSet();
+            problems.AddRange(
+                points
+                    .Where(m => !listed.Contains(m.Point) && !(m.Value <= limit))
+                    .Select(m => $"{check} {m.Value:G5} over {limit:G5} {m.Where}")
+            );
+        }
+
+        return problems.Count == 0
+            ? new Verdict(measure, Status.Pending, $"{check}: {string.Join("; ", pending.Select(e => e.Seen))}")
+            : new Verdict(measure, Status.Fail, string.Join("; ", problems));
     }
 
     /// <summary>Plays and judges <paramref name="combination"/>.</summary>

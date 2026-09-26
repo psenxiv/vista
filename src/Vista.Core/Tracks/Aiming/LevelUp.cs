@@ -11,7 +11,7 @@ public sealed class LevelUp
     private const double StepSeconds = 0.1;
 
     /// <summary>A step that crosses a passage's edge is halved until it's no longer than this, so each passage starts and ends within a millisecond of its edge.</summary>
-    private const float EdgeSeconds = 0.001f;
+    public const float EdgeSeconds = 0.001f;
 
     /// <summary>A shot starting with a sideways part shorter than this, within 0.006° of straight up or down, has no level to start from.</summary>
     private const float Vertical = 1e-4f;
@@ -20,7 +20,7 @@ public sealed class LevelUp
     public static readonly float PassageSideways = MathF.Sin(15f * Angles.Degree);
 
     /// <summary>A turn span reaches no further than this sideways part, 60° from straight up or down, since a level lean squared to a flatter view shrinks below half its length and can roll the picture.</summary>
-    private static readonly float SpanSideways = MathF.Sin(60f * Angles.Degree);
+    public static readonly float SpanSideways = MathF.Sin(60f * Angles.Degree);
 
     /// <summary>A step where the facing turns more than this, 5°, is halved until it doesn't, so a facing whipping through straight up can't cross a passage between samples.</summary>
     private const float MostTurnPerSample = 5f * Angles.Degree;
