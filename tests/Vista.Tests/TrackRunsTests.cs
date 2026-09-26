@@ -156,6 +156,21 @@ public class TrackRunsTests
     }
 
     [Fact]
+    public void WorldTurnRateReadsASteadyTurnAboutTheWorldVertical()
+    {
+        // A frame tilted 1 rad about +x, then turned about the world's +y at 0.5 rad/s: q(t) = Y(0.5t)·B. Across t ± h,
+        // q(t+h)·q(t−h)⁻¹ = Y(0.5(t+h))·B·B⁻¹·Y(−0.5(t−h)) = Y(0.5·2h), so the tilt cancels and the rate is (0, 0.5, 0),
+        // positive by the right-hand rule about +y (carrying +z towards +x). Read in the frame's own axes it would lean
+        // off +y by the 1 rad tilt. Each quaternion component rounds by a few 6e-8, moving the 0.01 rad turned over 2h =
+        // 0.02 s by under 1e-6 rad, 5e-5 rad/s.
+        var tilt = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 1f);
+        Quaternion Rotation(double t) =>
+            Quaternion.Concatenate(tilt, Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f * (float)t));
+
+        Near(new Vector3(0f, 0.5f, 0f), WorldTurnRate(Rotation, 0.7, 0.01), 1e-4f);
+    }
+
+    [Fact]
     public void CentringIsTheAngleBetweenTheFacingAndThePoint()
     {
         // At (1, 2, 3) facing -z: a point straight ahead is 0 off, and one 10 along +x and 10 along -z is 45° off.

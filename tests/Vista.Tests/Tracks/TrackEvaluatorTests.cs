@@ -982,6 +982,42 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelFacesTheWayTheSpotLeavesTheMovingCameraWhereTheirPathsCross()
+    {
+        // Along +x through the origin, round a loop and back through it along +z, points 5 yalms apart through both
+        // crossings so the legs either side are straight. The legs either side of the first crossing take 0.5 s and of the
+        // second 0.25 s, so the camera crosses at 10 yalms a second and the spot at 20, each leg's secant, which the
+        // timing curve keeps at a point between equal ones. The camera is at the origin at 1 s and back at 2.75 s, the
+        // 1.75 s look ahead later, so at 1 s the spot passes through the moving camera and the chord opens along the
+        // spot's velocity less the camera's: (0, 0, 20) − (10, 0, 0), along (−1, 0, 2)/√5. Every leg time is a sum of
+        // quarters, exact, so the chord is exactly zero; the speeds are the straight legs' table lengths over their
+        // times, off by float rounding, a few 1e-7 of each.
+        var track = TrackEditing.Empty(AimMode.PathTangent);
+        foreach (
+            var point in new[]
+            {
+                Point(-10f),
+                Point(-5f),
+                Point(0f),
+                Point(5f),
+                Point(10f),
+                Point(10f, 0f, -10f),
+                Point(0f, 0f, -10f),
+                Point(0f, 0f, -5f),
+                Point(0f),
+                Point(0f, 0f, 5f),
+                Point(0f, 0f, 10f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg <= 10; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, leg <= 3 ? 0.5f : 0.25f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.75f));
+
+        Near(new Vector3(-0.4472136f, 0f, 0.8944272f), Facing(evaluator, 1.0), 1e-5f);
+    }
+
+    [Fact]
     public void DirectionOfTravelHoldsItsArrivalLookUnderTheSpotWaitingWhereThePathEndsAndTurnsRoundLeaving()
     {
         // Along the x axis at 20 yalms a second: in from x = -10 to the origin, held 1 s there, out to x = 10 and straight
