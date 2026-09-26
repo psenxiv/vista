@@ -17,14 +17,14 @@ public class TimedRotationTests
 
     private static float YawOf(Quaternion rotation) => CameraRotation.ToAngles(rotation).Yaw;
 
-    /// <summary>How far either side of a middle point the world turn rate is sampled, in seconds: close enough that a leg's own curvature barely moves it, far enough that float round-off in <see cref="WorldTurnRate"/>'s 1e-4 s window stays well under the agreement tolerance.</summary>
+    /// <summary>How far either side of a middle point the world turn rate is sampled, in seconds: close enough that a leg's own curvature barely moves it (<see cref="RateAgreement"/> derives how much), far enough that float round-off in <see cref="WorldTurnRate"/>'s 1e-4 s window stays well under it.</summary>
     private const double RateOffset = 1e-3;
 
     /// <summary>The central-difference window <see cref="WorldTurnRate"/> measures each side's rate over.</summary>
     private const double RateWindow = 1e-4;
 
-    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate: comfortably above the finite-difference noise a correct implementation leaves (under 0.031 rad/s over 500,000 random three-point legs of 1 to 5 s, checked while writing this test), and far below the tenths of a rad/s a one-sided rate (the old behaviour) leaves.</summary>
-    private const float RateAgreement = 0.05f;
+    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate. Near the point, each side's rate leads or lags the point's own by about that leg's angular acceleration times <see cref="RateOffset"/>; from the Hermite curve's endpoint second derivative (2·from − 6·turn + 4·to, TimedRotation.At's own names, over the leg's squared duration), that acceleration is largest for a 1 s leg turning near π rad (<see cref="AnyRecordedAimTrack"/> generates no shorter or sharper), and shrinks for gentler turns or longer legs. A 3-point track's end points cap it at about 5π rad/s² each side (a turn cancelling against a still neighbour), ≈10π · RateOffset ≈ 0.031 rad/s total — the case random sampling tends to land on; this generator's interior middle points can have free neighbours on both sides too, which a targeted (non-random) search over that fuller space, run while fixing this constant and not kept in the repository, pushed to ≈0.047 rad/s. 0.08 keeps comfortable margin above that, and stays far below the several tenths of a rad/s a one-sided rate (the old behaviour) leaves.</summary>
+    private const float RateAgreement = 0.08f;
 
     [Fact]
     public void ARecordedAimTrackTurnsAtOneRateThroughAMiddlePoint()
@@ -58,7 +58,7 @@ public class TimedRotationTests
         );
     }
 
-    /// <summary>A recorded-aim track through 3 to 6 points (<see cref="AnyPoint"/>), each leg pinned to a duration of 1 to 5 s, no holds, built as the editor builds it.</summary>
+    /// <summary>A recorded-aim track through 3 to 6 points (<see cref="AnyPoint"/>), each leg pinned to a duration of 1 to 5 s, no holds, built as the editor builds it. 1 s is the shortest leg <see cref="RateAgreement"/>'s derivation assumes, where the turn-rate gap it bounds is largest; 5 s buys nothing beyond that (a longer leg only shrinks the gap) and just keeps a generated shot's legs a plausible length.</summary>
     private static readonly Gen<Track> AnyRecordedAimTrack =
         from points in AnyPoint.Array[3, 6]
         from legSeconds in Gen.Float[1f, 5f].Array[points.Length]
