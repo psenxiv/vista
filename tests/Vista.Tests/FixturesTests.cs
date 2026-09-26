@@ -1,5 +1,7 @@
 using System.Numerics;
 using Vista.Core.Camera;
+using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Vista.Tests.Regression;
 using Xunit;
 using Xunit.Sdk;
@@ -49,6 +51,39 @@ public class FixturesTests
             c.Name.StartsWith("Held where the path ends", StringComparison.Ordinal)
         );
         Assert.True(SpotPassesThroughCamera(held.Track));
+    }
+
+    [Fact]
+    public void APointNearTheEndLeadingIntoAPointOnItIsLeftOut()
+    {
+        // Point 1 is 0.07 yalm from the end, (0, 0, 0): at least 1e-3 and under 0.1. Point 2, a middle point, is on the end.
+        // The path is about 31 yalms, 1.6 s at 20 yalms a second, under the 2 s look ahead, so the spot waits at the end
+        // from the start, and about 21 yalms are left at point 1.
+        var track = TrackEditing.SetLookAhead(
+            TrackThrough(
+                [Point(-10f), Point(0f, z: 0.07f), Point(0f), Point(10f, z: 3f), Point(0f)],
+                AimMode.PathTangent,
+                20f
+            ),
+            2f
+        );
+        Assert.True(NearTheEndBeforeAPointOnIt(track, new TrackEvaluator(track)));
+        Assert.True(SpotPassesThroughCamera(track));
+    }
+
+    [Theory]
+    [InlineData(0.07f)]
+    [InlineData(0.09f)]
+    public void APointBesideTheWaitingEndWithNoPointOnItIsKept(float dz)
+    {
+        // Out along x through (0, 0, 0) and back, ending dz yalm beside it: no point but the last is on the end, and the
+        // camera passes the end no nearer than dz, more than 0.05.
+        var track = TrackEditing.SetLookAhead(
+            TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f, z: dz)], AimMode.PathTangent, 20f),
+            2f
+        );
+        Assert.False(NearTheEndBeforeAPointOnIt(track, new TrackEvaluator(track)));
+        Assert.False(SpotPassesThroughCamera(track));
     }
 
     [Fact]

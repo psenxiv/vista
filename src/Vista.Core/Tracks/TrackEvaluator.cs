@@ -13,7 +13,7 @@ public sealed class TrackEvaluator
     public const float MinTimingLength = 0.1f;
 
     /// <summary>Yalms within which a point counts as where the path ends: about sixteen float steps of a coordinate 1,000 yalms out (6.1e-5 each), and a hundredth of <see cref="TrackAim.MinTargetDistance"/>.</summary>
-    private const float SamePlace = 1e-3f;
+    public const float SamePlace = 1e-3f;
 
     /// <summary>Yalms within which the look-ahead aim blends from the spot ahead towards the path's direction into it.</summary>
     public const float LookAheadBlend = 1f;

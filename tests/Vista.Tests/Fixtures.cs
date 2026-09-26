@@ -104,12 +104,14 @@ internal static class Fixtures
     /// <summary>Seconds between the times the camera and its look-ahead spot are compared.</summary>
     private const double SpotStep = 0.01;
 
-    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot while both move, neither in a hold and the spot short of the end; or reaches the spot waiting at the end, arriving or passing, with at least <see cref="TrackEvaluator.LookAheadBlend"/> of path left, where it turns round as it moves on, by design. A spot waiting where the camera starts, as at the start of a lap back to where it began, doesn't count; the gap is taken as straight between the times compared.</summary>
+    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot while both move, neither in a hold and the spot short of the end; or reaches the spot waiting at the end, arriving or passing, with at least <see cref="TrackEvaluator.LookAheadBlend"/> of path left, where it turns round as it moves on, by design; or has a layout <see cref="NearTheEndBeforeAPointOnIt"/> finds. A spot waiting where the camera starts, as at the start of a lap back to where it began, doesn't count; the gap is taken as straight between the times compared.</summary>
     internal static bool SpotPassesThroughCamera(Track track)
     {
         if (track.Aim != AimMode.PathTangent || track.LookAhead <= 0f)
             return false;
         var evaluator = new TrackEvaluator(track with { Aim = AimMode.AimKeys });
+        if (NearTheEndBeforeAPointOnIt(track, evaluator))
+            return true;
         var ahead = track.LookAhead;
         Vector3 Place(double t) => evaluator.Evaluate(t)!.Value.Position;
 
@@ -144,6 +146,31 @@ internal static class Fixtures
             if (before is { } last && ClosestToZero(last, gap) < ClosestGeneratedSpot)
                 return true;
             before = gap;
+        }
+
+        return false;
+    }
+
+    /// <summary>True when a Direction of travel camera reaches a point within <see cref="TrackAim.MinTargetDistance"/> of the end but not on it (within <see cref="TrackEvaluator.SamePlace"/>), leading into a middle point on the end, with the look-ahead spot waiting at the end and at least <see cref="TrackEvaluator.LookAheadBlend"/> of path left: the aim may step there, by design.</summary>
+    internal static bool NearTheEndBeforeAPointOnIt(Track track, TrackEvaluator evaluator)
+    {
+        var points = track.Points;
+        var end = points[^1].Position;
+        for (var i = 0; i + 2 < points.Count; i++)
+        {
+            var off = Vector3.Distance(points[i].Position, end);
+            if (
+                off < TrackEvaluator.SamePlace
+                || off >= TrackAim.MinTargetDistance
+                || Vector3.Distance(points[i + 1].Position, end) >= TrackEvaluator.SamePlace
+            )
+                continue;
+            var arrive = evaluator.PointSeconds(i);
+            if (
+                evaluator.TravelledAhead(arrive, track.LookAhead) >= evaluator.Duration
+                && evaluator.TotalDistance - evaluator.DistanceAt(arrive) >= TrackEvaluator.LookAheadBlend
+            )
+                return true;
         }
 
         return false;
