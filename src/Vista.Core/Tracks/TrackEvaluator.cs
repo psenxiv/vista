@@ -307,6 +307,12 @@ public sealed class TrackEvaluator
         return TrackAim.Usable((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
     }
 
+    /// <summary>Where the look-ahead spot is at <paramref name="time"/>, or null unless the track aims along its path with a look-ahead.</summary>
+    public Vector3? LookAheadSpot(double time) =>
+        _track.Aim == AimMode.PathTangent && _track.LookAhead > 0f
+            ? PointAt(_curve.PositionAt(TravelledAhead(time, _track.LookAhead)))
+            : null;
+
     /// <summary>The track time after <paramref name="seconds"/> of travel from <paramref name="time"/>, skipping the time of every hold on the way.</summary>
     public double TravelledAhead(double time, float seconds)
     {

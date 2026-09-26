@@ -16,6 +16,7 @@ internal sealed class Overlay
     private const float PathThickness = 3f;
     private const float GlyphDepth = 1f;
     private const float GhostDepth = 1.6f;
+    private const float GhostSpotRadius = 4f;
 
     /// <summary>How thick the overlay's lines and rings are, and the Timing window's key rings.</summary>
     public const float LineThickness = 1.5f;
@@ -70,12 +71,18 @@ internal sealed class Overlay
         return labels;
     }
 
-    /// <summary>The ghost camera: a larger wireframe camera at <paramref name="frame"/>.</summary>
-    public static void DrawGhost(EditorView view, CameraState frame)
+    /// <summary>The ghost camera: a larger wireframe camera at <paramref name="frame"/>, with a line to its look-ahead <paramref name="spot"/> when it has one.</summary>
+    public static void DrawGhost(EditorView view, CameraState frame, Vector3? spot)
     {
+        var list = ImGui.GetBackgroundDrawList();
         var aspect = view.Size.Y > 0f ? view.Size.X / view.Size.Y : 1f;
         var glyph = CameraGlyph.Build(frame.Position, frame.Forward, frame.Up, frame.Fov, aspect, GhostDepth);
-        DrawGlyph(ImGui.GetBackgroundDrawList(), view, glyph, selected: false, Palette.Ghost);
+        DrawGlyph(list, view, glyph, selected: false, Palette.Ghost);
+        if (spot is not { } at)
+            return;
+        DrawEdge(list, view, frame.Position, at, EditorColours.Ghost, LineThickness);
+        if (view.ToScreen(at) is { } dot)
+            list.AddCircleFilled(dot, GhostSpotRadius, EditorColours.Ghost);
     }
 
     /// <summary>Forgets cached paths of tracks not in <paramref name="ids"/>.</summary>

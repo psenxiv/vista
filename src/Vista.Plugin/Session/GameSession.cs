@@ -312,6 +312,10 @@ internal sealed class GameSession
     /// <summary>Where the ghost camera is: the preview's frame, or the scrub head's; null unless the ghost is on in Edit.</summary>
     public CameraState? GhostFrame => state.Ghost && state.Mode == CameraMode.Editing ? ghostFrame : null;
 
+    /// <summary>Where the ghost's look-ahead spot is, or null without a ghost or a look-ahead.</summary>
+    public Vector3? GhostLookAhead =>
+        GhostFrame is null ? null : state.World.Evaluator.LookAheadSpot(state.Transport.ScrubHead);
+
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
