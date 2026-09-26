@@ -127,10 +127,13 @@ public sealed class SessionState
     /// <summary>True when Restart has something to play, which Off and View never do.</summary>
     public bool CanRestart => !Released && CanStart;
 
-    /// <summary>True in Edit while no preview plays: the overlay takes clicks and shows the gizmo.</summary>
-    public bool OverlayEditable => Mode == CameraMode.Editing && !Transport.Previewing;
+    /// <summary>True while Edit previews play a ghost camera and leave the game camera to the free-cam. Never saved.</summary>
+    public bool Ghost { get; set; }
 
-    /// <summary>True when the tracks are drawn over the game: in View, and in Edit while no preview plays.</summary>
+    /// <summary>True in Edit while no preview plays, or while one plays as the ghost: the overlay takes clicks and shows the gizmo.</summary>
+    public bool OverlayEditable => Mode == CameraMode.Editing && (Ghost || !Transport.Previewing);
+
+    /// <summary>True when the tracks are drawn over the game: in View, and in Edit while no preview plays or it plays as the ghost.</summary>
     public bool OverlayShown => Mode == CameraMode.View || OverlayEditable;
 
     /// <summary>Why a point can't be taken from the camera now, or null.</summary>

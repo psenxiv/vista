@@ -185,6 +185,10 @@ public sealed class Plugin : IDalamudPlugin
 #endif
                 game.Release("command");
                 break;
+            case "ghost":
+                game.State.Ghost = !game.State.Ghost;
+                ChatGui.Print(game.State.Ghost ? "Ghost camera on." : "Ghost camera off.");
+                break;
 #if DEBUG
             case "selftest":
                 selfTest.Start();

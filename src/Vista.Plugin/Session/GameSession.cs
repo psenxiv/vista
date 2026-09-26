@@ -23,6 +23,7 @@ internal sealed class GameSession
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
     private bool previewedLastFrame;
+    private CameraState? ghostFrame;
 
     public GameSession(Configuration config, MovementLock movement)
     {
@@ -308,6 +309,9 @@ internal sealed class GameSession
         return frame;
     }
 
+    /// <summary>Where the ghost camera is: the preview's frame, or the scrub head's; null unless the ghost is on in Edit.</summary>
+    public CameraState? GhostFrame => state.Ghost && state.Mode == CameraMode.Editing ? ghostFrame : null;
+
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
     {
@@ -319,7 +323,7 @@ internal sealed class GameSession
     /// <summary>The current camera as a control point, or the previewed frame while previewing; null when the camera can't be read.</summary>
     private ControlPoint? CameraPoint()
     {
-        if (state.Transport.Previewing && lastFrame is { } previewed)
+        if (state.Transport.Previewing && !state.Ghost && lastFrame is { } previewed)
             return ControlPoint.FromFrame(previewed);
 
         var camera = CameraAccess.ReadState();
@@ -337,6 +341,13 @@ internal sealed class GameSession
     private CameraState? EditingFrame(float dt)
     {
         var transport = state.Transport;
+        if (state.Ghost)
+        {
+            previewedLastFrame = false;
+            ghostFrame = transport.AdvancePreview(dt) ?? state.World.FrameAt(transport.ScrubHead);
+            return freeCam.Tick(dt);
+        }
+
         if (transport.Previewing && FreeCam.HasFlightInput())
             transport.StopPreview();
         var frame = transport.AdvancePreview(dt);

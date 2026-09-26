@@ -15,6 +15,7 @@ internal sealed class Overlay
     private const float PathSpacing = 0.25f;
     private const float PathThickness = 3f;
     private const float GlyphDepth = 1f;
+    private const float GhostDepth = 1.6f;
 
     /// <summary>How thick the overlay's lines and rings are, and the Timing window's key rings.</summary>
     public const float LineThickness = 1.5f;
@@ -67,6 +68,14 @@ internal sealed class Overlay
 
         DrawLabels(list, labels, selected, palette);
         return labels;
+    }
+
+    /// <summary>The ghost camera: a larger wireframe camera at <paramref name="frame"/>.</summary>
+    public static void DrawGhost(EditorView view, CameraState frame)
+    {
+        var aspect = view.Size.Y > 0f ? view.Size.X / view.Size.Y : 1f;
+        var glyph = CameraGlyph.Build(frame.Position, frame.Forward, frame.Up, frame.Fov, aspect, GhostDepth);
+        DrawGlyph(ImGui.GetBackgroundDrawList(), view, glyph, selected: false, Palette.Ghost);
     }
 
     /// <summary>Forgets cached paths of tracks not in <paramref name="ids"/>.</summary>
@@ -393,6 +402,11 @@ internal sealed class Overlay
             EditorColours.MarkerRing,
             EditorColours.MarkerText
         );
+        public static readonly Palette Ghost = Edited with
+        {
+            Glyph = EditorColours.Ghost,
+            UpLine = EditorColours.Ghost,
+        };
         public static readonly Palette Other = new(
             EditorColours.OtherPath,
             EditorColours.OtherGlyph,
