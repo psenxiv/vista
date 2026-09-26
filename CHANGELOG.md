@@ -5,6 +5,7 @@
 - Recorded aim turns smoothly through each point instead of changing direction slightly at it.
 - Look At turns the picture round gradually from point to point when the camera passes under or over its point, instead of quickly as it passes.
 - With a look ahead, Direction of travel keeps looking where it's going while it holds at a point.
+- When the look ahead reaches the end of the track at a point where the camera holds, it keeps looking the way it came in until it moves off.
 
 ## 0.11.0.1
 

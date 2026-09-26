@@ -77,6 +77,11 @@ internal static class RegressionScene
             TrackEditing.SetHold(LapBackToTheStart(), 0, 2f),
             0
         ),
+        new(
+            "Held where the path ends, look ahead 2: holds its look, turns round as it sets off",
+            HeldWhereThePathEnds(),
+            1
+        ),
     ];
 
     /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
@@ -209,6 +214,16 @@ internal static class RegressionScene
             TrackEditing.MaxLookAhead
         );
         return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 3, 2f);
+    }
+
+    /// <summary>In along +x to a point held 2 s, then the lap above back to it, at 25 yalms a second: the lap is under the 2 s look ahead, so the spot waits at its end, on the held camera.</summary>
+    private static Track HeldWhereThePathEnds()
+    {
+        var track = Travel(
+            [P(-15f, 0f, 5f), P(-5f, 0f, 5f), P(-5f, 0f, -5f), P(5f, 0f, -5f), P(-5f, 0f, 5f)],
+            TrackEditing.MaxLookAhead
+        );
+        return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 1, 2f);
     }
 
     /// <summary>A teardrop at 15 yalms a second whose way back crosses its way out, with a look ahead of the 1.74 s the loop takes from the crossing back to it: the spot ahead passes through the camera there, and the aim turns round at once.</summary>

@@ -276,7 +276,7 @@ public sealed class TrackEvaluator
         return TravelDirection(time, position, segment, fraction);
     }
 
-    /// <summary>The direction from <paramref name="from"/> to where the path is after the track's look-ahead of travel, the end once past it, blending towards the path's direction into that spot as it nears, or the way the chord opens where the spot is on the camera; null with no look-ahead or no direction.</summary>
+    /// <summary>The direction from <paramref name="from"/> to where the path is after the track's look-ahead of travel, the end once past it, blending towards the path's direction into that spot as it nears, or the way the chord opens where a moving spot passes through the camera; null with no look-ahead or no direction.</summary>
     private Vector3? LookAhead(double time, Vector3 from)
     {
         if (_track.LookAhead <= 0f)
@@ -285,10 +285,15 @@ public sealed class TrackEvaluator
         var later = TravelledAhead(time, _track.LookAhead);
         var ahead = _curve.PositionAt(later);
         var here = _curve.PositionAt(time);
-        var chord = PointAt(ahead) - from;
+        var spot = PointAt(ahead);
+        var chord = spot - from;
         var weight = MathF.Max(0f, ahead - here) / LookAheadBlend;
         if (weight >= 1f)
-            return TrackAim.Usable(chord) ?? Opening(time, later, here, ahead);
+        {
+            return _curve.SlopeAt(later) > 0f
+                ? TrackAim.Usable(chord) ?? Opening(time, later, here, ahead)
+                : TowardWaiting(time, here, chord, spot);
+        }
 
         // Weighed by distance along the path, a chord shrunk to rounding noise carries almost no weight, and a hairpin's short chord keeps its full weight.
         var start = MathF.Max(0f, ahead - LookAheadBlend);
@@ -317,14 +322,33 @@ public sealed class TrackEvaluator
         return from + left;
     }
 
-    /// <summary>The way the chord opens where the path comes back to the camera within the look ahead, the spot reached at <paramref name="later"/>: the spot's velocity less the camera's, or back along the path where neither moves yet; null where the path has no direction.</summary>
+    /// <summary>The way the chord opens where a moving spot, reached at <paramref name="later"/>, passes through the camera: the spot's velocity less the camera's; null where they match.</summary>
     private Vector3? Opening(double time, double later, float here, float ahead)
     {
         // At the start the curve's slope reads 0, so the camera's is the first key's slope out.
         var slope = time <= 0.0 ? _curve.SideSlope(0, KeySide.Out) : _curve.SlopeAt(time);
-        // A camera holding under a spot that waits at the end leaves it behind as it moves off.
-        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(later)) - Velocity(here, slope))
-            ?? TrackAim.Usable(-Velocity(here, 1f));
+        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(later)) - Velocity(here, slope));
+    }
+
+    /// <summary>The <paramref name="chord"/> to a spot waiting at the end, <paramref name="place"/>, which within <see cref="TrackAim.MinTargetDistance"/> gives way to the camera's direction of travel while it moves into a point there or waits after moving, and to back along it before it has moved at all or as it moves off.</summary>
+    private Vector3? TowardWaiting(double time, float here, Vector3 chord, Vector3 place)
+    {
+        var length = chord.Length();
+        if (length >= TrackAim.MinTargetDistance)
+            return chord;
+
+        var along = here > 0f && (!(_curve.SlopeAt(time) > 0f) || ReachesNext(time, place));
+        var way = Vectors.NormalizeOr(Velocity(here, along ? 1f : -1f), Vector3.Zero);
+        // Shorter, the chord gives way, so rounding noise in it at a point the camera shares with the spot carries almost no weight.
+        var share = length / TrackAim.MinTargetDistance;
+        return TrackAim.Usable((share * Vectors.NormalizeOr(chord, Vector3.Zero)) + ((1f - share) * way));
+    }
+
+    /// <summary>Whether the next point the camera reaches after <paramref name="time"/> is within <see cref="TrackAim.MinTargetDistance"/> of <paramref name="place"/>.</summary>
+    private bool ReachesNext(double time, Vector3 place)
+    {
+        var next = Array.FindIndex(_arrive, at => at > time);
+        return next >= 0 && Vector3.Distance(_positions[next], place) < TrackAim.MinTargetDistance;
     }
 
     /// <summary>The velocity along the path <paramref name="distance"/> along it, moving at <paramref name="slope"/> distance per second.</summary>

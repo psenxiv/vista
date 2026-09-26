@@ -87,7 +87,7 @@ internal static class Fixtures
                 )
         );
 
-    /// <summary>A track through <see cref="AnyPoints"/> aimed along its path, by its aim keys or at <see cref="GeneratedLookAt"/>, with random speed, holds, leg times and look ahead, built as the editor builds it; a Direction of travel track whose look-ahead spot passes through the moving camera (<see cref="SpotPassesThroughCamera"/>) is left out.</summary>
+    /// <summary>A track through <see cref="AnyPoints"/> aimed along its path, by its aim keys or at <see cref="GeneratedLookAt"/>, with random speed, holds, leg times and look ahead, built as the editor builds it; a Direction of travel track whose look-ahead spot passes through the moving camera, or whose camera reaches the spot waiting at the end with path still to go (<see cref="SpotPassesThroughCamera"/>), is left out.</summary>
     internal static readonly Gen<Track> AnyPathTrack = (
         from points in AnyPoints
         from aim in Gen.OneOfConst(AimMode.PathTangent, AimMode.AimKeys, AimMode.LookAt)
@@ -104,7 +104,7 @@ internal static class Fixtures
     /// <summary>Seconds between the times the camera and its look-ahead spot are compared.</summary>
     private const double SpotStep = 0.01;
 
-    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot while both move: neither in a hold, and the spot short of the end, where it waits. A spot waiting for the camera, as at the start of a lap back to where it began, doesn't count; the gap is taken as straight between the times compared.</summary>
+    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot while both move, neither in a hold and the spot short of the end; or reaches the spot waiting at the end, arriving or passing, with at least <see cref="TrackEvaluator.LookAheadBlend"/> of path left, where it turns round as it moves on, by design. A spot waiting where the camera starts, as at the start of a lap back to where it began, doesn't count; the gap is taken as straight between the times compared.</summary>
     internal static bool SpotPassesThroughCamera(Track track)
     {
         if (track.Aim != AimMode.PathTangent || track.LookAhead <= 0f)
@@ -113,12 +113,27 @@ internal static class Fixtures
         var ahead = track.LookAhead;
         Vector3 Place(double t) => evaluator.Evaluate(t)!.Value.Position;
 
+        var end = Place(evaluator.Duration);
         Vector3? before = null;
+        Vector3? waiting = null;
         for (var t = SpotStep; t < evaluator.Duration; t += SpotStep)
         {
             var spot = evaluator.TravelledAhead(t, ahead);
             if (spot >= evaluator.Duration)
-                break;
+            {
+                // Only a shrinking gap counts: the camera nears the spot rather than leaving it or holding under it.
+                var toEnd = end - Place(t);
+                if (
+                    waiting is { } previous
+                    && Vector3.Dot(previous, toEnd - previous) < 0f
+                    && evaluator.TotalDistance - evaluator.DistanceAt(t) >= TrackEvaluator.LookAheadBlend
+                    && ClosestToZero(previous, toEnd) < ClosestGeneratedSpot
+                )
+                    return true;
+                waiting = toEnd;
+                continue;
+            }
+
             if (!(evaluator.SlopeAt(t) > 0f && evaluator.SlopeAt(spot) > 0f))
             {
                 before = null;

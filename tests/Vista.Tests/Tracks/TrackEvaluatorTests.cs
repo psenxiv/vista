@@ -982,6 +982,48 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelHoldsItsArrivalLookUnderTheSpotWaitingWhereThePathEndsAndTurnsRoundLeaving()
+    {
+        // Along the x axis at 20 yalms a second: in from x = -10 to the origin, held 1 s there, out to x = 10 and straight
+        // back to the origin, where the path ends. Its three 10-yalm legs take 1.5 s, under the 2 s look ahead, so the spot
+        // waits at the end, the origin, throughout. Every spline point is on the x axis, so arriving the camera faces +x,
+        // straight at the origin; held there it keeps that look; and moving off the spot falls behind it, so it faces -x
+        // to the end. The one turn-round is 180°, 2 as the distance between unit directions, as it leaves.
+        var track = TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f)], AimMode.PathTangent, 20f);
+        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), TrackEditing.MaxLookAhead));
+        var (arrive, depart) = (run.Arrive(1), run.Depart(1));
+
+        // Well out, then 1 ms out: the monotone timing curve runs at most 3 times the leg's 20 yalms a second, so that's at
+        // most 0.06 yalm, where the chord gives way to the direction of travel.
+        Near(Vector3.UnitX, run.At(arrive - 0.25).Forward, 1e-6f);
+        Near(Vector3.UnitX, run.At(arrive - 1e-3).Forward, 1e-6f);
+        for (var i = 0; i < 64; i++)
+            Near(Vector3.UnitX, run.At(arrive + ((depart - arrive) * i / 64)).Forward, 1e-6f);
+        Near(-Vector3.UnitX, run.At(depart + 1e-3).Forward, 1e-6f);
+        Near(-Vector3.UnitX, run.At(depart + 0.25).Forward, 1e-6f);
+        Near(-Vector3.UnitX, run.At(run.Duration).Forward, 1e-6f);
+
+        // The step search narrows a 10 ms window 8 times, to 10 ms / 256 ≈ 4e-5 s.
+        var step = Assert.Single(run.FacingSteps());
+        Assert.Equal(depart, step.Time, 4e-5);
+        Assert.Equal(2f, step.Size, 1e-6f);
+    }
+
+    [Fact]
+    public void DirectionOfTravelKeepsItsArrivalLookThroughAHoldWhereRoundingPutsTheWaitingSpotBesideIt()
+    {
+        // The track above with its end 1e-4 yalm off the held point along +z, as float rounding can leave it. Through the
+        // hold the chord (0, 0, 1e-4) is 1e-3 of the 0.1 yalm within which it gives way to the +x the camera arrived with,
+        // so the camera faces (0.999, 0, 0.001) normalised, 0.057° off +x, rather than along +z.
+        var track = TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f, z: 1e-4f)], AimMode.PathTangent, 20f);
+        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), TrackEditing.MaxLookAhead));
+
+        var held = Vector3.Normalize(new Vector3(0.999f, 0f, 0.001f));
+        for (var i = 0; i < 64; i++)
+            Near(held, run.At(run.Arrive(1) + ((run.Depart(1) - run.Arrive(1)) * i / 64)).Forward, 1e-5f);
+    }
+
+    [Fact]
     public void LookAtStartingStraightUnderItsPointDoesNotWhip()
     {
         // Found by ThePictureNeverWhips as a 7.6° excess in a frame: starting 0.1° from straight under the point, the

@@ -39,4 +39,25 @@ public class FixturesTests
         );
         Assert.False(SpotPassesThroughCamera(lap.Track));
     }
+
+    [Fact]
+    public void AGeneratedTrackWhoseCameraReachesTheSpotWaitingAtTheEndIsLeftOut()
+    {
+        // The camera arrives at the held point where the path ends with the lap still to go, and turns round as it
+        // moves off, by design.
+        var held = RegressionScene.Cases.Single(c =>
+            c.Name.StartsWith("Held where the path ends", StringComparison.Ordinal)
+        );
+        Assert.True(SpotPassesThroughCamera(held.Track));
+    }
+
+    [Fact]
+    public void ASpotWaitingWhereTheCameraHoldsAtItsStartIsKept()
+    {
+        // Held at the start of the lap, the camera is under the waiting spot before it has moved, then leaves it.
+        var lap = RegressionScene.Cases.Single(c =>
+            c.Name.StartsWith("Lap held at its start", StringComparison.Ordinal)
+        );
+        Assert.False(SpotPassesThroughCamera(lap.Track));
+    }
 }
