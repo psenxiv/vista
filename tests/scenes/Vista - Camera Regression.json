@@ -143,6 +143,12 @@
       "trackId": "00000000-0000-0000-0001-000000000021",
       "loops": null,
       "transition": "Cut"
+    },
+    {
+      "id": "00000000-0000-0000-0002-000000000022",
+      "trackId": "00000000-0000-0000-0001-000000000022",
+      "loops": null,
+      "transition": "Cut"
     }
   ],
   "tracks": [
@@ -2653,6 +2659,120 @@
         }
       ],
       "lookAhead": 1
+    },
+    {
+      "id": "00000000-0000-0000-0001-000000000022",
+      "name": "Lap held at its start, look ahead 2: faces back, no turn-round as it sets off",
+      "anchor": {
+        "position": {
+          "x": 15,
+          "y": 0,
+          "z": 75
+        },
+        "yaw": 0
+      },
+      "anchorPlaced": true,
+      "speed": 25,
+      "aim": "PathTangent",
+      "direction": "Forward",
+      "loop": false,
+      "lookAt": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "lookAtPlaced": false,
+      "targetName": null,
+      "targetWorld": null,
+      "aimHeight": 1.3,
+      "smoothing": 0.3,
+      "followTurns": true,
+      "followLooks": true,
+      "points": [
+        {
+          "position": {
+            "x": -5,
+            "y": 0,
+            "z": 5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -5,
+            "y": 0,
+            "z": -5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 0,
+            "z": -5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        },
+        {
+          "position": {
+            "x": -5,
+            "y": 0,
+            "z": 5
+          },
+          "yaw": 0,
+          "pitch": 0,
+          "fov": 0.78,
+          "roll": 0
+        }
+      ],
+      "timing": [
+        {
+          "legSpeed": null,
+          "hold": 2,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 0,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        },
+        {
+          "legSpeed": null,
+          "hold": 2,
+          "inMode": "Auto",
+          "outMode": "Auto",
+          "inTangent": 0,
+          "outTangent": 0,
+          "broken": false
+        }
+      ],
+      "lookAhead": 2
     }
   ]
 }

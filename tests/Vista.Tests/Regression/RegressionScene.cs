@@ -72,6 +72,11 @@ internal static class RegressionScene
             TrackEditing.SetHold(Travel([P(0f, 0f, 0f), P(10f, 0f, 0f), P(10f, 0f, 10f)], lookAhead: 1f), 1, 3f),
             0
         ),
+        new(
+            "Lap held at its start, look ahead 2: faces back, no turn-round as it sets off",
+            TrackEditing.SetHold(LapBackToTheStart(), 0, 2f),
+            0
+        ),
     ];
 
     /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
