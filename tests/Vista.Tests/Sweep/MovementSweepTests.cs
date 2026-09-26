@@ -58,7 +58,7 @@ public class MovementSweepTests
     /// <summary>A failure a spec implies: the shape, the aim setting (every aim when null), the check, the count it has or the bound it stays within, why, and the spec it follows from.</summary>
     private sealed record Declared(Shape Shape, Aim? Aim, Check Check, float Expected, string Reason, string Spec);
 
-    /// <summary>A failure waiting for the user's triage: the shape, the aim setting (every aim when null), the check, the point it was found at (the whole measure when null), the value measured when it was listed, and what's seen. It fails if that value moves further than the check's own limit or falls within the limit, and every other point is held to the limit.</summary>
+    /// <summary>A failure waiting for the user's triage: the shape, the aim setting (every aim when null), the check, the point it was found at (the whole measure when null, only for a check not measured at each point), the value measured when it was listed, and what's seen. It fails if that value moves further than the check's own limit or falls within the limit, and every other point is held to the limit.</summary>
     private sealed record Pending(Shape Shape, Aim? Aim, Check Check, int? Point, float Measured, string Seen);
 
     /// <summary>The seconds the middle-hold shape holds its middle point.</summary>
@@ -429,7 +429,7 @@ public class MovementSweepTests
         return frames.Where((_, i) => !span[i]);
     }
 
-    /// <summary>Which <paramref name="frames"/> a Look At turn span may cover (aim-flow §2): around each vertical passage, from leaving the last point at or before it to reaching the first point at or after it, and never beyond 60° from straight up or down. The sweep's Look At points are at least 2 yalms from its paths, so a passage, 30° of view, takes at least 0.2 s at 5 yalms a second (2.5 rad/s), more than ten frames: none falls between frames.</summary>
+    /// <summary>Which <paramref name="frames"/> a Look At turn span may cover (aim-flow §2): around each vertical passage, from leaving the last point at or before it to reaching the first point at or after it, and never beyond 60° from straight up or down; a passage the shot starts inside or never leaves has no span (LevelUp's Reaches), so only its own frames are left out. Passages are found at the frames: one that falls between frames leaves its span checked, which only makes the check stricter and fails loudly.</summary>
     private static bool[] SpanStretches(Run run, int points, double[] frames)
     {
         var slop = (double)LevelUp.EdgeSeconds;
@@ -444,8 +444,16 @@ public class MovementSweepTests
             while (j + 1 < frames.Length && InPassage(j + 1))
                 j++;
 
+            if (i == 0 || j == frames.Length - 1)
+            {
+                for (var k = Math.Max(0, i - 1); k <= Math.Min(frames.Length - 1, j + 1); k++)
+                    span[k] |= !Beyond(run, frames[k], LevelUp.PassageSideways);
+                i = j;
+                continue;
+            }
+
             // The passage starts after the frame before this run of passage frames and ends before the frame after it.
-            var (enter, leave) = (i > 0 ? frames[i - 1] : 0.0, j + 1 < frames.Length ? frames[j + 1] : run.Duration);
+            var (enter, leave) = (frames[i - 1], frames[j + 1]);
             var from = Enumerable.Range(0, points).Select(run.Depart).Where(t => t <= enter).DefaultIfEmpty(0.0).Max();
             var to = Enumerable
                 .Range(0, points)
@@ -601,7 +609,9 @@ public class MovementSweepTests
         {
             var at = entry.Point is { } p ? points.FirstOrDefault(m => m.Point == p) : null;
             var (value, where) = at is null ? (measure.Value, measure.Where) : (at.Value, at.Where);
-            if (entry.Point is not null && at is null)
+            if (entry.Point is null && measure.Points is not null)
+                problems.Add($"{check} is measured at each point, so its pending entry needs one ({entry.Seen})");
+            else if (entry.Point is not null && at is null)
                 problems.Add($"{check} has no point {entry.Point}, pending ({entry.Seen})");
             else if (value <= limit)
                 problems.Add($"{check} {value:G5} {where} is within {limit:G5}: drop the pending entry ({entry.Seen})");
@@ -609,15 +619,12 @@ public class MovementSweepTests
                 problems.Add($"{check} {value:G5}, pending at {entry.Measured:G5} ({entry.Seen}) {where}");
         }
 
-        if (pending.All(e => e.Point is not null))
-        {
-            var listed = pending.Select(e => e.Point!.Value).ToHashSet();
-            problems.AddRange(
-                points
-                    .Where(m => !listed.Contains(m.Point) && !(m.Value <= limit))
-                    .Select(m => $"{check} {m.Value:G5} over {limit:G5} {m.Where}")
-            );
-        }
+        var listed = pending.Select(e => e.Point).OfType<int>().ToHashSet();
+        problems.AddRange(
+            points
+                .Where(m => !listed.Contains(m.Point) && !(m.Value <= limit))
+                .Select(m => $"{check} {m.Value:G5} over {limit:G5} {m.Where}")
+        );
 
         return problems.Count == 0
             ? new Verdict(measure, Status.Pending, $"{check}: {string.Join("; ", pending.Select(e => e.Seen))}")
