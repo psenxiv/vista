@@ -16,7 +16,7 @@ internal sealed class Overlay
     private const float PathThickness = 3f;
     private const float GlyphDepth = 1f;
     private const float GhostDepth = 1.6f;
-    private const float GhostSpotRadius = 4f;
+    private const float GhostSpotRadius = 8f;
 
     /// <summary>How thick the overlay's lines and rings are, and the Timing window's key rings.</summary>
     public const float LineThickness = 1.5f;
