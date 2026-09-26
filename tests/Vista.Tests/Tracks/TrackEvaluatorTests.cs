@@ -955,10 +955,11 @@ public class TrackEvaluatorTests
     {
         // The camera runs along x from -10 to 30 under a Look At point at (0, 10, 0), reaching x = 0 at 5 s (10 yalms at 2
         // a second). Looking up-and-ahead, upright leans back along -x; looking up-and-back past it, along +x. Look At never
-        // inverts, so the picture turns half round about the vertical through the passage, which is symmetric about x = 0:
-        // straight under the point it has turned a quarter, leaning along ±z. The passage's ends fall within 1 ms of its edges,
-        // where the facing turns 0.0115° (2/10 rad a second): the share of the 30° passage off by up to twice that, eased at
-        // up to 1.5 times, puts the turn up to 180° × 1.5 × 0.023 / 30 ≈ 0.2° out, and sin 0.2° ≈ 0.0036.
+        // inverts, so the picture turns half round about the vertical over the passage's turn span: from the first point,
+        // 45° up, to where the view leaves 60° from straight up at x = 10 / tan 30° = 17.32, 150° from +x, short of the
+        // last point. Straight under the point the view has turned 45° of those 105°: share 3/7, eased 3s² - 2s³ = 135/343,
+        // θ = 70.845°, so up is the lean (-cos θ, 0, ±sin θ) = (-0.32812, 0, ±0.94464). The span's end is found within 0.78
+        // ms, where the view turns 2·10/400 = 0.05 rad a second, 4e-5 rad of 1.83, so 1e-4 covers it.
         var track = TrackEditing.SetLookAt(
             TrackThrough([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt, 2f),
             new Vector3(0f, 10f, 0f)
@@ -968,8 +969,8 @@ public class TrackEvaluatorTests
         var under = FrameAt(evaluator.PointSeconds(1));
 
         Near(Vector3.UnitY, under.Forward, 1e-4f);
-        Assert.Equal(0f, under.Up.X, 0.004f);
-        Assert.Equal(1f, MathF.Abs(under.Up.Z), 1e-3f);
+        Assert.Equal(-0.32812f, under.Up.X, 1e-4f);
+        Assert.Equal(0.94464f, MathF.Abs(under.Up.Z), 1e-4f);
         Assert.InRange(Fixtures.LargestTwist(FrameAt, evaluator.Duration), 0f, PictureSpinLimit);
         var end = FrameAt(evaluator.Duration);
         // At the end, at (30, 0, 0) facing (-30, 10, 0)/√1000, upright leans back: (10, 30, 0)/√1000.

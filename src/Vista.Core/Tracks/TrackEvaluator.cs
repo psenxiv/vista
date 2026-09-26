@@ -30,6 +30,8 @@ public sealed class TrackEvaluator
     private readonly TimedChannel? _fov;
     private readonly float _fovMin;
     private readonly float _fovMax;
+    private readonly float[] _arrive = [];
+    private readonly float[] _depart = [];
     private LevelUp? _travelUp;
     private LevelUp? _lookAtUp;
 
@@ -68,18 +70,18 @@ public sealed class TrackEvaluator
             return;
 
         // Each point is reached at its key's time and left at its hold end's, or at once.
-        var arrive = Enumerable.Range(0, track.Points.Count).Select(PointSeconds).ToArray();
-        var depart = arrive
+        _arrive = Enumerable.Range(0, track.Points.Count).Select(PointSeconds).ToArray();
+        _depart = _arrive
             .Select((at, i) => track.Timing[i].Hold > 0f ? _keys[TrackEditing.PointKey(track, i) + 1].Time : at)
             .ToArray();
         var rolls = Angles.Unwrap(track.Points.Select(p => p.Roll).ToArray());
         _rotation = new TimedRotation(
             _yaws.Select((yaw, i) => CameraRotation.FromAngles(yaw, _pitches[i], rolls[i])).ToArray(),
-            arrive,
-            depart
+            _arrive,
+            _depart
         );
-        _roll = new TimedChannel(rolls, arrive, depart);
-        _fov = new TimedChannel(fovs, arrive, depart);
+        _roll = new TimedChannel(rolls, _arrive, _depart);
+        _fov = new TimedChannel(fovs, _arrive, _depart);
     }
 
     /// <summary>Leg <paramref name="leg"/>'s length as timing measures it.</summary>
@@ -238,7 +240,7 @@ public sealed class TrackEvaluator
     /// <summary>The up for a shot that starts facing straight up: the first point's heading at pitch 90°.</summary>
     private Vector3 VerticalStartUp => CameraRotation.Up(CameraRotation.FromAngles(_yaws[0], MathF.PI / 2f, 0f));
 
-    /// <summary>A Look At track's up: upright, turning round as the camera passes under or over its point, worked out once.</summary>
+    /// <summary>A Look At track's up: upright, turning round from point to point as the camera passes under or over its point, worked out once.</summary>
     private LevelUp LookAtUp() =>
         _lookAtUp ??= LevelUp.Along(
             time =>
@@ -247,7 +249,8 @@ public sealed class TrackEvaluator
                     : null,
             (float)Duration,
             allowInverted: false,
-            VerticalStartUp
+            VerticalStartUp,
+            (_arrive, _depart)
         );
 
     /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped: the look-ahead, else the path's own; null where the path has none.</summary>

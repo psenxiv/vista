@@ -4,7 +4,7 @@ using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Tracks.Aiming;
 
-/// <summary>A shot's up, worked out once: level, upright or inverted, except through each vertical passage, where it turns once from level to level.</summary>
+/// <summary>A shot's up, worked out once: level, upright or inverted, except through each vertical passage, or its wider turn span, where it turns once from level to level.</summary>
 public sealed class LevelUp
 {
     /// <summary>The most seconds between the samples the facing is read at to find the passages, before refining.</summary>
@@ -18,6 +18,9 @@ public sealed class LevelUp
 
     /// <summary>A facing whose sideways part is shorter than this, within 15° of straight up or down, is in a vertical passage, where level is only the heading and swings round fast.</summary>
     public static readonly float PassageSideways = MathF.Sin(15f * Angles.Degree);
+
+    /// <summary>A turn span reaches no further than this sideways part, 60° from straight up or down, since a level lean squared to a flatter view shrinks below half its length and can roll the picture.</summary>
+    private static readonly float SpanSideways = MathF.Sin(60f * Angles.Degree);
 
     /// <summary>A step where the facing turns more than this, 5°, is halved until it doesn't, so a facing whipping through straight up can't cross a passage between samples.</summary>
     private const float MostTurnPerSample = 5f * Angles.Degree;
@@ -43,20 +46,26 @@ public sealed class LevelUp
         passageStarts = [.. passages.Select(p => times[p.Start])];
     }
 
-    /// <summary>The up along a shot of <paramref name="duration"/> seconds facing <paramref name="facing"/> (null keeps the facing before), inverting over loops when <paramref name="allowInverted"/>; a shot starting straight up takes <paramref name="verticalStartUp"/>, negated straight down.</summary>
+    /// <summary>The up along a shot of <paramref name="duration"/> seconds facing <paramref name="facing"/> (null keeps the facing before), inverting over loops when <paramref name="allowInverted"/>; a shot starting straight up takes <paramref name="verticalStartUp"/>, negated straight down; given the <paramref name="points"/>' times, each passage turns over its turn span.</summary>
     public static LevelUp Along(
         Func<double, Vector3?> facing,
         float duration,
         bool allowInverted,
-        Vector3 verticalStartUp
+        Vector3 verticalStartUp,
+        (float[] Arrive, float[] Depart)? points = null
     )
     {
+        var pointTimes = points is { } times ? times.Arrive.Concat(times.Depart) : [];
         var steps = Enumerable
             .Range(0, (int)Math.Ceiling(duration / StepSeconds) + 1)
             .Select(k => (float)Math.Min(k * StepSeconds, duration))
+            .Concat(pointTimes.Where(t => t >= 0f && t <= duration))
             .Distinct()
+            .Order()
             .ToArray();
         Vector3 FacingAt(float time, Vector3 before) => facing(time) is { } f ? Vectors.NormalizeOr(f, before) : before;
+        bool CrossesEdge(Vector3 from, Vector3 to) =>
+            InPassage(from) != InPassage(to) || (points is not null && InSpanReach(from) != InSpanReach(to));
 
         var samples = new List<(float Time, Vector3 Facing)>
         {
@@ -65,7 +74,7 @@ public sealed class LevelUp
         void Refine(float from, Vector3 fromFacing, float to, Vector3 toFacing, int halvings)
         {
             var middle = (from + to) / 2f;
-            var crossesEdge = InPassage(fromFacing) != InPassage(toFacing) && to - from > EdgeSeconds;
+            var crossesEdge = CrossesEdge(fromFacing, toFacing) && to - from > EdgeSeconds;
             if (
                 halvings < MostHalvings
                 && middle > from
@@ -94,37 +103,91 @@ public sealed class LevelUp
         for (var k = 1; k < sampleTimes.Length; k++)
             sampleTurned[k] = sampleTurned[k - 1] + Vectors.AngleBetween(sampleFacings[k - 1], sampleFacings[k]);
 
+        return new LevelUp(
+            sampleTimes,
+            sampleFacings,
+            sampleTurned,
+            Plan(sampleTimes, sampleFacings, duration, allowInverted, verticalStartUp, points)
+        );
+    }
+
+    /// <summary>Each passage's planned turn along the sampled <paramref name="times"/> and <paramref name="facings"/>, over its turn span when <paramref name="points"/>' times are given.</summary>
+    private static Passage[] Plan(
+        float[] times,
+        Vector3[] facings,
+        float duration,
+        bool allowInverted,
+        Vector3 verticalStartUp,
+        (float[] Arrive, float[] Depart)? points
+    )
+    {
+        var extents = new List<(int Start, int? End, float Pole, bool Inside)>();
+        for (var k = 0; k < times.Length; k++)
+        {
+            if (!InPassage(facings[k]))
+                continue;
+            var end = k;
+            while (end < times.Length && InPassage(facings[end]))
+                end++;
+            extents.Add((k == 0 ? 0 : k - 1, end == times.Length ? null : end, MathF.Sign(facings[k].Y), k == 0));
+            k = end;
+        }
+
+        // The sample at a point's time: every point time within the shot is one of the steps.
+        int SampleAt(float time) => Search.LastAtOrBelow(times, time, 0, times.Length);
+        bool Steep(int sample, float pole) => InSpanReach(facings[sample]) && MathF.Sign(facings[sample].Y) == pole;
+
         var found = new List<Passage>();
         var inverted = false;
-        for (var k = 0; k < sampleTimes.Length; k++)
+        var previousEnd = 0;
+        for (var i = 0; i < extents.Count; i++)
         {
-            if (!InPassage(sampleFacings[k]))
-                continue;
-            var start = k == 0 ? 0 : k - 1;
-            var pole = MathF.Sign(sampleFacings[k].Y);
-            var end = k;
-            while (end < sampleTimes.Length && InPassage(sampleFacings[end]))
-                end++;
-            if (end == sampleTimes.Length)
+            var (start, end, pole, inside) = extents[i];
+            if (end is not { } last)
             {
                 var held =
-                    start == k && CameraRotation.Sideways(sampleFacings[0]) < Vertical
+                    inside && CameraRotation.Sideways(facings[0]) < Vertical
                         ? Flat(pole * verticalStartUp)
-                        : Level(sampleFacings[start], inverted, pole);
+                        : Level(facings[start], inverted, pole);
                 found.Add(new Passage(start, null, held, 0f, inverted, inverted, FromLevel: false));
                 break;
             }
 
-            var to = Level(sampleFacings[end], inverted, pole);
-            if (start == k)
+            if (inside)
             {
                 // A shot that starts inside a passage has no picture before it to turn from, so it starts as it leaves.
-                found.Add(new Passage(start, end, to, 0f, inverted, inverted, FromLevel: false));
-                k = end;
+                found.Add(
+                    new Passage(
+                        start,
+                        last,
+                        Level(facings[last], inverted, pole),
+                        0f,
+                        inverted,
+                        inverted,
+                        FromLevel: false
+                    )
+                );
+                previousEnd = last;
                 continue;
             }
 
-            var from = Level(sampleFacings[start], inverted, pole);
+            if (points is { } pointTimes)
+            {
+                var nextStart = i + 1 < extents.Count ? extents[i + 1].Start : times.Length - 1;
+                var reachStart = start;
+                while (reachStart > 0 && Steep(reachStart, pole) && Steep(reachStart - 1, pole))
+                    reachStart--;
+                var reachEnd = last;
+                while (reachEnd < times.Length - 1 && Steep(reachEnd, pole) && Steep(reachEnd + 1, pole))
+                    reachEnd++;
+                var departed = SampleAt(pointTimes.Depart.Where(t => t <= times[start]).DefaultIfEmpty(0f).Max());
+                var arrived = SampleAt(pointTimes.Arrive.Where(t => t >= times[last]).DefaultIfEmpty(duration).Min());
+                start = Math.Max(Math.Max(departed, reachStart), previousEnd);
+                last = Math.Min(Math.Min(arrived, reachEnd), nextStart);
+            }
+
+            var from = Level(facings[start], inverted, pole);
+            var to = Level(facings[last], inverted, pole);
             var after = inverted;
             if (allowInverted && Vector3.Dot(from, to) < Reversed)
             {
@@ -133,12 +196,12 @@ public sealed class LevelUp
             }
 
             var turn = Vectors.SignedAngle(from, to, Vector3.UnitY);
-            found.Add(new Passage(start, end, from, turn, inverted, after, FromLevel: true));
+            found.Add(new Passage(start, last, from, turn, inverted, after, FromLevel: true));
             inverted = after;
-            k = end;
+            previousEnd = last;
         }
 
-        return new LevelUp(sampleTimes, sampleFacings, sampleTurned, [.. found]);
+        return [.. found];
     }
 
     /// <summary>The up at <paramref name="time"/> facing <paramref name="facing"/>.</summary>
@@ -178,6 +241,9 @@ public sealed class LevelUp
     /// <summary>Whether unit <paramref name="forward"/> is within a vertical passage.</summary>
     private static bool InPassage(Vector3 forward) => CameraRotation.Sideways(forward) < PassageSideways;
 
+    /// <summary>Whether unit <paramref name="forward"/> is steep enough for a turn span to reach.</summary>
+    private static bool InSpanReach(Vector3 forward) => CameraRotation.Sideways(forward) < SpanSideways;
+
     /// <summary>The upright up facing unit <paramref name="forward"/>.</summary>
     private static Vector3 Level(Vector3 forward) => CameraRotation.Upright(forward);
 
@@ -188,7 +254,7 @@ public sealed class LevelUp
     /// <summary><paramref name="v"/>'s level part as a unit vector; straight up or down, yaw 0's heading, −z.</summary>
     private static Vector3 Flat(Vector3 v) => Vectors.FlatOr(v, new Vector3(0f, 0f, -1f));
 
-    /// <summary>A vertical passage from sample <see cref="Start"/> to sample <see cref="End"/> (null if the shot ends in it), turning up about the vertical by <see cref="Turn"/> from leaning along <see cref="From"/>; <see cref="FromLevel"/> when it starts from a level sample.</summary>
+    /// <summary>A vertical passage's turn from sample <see cref="Start"/> to sample <see cref="End"/> (null if the shot ends in it), over the passage or its turn span, turning up about the vertical by <see cref="Turn"/> from leaning along <see cref="From"/>; <see cref="FromLevel"/> when it starts from a level sample.</summary>
     private readonly record struct Passage(
         int Start,
         int? End,

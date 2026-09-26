@@ -62,7 +62,7 @@ internal static class RegressionScene
         new("Vertical loop: upside down over the top, smooth", Travel(Loop), 0),
         new("Recorded aim over the top: straight up, no swing", OverTheTop(), 0),
         new("Recorded aim up and over through a middle point: one steady turn", RecordedAimUpAndOverAMiddlePoint(), 0),
-        new("Look At straight overhead: turns upright, no flip", PassingUnder(), 0),
+        new("Look At straight overhead: turns round from point to point, no flip", PassingUnder(), 0),
         new("Climbing turn: horizon stays level", Travel(ClimbingTurn), 0),
         new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
         new("Hairpin crossing its own path, look ahead 1.74: one expected flip", HairpinCrossing(), 1),

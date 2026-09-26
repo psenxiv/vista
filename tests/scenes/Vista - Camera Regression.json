@@ -1926,7 +1926,7 @@
     },
     {
       "id": "00000000-0000-0000-0001-000000000016",
-      "name": "Look At straight overhead: turns upright, no flip",
+      "name": "Look At straight overhead: turns round from point to point, no flip",
       "anchor": {
         "position": {
           "x": -45,

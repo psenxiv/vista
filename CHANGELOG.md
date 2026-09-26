@@ -3,6 +3,7 @@
 ## X.Y.Z.N
 
 - Recorded aim turns smoothly through each point instead of changing direction slightly at it.
+- Look At turns the picture round gradually from point to point when the camera passes under or over its point, instead of all at once.
 
 ## 0.11.0.1
 
