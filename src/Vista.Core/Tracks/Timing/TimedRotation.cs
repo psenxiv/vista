@@ -42,7 +42,7 @@ public sealed class TimedRotation
         var span = arrive[leg] - start;
         var u = (float)((time - start) / span);
         var from = rates[leg - 1] * span;
-        var to = rates[leg] * span;
+        var to = InverseLeftJacobian(turns[leg], rates[leg] * span);
         var turned = new Vector3(
             Hermite.At(0f, turns[leg].X, from.X, to.X, u),
             Hermite.At(0f, turns[leg].Y, from.Y, to.Y, u),
@@ -84,6 +84,17 @@ public sealed class TimedRotation
     {
         var span = arrive[leg] - depart[leg - 1];
         return span <= TimedChannel.MinSeconds ? Vector3.Zero : turns[leg] / span;
+    }
+
+    /// <summary>The inverse left Jacobian of the exponential map at rotation vector <paramref name="turn"/> of angle φ, applied to <paramref name="rate"/>: the world rate that arrives with rotation-vector rate <paramref name="rate"/> at a leg turning by <paramref name="turn"/>. Below <see cref="SmallAngle"/> it's <paramref name="rate"/> unchanged.</summary>
+    private static Vector3 InverseLeftJacobian(Vector3 turn, Vector3 rate)
+    {
+        var angle = turn.Length();
+        if (angle < SmallAngle)
+            return rate;
+        var cross = Vector3.Cross(turn, rate);
+        var factor = (1f / (angle * angle)) - ((1f + MathF.Cos(angle)) / (2f * angle * MathF.Sin(angle)));
+        return rate - (cross / 2f) + (factor * Vector3.Cross(turn, cross));
     }
 
     /// <summary>The rotation vector (axis times angle) of a unit quaternion.</summary>

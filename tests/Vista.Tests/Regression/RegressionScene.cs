@@ -61,6 +61,7 @@ internal static class RegressionScene
         new("Straight doubleback, look ahead 0: snaps round once", Travel(Doubleback, lookAhead: 0f), 1),
         new("Vertical loop: upside down over the top, smooth", Travel(Loop), 0),
         new("Recorded aim over the top: straight up, no swing", OverTheTop(), 0),
+        new("Recorded aim up and over through a middle point: one steady turn", RecordedAimUpAndOverAMiddlePoint(), 0),
         new("Look At straight overhead: turns upright, no flip", PassingUnder(), 0),
         new("Climbing turn: horizon stays level", Travel(ClimbingTurn), 0),
         new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
@@ -99,6 +100,23 @@ internal static class RegressionScene
             track,
             new ControlPoint(new Vector3(5f, 0f, 0f), MathF.PI, MathF.PI / 3f, Fov, MathF.PI)
         );
+    }
+
+    /// <summary>Recorded aim east 45° up, straight up with the picture's top to the north, west 45° up, 2 s a leg: the shot that found the turn-rate jump at a middle point (spec:7).</summary>
+    private static Track RecordedAimUpAndOverAMiddlePoint()
+    {
+        var track = TrackEditing.Empty(AimMode.AimKeys);
+        track = TrackEditing.Append(
+            track,
+            new ControlPoint(new Vector3(-10f, 0f, 0f), -MathF.PI / 2f, MathF.PI / 4f, Fov)
+        );
+        track = TrackEditing.Append(track, new ControlPoint(new Vector3(0f, 0f, 0f), MathF.PI, MathF.PI / 2f, Fov));
+        track = TrackEditing.Append(
+            track,
+            new ControlPoint(new Vector3(10f, 0f, 0f), MathF.PI / 2f, MathF.PI / 4f, Fov)
+        );
+        track = TrackEditing.SetLegDuration(track, 1, 2f);
+        return TrackEditing.SetLegDuration(track, 2, 2f);
     }
 
     /// <summary>Along x under a Look At point 10 yalms up, passing straight beneath it.</summary>

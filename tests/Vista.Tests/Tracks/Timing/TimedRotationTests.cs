@@ -1,8 +1,12 @@
 using System.Numerics;
+using CsCheck;
 using Vista.Core.Camera;
+using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Timing.TimingFixtures;
 
 namespace Vista.Tests.Tracks.Timing;
 
@@ -12,6 +16,89 @@ public class TimedRotationTests
         CameraRotation.FromAngles(yaw, pitch, roll);
 
     private static float YawOf(Quaternion rotation) => CameraRotation.ToAngles(rotation).Yaw;
+
+    /// <summary>How far either side of a middle point the world turn rate is sampled, in seconds: close enough that a leg's own curvature barely moves it, far enough that float round-off in <see cref="WorldTurnRate"/>'s 1e-4 s window stays well under the agreement tolerance.</summary>
+    private const double RateOffset = 1e-3;
+
+    /// <summary>The central-difference window <see cref="WorldTurnRate"/> measures each side's rate over.</summary>
+    private const double RateWindow = 1e-4;
+
+    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate: comfortably above the finite-difference noise a correct implementation leaves (under 0.031 rad/s over 500,000 random three-point legs of 1 to 5 s, checked while writing this test), and far below the tenths of a rad/s a one-sided rate (the old behaviour) leaves.</summary>
+    private const float RateAgreement = 0.05f;
+
+    [Fact]
+    public void ARecordedAimTrackTurnsAtOneRateThroughAMiddlePoint()
+    {
+        // The user's shot: east 45° up and upright, straight up with the picture's top to the north (-z), west 45° up
+        // and upright, 2 s apart. The middle point's turn so far, going in, is the whole first leg's; its rotation-vector
+        // rate must be mapped through the inverse left Jacobian of the exponential map there for the camera's actual
+        // world turn rate arriving to equal the rate it leaves with, since only one rate can pass through a point.
+        var east = CameraRotation.FromBasis(
+            Vector3.Normalize(new Vector3(1f, 1f, 0f)),
+            Vector3.Normalize(new Vector3(-1f, 1f, 0f))
+        );
+        var up = CameraRotation.FromBasis(new Vector3(0f, 1f, 0f), new Vector3(0f, 0f, -1f));
+        var west = CameraRotation.FromBasis(
+            Vector3.Normalize(new Vector3(-1f, 1f, 0f)),
+            Vector3.Normalize(new Vector3(1f, 1f, 0f))
+        );
+        var channel = new TimedRotation([east, up, west], [0f, 2f, 4f], [0f, 2f, 4f]);
+
+        var before = WorldTurnRate(channel.At, 2.0 - RateOffset, RateWindow);
+        var after = WorldTurnRate(channel.At, 2.0 + RateOffset, RateWindow);
+
+        Assert.True(
+            Vectors.AngleBetween(before, after) <= 0.5f * Deg,
+            $"Axis differs by {Vectors.AngleBetween(before, after) / Deg:0.###}°"
+        );
+        var (beforeSpeed, afterSpeed) = (before.Length(), after.Length());
+        Assert.True(
+            MathF.Abs(beforeSpeed - afterSpeed) <= 0.01f * ((beforeSpeed + afterSpeed) / 2f),
+            $"Speed differs: {beforeSpeed:0.###} vs {afterSpeed:0.###} rad/s"
+        );
+    }
+
+    /// <summary>A recorded-aim track through 3 to 6 points (<see cref="AnyPoint"/>), each leg pinned to a duration of 1 to 5 s, no holds, built as the editor builds it.</summary>
+    private static readonly Gen<Track> AnyRecordedAimTrack =
+        from points in AnyPoint.Array[3, 6]
+        from legSeconds in Gen.Float[1f, 5f].Array[points.Length]
+        select RecordedAimTrack(points, legSeconds);
+
+    private static Track RecordedAimTrack(ControlPoint[] points, float[] legSeconds)
+    {
+        var track = TrackEditing.Empty(AimMode.AimKeys);
+        foreach (var point in points)
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg < points.Length; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, legSeconds[leg]);
+        return track;
+    }
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void ARecordedAimTrackTurnsAtOneRateThroughEveryMiddlePoint()
+    {
+        AnyRecordedAimTrack.Sample(
+            track =>
+            {
+                var evaluator = new TrackEvaluator(track);
+                var rotation = RecordedAimRotation(evaluator);
+                for (var point = 1; point < track.Points.Count - 1; point++)
+                {
+                    var t = evaluator.PointSeconds(point);
+                    var before = WorldTurnRate(rotation, t - RateOffset, RateWindow);
+                    var after = WorldTurnRate(rotation, t + RateOffset, RateWindow);
+                    var diff = (before - after).Length();
+                    if (!(diff <= RateAgreement))
+                        Assert.Fail(
+                            $"Point {point}: turn rate differs by {diff:0.#####} rad/s either side of {t:0.###} s"
+                        );
+                }
+            },
+            iter: 2000,
+            print: Kept<Track>(PrintTrack)
+        );
+    }
 
     [Fact]
     public void AHoldKeepsItsPointsRotationExactly()

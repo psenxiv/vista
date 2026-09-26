@@ -1,5 +1,9 @@
 # Changelog
 
+## X.Y.Z.N
+
+- Recorded aim turns smoothly through each point instead of changing direction slightly at it.
+
 ## 0.11.0.1
 
 - Reworked the points table's rows, with flatter value fields and a handle for dragging a row.
