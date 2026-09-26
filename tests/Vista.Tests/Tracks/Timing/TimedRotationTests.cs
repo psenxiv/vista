@@ -23,7 +23,7 @@ public class TimedRotationTests
     /// <summary>The central-difference window <see cref="WorldTurnRate"/> measures each side's rate over.</summary>
     private const double RateWindow = 1e-4;
 
-    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate. Near the point, each side's rate leads or lags the point's own by about that leg's angular acceleration times <see cref="RateOffset"/>; from the Hermite curve's endpoint second derivative (2·from − 6·turn + 4·to, TimedRotation.At's own names, over the leg's squared duration), that acceleration is largest for a 1 s leg turning near π rad (<see cref="AnyRecordedAimTrack"/> generates no shorter or sharper), and shrinks for gentler turns or longer legs. A 3-point track's end points cap it at about 5π rad/s² each side (a turn cancelling against a still neighbour), ≈10π · RateOffset ≈ 0.031 rad/s total — the case random sampling tends to land on; this generator's interior middle points can have free neighbours on both sides too, which a targeted (non-random) search over that fuller space, run while fixing this constant and not kept in the repository, pushed to ≈0.047 rad/s. 0.08 keeps comfortable margin above that, and stays far below the several tenths of a rad/s a one-sided rate (the old behaviour) leaves.</summary>
+    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate. Near the point, each side's rate leads or lags the point's own by about that leg's angular acceleration times <see cref="RateOffset"/>; from the Hermite curve's endpoint second derivative (2·from − 6·turn + 4·to, TimedRotation.At's own names, over the leg's squared duration), that acceleration is largest for a 1 s leg turning near π rad, and shrinks for gentler turns or longer legs (<see cref="AnyRecordedAimTrack"/> generates no leg shorter or turn sharper). A 3-point track's end points cap it at about 5π rad/s² each side (a turn cancelling against a still neighbour), ≈10π · RateOffset ≈ 0.031 rad/s total; a longer chain's interior points, with free neighbours on both sides, push it to about 0.047 rad/s, the worst a search over that fuller space found. 0.08 keeps comfortable margin above that, and stays far below the several tenths of a rad/s a one-sided rate (the old behaviour) leaves.</summary>
     private const float RateAgreement = 0.08f;
 
     [Fact]
@@ -55,6 +55,33 @@ public class TimedRotationTests
         Assert.True(
             MathF.Abs(beforeSpeed - afterSpeed) <= 0.01f * ((beforeSpeed + afterSpeed) / 2f),
             $"Speed differs: {beforeSpeed:0.###} vs {afterSpeed:0.###} rad/s"
+        );
+    }
+
+    [Fact]
+    public void APointBetweenLargePerpendicularLegsTurnsAtOneRate()
+    {
+        // Two 140° legs, 1 s each, about perpendicular world axes (X then Z): the middle point's rotation-vector rate
+        // mixes both axes, (70°, 0, 70°) rad/s, while each leg's own turn is along a single axis, so the inverse left
+        // Jacobian's cross terms move the Hermite endpoint slope well off that axis. Mutating its factor (2·angle·sin
+        // angle to 2·angle/sin angle) leaves the two sides about 8° and 0.25 rad/s apart; unmutated, the Hermite
+        // curve's own endpoint curvature (2·from − 6·turn + 4·to either side, over the leg's squared duration) puts
+        // them about 0.5° and 0.017 rad/s apart, so 2° and 0.05 rad/s keep clear margin both ways.
+        var turnX = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 140f * Deg);
+        var turnZ = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 140f * Deg);
+        var rotations = new[] { Quaternion.Identity, turnX, Quaternion.Concatenate(turnX, turnZ) };
+        var channel = new TimedRotation(rotations, [0f, 1f, 2f], [0f, 1f, 2f]);
+
+        var before = WorldTurnRate(channel.At, 1.0 - RateOffset, RateWindow);
+        var after = WorldTurnRate(channel.At, 1.0 + RateOffset, RateWindow);
+
+        Assert.True(
+            Vectors.AngleBetween(before, after) <= 2f * Deg,
+            $"Axis differs by {Vectors.AngleBetween(before, after) / Deg:0.###}°"
+        );
+        Assert.True(
+            MathF.Abs(before.Length() - after.Length()) <= 0.05f,
+            $"Speed differs: {before.Length():0.###} vs {after.Length():0.###} rad/s"
         );
     }
 

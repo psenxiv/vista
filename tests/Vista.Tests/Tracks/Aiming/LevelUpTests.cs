@@ -187,6 +187,37 @@ public class LevelUpTests
     }
 
     [Fact]
+    public void ATurnSpanStartsExactlyAtAnOffGridPointsDeparture()
+    {
+        // Over the top from level to level at 90° a second, as above, but with a point at 0.37 s (off the 0.1 s
+        // sampling grid) instead of 0 s, and no hold there. The 60° reach would start at 1/3 s, earlier than the
+        // point departs, so the point's own departure is the later, binding edge, and the span starts exactly there:
+        // at 33.3° over. Sampling the point's own time exactly (not rounded down to the 0.1 s grid) is what makes
+        // that so.
+        float[] times = [0.37f, 2f];
+        var level = LevelUp.Along(
+            t => OverTheTop(t * Math.PI / 2),
+            2f,
+            allowInverted: false,
+            Vector3.UnitY,
+            (times, times)
+        );
+
+        // At the point's own time, the share is exactly 0: the up is exactly upright, at 33.3° over,
+        // (0, cos 33.3°, sin 33.3°) = (0, 0.83581, 0.54902).
+        Near(new Vector3(0f, 0.83581f, 0.54902f), level.At(0.37, OverTheTop(0.37 * Math.PI / 2)), 1e-5f);
+
+        // The lean turns from +z half round to -z over the span's 150 - 33.3 = 116.7°. At 36° over (0.4 s, 0.03 s
+        // later): share (36 - 33.3) / 116.7 = 0.023136, eased 3s² - 2s³ = 0.0015811, θ = 0.28460°; the lean
+        // (sin θ, 0, cos θ) = (0.0049671, 0, 0.9999877) squared to (0, sin 36°, -cos 36°) is
+        // (0.008450, 0.808988, 0.587764).
+        var soonAfter = level.At(0.4, OverTheTop(0.4 * Math.PI / 2));
+        Assert.Equal(0.008450f, MathF.Abs(soonAfter.X), 1e-3f);
+        Assert.Equal(0.808988f, soonAfter.Y, 1e-3f);
+        Assert.Equal(0.587764f, soonAfter.Z, 1e-3f);
+    }
+
+    [Fact]
     public void TurnSpansThatWouldOverlapSplitAtTheMidpointBetweenThePassages()
     {
         // Over the top from 45° up along -z to 45° up along +z in the first second, then back: two passages (1/3 to 2/3 s
@@ -323,5 +354,51 @@ public class LevelUpTests
         var level = LevelUp.Along(t => OverTheTop(t * Math.PI / 2), 1.175f, allowInverted: false, Vector3.UnitY);
 
         Near(new Vector3(0f, 0.27144f, -0.96246f), level.At(1.175, OverTheTop(1.175 * Math.PI / 2)), 1e-4f);
+    }
+
+    [Fact]
+    public void AShotStartingInsideAPassageHasNoSpanAndDoesNotSplitAgainstTheNext()
+    {
+        // Over the top from straight up (inside a passage, no picture before it), down to 60° over at 33.3°/s (0 to
+        // 0.9 s), a quick wobble down to 40° and back to 60° within one 0.1 s sample (0.9 to 1 s, invisible to the
+        // recorded turn tally, which is exactly what a phantom split sample would partly uncover), then on over the
+        // top at 40°/s to 150° over (1 to 3.25 s) where the turn span's 60° reach ends, coasting level from there.
+        // Points only at the ends, far from any of this, so departure/arrival never clips a span.
+        //
+        // The first passage ends at 75° over, 0.45 s (15° at 33.3°/s). Nothing in the gap ever leaves the second
+        // passage's 60° reach (it only dips to 40°, short of 30°), so that reach's own span grows backward through
+        // the whole gap to the shot's start: clipped by the first passage's own end, the second passage starts right
+        // there, at 0.45 s, with no midpoint split against the first (which has none to split against, since a
+        // passage the shot starts inside has no span of its own).
+        //
+        // From (leaning back from the climb at 75° over) is (0, 0, 1); to (at 150° over) is (0, 0, -1): a half turn,
+        // either way round (its sign isn't pinned, as in LookAtUnderItsPointTurnsRoundFromPointToPoint). The span's
+        // total turn tally is 15° (0.45 to 0.9 s) + 0° (the hidden wobble) + 90° (1 to 3.25 s, 60° to 150°) = 105°.
+        //
+        // Just after 0.45 s the share is 0, so the up is exactly upright: facing 74.667° over at 0.46 s,
+        // (0, 0.26443, 0.96440) (Upright's own formula, not LevelUp's).
+        //
+        // At 1.5 s (80° over) the tally is 15° + 0° + 20° = 35° of 105°: share 1/3, eased 3s² - 2s³ = 7/27, θ =
+        // 46.667°. The lean (±sin θ, 0, cos θ) = (±0.72714, 0, 0.68655) squared to (0, sin 80°, -cos 80°) is
+        // (±0.73233, 0.11825, 0.67056).
+        static Vector3 Facing(double t) =>
+            OverTheTop(
+                (
+                    t <= 0.9 ? 90.0 - (30.0 * (t / 0.9))
+                    : t <= 0.95 ? 60.0 - (20.0 * ((t - 0.9) / 0.05))
+                    : t <= 1.0 ? 40.0 + (20.0 * ((t - 0.95) / 0.05))
+                    : 60.0 + (120.0 * ((t - 1.0) / 3.0))
+                ) * Deg
+            );
+        float[] times = [0f, 4f];
+        var level = LevelUp.Along(t => Facing(t), 4f, allowInverted: false, Vector3.UnitY, (times, times));
+
+        var justAfter = level.At(0.46, Facing(0.46));
+        Near(new Vector3(0f, 0.26443f, 0.96440f), justAfter, 2e-3f);
+
+        var soonAfter = level.At(1.5, Facing(1.5));
+        Assert.Equal(0.73233f, MathF.Abs(soonAfter.X), 1e-3f);
+        Assert.Equal(0.11825f, soonAfter.Y, 1e-3f);
+        Assert.Equal(0.67056f, soonAfter.Z, 1e-3f);
     }
 }
