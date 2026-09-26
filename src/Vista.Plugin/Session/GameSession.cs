@@ -301,7 +301,7 @@ internal sealed class GameSession
         var frame = state.Mode switch
         {
             CameraMode.Editing => EditingFrame(dt),
-            CameraMode.Live => state.Director.Tick(dt),
+            CameraMode.Live => state.Director.Tick(dt * state.PlaybackRate),
             _ => null,
         };
 
@@ -344,13 +344,13 @@ internal sealed class GameSession
         if (state.Ghost)
         {
             previewedLastFrame = false;
-            ghostFrame = transport.AdvancePreview(dt) ?? state.World.FrameAt(transport.ScrubHead);
+            ghostFrame = transport.AdvancePreview(dt * state.PlaybackRate) ?? state.World.FrameAt(transport.ScrubHead);
             return freeCam.Tick(dt);
         }
 
         if (transport.Previewing && FreeCam.HasFlightInput())
             transport.StopPreview();
-        var frame = transport.AdvancePreview(dt);
+        var frame = transport.AdvancePreview(dt * state.PlaybackRate);
 
         if (previewedLastFrame && !transport.Previewing)
         {

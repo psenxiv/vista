@@ -1,3 +1,4 @@
+using System.Globalization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
@@ -185,6 +186,9 @@ public sealed class Plugin : IDalamudPlugin
 #endif
                 game.Release("command");
                 break;
+            case "playback":
+                SetPlaybackRate(args.Trim().Split(' ', 2) is [_, var rate] ? rate.Trim() : "");
+                break;
             case "ghost":
                 game.State.Ghost = !game.State.Ghost;
                 ChatGui.Print(game.State.Ghost ? "Ghost camera on." : "Ghost camera off.");
@@ -198,6 +202,25 @@ public sealed class Plugin : IDalamudPlugin
                 Log.Information("[vista] unknown verb '{Verb}'.", verb);
                 break;
         }
+    }
+
+    /// <summary>Sets the playback rate from <paramref name="text"/>, or says why it can't.</summary>
+    private void SetPlaybackRate(string text)
+    {
+        if (
+            !float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
+            || rate <= 0f
+            || rate > SessionState.MaxPlaybackRate
+        )
+        {
+            ChatGui.Print(
+                $"Playback rate must be above 0 and at most {SessionState.MaxPlaybackRate.ToString(CultureInfo.InvariantCulture)}, e.g. /vista playback 0.5."
+            );
+            return;
+        }
+
+        game.State.PlaybackRate = rate;
+        ChatGui.Print($"Playback rate {rate.ToString(CultureInfo.InvariantCulture)}×.");
     }
 
     /// <summary>The safety steps first, each on its own, so a fault in one never skips another; then everything else.</summary>

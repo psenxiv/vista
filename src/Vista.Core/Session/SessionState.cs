@@ -130,6 +130,12 @@ public sealed class SessionState
     /// <summary>True while Edit previews play a ghost camera and leave the game camera to the free-cam. Never saved.</summary>
     public bool Ghost { get; set; }
 
+    /// <summary>The fastest playback rate, as a multiple of normal speed.</summary>
+    public const float MaxPlaybackRate = 2f;
+
+    /// <summary>How fast previews and live shots play, as a multiple of normal speed, above 0 and at most <see cref="MaxPlaybackRate"/>. Never saved.</summary>
+    public float PlaybackRate { get; set; } = 1f;
+
     /// <summary>True in Edit while no preview plays, or while one plays as the ghost: the overlay takes clicks and shows the gizmo.</summary>
     public bool OverlayEditable => Mode == CameraMode.Editing && (Ghost || !Transport.Previewing);
 
