@@ -1162,7 +1162,12 @@ public class TrackEvaluatorTests
     {
         Gen.Select(AnyPathTrack, AnyFrameStep.Array[1, 32])
             .Sample(
-                (track, steps) => AssertEveryFrameWellFormed(steps, FrameBudget, new Run(track).Clock()),
+                (track, steps) =>
+                {
+                    var run = new Run(track);
+                    AssertEveryFrameWellFormed(steps, FrameBudget, run.Clock());
+                    AssertWellFormed(run.At(run.Duration), "At the end");
+                },
                 iter: 1000,
                 print: Kept<(Track Track, float[] Steps)>(x =>
                     $"{PrintTrack(x.Track)}\nSteps: {string.Join(", ", x.Steps)}"
