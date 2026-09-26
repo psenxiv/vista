@@ -224,7 +224,19 @@ public sealed class TrackEvaluator
             return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(time), fov);
 
         _travelUp ??= LevelUp.Along(TravelDirection, (float)Duration, allowInverted: true, VerticalStartUp);
-        return Framed(time, from, direction, _travelUp.At(time, direction), fov);
+        return Framed(time, from, direction, _travelUp.At(HoldStart(time), direction), fov);
+    }
+
+    /// <summary>The start of the hold <paramref name="time"/> falls in after arriving, or <paramref name="time"/> outside a hold.</summary>
+    private double HoldStart(double time)
+    {
+        for (var point = 0; point < _arrive.Length; point++)
+        {
+            if (_arrive[point] < time && time <= _depart[point])
+                return _arrive[point];
+        }
+
+        return time;
     }
 
     /// <summary>The frame at <paramref name="from"/> facing <paramref name="direction"/> with <paramref name="up"/>, the track's roll turned on top.</summary>
@@ -288,7 +300,7 @@ public sealed class TrackEvaluator
     }
 
     /// <summary>The track time after <paramref name="seconds"/> of travel from <paramref name="time"/>, skipping the time of every hold on the way.</summary>
-    private double TravelledAhead(double time, float seconds)
+    public double TravelledAhead(double time, float seconds)
     {
         var from = time;
         double left = seconds;
@@ -305,12 +317,14 @@ public sealed class TrackEvaluator
         return from + left;
     }
 
-    /// <summary>The way the chord opens where the path comes back to the camera within the look ahead, the spot reached at <paramref name="later"/>: the spot's velocity less the camera's; null where neither moves.</summary>
+    /// <summary>The way the chord opens where the path comes back to the camera within the look ahead, the spot reached at <paramref name="later"/>: the spot's velocity less the camera's, or back along the path where neither moves yet; null where the path has no direction.</summary>
     private Vector3? Opening(double time, double later, float here, float ahead)
     {
         // At the start the curve's slope reads 0, so the camera's is the first key's slope out.
         var slope = time <= 0.0 ? _curve.SideSlope(0, KeySide.Out) : _curve.SlopeAt(time);
-        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(later)) - Velocity(here, slope));
+        // A camera holding under a spot that waits at the end leaves it behind as it moves off.
+        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(later)) - Velocity(here, slope))
+            ?? TrackAim.Usable(-Velocity(here, 1f));
     }
 
     /// <summary>The velocity along the path <paramref name="distance"/> along it, moving at <paramref name="slope"/> distance per second.</summary>

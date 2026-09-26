@@ -85,7 +85,8 @@ public class FixturesTests
     [Fact]
     public void ASpotWaitingWhereTheCameraStartsIsKept()
     {
-        // At the start of the lap, the spot 2 s ahead waits in the hold where the camera is: it isn't moving, so it counts.
+        // At the start of the lap, 2 s of travel is past the end, so the spot waits there, where the camera is: it isn't
+        // moving, so the track is kept.
         var lap = RegressionScene.Cases.Single(c =>
             c.Name.StartsWith("Lap back to the start", StringComparison.Ordinal)
         );

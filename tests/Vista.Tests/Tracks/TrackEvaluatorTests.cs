@@ -507,6 +507,11 @@ public class TrackEvaluatorTests
         // and 1 times the secant): at share s of it the camera is D(2s² - s³) along. At s = 1 / T that's 50/D - 125/D² ≈ 3.70
         // yalms, past the 1-yalm blend, so the camera faces the spot itself.
         AimsAt(evaluator.Evaluate(depart + 1.0)!.Value.Position, held, 4);
+
+        // Approaching at 1.5 s, the look ahead reaches across the hold: 0.54 s of travel to arriving at 2.04 s, then the
+        // other 0.46 s after leaving at 5.04 s, so the spot is where the camera is at 1.5 + 1 + 3 = 5.5 s, not 6.04 s. The
+        // camera is about 9 yalms along and the spot over 11, past the 1-yalm blend, so it faces the spot itself.
+        AimsAt(evaluator.Evaluate(1.5 + 1.0 + 3.0)!.Value.Position, evaluator.Evaluate(1.5)!.Value, 4);
         for (var i = 0; i <= 64; i++)
             Assert.Equal(held.Forward, Facing(evaluator, arrive + ((depart - arrive) * i / 64)));
 
@@ -933,6 +938,46 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void DirectionOfTravelHoldingAtTheStartFacesBackAtTheSpotWaitingThere()
+    {
+        // The lap above, held 1 s at its start: 1.5 s of travel is more than the lap's 1 s, so through the hold the spot
+        // waits at the end, on the camera. Moving off down the first leg along -z leaves it behind, so the chord opens
+        // along +z, and the camera faces that way from the start.
+        var track = TrackEditing.Empty(AimMode.PathTangent);
+        foreach (
+            var point in new[] { Point(0f), Point(0f, 0f, -5f), Point(0f, 0f, -10f), Point(10f, 0f, -10f), Point(0f) }
+        )
+            track = TrackEditing.Append(track, point);
+        for (var leg = 1; leg <= 4; leg++)
+            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 1f), 4, 2f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.5f));
+
+        Near(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-6f);
+        Near(Vector3.UnitZ, Facing(evaluator, 0.5), 1e-6f);
+        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+    }
+
+    [Fact]
+    public void DirectionOfTravelDoesNotTurnRoundLeavingAHoldUnderTheSpotWaitingThere()
+    {
+        // Found by TheAimNeverSteps as a 114.6° step at 3 s: the path ends where it starts, held 3 s there, and its 1.93 s
+        // look ahead is more than all its travel, so through the hold the spot waits at the end, on the camera. The camera
+        // faced along the path until it moved off and the spot fell behind it; it now faces back at the spot throughout.
+        var track = TrackEditing.Empty(AimMode.PathTangent) with
+        {
+            Speed = 12f,
+        };
+        foreach (var point in new[] { Point(0f), Point(-3f, -1.3278688f), Point(0f, 3.4775333f, -5f), Point(0f) })
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 3f), 1, 2f);
+        track = TrackEditing.SetHold(track, 3, 2.099152f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.9320359f));
+
+        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+    }
+
+    [Fact]
     public void DirectionOfTravelStartsFacingTheSpotPassingWhereTheCameraWaits()
     {
         // The camera holds 1 s at the origin, then legs of 0.25 s reach the origin again after 0.75 s of travel, the look
@@ -950,11 +995,12 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void DirectionOfTravelFacesTheWayTheSpotLeavesAsItPassesThroughTheHoldingCamera()
+    public void DirectionOfTravelFacesTheWayTheSpotWillLeaveWhileItWaitsOnTheHoldingCamera()
     {
         // Legs of 0.25 s: the camera holds at the origin from 0.25 s to 1.25 s, and reaches it again at 2 s, 0.75 s of
-        // travel after leaving. At 0.75 s, looking that far ahead, the spot passes through the holding camera, between
-        // (-5, 0, 0) and (5, 0, 0), equally far either side, so along +x. Only the spot moves, so the chord opens that way.
+        // travel after leaving. Looking that far ahead, through the hold the spot waits on the camera at that second visit,
+        // between (-5, 0, 0) and (5, 0, 0), equally far either side, so the path there runs along +x. Only the spot moves
+        // on from there, so the chord opens that way.
         var track = TrackEditing.Empty(AimMode.PathTangent);
         foreach (
             var point in new[] { Point(0f, 0f, 5f), Point(0f), Point(0f, 0f, -5f), Point(-5f), Point(0f), Point(5f) }
@@ -993,6 +1039,34 @@ public class TrackEvaluatorTests
             0f,
             PictureSpinLimit
         );
+    }
+
+    [Fact]
+    public void DirectionOfTravelKeepsItsUpExactlyThroughAHoldReachedLeavingAVerticalPassage()
+    {
+        // Found by AHoldIsStill as a last-bit change in up just after arriving at point 1's hold: the facing leaves a vertical
+        // passage as the camera stops, and the passage's end is sampled within a millisecond after, so the arrival was still
+        // in its turn. Through a hold the up is now read at the hold's start.
+        var track = TrackEditing.Empty(AimMode.PathTangent) with
+        {
+            Speed = 14f,
+        };
+        foreach (
+            var point in new[]
+            {
+                Point(13.3f, 0f, 4.5208335f),
+                Point(-17f, 0f, -9.875137f),
+                Point(-17.950653f, -4f, -11f),
+                Point(27f, -3.5347633f, 0f),
+            }
+        )
+            track = TrackEditing.Append(track, point);
+        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 0.39784947f), 1, 3f);
+        track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 1, 6.582359f), 3, 11.641592f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 0.49757695f));
+        var arrive = evaluator.PointSeconds(1);
+
+        Assert.Equal(evaluator.Evaluate(arrive)!.Value.Up, evaluator.Evaluate(arrive + 1.0)!.Value.Up);
     }
 
     [Fact]

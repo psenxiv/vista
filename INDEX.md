@@ -90,7 +90,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### Timing
 
 - `Tracks/TrackEditing`: which timing key is a point or a hold end, and the keys a leg runs between.
-- `Tracks/TrackEvaluator`: leg lengths and times, point times, and distance and speed along the path at a time; `Tracks/EvaluatorCache` keeps one track's evaluator until the track changes.
+- `Tracks/TrackEvaluator`: leg lengths and times, point times, distance and speed along the path at a time, and the time after some seconds of travel; `Tracks/EvaluatorCache` keeps one track's evaluator until the track changes.
 
 ### Playback clock
 

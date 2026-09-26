@@ -114,15 +114,18 @@ internal static class Fixtures
         Vector3 Place(double t) => evaluator.Evaluate(t)!.Value.Position;
 
         Vector3? before = null;
-        for (var t = SpotStep; t + ahead < evaluator.Duration; t += SpotStep)
+        for (var t = SpotStep; t < evaluator.Duration; t += SpotStep)
         {
-            if (!(evaluator.SlopeAt(t) > 0f && evaluator.SlopeAt(t + ahead) > 0f))
+            var spot = evaluator.TravelledAhead(t, ahead);
+            if (spot >= evaluator.Duration)
+                break;
+            if (!(evaluator.SlopeAt(t) > 0f && evaluator.SlopeAt(spot) > 0f))
             {
                 before = null;
                 continue;
             }
 
-            var gap = Place(t + ahead) - Place(t);
+            var gap = Place(spot) - Place(t);
             if (before is { } last && ClosestToZero(last, gap) < ClosestGeneratedSpot)
                 return true;
             before = gap;
