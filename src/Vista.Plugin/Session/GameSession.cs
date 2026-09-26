@@ -273,10 +273,10 @@ internal sealed class GameSession
         return refusal;
     }
 
-    /// <summary>Stops dragging the scrub head; while editing the free-cam flies on from the frame shown.</summary>
+    /// <summary>Stops dragging the scrub head; while editing without the ghost the free-cam flies on from the frame shown.</summary>
     public void FinishScrub()
     {
-        var fromEditing = state.Mode == CameraMode.Editing && state.Transport.Scrubbing;
+        var fromEditing = state.Mode == CameraMode.Editing && state.Transport.Scrubbing && !state.Ghost;
         state.Transport.EndScrub();
         if (fromEditing && state.World.FrameAt(state.Transport.ScrubHead) is { } frame)
             FlyFrom(frame);
