@@ -134,8 +134,9 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Test fixtures
 
-- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, step and twist measures, and vector assertions.
+- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, and vector assertions.
+- `TrackRuns`: playing a track, or hand-made motion, and measuring it: a run's frame at a time, length and point arrive and depart times; clocks (fixed steps, and the evaluator, a playback or the Director stepped within a frame budget); and measures: steps and snaps, picture twist, the largest change or value over samples, world turn rate, speed, horizon tilt, Look At centring, and well-formed on every frame.
 - `Session/SessionFixtures`: the sessions the session tests start from, and track and entry ids by index.
-- `Tracks/Timing/TimingFixtures`: key times, key drags, and world turn rates (`WorldTurnRate`, `RecordedAimRotation`).
+- `Tracks/Timing/TimingFixtures`: key times and key drags.
 - `Tracks/Playback/PlaybackFixtures`: the straight track the playback tests play.
 - `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, and a scene folder in a temporary directory.

@@ -7,6 +7,7 @@ using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.TrackRuns;
 
 namespace Vista.Tests.Tracks.Aiming;
 
@@ -133,16 +134,18 @@ public class AimTrackerTests
         var tracker = new AimTracker(characters);
         var track = Watching();
         var evaluator = new TrackEvaluator(track);
-        CameraState? last = null;
         CameraState frame = default;
-        for (var i = 0; i <= 240; i++)
+        CameraState Watch(double t)
         {
-            GuardAt(characters, new Vector3(-20f + (i / 6f), 10f, 0f));
-            frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
-            if (last is { } previous)
-                Assert.InRange(Twist(previous.Forward, previous.Up, frame.Forward, frame.Up), 0f, PictureSpinLimit);
-            last = frame;
+            GuardAt(characters, new Vector3(-20f + (10f * (float)t), 10f, 0f));
+            return frame = tracker.Frame(evaluator, track, 0.0, (float)FrameSeconds)!.Value;
         }
+
+        Assert.InRange(
+            LargestChange(Every(FrameSeconds, 0.0, 4.0), Watch, (a, b) => Twist(a.Forward, a.Up, b.Forward, b.Up)),
+            0f,
+            PictureSpinLimit
+        );
 
         // The guard ends at x = 20, their aim point (20, 10, 0): facing (20, 10, 0)/√500, upright leans back, (-10, 20, 0)/√500.
         Near(new Vector3(-10f, 20f, 0f) / MathF.Sqrt(500f), frame.Up, 1e-3f);
@@ -163,12 +166,14 @@ public class AimTrackerTests
             TargetName = "Guard",
         };
         var evaluator = new TrackEvaluator(track);
-        for (var i = 0; i <= 240; i++)
+        float OffSquare(double t)
         {
-            GuardAt(characters, new Vector3(-17f + (i / 6f), 10f, 0f));
-            var frame = tracker.Frame(evaluator, track, 0.0, 1f / 60f)!.Value;
-            Assert.Equal(0f, Vector3.Dot(frame.Up, frame.Forward), 1e-5f);
+            GuardAt(characters, new Vector3(-17f + (10f * (float)t), 10f, 0f));
+            var frame = tracker.Frame(evaluator, track, 0.0, (float)FrameSeconds)!.Value;
+            return MathF.Abs(Vector3.Dot(frame.Up, frame.Forward));
         }
+
+        Assert.InRange(Largest(Every(FrameSeconds, 0.0, 4.0), OffSquare), 0f, 1e-5f);
     }
 
     [Fact]
@@ -513,14 +518,18 @@ public class AimTrackerTests
                 var characters = new NearbyCharacters();
                 var playback = new TrackPlayback(x.Track, characters);
                 var clock = 0.0;
-                for (var i = 0; i < FrameBudget && clock <= x.Walk.Duration + 1.0; i++)
-                {
-                    var dt = x.Steps[i % x.Steps.Length];
-                    clock += dt;
-                    characters.Update([x.Walk.At(clock)]);
-                    if (playback.Advance(dt) is { } frame)
-                        AssertWellFormed(frame, $"Frame {i} at {clock:0.######} s");
-                }
+                AssertEveryFrameWellFormed(
+                    x.Steps,
+                    FrameBudget,
+                    dt =>
+                    {
+                        if (clock > x.Walk.Duration + 1.0)
+                            return null;
+                        clock += dt;
+                        characters.Update([x.Walk.At(clock)]);
+                        return new Played(playback.Advance(dt), clock);
+                    }
+                );
             },
             iter: 1000,
             print: Kept<(Track Track, Walk Walk, float[] Steps)>(x =>

@@ -6,6 +6,7 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.TrackRuns;
 using static Vista.Tests.Tracks.Playback.PlaybackFixtures;
 
 namespace Vista.Tests.Tracks.Playback;
@@ -425,9 +426,12 @@ public class DirectorTests
                     var state = new SessionState();
                     state.LoadScene(scene);
                     state.Restart();
-                    for (var i = 0; i < FrameBudget && !state.Director.IsFinished; i++)
-                        if (state.Director.Tick(steps[i % steps.Length]) is { } frame)
-                            AssertWellFormed(frame, $"Frame {i} at {state.Director.ShotTime:0.######} s");
+                    var director = state.Director;
+                    AssertEveryFrameWellFormed(
+                        steps,
+                        FrameBudget,
+                        dt => director.IsFinished ? null : new Played(director.Tick(dt), director.ShotTime)
+                    );
                 },
                 iter: 500,
                 print: Kept<(Scene Scene, float[] Steps)>(x =>

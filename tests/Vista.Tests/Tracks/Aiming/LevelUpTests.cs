@@ -3,6 +3,7 @@ using Vista.Core.Camera;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.TrackRuns;
 
 namespace Vista.Tests.Tracks.Aiming;
 
@@ -18,19 +19,12 @@ public class LevelUpTests
     private const float MostStepDegrees = 0.09f * SpinPerTurn;
 
     // The largest angle, in degrees, up turns between samples a millisecond apart.
-    private static float LargestStep(LevelUp level, Func<double, Vector3> facing, double duration)
-    {
-        var largest = 0f;
-        var last = level.At(0.0, facing(0.0));
-        for (var t = 0.001; t <= duration; t += 0.001)
-        {
-            var up = level.At(t, facing(t));
-            largest = MathF.Max(largest, Vectors.AngleBetween(last, up) / Deg);
-            last = up;
-        }
-
-        return largest;
-    }
+    private static float LargestStep(LevelUp level, Func<double, Vector3> facing, double duration) =>
+        LargestChange(
+            Every(Millisecond, 0.0, duration),
+            t => level.At(t, facing(t)),
+            (a, b) => Vectors.AngleBetween(a, b) / Deg
+        );
 
     [Fact]
     public void ALevelTurnStaysUpright()
@@ -359,46 +353,38 @@ public class LevelUpTests
     [Fact]
     public void AShotStartingInsideAPassageHasNoSpanAndDoesNotSplitAgainstTheNext()
     {
-        // Over the top from straight up (inside a passage, no picture before it), down to 60° over at 33.3°/s (0 to
-        // 0.9 s), a quick wobble down to 40° and back to 60° within one 0.1 s sample (0.9 to 1 s, invisible to the
-        // recorded turn tally, which is exactly what a phantom split sample would partly uncover), then on over the
-        // top at 40°/s to 150° over (1 to 3.25 s) where the turn span's 60° reach ends, coasting level from there.
-        // Points only at the ends, far from any of this, so departure/arrival never clips a span.
+        // From straight up (inside a passage, no picture before it), tipping back toward -z at 20°/s to 60° over at 1.5 s,
+        // then on over the top at 40°/s to 150° over at 3.75 s, where the turn span's 60° reach ends. Points only at the
+        // ends, 0 and 4 s, so departure and arrival never clip a span. The facing turns back at 1.5 s, one of the 0.1 s
+        // samples, so the turn tally counts both ways in full.
         //
-        // The first passage ends at 75° over, 0.45 s (15° at 33.3°/s). Nothing in the gap ever leaves the second
-        // passage's 60° reach (it only dips to 40°, short of 30°), so that reach's own span grows backward through
-        // the whole gap to the shot's start: clipped by the first passage's own end, the second passage starts right
-        // there, at 0.45 s, with no midpoint split against the first (which has none to split against, since a
-        // passage the shot starts inside has no span of its own).
+        // The first passage ends at 75° over, 0.75 s. The facing never leaves the second passage's 60° reach (it only
+        // dips to 60°), so that reach grows back through the gap to the shot's start; the ruling is that the second
+        // passage's span starts at the first passage's end instead, with no midpoint split (a passage the shot starts
+        // inside has no span to split against). Its tally is 15° (75° back to 60°) + 90° (60° on to 150°) = 105°.
         //
         // From (leaning back from the climb at 75° over) is (0, 0, 1); to (at 150° over) is (0, 0, -1): a half turn,
-        // either way round (its sign isn't pinned, as in LookAtUnderItsPointTurnsRoundFromPointToPoint). The span's
-        // total turn tally is 15° (0.45 to 0.9 s) + 0° (the hidden wobble) + 90° (1 to 3.25 s, 60° to 150°) = 105°.
-        //
-        // Just after 0.45 s the share is 0, so the up is exactly upright: facing 74.667° over at 0.46 s,
-        // (0, 0.26443, 0.96440) (Upright's own formula, not LevelUp's).
-        //
-        // At 1.5 s (80° over) the tally is 15° + 0° + 20° = 35° of 105°: share 1/3, eased 3s² - 2s³ = 7/27, θ =
-        // 46.667°. The lean (±sin θ, 0, cos θ) = (±0.72714, 0, 0.68655) squared to (0, sin 80°, -cos 80°) is
-        // (±0.73233, 0.11825, 0.67056).
-        static Vector3 Facing(double t) =>
-            OverTheTop(
-                (
-                    t <= 0.9 ? 90.0 - (30.0 * (t / 0.9))
-                    : t <= 0.95 ? 60.0 - (20.0 * ((t - 0.9) / 0.05))
-                    : t <= 1.0 ? 40.0 + (20.0 * ((t - 0.95) / 0.05))
-                    : 60.0 + (120.0 * ((t - 1.0) / 3.0))
-                ) * Deg
-            );
+        // either way round (its sign isn't pinned, as in LookAtUnderItsPointTurnsRoundFromPointToPoint).
+        static Vector3 Facing(double t) => OverTheTop((t <= 1.5 ? 90.0 - (20.0 * t) : 60.0 + (40.0 * (t - 1.5))) * Deg);
         float[] times = [0f, 4f];
         var level = LevelUp.Along(t => Facing(t), 4f, allowInverted: false, Vector3.UnitY, (times, times));
 
-        var justAfter = level.At(0.46, Facing(0.46));
-        Near(new Vector3(0f, 0.26443f, 0.96440f), justAfter, 2e-3f);
+        // Each edge of the span is found within 0.78 ms (0.1 s halved 7 times) past its passage's or reach's edge, where
+        // the facing turns 20°/s and 40°/s: its start lies up to 0.016° inside 75° and its end up to 0.031° inside 150°.
+        //
+        // At 0.76 s, 74.8° over, the span has turned about 0.2° of 105°: share 0.0019, eased 3s² - 2s³ = 1.1e-5, a turn
+        // of 3.4e-5 rad, so the up is upright to within 1e-4: (0, cos 74.8°, sin 74.8°) = (0, 0.26219, 0.96502).
+        Near(new Vector3(0f, 0.26219f, 0.96502f), level.At(0.76, Facing(0.76)), 1e-4f);
 
-        var soonAfter = level.At(1.5, Facing(1.5));
-        Assert.Equal(0.73233f, MathF.Abs(soonAfter.X), 1e-3f);
-        Assert.Equal(0.11825f, soonAfter.Y, 1e-3f);
-        Assert.Equal(0.67056f, soonAfter.Z, 1e-3f);
+        // At 2 s, 80° over, the tally is 15° + 20° = 35° of 105°: share 1/3, eased 7/27, θ = 46.667°. The lean
+        // (±sin θ, 0, cos θ) = (±0.72737, 0, 0.68624) squared to (0, sin 80°, -cos 80°), (sin θ, cos θ cos 80° sin 80°,
+        // cos θ sin² 80°) made unit, is (±0.73259, 0.11820, 0.67033). The span's edges put the share out by up to
+        // 0.016 × 70 / 105² = 1e-4, eased at 6s(1 - s) = 4/3 times, turning the lean up to π × 1.4e-4 = 4.4e-4 rad, so
+        // 1e-3 covers it. Spanning from the shot's start instead, the share would be 50/120; split at the midpoint
+        // between the passages (1.3125 s, 63.75° over), 23.75/93.75.
+        var turning = level.At(2.0, Facing(2.0));
+        Assert.Equal(0.73259f, MathF.Abs(turning.X), 1e-3f);
+        Assert.Equal(0.11820f, turning.Y, 1e-3f);
+        Assert.Equal(0.67033f, turning.Z, 1e-3f);
     }
 }

@@ -6,7 +6,7 @@ using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
-using static Vista.Tests.Tracks.Timing.TimingFixtures;
+using static Vista.Tests.TrackRuns;
 
 namespace Vista.Tests.Tracks.Timing;
 
@@ -17,13 +17,13 @@ public class TimedRotationTests
 
     private static float YawOf(Quaternion rotation) => CameraRotation.ToAngles(rotation).Yaw;
 
-    /// <summary>How far either side of a middle point the world turn rate is sampled, in seconds: close enough that a leg's own curvature barely moves it (<see cref="RateAgreement"/> derives how much), far enough that float round-off in <see cref="WorldTurnRate"/>'s 1e-4 s window stays well under it.</summary>
+    /// <summary>How far either side of a middle point the world turn rate is sampled, in seconds: close enough that a leg's own curvature barely moves it (<see cref="RateAgreement"/> derives how much), far enough that float round-off in <see cref="TrackRuns.WorldTurnRate(Func{double, Quaternion}, double, double)"/>'s 1e-4 s window stays well under it.</summary>
     private const double RateOffset = 1e-3;
 
-    /// <summary>The central-difference window <see cref="WorldTurnRate"/> measures each side's rate over.</summary>
+    /// <summary>The central-difference window <see cref="TrackRuns.WorldTurnRate(Func{double, Quaternion}, double, double)"/> measures each side's rate over.</summary>
     private const double RateWindow = 1e-4;
 
-    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate. Near the point, each side's rate leads or lags the point's own by about that leg's angular acceleration times <see cref="RateOffset"/>; from the Hermite curve's endpoint second derivative (2·from − 6·turn + 4·to, TimedRotation.At's own names, over the leg's squared duration), that acceleration is largest for a 1 s leg turning near π rad, and shrinks for gentler turns or longer legs (<see cref="AnyRecordedAimTrack"/> generates no leg shorter or turn sharper). A 3-point track's end points cap it at about 5π rad/s² each side (a turn cancelling against a still neighbour), ≈10π · RateOffset ≈ 0.031 rad/s total; a longer chain's interior points, with free neighbours on both sides, push it to about 0.047 rad/s, the worst a search over that fuller space found. 0.08 keeps comfortable margin above that, and stays far below the several tenths of a rad/s a one-sided rate (the old behaviour) leaves.</summary>
+    /// <summary>How far apart, in rad/s, the world turn rate either side of a middle point may be and still count as one rate. Near the point, each side's rate leads or lags the point's own by about that leg's angular acceleration times <see cref="RateOffset"/>; from the Hermite curve's endpoint second derivative (2·from − 6·turn + 4·to, TimedRotation.At's own names, over the leg's squared duration), that acceleration is largest for a 1 s leg turning near π rad, and shrinks for gentler turns or longer legs (<see cref="AnyRecordedAimTrack"/> generates no leg shorter or turn sharper). A 3-point track's end points cap it at about 5π rad/s² each side (a turn cancelling against a still neighbour), ≈10π · RateOffset ≈ 0.031 rad/s total; a longer chain's interior points, with free neighbours on both sides, push it to about 0.047 rad/s, the worst a search over that fuller space found. 0.08 keeps comfortable margin above that, and stays far below the several tenths of a rad/s a one-sided rate leaves.</summary>
     private const float RateAgreement = 0.08f;
 
     [Fact]
@@ -63,10 +63,12 @@ public class TimedRotationTests
     {
         // Two 140° legs, 1 s each, about perpendicular world axes (X then Z): the middle point's rotation-vector rate
         // mixes both axes, (70°, 0, 70°) rad/s, while each leg's own turn is along a single axis, so the inverse left
-        // Jacobian's cross terms move the Hermite endpoint slope well off that axis. Mutating its factor (2·angle·sin
-        // angle to 2·angle/sin angle) leaves the two sides about 8° and 0.25 rad/s apart; unmutated, the Hermite
-        // curve's own endpoint curvature (2·from − 6·turn + 4·to either side, over the leg's squared duration) puts
-        // them about 0.5° and 0.017 rad/s apart, so 2° and 0.05 rad/s keep clear margin both ways.
+        // Jacobian's cross terms move the Hermite endpoint slope well off that axis. The axis check is what catches a
+        // wrong Jacobian factor: mutating it (2·angle·sin angle to 2·angle/sin angle) turns the two sides' axes 8.3°
+        // apart, but leaves their lengths only 0.039 rad/s apart, inside the speed check's 0.05. Unmutated, the Hermite
+        // curve's own endpoint curvature (2·from − 6·turn + 4·to either side, over the leg's squared duration) puts the
+        // axes 0.64° and the lengths 0.003 rad/s apart (both measured), so 2° keeps clear margin both ways; the speed
+        // check guards the rate's size.
         var turnX = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 140f * Deg);
         var turnZ = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 140f * Deg);
         var rotations = new[] { Quaternion.Identity, turnX, Quaternion.Concatenate(turnX, turnZ) };
@@ -108,13 +110,12 @@ public class TimedRotationTests
         AnyRecordedAimTrack.Sample(
             track =>
             {
-                var evaluator = new TrackEvaluator(track);
-                var rotation = RecordedAimRotation(evaluator);
+                var run = new Run(track);
                 for (var point = 1; point < track.Points.Count - 1; point++)
                 {
-                    var t = evaluator.PointSeconds(point);
-                    var before = WorldTurnRate(rotation, t - RateOffset, RateWindow);
-                    var after = WorldTurnRate(rotation, t + RateOffset, RateWindow);
+                    var t = run.Arrive(point);
+                    var before = run.WorldTurnRate(t - RateOffset, RateWindow);
+                    var after = run.WorldTurnRate(t + RateOffset, RateWindow);
                     var diff = (before - after).Length();
                     if (!(diff <= RateAgreement))
                         Assert.Fail(

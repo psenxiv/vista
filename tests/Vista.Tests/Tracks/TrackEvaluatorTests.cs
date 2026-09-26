@@ -7,6 +7,7 @@ using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.TrackRuns;
 
 namespace Vista.Tests.Tracks;
 
@@ -387,9 +388,8 @@ public class TrackEvaluatorTests
         Assert.Equal(FreeCamMotion.LookAtFrom(point.Position, 0.5f, 0.1f), state.LookAt);
     }
 
-    // The direction the camera faces at time t, aimed at target when given.
-    private static Vector3 Facing(TrackEvaluator evaluator, double t, Vector3? target = null) =>
-        evaluator.Evaluate(t, target)!.Value.Forward;
+    // The direction the camera faces at time t.
+    private static Vector3 Facing(TrackEvaluator evaluator, double t) => evaluator.Evaluate(t)!.Value.Forward;
 
     [Fact]
     public void LookingAheadOnAStraightPathFacesAlongIt()
@@ -584,14 +584,11 @@ public class TrackEvaluatorTests
             1,
             2f
         );
-        var evaluator = new TrackEvaluator(track);
-        var arrive = evaluator.PointSeconds(1);
+        var run = new Run(track);
+        var arrive = run.Arrive(1);
 
-        for (var t = arrive - 0.5; t < arrive + 2.5; t += 1e-3)
-        {
-            // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
-            Assert.InRange(Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + 1e-3)), 0f, 0.1f * Deg);
-        }
+        // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
+        Assert.InRange(run.LargestTurn(Millisecond, arrive - 0.5, arrive + 2.5), 0f, 0.1f * Deg);
     }
 
     [Fact]
@@ -614,18 +611,11 @@ public class TrackEvaluatorTests
         // East Hawker eases into its last point turning about 1.5 deg/s, 0.025° a frame at 60 fps. Snapping to the exact
         // tangent 0.1 yalm out stepped 0.12° in one frame; 0.05° allows the steady turn twice over and catches the step.
         var track = DemoScene().Tracks.Single(t => t.Name == "East Hawker fly through");
-        var evaluator = new TrackEvaluator(track);
-        var end = evaluator.PointSeconds(track.Points.Count - 1);
+        var run = new Run(track);
+        var end = run.Arrive(track.Points.Count - 1);
 
-        for (var t = end - 1.5; t < end + 0.5; t += 1.0 / 60.0)
-        {
-            // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
-            Assert.InRange(
-                Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + (1.0 / 60.0))),
-                0f,
-                0.05f * Deg
-            );
-        }
+        // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
+        Assert.InRange(run.LargestTurn(FrameSeconds, end - 1.5, end + 0.5), 0f, 0.05f * Deg);
     }
 
     [Fact]
@@ -676,19 +666,6 @@ public class TrackEvaluatorTests
         Assert.Equal(1f, CameraRotation.YawPitch(Facing(evaluator, arrive + 1.9)).Yaw, 1e-4f);
     }
 
-    // The largest turn of the facing from one millisecond to the next across the whole shot, in radians.
-    private static float LargestMillisecondTurn(TrackEvaluator evaluator)
-    {
-        var largest = 0f;
-        for (var t = 0.0; t < evaluator.Duration; t += 1e-3)
-            largest = MathF.Max(largest, Vector3.Distance(Facing(evaluator, t), Facing(evaluator, t + 1e-3)));
-        return largest;
-    }
-
-    // Every frame of the evaluator's shot, for the picture spin check.
-    private static float LargestTwist(TrackEvaluator evaluator) =>
-        Fixtures.LargestTwist(t => evaluator.Evaluate(t)!.Value, evaluator.Duration);
-
     [Theory]
     [InlineData(0f)]
     [InlineData(0.5f)]
@@ -697,15 +674,16 @@ public class TrackEvaluatorTests
         // The path climbs 10 yalms, bowing 0.2 to +x and back, so its direction passes the vertical from +x to -x. The facing
         // follows the bow, well under 0.05° a millisecond, and up turns once through the vertical passage, so the picture
         // never whips.
-        var track = TrackEditing.SetLookAhead(
-            TrackThrough([Point(0f), Point(0.2f, 5f), Point(0f, 10f)], AimMode.PathTangent, 2f),
-            lookAhead
+        var run = new Run(
+            TrackEditing.SetLookAhead(
+                TrackThrough([Point(0f), Point(0.2f, 5f), Point(0f, 10f)], AimMode.PathTangent, 2f),
+                lookAhead
+            )
         );
-        var evaluator = new TrackEvaluator(track);
 
         // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
-        Assert.InRange(LargestMillisecondTurn(evaluator), 0f, 0.05f * Deg);
-        Assert.InRange(LargestTwist(evaluator), 0f, PictureSpinLimit);
+        Assert.InRange(run.LargestTurn(Millisecond), 0f, 0.05f * Deg);
+        Assert.InRange(run.LargestTwist(), 0f, PictureSpinLimit);
     }
 
     [Theory]
@@ -734,7 +712,7 @@ public class TrackEvaluatorTests
 
         Assert.Equal(0f, CameraRotation.YawPitch(Facing(evaluator, 2.0)).Yaw, 1e-4f);
         Assert.Equal(-MathF.PI / 2f, CameraRotation.YawPitch(Facing(evaluator, evaluator.Duration - 2.0)).Yaw, 1e-4f);
-        Assert.InRange(LargestTwist(evaluator), 0f, PictureSpinLimit);
+        Assert.InRange(new Run(track).LargestTwist(), 0f, PictureSpinLimit);
 
         // The way out (+x) is a quarter turn from the way in (-z), short of 135°, so the passage turns the picture a quarter
         // and it comes out upright. The last leg lies straight and level (points 3 to 5 in a line), facing +x, where upright
@@ -833,12 +811,10 @@ public class TrackEvaluatorTests
             track = TrackEditing.Append(track, point);
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 1, 0.07317073f), 3, 1.3629642f);
         track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 2, 4.5509834f), 3, 53.612453f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.1391547f));
+        var run = new Run(TrackEditing.SetLookAhead(track, 1.1391547f));
 
-        Assert.Empty(
-            Steps(t => Facing(evaluator, t), (a, b) => Vector3.Distance(a, b), FacingStepFloor, evaluator.Duration)
-        );
-        Assert.InRange(LargestTwist(evaluator), 0f, PictureSpinLimit);
+        Assert.Empty(run.FacingSteps());
+        Assert.InRange(run.LargestTwist(), 0f, PictureSpinLimit);
     }
 
     [Fact]
@@ -860,9 +836,7 @@ public class TrackEvaluatorTests
         )
             track = TrackEditing.Append(track, point);
         track = TrackEditing.SetHold(track, 2, 2.6231241f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 0.19565217f));
-
-        Assert.Empty(Steps(t => evaluator.Evaluate(t)!.Value.Up, Vector3.Distance, UpStepFloor, evaluator.Duration));
+        Assert.Empty(new Run(TrackEditing.SetLookAhead(track, 0.19565217f)).UpSteps());
     }
 
     [Fact]
@@ -885,9 +859,7 @@ public class TrackEvaluatorTests
         )
             track = TrackEditing.Append(track, point);
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 2.1590958f), 1, 0.5309508f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.9551187f));
-
-        Assert.Empty(Steps(t => evaluator.Evaluate(t)!.Value.Up, Vector3.Distance, UpStepFloor, evaluator.Duration));
+        Assert.Empty(new Run(TrackEditing.SetLookAhead(track, 1.9551187f)).UpSteps());
     }
 
     [Fact]
@@ -913,9 +885,7 @@ public class TrackEvaluatorTests
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 3f), 1, 1f);
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 2, 2f), 3, 0.44615385f);
         track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(track, 1, 44.570385f), 3, 26.346441f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.3770492f));
-
-        Assert.Empty(PictureSteps(t => evaluator.Evaluate(t)!.Value, evaluator.Duration));
+        Assert.Empty(new Run(TrackEditing.SetLookAhead(track, 1.3770492f)).PictureSteps());
     }
 
     [Fact]
@@ -931,10 +901,10 @@ public class TrackEvaluatorTests
             track = TrackEditing.Append(track, point);
         for (var leg = 1; leg <= 4; leg++)
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 4, 2f), 1.5f));
+        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 4, 2f), 1.5f));
 
-        Near(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-6f);
-        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+        Near(Vector3.UnitZ, run.At(0.0).Forward, 1e-6f);
+        Assert.Empty(run.FacingSteps());
     }
 
     [Fact]
@@ -951,11 +921,11 @@ public class TrackEvaluatorTests
         for (var leg = 1; leg <= 4; leg++)
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 1f), 4, 2f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.5f));
+        var run = new Run(TrackEditing.SetLookAhead(track, 1.5f));
 
-        Near(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-6f);
-        Near(Vector3.UnitZ, Facing(evaluator, 0.5), 1e-6f);
-        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+        Near(Vector3.UnitZ, run.At(0.0).Forward, 1e-6f);
+        Near(Vector3.UnitZ, run.At(0.5).Forward, 1e-6f);
+        Assert.Empty(run.FacingSteps());
     }
 
     [Fact]
@@ -972,9 +942,7 @@ public class TrackEvaluatorTests
             track = TrackEditing.Append(track, point);
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 3f), 1, 2f);
         track = TrackEditing.SetHold(track, 3, 2.099152f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.9320359f));
-
-        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+        Assert.Empty(new Run(TrackEditing.SetLookAhead(track, 1.9320359f)).FacingSteps());
     }
 
     [Fact]
@@ -988,10 +956,10 @@ public class TrackEvaluatorTests
             track = TrackEditing.Append(track, point);
         for (var leg = 1; leg <= 4; leg++)
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 0, 1f), 0.75f));
+        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 0, 1f), 0.75f));
 
-        Near(Vector3.UnitX, Facing(evaluator, 0.0), 1e-6f);
-        Assert.Empty(Steps(t => Facing(evaluator, t), Vector3.Distance, FacingStepFloor, evaluator.Duration));
+        Near(Vector3.UnitX, run.At(0.0).Forward, 1e-6f);
+        Assert.Empty(run.FacingSteps());
     }
 
     [Fact]
@@ -1032,13 +1000,8 @@ public class TrackEvaluatorTests
         )
             track = TrackEditing.Append(track, point);
         track = TrackEditing.SetLookAt(TrackEditing.SetLookAhead(track, 0f), new Vector3(0f, 15f, 0f));
-        var evaluator = new TrackEvaluator(track);
 
-        Assert.InRange(
-            Fixtures.LargestTwist(t => evaluator.Evaluate(t, track.LookAt)!.Value, evaluator.Duration),
-            0f,
-            PictureSpinLimit
-        );
+        Assert.InRange(new Run(track).LargestTwist(), 0f, PictureSpinLimit);
     }
 
     [Fact]
@@ -1110,15 +1073,14 @@ public class TrackEvaluatorTests
             TrackThrough([Point(-10f), Point(0f), Point(30f)], AimMode.LookAt, 2f),
             new Vector3(0f, 10f, 0f)
         );
-        var evaluator = new TrackEvaluator(track);
-        CameraState FrameAt(double t) => evaluator.Evaluate(t, track.LookAt)!.Value;
-        var under = FrameAt(evaluator.PointSeconds(1));
+        var run = new Run(track);
+        var under = run.At(run.Arrive(1));
 
         Near(Vector3.UnitY, under.Forward, 1e-4f);
         Assert.Equal(-0.32812f, under.Up.X, 1e-4f);
         Assert.Equal(0.94464f, MathF.Abs(under.Up.Z), 1e-4f);
-        Assert.InRange(Fixtures.LargestTwist(FrameAt, evaluator.Duration), 0f, PictureSpinLimit);
-        var end = FrameAt(evaluator.Duration);
+        Assert.InRange(run.LargestTwist(), 0f, PictureSpinLimit);
+        var end = run.At(run.Duration);
         // At the end, at (30, 0, 0) facing (-30, 10, 0)/√1000, upright leans back: (10, 30, 0)/√1000.
         Near(new Vector3(10f, 30f, 0f) / MathF.Sqrt(1000f), end.Up, 1e-5f);
     }
@@ -1200,19 +1162,7 @@ public class TrackEvaluatorTests
     {
         Gen.Select(AnyPathTrack, AnyFrameStep.Array[1, 32])
             .Sample(
-                (track, steps) =>
-                {
-                    var evaluator = new TrackEvaluator(track);
-                    var target = AimTracker.AimPoint(track, null);
-                    var time = 0.0;
-                    for (var i = 0; time < evaluator.Duration && i < FrameBudget; i++)
-                    {
-                        AssertWellFormed(evaluator.Evaluate(time, target)!.Value, $"At {time:0.######} s");
-                        time += steps[i % steps.Length];
-                    }
-
-                    AssertWellFormed(evaluator.Evaluate(evaluator.Duration, target)!.Value, "At the end");
-                },
+                (track, steps) => AssertEveryFrameWellFormed(steps, FrameBudget, new Run(track).Clock()),
                 iter: 1000,
                 print: Kept<(Track Track, float[] Steps)>(x =>
                     $"{PrintTrack(x.Track)}\nSteps: {string.Join(", ", x.Steps)}"
@@ -1227,22 +1177,16 @@ public class TrackEvaluatorTests
         AnyPathTrack.Sample(
             track =>
             {
-                var evaluator = new TrackEvaluator(track);
-                var target = AimTracker.AimPoint(track, null);
-                var steps = Steps(
-                    t => Facing(evaluator, t, target),
-                    Vector3.Distance,
-                    FacingStepFloor,
-                    evaluator.Duration
-                );
+                var run = new Run(track);
+                var steps = run.FacingSteps();
                 if (steps.Count > 0)
                     Assert.Fail(
-                        $"The aim steps {steps[0].Size / Deg:0.###}° at {steps[0].Time:0.######} s of {evaluator.Duration:0.###} s"
+                        $"The aim steps {steps[0].Size / Deg:0.###}° at {steps[0].Time:0.######} s of {run.Duration:0.###} s"
                     );
-                var flips = PictureSteps(t => evaluator.Evaluate(t, target)!.Value, evaluator.Duration);
+                var flips = run.PictureSteps();
                 if (flips.Count > 0)
                     Assert.Fail(
-                        $"The picture steps {flips[0].Size / Deg:0.###}° at {flips[0].Time:0.######} s of {evaluator.Duration:0.###} s"
+                        $"The picture steps {flips[0].Size / Deg:0.###}° at {flips[0].Time:0.######} s of {run.Duration:0.###} s"
                     );
             },
             iter: 3000,
@@ -1263,13 +1207,10 @@ public class TrackEvaluatorTests
             .Sample(
                 track =>
                 {
-                    var evaluator = new TrackEvaluator(track);
-                    var target = AimTracker.AimPoint(track, null);
-                    var twist = Fixtures.LargestTwist(t => evaluator.Evaluate(t, target)!.Value, evaluator.Duration);
+                    var run = new Run(track);
+                    var twist = run.LargestTwist();
                     if (!(twist <= PictureSpinLimit))
-                        Assert.Fail(
-                            $"The picture turns {twist / Deg:0.###}° in a frame of {evaluator.Duration:0.###} s"
-                        );
+                        Assert.Fail($"The picture turns {twist / Deg:0.###}° in a frame of {run.Duration:0.###} s");
                 },
                 iter: 1000,
                 print: Kept<Track>(PrintTrack)
@@ -1285,21 +1226,19 @@ public class TrackEvaluatorTests
         AnyPathTrack.Sample(
             track =>
             {
-                var evaluator = new TrackEvaluator(track);
-                var target = AimTracker.AimPoint(track, null);
+                var run = new Run(track);
                 for (var point = 0; point < track.Points.Count; point++)
                 {
                     if (TrackEditing.HoldSeconds(track, point) <= 0f)
                         continue;
-                    double start = evaluator.PointSeconds(point);
-                    double end = evaluator.Keys[TrackEditing.PointKey(track, point) + 1].Time;
-                    var arrived = evaluator.Evaluate(start, target)!.Value;
+                    var (start, end) = (run.Arrive(point), run.Depart(point));
+                    var arrived = run.At(start);
                     // Equal treats NaN as equal to NaN, so the frame held to must be finite for the checks below to mean anything.
                     AssertWellFormed(arrived, $"the hold at point {point}");
                     for (var i = 0; i <= samples; i++)
                     {
                         var time = start + ((end - start) * i / samples);
-                        var frame = evaluator.Evaluate(time, target)!.Value;
+                        var frame = run.At(time);
                         Assert.Equal(arrived.Position, frame.Position);
                         Assert.Equal(arrived.Fov, frame.Fov);
                         Assert.Equal(arrived.LookAt, frame.LookAt);
