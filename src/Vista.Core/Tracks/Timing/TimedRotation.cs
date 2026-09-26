@@ -86,7 +86,7 @@ public sealed class TimedRotation
         return span <= TimedChannel.MinSeconds ? Vector3.Zero : turns[leg] / span;
     }
 
-    /// <summary>The inverse left Jacobian of the exponential map at rotation vector <paramref name="turn"/> of angle φ, applied to <paramref name="rate"/>: the world rate that arrives with rotation-vector rate <paramref name="rate"/> at a leg turning by <paramref name="turn"/>. Below <see cref="SmallAngle"/> it's <paramref name="rate"/> unchanged.</summary>
+    /// <summary>The rotation-vector rate at turn <paramref name="turn"/> that gives world turn rate <paramref name="rate"/>: the inverse left Jacobian of the exponential map; <paramref name="rate"/> unchanged below <see cref="SmallAngle"/>.</summary>
     private static Vector3 InverseLeftJacobian(Vector3 turn, Vector3 rate)
     {
         var angle = turn.Length();

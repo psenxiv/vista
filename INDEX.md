@@ -136,6 +136,6 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 - `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, step and twist measures, and vector assertions.
 - `Session/SessionFixtures`: the sessions the session tests start from, and track and entry ids by index.
-- `Tracks/Timing/TimingFixtures`: key times and key drags.
+- `Tracks/Timing/TimingFixtures`: key times, key drags, and world turn rates (`WorldTurnRate`, `RecordedAimRotation`).
 - `Tracks/Playback/PlaybackFixtures`: the straight track the playback tests play.
 - `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, and a scene folder in a temporary directory.

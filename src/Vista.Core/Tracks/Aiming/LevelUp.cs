@@ -261,7 +261,7 @@ public sealed class LevelUp
         return reaches;
     }
 
-    /// <summary>Where passage <paramref name="i"/>'s turn span and the next one's meet when they'd overlap: halfway from its end to the next one's start; null when they don't overlap.</summary>
+    /// <summary>Where passage <paramref name="i"/>'s turn span and passage <paramref name="i"/> + 1's would overlap: halfway from passage <paramref name="i"/>'s end to passage <paramref name="i"/> + 1's start; null when they don't overlap.</summary>
     private static float? Split(float[] times, List<Extent> extents, (int Start, int End)?[] reaches, int i) =>
         i + 1 < extents.Count && reaches[i] is { } first && reaches[i + 1] is { } second && first.End > second.Start
             ? (times[extents[i].End!.Value] + times[extents[i + 1].Start]) / 2f

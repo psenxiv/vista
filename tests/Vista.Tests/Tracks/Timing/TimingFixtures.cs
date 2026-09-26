@@ -5,7 +5,7 @@ using Vista.Core.Tracks.Timing;
 
 namespace Vista.Tests.Tracks.Timing;
 
-/// <summary>Key times and key drags the timing tests share.</summary>
+/// <summary>Key times, key drags and world turn rates the timing tests share.</summary>
 internal static class TimingFixtures
 {
     /// <summary>The track's key times, rounded to hundredths of a second.</summary>
