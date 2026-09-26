@@ -1023,6 +1023,27 @@ public class TrackEvaluatorTests
             Near(held, run.At(run.Arrive(1) + ((run.Depart(1) - run.Arrive(1)) * i / 64)).Forward, 1e-5f);
     }
 
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(1f)]
+    public void DirectionOfTravelMovesOnSmoothlyPastAPointBesideTheWaitingSpot(float hold)
+    {
+        // The track above with its end 0.07 yalm off the point it passes, or holds at, along +z: not where the path ends,
+        // so the camera doesn't turn round there. At the point the chord (0, 0, 0.07) is 0.7 of the 0.1 yalm within which it
+        // gives way to back along the path, the -x of the on-axis spline's tangent there, so the camera faces
+        // (-0.3, 0, 0.7) normalised: (-0.3939, 0, 0.9191), as 0.3 and 0.7 over √0.58. The camera's closest approach to the
+        // spot is that 0.07 yalm, more than the 0.05 at which the two could cancel, so the facing moves on without a step.
+        var track = TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f, z: 0.07f)], AimMode.PathTangent, 20f);
+        if (hold > 0f)
+            track = TrackEditing.SetHold(track, 1, hold);
+        var run = new Run(TrackEditing.SetLookAhead(track, TrackEditing.MaxLookAhead));
+
+        var beside = Vector3.Normalize(new Vector3(-0.3f, 0f, 0.7f));
+        Near(beside, run.At(run.Arrive(1)).Forward, 1e-5f);
+        Near(beside, run.At(run.Depart(1)).Forward, 1e-5f);
+        Assert.Empty(run.FacingSteps());
+    }
+
     [Fact]
     public void LookAtStartingStraightUnderItsPointDoesNotWhip()
     {
