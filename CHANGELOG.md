@@ -3,7 +3,8 @@
 ## X.Y.Z.N
 
 - Recorded aim turns smoothly through each point instead of changing direction slightly at it.
-- Look At turns the picture round gradually from point to point when the camera passes under or over its point, instead of quickly right beneath it.
+- Look At turns the picture round gradually from point to point when the camera passes under or over its point, instead of quickly as it passes.
+- With a look ahead, Direction of travel keeps looking where it's going while it holds at a point.
 
 ## 0.11.0.1
 

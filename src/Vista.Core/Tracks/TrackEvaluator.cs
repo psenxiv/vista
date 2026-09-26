@@ -264,18 +264,19 @@ public sealed class TrackEvaluator
         return TravelDirection(time, position, segment, fraction);
     }
 
-    /// <summary>The direction from <paramref name="from"/> to where the path is the track's look-ahead later, the end once past it, blending towards the path's direction into that spot as it nears, or the way the chord opens where the spot is on the camera; null with no look-ahead or no direction.</summary>
+    /// <summary>The direction from <paramref name="from"/> to where the path is after the track's look-ahead of travel, the end once past it, blending towards the path's direction into that spot as it nears, or the way the chord opens where the spot is on the camera; null with no look-ahead or no direction.</summary>
     private Vector3? LookAhead(double time, Vector3 from)
     {
         if (_track.LookAhead <= 0f)
             return null;
 
-        var ahead = _curve.PositionAt(time + _track.LookAhead);
+        var later = TravelledAhead(time, _track.LookAhead);
+        var ahead = _curve.PositionAt(later);
         var here = _curve.PositionAt(time);
         var chord = PointAt(ahead) - from;
         var weight = MathF.Max(0f, ahead - here) / LookAheadBlend;
         if (weight >= 1f)
-            return TrackAim.Usable(chord) ?? Opening(time, here, ahead);
+            return TrackAim.Usable(chord) ?? Opening(time, later, here, ahead);
 
         // Weighed by distance along the path, a chord shrunk to rounding noise carries almost no weight, and a hairpin's short chord keeps its full weight.
         var start = MathF.Max(0f, ahead - LookAheadBlend);
@@ -286,12 +287,30 @@ public sealed class TrackEvaluator
         return TrackAim.Usable((weight * toward) + ((1f - weight) * Vector3.Normalize(arrival)));
     }
 
-    /// <summary>The way the chord opens where the path comes back to the camera within the look ahead: the spot's velocity less the camera's; null where neither moves.</summary>
-    private Vector3? Opening(double time, float here, float ahead)
+    /// <summary>The track time after <paramref name="seconds"/> of travel from <paramref name="time"/>, skipping the time of every hold on the way.</summary>
+    private double TravelledAhead(double time, float seconds)
+    {
+        var from = time;
+        double left = seconds;
+        for (var point = 0; point < _arrive.Length; point++)
+        {
+            if (_depart[point] == _arrive[point] || _depart[point] <= from)
+                continue;
+            if (_arrive[point] >= from + left)
+                break;
+            left -= Math.Max(0.0, _arrive[point] - from);
+            from = _depart[point];
+        }
+
+        return from + left;
+    }
+
+    /// <summary>The way the chord opens where the path comes back to the camera within the look ahead, the spot reached at <paramref name="later"/>: the spot's velocity less the camera's; null where neither moves.</summary>
+    private Vector3? Opening(double time, double later, float here, float ahead)
     {
         // At the start the curve's slope reads 0, so the camera's is the first key's slope out.
         var slope = time <= 0.0 ? _curve.SideSlope(0, KeySide.Out) : _curve.SlopeAt(time);
-        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(time + _track.LookAhead)) - Velocity(here, slope));
+        return TrackAim.Usable(Velocity(ahead, _curve.SlopeAt(later)) - Velocity(here, slope));
     }
 
     /// <summary>The velocity along the path <paramref name="distance"/> along it, moving at <paramref name="slope"/> distance per second.</summary>

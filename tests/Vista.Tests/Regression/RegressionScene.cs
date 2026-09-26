@@ -67,6 +67,11 @@ internal static class RegressionScene
         new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
         new("Hairpin crossing its own path, look ahead 1.74: one expected flip", HairpinCrossing(), 1),
         new("Field of view recorded at 3° and 143°: zooms from 5° to 120° and back, no pop", PastTheFovRange(), 0),
+        new(
+            "Direction of travel through a held corner, look ahead 1: holds its look, no swing",
+            TrackEditing.SetHold(Travel([P(0f, 0f, 0f), P(10f, 0f, 0f), P(10f, 0f, 10f)], lookAhead: 1f), 1, 3f),
+            0
+        ),
     ];
 
     /// <summary>In along +x, up and over a loop 16 yalms high, and out along +x again, each point at least a yalm from the last.</summary>
