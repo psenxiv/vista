@@ -43,11 +43,7 @@ public sealed class TimedRotation
         var u = (float)((time - start) / span);
         var from = rates[leg - 1] * span;
         var to = InverseLeftJacobian(turns[leg], rates[leg] * span);
-        var turned = new Vector3(
-            Hermite.At(0f, turns[leg].X, from.X, to.X, u),
-            Hermite.At(0f, turns[leg].Y, from.Y, to.Y, u),
-            Hermite.At(0f, turns[leg].Z, from.Z, to.Z, u)
-        );
+        var turned = Hermite.At(Vector3.Zero, turns[leg], from, to, u);
         return Quaternion.Normalize(Quaternion.Concatenate(rotations[leg - 1], Exp(turned)));
     }
 

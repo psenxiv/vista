@@ -6,9 +6,6 @@ public sealed class TimingCurve
     /// <summary>Below this, a secant is treated as a hold rather than divided by.</summary>
     private const float SecantEpsilon = 1e-6f;
 
-    /// <summary>Fritsch-Carlson monotonicity bound on a single tangent-to-secant ratio.</summary>
-    private const float MonotoneBound = 3f;
-
     private readonly IReadOnlyList<TimingKey> _keys;
     private readonly float[] _times;
     private readonly float[] _inTangent = Array.Empty<float>();
@@ -124,8 +121,8 @@ public sealed class TimingCurve
         if (delta <= SecantEpsilon)
             return (0f, 0f);
 
-        var a = Math.Clamp(m0 / delta, 0f, MonotoneBound);
-        var b = Math.Clamp(m1 / delta, 0f, MonotoneBound);
+        var a = Hermite.MonotoneRatio(m0 / delta);
+        var b = Hermite.MonotoneRatio(m1 / delta);
         return (a * delta, b * delta);
     }
 

@@ -18,7 +18,7 @@ public sealed class ArcLengthTable
     /// <summary>Sum of every segment's arc length.</summary>
     public float TotalLength { get; }
 
-    /// <summary>Samples the Catmull-Rom curve through <paramref name="points"/> once and builds the cumulative table.</summary>
+    /// <summary>Samples the Catmull-Rom curve through <paramref name="points"/> once: the cumulative table and the path's speed at each sample.</summary>
     public ArcLengthTable(IReadOnlyList<Vector3> points)
     {
         SegmentCount = CatmullRom.SegmentCount(points.Count);
@@ -79,13 +79,13 @@ public sealed class ArcLengthTable
             return lo / (float)SamplesPerSegment;
         var local = (target - samples[lo]) / span;
         var rates = _rates[segment];
-        var slopes = (InverseSlope(rates[lo], span), InverseSlope(rates[hi], span));
-        return (lo + Hermite.At(0f, 1f, slopes.Item1, slopes.Item2, local)) / SamplesPerSegment;
+        var from = InverseSlope(rates[lo], span);
+        var to = InverseSlope(rates[hi], span);
+        return (lo + Hermite.At(0f, 1f, from, to, local)) / SamplesPerSegment;
     }
 
-    /// <summary>The inverse's slope at a sample in units of its interval: the true dt/ds from the path's speed <paramref name="rate"/> there, clamped to [0, 3] so the inverse stays monotone (Fritsch–Carlson); 3 where the path stands still.</summary>
-    private static float InverseSlope(float rate, float span) =>
-        rate <= 0f ? 3f : Math.Clamp(span * SamplesPerSegment / rate, 0f, 3f);
+    /// <summary>The inverse's slope at a sample in units of its interval: the true dt/ds from the path's speed <paramref name="rate"/> there, kept monotone; where the path stands still the rate is 0 and the slope clamps from infinity to the bound.</summary>
+    private static float InverseSlope(float rate, float span) => Hermite.MonotoneRatio(span * SamplesPerSegment / rate);
 
     private int CheckSegment(int segment)
     {

@@ -50,4 +50,10 @@ internal static class Hermite
 
     /// <summary>0 to 1 over <paramref name="t"/> in [0, 1], starting and stopping gently: the curve between flat ends.</summary>
     public static float Smoothstep(float t) => t * t * (3f - (2f * t));
+
+    /// <summary><paramref name="ratio"/>, a tangent over its interval's secant, clamped to [0, 3] so the cubic stays monotone (Fritsch–Carlson); infinity clamps to 3.</summary>
+    public static float MonotoneRatio(float ratio) => Math.Clamp(ratio, 0f, MonotoneBound);
+
+    /// <summary>The Fritsch–Carlson bound on a tangent-to-secant ratio.</summary>
+    private const float MonotoneBound = 3f;
 }

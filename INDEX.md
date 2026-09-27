@@ -52,7 +52,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### Scalars and curves
 
 - `Tracks/Fraction`: clamping to [0, 1], and how far a value lies along a span, with the answer for an empty span given by the caller.
-- `Tracks/Timing/Hermite`: the cubic Hermite basis on numbers and on points in space, its slope, and smoothstep.
+- `Tracks/Timing/Hermite`: the cubic Hermite basis on numbers and on points in space, its slope, smoothstep, and the Fritsch–Carlson clamp that keeps a cubic monotone.
 - `Tracks/Aiming/AimSmoother`: the share of the way an eased value moves in a frame at a smoothing, and easing a position with it.
 - `Tracks/Search`: the binary search over an ascending array that curves and tables use to find their interval.
 - `Tracks/Spline/CatmullRom` and `ArcLengthTable`: the path through points, its derivative, and walking it by distance.

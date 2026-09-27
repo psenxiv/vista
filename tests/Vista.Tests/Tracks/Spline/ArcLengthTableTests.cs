@@ -53,10 +53,31 @@ public class ArcLengthTableTests
     }
 
     [Fact]
+    public void APathStartingFromRestStillMapsDistanceToParameterMonotonically()
+    {
+        // Points 0 and 1 coincide, so segment 1 starts from rest (its start tangent drops the zero interval's terms and is 0):
+        // the speed at its first sample is 0, whose inverse slope clamps from infinity to the Fritsch–Carlson bound.
+        Vector3[] points = [new(0f, 0f, 0f), new(0f, 0f, 0f), new(10f, 0f, 0f), new(10f, 0f, 10f)];
+        var table = new ArcLengthTable(points);
+
+        Assert.Equal(0f, table.ParameterAt(1, 0f));
+        Assert.Equal(1f, table.ParameterAt(1, 1f));
+        var previous = 0f;
+        for (var i = 1; i <= 600; i++)
+        {
+            var t = table.ParameterAt(1, i / 600f);
+            Assert.True(float.IsFinite(t) && t >= previous, $"{t} after {previous} at fraction {i / 600f}");
+            previous = t;
+        }
+    }
+
+    [Fact]
     public void AnEvenlySpacedStraightPathMapsDistanceToParameterOneToOne()
     {
-        // Two points: with reflected ends the path is the straight line at even parameter speed (CatmullRomTests), so the
-        // distance fraction and the parameter are the same number everywhere.
+        // Two points: with reflected ends the path is the straight line at even parameter speed (CatmullRomTests), |C′| = 10,
+        // so every sample's slope is (10/60)·60/10 = 1 and the Hermite inverse with unit slopes is the identity: the distance
+        // fraction and the parameter are the same number. 0.37 falls mid-interval; 0.9 is sample 54. 1e-5: sixty float chord
+        // sums of about 10/60 yalm round to a few 1e-5 yalm of the 10, a few 1e-6 of the fraction.
         var table = new ArcLengthTable([new Vector3(0f, 0f, 0f), new Vector3(10f, 0f, 0f)]);
 
         Assert.Equal(0.37f, table.ParameterAt(0, 0.37f), 1e-5f);
