@@ -6,8 +6,8 @@ using Vista.Core.Tracks.Playback;
 
 namespace Vista.Core.SelfTest;
 
-/// <summary>The scene dry run: plays <paramref name="scene"/>'s playlist once through, checking each frame written was well-formed and read back exactly.</summary>
-public sealed class SelfTestDryRun(Scene scene)
+/// <summary>The scene dry run: plays <paramref name="scene"/>'s playlist once through, checking each frame written was well-formed and read back exactly, a field of view below the game's <paramref name="fovFloor"/> reading back as the floor.</summary>
+public sealed class SelfTestDryRun(Scene scene, float fovFloor)
 {
     /// <summary>How many times faster than real time the dry run plays; provisional.</summary>
     public const float Speed = 10f;
@@ -33,7 +33,7 @@ public sealed class SelfTestDryRun(Scene scene)
         Frames++;
         if (FirstFailure is not null)
             return;
-        if ((WellFormed.FirstBroken(written) ?? SelfTestRules.ReadBackMismatch(written, read)) is { } rule)
+        if ((WellFormed.FirstBroken(written) ?? SelfTestRules.ReadBackMismatch(written, read, fovFloor)) is { } rule)
             FirstFailure = string.Create(
                 CultureInfo.InvariantCulture,
                 $"{EntryLabel(entryId)} at {time:0.00} s: {rule}"

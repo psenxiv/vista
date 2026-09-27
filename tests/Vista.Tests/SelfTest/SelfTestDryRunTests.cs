@@ -48,7 +48,7 @@ public class SelfTestDryRunTests
     public void EveryFrameGoodPasses()
     {
         var scene = TwoEntries();
-        var run = new SelfTestDryRun(scene);
+        var run = new SelfTestDryRun(scene, 0f);
 
         run.Check(scene.Playlist[0].Id, 0.0, Good, Good);
         run.Check(scene.Playlist[1].Id, 0.5, Good, Good);
@@ -63,7 +63,7 @@ public class SelfTestDryRunTests
     public void AMalformedFrameFailsNamingItsEntryTimeAndRule()
     {
         var scene = TwoEntries();
-        var run = new SelfTestDryRun(scene);
+        var run = new SelfTestDryRun(scene, 0f);
         // A 3 rad field of view is above the 120° (2.0944 rad) maximum.
         var wide = Good with
         {
@@ -87,7 +87,7 @@ public class SelfTestDryRunTests
     public void AFrameReadBackDifferentlyFails()
     {
         var scene = TwoEntries();
-        var run = new SelfTestDryRun(scene);
+        var run = new SelfTestDryRun(scene, 0f);
         // Written half a yalm higher than the game kept it; the position is the first part compared.
         var written = Good with
         {
@@ -104,10 +104,22 @@ public class SelfTestDryRunTests
     }
 
     [Fact]
+    public void AFrameBelowTheGamesFieldOfViewFloorMayReadBackAsTheFloor()
+    {
+        var scene = TwoEntries();
+        // The game's floor seen in game (2026-09-27) is 0.69: a 0.6 frame reads back as 0.69.
+        var run = new SelfTestDryRun(scene, 0.69f);
+
+        run.Check(scene.Playlist[0].Id, 0.1, Good with { Fov = 0.6f }, Good with { Fov = 0.69f });
+
+        Assert.Null(run.FirstFailure);
+    }
+
+    [Fact]
     public void AMalformedFrameIsNamedForItsBrokenRuleBeforeItsReadBack()
     {
         var scene = TwoEntries();
-        var run = new SelfTestDryRun(scene);
+        var run = new SelfTestDryRun(scene, 0f);
 
         // Written with a 3 rad field of view, read back as 1 rad: both wrong, and the broken rule comes first.
         run.Check(scene.Playlist[0].Id, 0.0, Good with { Fov = 3f }, Good);
@@ -119,7 +131,7 @@ public class SelfTestDryRunTests
     public void OnlyTheFirstFailureIsKeptButEveryFrameIsCounted()
     {
         var scene = TwoEntries();
-        var run = new SelfTestDryRun(scene);
+        var run = new SelfTestDryRun(scene, 0f);
         var wide = Good with { Fov = 3f };
 
         run.Check(scene.Playlist[0].Id, 0.0, wide, wide);
@@ -133,7 +145,7 @@ public class SelfTestDryRunTests
     public void StoppingBeforeTheEndFails()
     {
         var scene = TwoEntries();
-        var run = new SelfTestDryRun(scene);
+        var run = new SelfTestDryRun(scene, 0f);
         run.Check(scene.Playlist[0].Id, 0.0, Good, Good);
 
         Assert.Equal(
@@ -146,7 +158,7 @@ public class SelfTestDryRunTests
     public void NoFramesCheckedFails() =>
         Assert.Equal(
             SelfTestResult.Fail("scene dry run", "no frames checked"),
-            new SelfTestDryRun(TwoEntries()).Result(finished: true)
+            new SelfTestDryRun(TwoEntries(), 0f).Result(finished: true)
         );
 
     [Fact]

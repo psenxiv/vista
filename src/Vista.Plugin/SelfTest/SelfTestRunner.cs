@@ -196,7 +196,7 @@ internal sealed class SelfTestRunner(GameSession game, Func<IReadOnlyList<(strin
             yield break;
         }
 
-        var run = new SelfTestDryRun(game.State.Scene);
+        var run = new SelfTestDryRun(game.State.Scene, CameraAccess.ReadFovLimits()?.Min ?? float.NegativeInfinity);
         var director = new Director(game.Characters);
         director.GoLive(shot);
         (Guid Entry, double Time, CameraState Frame)? written = null;

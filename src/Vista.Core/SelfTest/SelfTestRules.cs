@@ -60,12 +60,13 @@ public static class SelfTestRules
         ];
 
     /// <summary>The first part of <paramref name="read"/> that isn't bit for bit what was <paramref name="written"/>, with both values, or null when all of it is.</summary>
-    public static string? ReadBackMismatch(CameraState written, CameraState read) =>
+    /// <remarks>A field of view written below <paramref name="fovFloor"/>, the game's MinFoV, may read back as the floor: the game raises it after drawing the frame, which still shows the written one (seen in game, 2026-09-27).</remarks>
+    public static string? ReadBackMismatch(CameraState written, CameraState read, float fovFloor) =>
         Mismatch("position", written.Position, read.Position)
         ?? Mismatch("look-at", written.LookAt, read.LookAt)
         ?? Mismatch("up", written.Up, read.Up)
         ?? (
-            Same(written.Fov, read.Fov)
+            Same(written.Fov, read.Fov) || (written.Fov < fovFloor && Same(read.Fov, fovFloor))
                 ? null
                 : Invariant($"the field of view read back as {read.Fov:G9}, written {written.Fov:G9}")
         );
@@ -148,7 +149,8 @@ public static class SelfTestRules
         if (readBacks.Count < frames)
             return (false, $"the hook read back {readBacks.Count} of {frames} frames");
         for (var i = 0; i < readBacks.Count; i++)
-            if (ReadBackMismatch(readBacks[i].Written, readBacks[i].Read) is { } mismatch)
+            // The round trip writes the game's own field of view, which is never below its floor.
+            if (ReadBackMismatch(readBacks[i].Written, readBacks[i].Read, float.NegativeInfinity) is { } mismatch)
                 return (false, $"frame {i + 1}: {mismatch}");
         return (true, $"{frames} frames read back exactly");
     }

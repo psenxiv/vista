@@ -17,6 +17,12 @@ public class SelfTestRulesTests
         1f
     );
 
+    // No game field of view floor: every field of view Vista writes is above 0.
+    private const float NoFloor = 0f;
+
+    // The game's field of view floor seen in game (2026-09-27): 0.670 written read back as 0.69.
+    private const float GameFloor = 0.69f;
+
     public static TheoryData<bool, bool, bool, bool, CameraMode, bool, string?> Refusals =>
         new()
         {
@@ -91,7 +97,7 @@ public class SelfTestRulesTests
         );
 
     [Fact]
-    public void AnExactReadBackMatches() => Assert.Null(SelfTestRules.ReadBackMismatch(Before, Before));
+    public void AnExactReadBackMatches() => Assert.Null(SelfTestRules.ReadBackMismatch(Before, Before, NoFloor));
 
     // Each read-back is one float step from what was written: 2.00000024 is 2 + 2^-22, the next float above 2;
     // -7.00000048 is 7 + 2^-21 below -7; 1.00000012 is 1 + 2^-23. -0 differs from 0 only in its sign bit.
@@ -119,7 +125,7 @@ public class SelfTestRulesTests
     [Theory]
     [MemberData(nameof(Mismatches))]
     public void AReadBackOffByOneBitNamesThePartAndBothValues(CameraState read, string mismatch) =>
-        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read));
+        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read, NoFloor));
 
     // Position, look-at, up and field of view are compared in that order, and the first that differs is named.
     public static TheoryData<CameraState, string> FirstMismatches =>
@@ -144,7 +150,29 @@ public class SelfTestRulesTests
     [Theory]
     [MemberData(nameof(FirstMismatches))]
     public void TheFirstPartThatDiffersIsNamed(CameraState read, string mismatch) =>
-        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read));
+        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read, NoFloor));
+
+    [Fact]
+    public void AFieldOfViewBelowTheGamesFloorMayReadBackAsTheFloor() =>
+        Assert.Null(
+            SelfTestRules.ReadBackMismatch(Before with { Fov = 0.6f }, Before with { Fov = GameFloor }, GameFloor)
+        );
+
+    // 0.6f is 0.600000024 and 0.7f is 0.699999988 to nine digits; 0.69f is 0.689999998.
+    public static TheoryData<float, float, string> FloorMismatches =>
+        new()
+        {
+            { 0.6f, 0.7f, "the field of view read back as 0.699999988, written 0.600000024" },
+            { 1f, GameFloor, "the field of view read back as 0.689999998, written 1" },
+        };
+
+    [Theory]
+    [MemberData(nameof(FloorMismatches))]
+    public void OnlyAFieldOfViewBelowTheFloorMayReadBackAsTheFloor(float written, float read, string mismatch) =>
+        Assert.Equal(
+            mismatch,
+            SelfTestRules.ReadBackMismatch(Before with { Fov = written }, Before with { Fov = read }, GameFloor)
+        );
 
     [Fact]
     public void ANotANumberReadBackWithTheSameBitsMatches()
@@ -155,7 +183,7 @@ public class SelfTestRulesTests
             Fov = float.NaN,
         };
 
-        Assert.Null(SelfTestRules.ReadBackMismatch(nan, nan));
+        Assert.Null(SelfTestRules.ReadBackMismatch(nan, nan, NoFloor));
     }
 
     private static (CameraState, CameraState)[] Exact(IReadOnlyList<CameraState> frames) =>
