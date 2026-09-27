@@ -74,7 +74,7 @@ internal sealed class MainMenu
         if (Menu.Item("Select scene anchor", editing && session.Scene.AnchorPlaced))
             Report(session.Selection.SelectSceneAnchor());
         // A new folder loads a scene, which Live refuses.
-        if (Menu.Item("Save folder…", session.Mode != CameraMode.Live))
+        if (Menu.Item("Save folder...", session.Mode != CameraMode.Live))
             Show(setup);
         if (Menu.Item("Open save folder", files.Ready))
             files.OpenFolder(presets: false);
