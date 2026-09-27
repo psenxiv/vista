@@ -77,6 +77,12 @@ internal static class PathShapes
     /// <summary>The user's recorded-aim shot's positions: along +x through the origin, 10 yalms a leg.</summary>
     internal static Vector3[] UpAndOver => [new(-10f, 0f, 0f), new(0f, 0f, 0f), new(10f, 0f, 0f)];
 
+    /// <summary>Along +x with a 1-yalm leg between two 10-yalm ones, for a slow drift in the middle.</summary>
+    internal static Vector3[] SlowDrift => [new(-10f, 0f, 0f), new(0f, 0f, 0f), new(1f, 0f, 0f), new(11f, 0f, 0f)];
+
+    /// <summary>Two points on one spot, then 10 yalms along +x, for a pan on the spot.</summary>
+    internal static Vector3[] OnTheSpot => [new(0f, 0f, 0f), new(0f, 0f, 0f), new(10f, 0f, 0f)];
+
     /// <summary>The place <paramref name="degrees"/> round a level circle of <paramref name="radius"/> about the origin, from +x toward +z.</summary>
     private static Vector3 Round(float radius, float degrees) => new(radius * Cos(degrees), 0f, radius * Sin(degrees));
 

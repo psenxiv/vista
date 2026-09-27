@@ -4,6 +4,7 @@ using System.Text;
 using Vista.Core.Camera;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
+using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
 using static Vista.Tests.TrackRuns;
@@ -30,8 +31,8 @@ public class MovementSweepTests
         LookAtCentred,
     }
 
-    /// <summary>A path shape: its name, its points' positions, and the point held <see cref="HoldSeconds"/>, if any.</summary>
-    private sealed record Shape(string Name, Vector3[] Positions, int? Held = null);
+    /// <summary>A path shape: its name, its points' positions, the point held <see cref="HoldSeconds"/> if any, and an adjustment applied to the built track after the hold, if any.</summary>
+    private sealed record Shape(string Name, Vector3[] Positions, int? Held = null, Func<Track, Track>? Adjust = null);
 
     /// <summary>An aim setting: its name, and the track it makes through a shape's positions.</summary>
     private sealed record Aim(string Name, Func<Vector3[], Track> Build);
@@ -45,7 +46,8 @@ public class MovementSweepTests
         internal Track Track()
         {
             var track = Aim.Build(Shape.Positions);
-            return Shape.Held is { } held ? TrackEditing.SetHold(track, held, HoldSeconds) : track;
+            track = Shape.Held is { } held ? TrackEditing.SetHold(track, held, HoldSeconds) : track;
+            return Shape.Adjust is { } adjust ? adjust(track) : track;
         }
     }
 
@@ -81,6 +83,22 @@ public class MovementSweepTests
     private static readonly Shape MiddleHold = new("Middle hold", PathShapes.Corner, Held: 1);
     private static readonly Shape ClosePoints = new("Close points", PathShapes.ClosePoints);
     private static readonly Shape UpAndOver = new("Up and over", PathShapes.UpAndOver);
+    private static readonly Shape EasedCorner = new(
+        "Eased corner",
+        PathShapes.Corner,
+        Adjust: t =>
+            Enumerable.Range(1, t.Points.Count - 1).Aggregate(t, (x, leg) => LegEasing.Set(x, leg, Easing.EaseInOut))
+    );
+    private static readonly Shape SlowDrift = new(
+        "Slow drift",
+        PathShapes.SlowDrift,
+        Adjust: t => TrackEditing.SetLegDuration(t, 2, 4f)
+    );
+    private static readonly Shape OnTheSpot = new(
+        "Pan on the spot",
+        PathShapes.OnTheSpot,
+        Adjust: t => TrackEditing.SetLegDuration(t, 1, 3f)
+    );
 
     private static readonly Aim Pan = new("Recorded aim: pan", ps => Recorded(ps, i => (40f * i, 0f, 0f)));
     private static readonly Aim Tilt = new(
@@ -130,6 +148,9 @@ public class MovementSweepTests
         MiddleHold,
         ClosePoints,
         UpAndOver,
+        EasedCorner,
+        SlowDrift,
+        OnTheSpot,
     ];
 
     /// <summary>The spec's aim settings (§2.2).</summary>
@@ -319,8 +340,16 @@ public class MovementSweepTests
         new(Orbit, UnderAPoint, Check.TurnRateContinuous, 5, 0.28161f),
     ];
 
+    /// <summary>Speed jumps found by the sweep where a leg pinned to run much slower or faster than its neighbours meets them.</summary>
+    private static readonly Pending[] PendingSpeed =
+    [
+        new(SlowDrift, null, Check.SpeedContinuous, 1, 0.038743f),
+        new(SlowDrift, null, Check.SpeedContinuous, 2, 0.038826f),
+        new(OnTheSpot, null, Check.SpeedContinuous, 1, 0.12323f),
+    ];
+
     /// <summary>Failures waiting for the user's triage.</summary>
-    private static readonly Pending[] PendingTriage = [.. PendingTurnRate];
+    private static readonly Pending[] PendingTriage = [.. PendingTurnRate, .. PendingSpeed];
 
     /// <summary>Every check that applies to <paramref name="combination"/>, measured on <paramref name="run"/>.</summary>
     private static List<Measure> MeasureAll(Combination combination, Track track, Run run)
