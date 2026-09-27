@@ -1922,7 +1922,7 @@
           "broken": false
         },
         {
-          "legSpeed": 5.000001,
+          "legSpeed": 4.9999995,
           "hold": 0,
           "inMode": "Auto",
           "outMode": "Auto",

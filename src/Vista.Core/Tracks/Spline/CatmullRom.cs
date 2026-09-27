@@ -1,78 +1,60 @@
 using System.Numerics;
+using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Tracks.Spline;
 
-/// <summary>Centripetal Catmull-Rom spline through a track's control points. The path is always open.</summary>
+/// <summary>Centripetal Catmull-Rom spline through a track's control points, evaluated in Hermite form. The path is always open.</summary>
 public static class CatmullRom
 {
-    /// <summary>Centripetal parameterisation exponent.</summary>
-    public const float Alpha = 0.5f;
-
     /// <summary>Below this, a knot interval is treated as zero rather than divided by.</summary>
     private const float KnotEpsilon = 1e-6f;
-
-    /// <summary>A point's value and its derivative with respect to the spline parameter u.</summary>
-    private readonly record struct Dual(Vector3 Value, Vector3 Deriv);
 
     /// <summary>Number of curve segments for a point count.</summary>
     public static int SegmentCount(int pointCount) => Math.Max(pointCount - 1, 0);
 
     /// <summary>Position on the curve at parameter t in [0, 1] across the given segment.</summary>
-    public static Vector3 Evaluate(IReadOnlyList<Vector3> points, int segment, float t) =>
-        EvaluateCore(points, segment, t).Value;
+    public static Vector3 Evaluate(IReadOnlyList<Vector3> points, int segment, float t)
+    {
+        var (p1, p2, m1, m2) = Segment(points, segment);
+        return Hermite.At(p1, p2, m1, m2, t);
+    }
 
     /// <summary>d/dt of the curve at parameter t in [0, 1] across the given segment.</summary>
-    public static Vector3 Derivative(IReadOnlyList<Vector3> points, int segment, float t) =>
-        EvaluateCore(points, segment, t).Deriv;
+    public static Vector3 Derivative(IReadOnlyList<Vector3> points, int segment, float t)
+    {
+        var (p1, p2, m1, m2) = Segment(points, segment);
+        return Hermite.Slope(p1, p2, m1, m2, t);
+    }
 
-    private static Dual EvaluateCore(IReadOnlyList<Vector3> points, int segment, float t)
+    /// <summary>A segment's two end points and their tangents in the segment's own parameter (Yuksel et al.'s centripetal tangents); a segment of coincident points is that point, standing still.</summary>
+    private static (Vector3 P1, Vector3 P2, Vector3 M1, Vector3 M2) Segment(IReadOnlyList<Vector3> points, int segment)
     {
         ValidateSegment(points.Count, segment);
-
         var p0 = GetPoint(points, segment - 1);
         var p1 = GetPoint(points, segment);
         var p2 = GetPoint(points, segment + 1);
         var p3 = GetPoint(points, segment + 2);
-
-        var t0 = 0f;
-        var t1 = t0 + KnotDelta(p0, p1);
-        var t2 = t1 + KnotDelta(p1, p2);
-        var t3 = t2 + KnotDelta(p2, p3);
-        var u = t1 + (t * (t2 - t1));
-
-        var leaf0 = new Dual(p0, Vector3.Zero);
-        var leaf1 = new Dual(p1, Vector3.Zero);
-        var leaf2 = new Dual(p2, Vector3.Zero);
-        var leaf3 = new Dual(p3, Vector3.Zero);
-
-        var a1 = Lerp(leaf0, leaf1, t0, t1, u);
-        var a2 = Lerp(leaf1, leaf2, t1, t2, u);
-        var a3 = Lerp(leaf2, leaf3, t2, t3, u);
-        var b1 = Lerp(a1, a2, t0, t2, u);
-        var b2 = Lerp(a2, a3, t1, t3, u);
-        var c = Lerp(b1, b2, t1, t2, u);
-
-        // u is affine in t (u = t1 + t * (t2 - t1)), so scale the u-derivative by du/dt.
-        return c with
-        {
-            Deriv = c.Deriv * (t2 - t1),
-        };
+        var d0 = KnotDelta(p0, p1);
+        var d1 = KnotDelta(p1, p2);
+        var d2 = KnotDelta(p2, p3);
+        if (d1 < KnotEpsilon)
+            return (p1, p1, Vector3.Zero, Vector3.Zero);
+        return (p1, p2, d1 * Rate(p0, p1, p2, d0, d1), d1 * Rate(p1, p2, p3, d1, d2));
     }
 
-    /// <summary>Barry-Goldman linear step, clamped to the start point on a zero knot interval.</summary>
-    private static Dual Lerp(Dual a, Dual b, float ta, float tb, float u)
+    /// <summary>The curve's rate per knot at <paramref name="b"/>, between <paramref name="a"/> and <paramref name="c"/> with knot intervals <paramref name="before"/> and <paramref name="after"/>; a term over a zero interval is left out.</summary>
+    private static Vector3 Rate(Vector3 a, Vector3 b, Vector3 c, float before, float after)
     {
-        var denom = tb - ta;
-        if (MathF.Abs(denom) < KnotEpsilon)
-            return a;
-
-        var factor = (u - ta) / denom;
-        var value = a.Value + ((b.Value - a.Value) * factor);
-        var deriv = a.Deriv + ((b.Deriv - a.Deriv) * factor) + ((b.Value - a.Value) * (1f / denom));
-        return new Dual(value, deriv);
+        var rate = -(c - a) / (before + after);
+        if (before >= KnotEpsilon)
+            rate += (b - a) / before;
+        if (after >= KnotEpsilon)
+            rate += (c - b) / after;
+        return rate;
     }
 
-    private static float KnotDelta(Vector3 a, Vector3 b) => MathF.Pow(Vector3.Distance(a, b), Alpha);
+    /// <summary>Centripetal knot interval: the square root of the distance.</summary>
+    private static float KnotDelta(Vector3 a, Vector3 b) => MathF.Sqrt(Vector3.Distance(a, b));
 
     /// <summary>Endpoints duplicate to supply the phantom points.</summary>
     private static Vector3 GetPoint(IReadOnlyList<Vector3> points, int index) =>
