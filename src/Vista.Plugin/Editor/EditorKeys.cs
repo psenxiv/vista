@@ -93,6 +93,7 @@ internal sealed class EditorKeys
             VirtualKey.OEM_3 when ctrl => game.OverwriteSelected(),
             VirtualKey.OEM_3 when alt => game.AddAfterSelected(),
             VirtualKey.OEM_3 => game.AddToEnd(),
+            VirtualKey.R when alt && !ctrl => Level(game),
             VirtualKey.R
                 when session.Selection.Point is not null
                     || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
@@ -113,6 +114,12 @@ internal sealed class EditorKeys
     private static string? Restart(GameSession game)
     {
         game.RestartPlay();
+        return null;
+    }
+
+    private static string? Level(GameSession game)
+    {
+        game.LevelCameraRoll();
         return null;
     }
 

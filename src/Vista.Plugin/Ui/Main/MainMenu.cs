@@ -115,7 +115,7 @@ internal sealed class MainMenu
         }
 
         ImGui.Separator();
-        if (Menu.Item("Level camera roll", editing))
+        if (Menu.Item("Level camera roll", editing, "Alt + R"))
             game.LevelCameraRoll();
     }
 

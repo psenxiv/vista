@@ -20,7 +20,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Add point** | Adds a point at the camera. See [Adding points](tracks-adding-points.md). |
 | **Duplicate point** | Copies each selected point. See [Adding points](tracks-adding-points.md). |
 | **Delete selected points** | Deletes the selected points (`Delete`). |
-| **Level camera roll** | Levels the camera's roll. |
+| **Level camera roll** | Levels the camera's roll (`Alt + R`). |
 
 ## View
 

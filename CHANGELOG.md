@@ -10,6 +10,7 @@
 - In Live, the scrub bar covers the whole playlist, with a stretch for each entry. Drag it to move anywhere in the playlist.
 - Dragging the scrub bar to the end of a looping shot shows its last frame instead of its first.
 - Duplicate points from their right-click menu or the Edit menu.
+- Alt + R levels the camera's roll in Edit.
 - Clicking a point's Duration, Speed or Hold field selects its row.
 - In Edit, clicking a playlist entry edits its track.
 - Names can be up to 100 characters long.
