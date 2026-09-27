@@ -255,14 +255,9 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>Grows the window by a panel <paramref name="width"/> wide as it shows, or shrinks it as it hides.</summary>
     private void PanelShown(bool shown, float width) => pendingWidth += (shown ? 1f : -1f) * (width + Layout.Spacing.X);
 
-    /// <summary>The Hierarchy and Playlist toggles, ending a gap before Undo.</summary>
-    private void DrawPanelToggles(float gap)
+    /// <summary>The Hierarchy and Playlist toggles, at the start of the top row.</summary>
+    private void DrawPanelToggles()
     {
-        var toggles =
-            IconButton.Width(FontAwesomeIcon.Sitemap)
-            + ImGui.GetStyle().ItemSpacing.X
-            + IconButton.Width(FontAwesomeIcon.ListOl);
-        AlignTo(aimX - gap - toggles, gap);
         if (
             IconButton.Toggle(
                 "hierarchy",
@@ -293,10 +288,11 @@ internal sealed class TrackEditorWindow : Window
 
     private void DrawTopRow(bool editing)
     {
+        DrawPanelToggles();
+        ImGui.SameLine();
         DrawModeCombo();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
-        DrawPanelToggles(gap);
         AlignTo(aimX, gap);
         ImGui.BeginDisabled(!session.CanUndo);
         if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo"))
@@ -1020,7 +1016,7 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.ChartLine);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 9f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 7f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));
