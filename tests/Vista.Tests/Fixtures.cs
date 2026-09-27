@@ -43,7 +43,7 @@ internal static class Fixtures
     /// <summary>A quarter turn in radians.</summary>
     internal const float QuarterTurn = MathF.PI / 2f;
 
-    /// <summary>The fewest seconds Direction of travel looks ahead in a generated track, since with none it turns at once where the path doubles back, by design.</summary>
+    /// <summary>The fewest yalms Direction of travel looks ahead in a generated track, since with none it turns at once where the path doubles back, by design.</summary>
     private const float MinGeneratedLookAhead = 0.1f;
 
     /// <summary>Where a generated Look At track looks: above the middle of the generated points, so cameras pass under it and look steeply up.</summary>
@@ -87,7 +87,7 @@ internal static class Fixtures
                 )
         );
 
-    /// <summary>A track through <see cref="AnyPoints"/> aimed along its path, by its aim keys or at <see cref="GeneratedLookAt"/>, with random speed, holds, leg times and look ahead, built as the editor builds it; a Direction of travel track whose look-ahead spot passes through the moving camera, or whose camera reaches the spot waiting at the end with path still to go (<see cref="SpotPassesThroughCamera"/>), is left out.</summary>
+    /// <summary>A track through <see cref="AnyPoints"/> aimed along its path, by its aim keys or at <see cref="GeneratedLookAt"/>, with random speed, holds, leg times and look ahead, built as the editor builds it; a Direction of travel track whose look-ahead spot passes through the camera (<see cref="SpotPassesThroughCamera"/>) is left out.</summary>
     internal static readonly Gen<Track> AnyPathTrack = (
         from points in AnyPoints
         from aim in Gen.OneOfConst(AimMode.PathTangent, AimMode.AimKeys, AimMode.LookAt)
@@ -104,73 +104,21 @@ internal static class Fixtures
     /// <summary>Seconds between the times the camera and its look-ahead spot are compared.</summary>
     private const double SpotStep = 0.01;
 
-    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot while both move, neither in a hold and the spot short of the end; or reaches the spot waiting at the end, arriving or passing, with at least <see cref="TrackEvaluator.LookAheadBlend"/> of path left, where it turns round as it moves on, by design; or has a layout <see cref="NearTheEndBeforeAPointOnIt"/> finds. A spot waiting where the camera starts, as at the start of a lap back to where it began, doesn't count; the gap is taken as straight between the times compared.</summary>
+    /// <summary>True when a Direction of travel track's camera comes within <see cref="ClosestGeneratedSpot"/> of its look-ahead spot, where the path comes back past itself, taking the gap as straight between the times compared.</summary>
     internal static bool SpotPassesThroughCamera(Track track)
     {
         if (track.Aim != AimMode.PathTangent || track.LookAhead <= 0f)
             return false;
-        var evaluator = new TrackEvaluator(track with { Aim = AimMode.AimKeys });
-        if (NearTheEndBeforeAPointOnIt(track, evaluator))
-            return true;
-        var ahead = track.LookAhead;
-        Vector3 Place(double t) => evaluator.Evaluate(t)!.Value.Position;
+        var travel = new TrackEvaluator(track);
+        var places = new TrackEvaluator(track with { Aim = AimMode.AimKeys });
 
-        var end = Place(evaluator.Duration);
         Vector3? before = null;
-        Vector3? waiting = null;
-        for (var t = SpotStep; t < evaluator.Duration; t += SpotStep)
+        for (var t = 0.0; t <= places.Duration; t += SpotStep)
         {
-            var spot = evaluator.TravelledAhead(t, ahead);
-            if (spot >= evaluator.Duration)
-            {
-                // Only a shrinking gap counts: the camera nears the spot rather than leaving it or holding under it.
-                var toEnd = end - Place(t);
-                if (
-                    waiting is { } previous
-                    && Vector3.Dot(previous, toEnd - previous) < 0f
-                    && evaluator.TotalDistance - evaluator.DistanceAt(t) >= TrackEvaluator.LookAheadBlend
-                    && ClosestToZero(previous, toEnd) < ClosestGeneratedSpot
-                )
-                    return true;
-                waiting = toEnd;
-                continue;
-            }
-
-            if (!(evaluator.SlopeAt(t) > 0f && evaluator.SlopeAt(spot) > 0f))
-            {
-                before = null;
-                continue;
-            }
-
-            var gap = Place(spot) - Place(t);
+            var gap = travel.LookAheadSpot(t)!.Value - places.Evaluate(t)!.Value.Position;
             if (before is { } last && ClosestToZero(last, gap) < ClosestGeneratedSpot)
                 return true;
             before = gap;
-        }
-
-        return false;
-    }
-
-    /// <summary>True when a Direction of travel camera reaches a point within <see cref="TrackAim.MinTargetDistance"/> of the end but not on it (within <see cref="TrackEvaluator.SamePlace"/>), leading into a middle point on the end, with the look-ahead spot waiting at the end and at least <see cref="TrackEvaluator.LookAheadBlend"/> of path left: the aim may step there, by design.</summary>
-    internal static bool NearTheEndBeforeAPointOnIt(Track track, TrackEvaluator evaluator)
-    {
-        var points = track.Points;
-        var end = points[^1].Position;
-        for (var i = 0; i + 2 < points.Count; i++)
-        {
-            var off = Vector3.Distance(points[i].Position, end);
-            if (
-                off < TrackEvaluator.SamePlace
-                || off >= TrackAim.MinTargetDistance
-                || Vector3.Distance(points[i + 1].Position, end) >= TrackEvaluator.SamePlace
-            )
-                continue;
-            var arrive = evaluator.PointSeconds(i);
-            if (
-                evaluator.TravelledAhead(arrive, track.LookAhead) >= evaluator.Duration
-                && evaluator.TotalDistance - evaluator.DistanceAt(arrive) >= TrackEvaluator.LookAheadBlend
-            )
-                return true;
         }
 
         return false;

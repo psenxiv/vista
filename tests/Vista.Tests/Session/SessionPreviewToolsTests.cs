@@ -265,8 +265,8 @@ public class SessionPreviewToolsTests
 
         state.Transport.SetGhost(true);
 
-        // The default look-ahead is 0.5 s, so the spot is at 2.5 s: x = 5.
-        Assert.Equal(5f, state.Transport.GhostLookAhead!.Value.X, 1e-3f);
+        // At 2 yalms a second the scrub head at 2 s is at x = 4, and the default look ahead is 2.5 yalms: x = 6.5.
+        Assert.Equal(6.5f, state.Transport.GhostLookAhead!.Value.X, 1e-3f);
     }
 
     [Fact]

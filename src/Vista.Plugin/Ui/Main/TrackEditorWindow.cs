@@ -70,7 +70,7 @@ internal sealed class TrackEditorWindow : Window
         TrackEditing.MaxSeconds
     );
     private static readonly PendingField.Range HoldRange = new(0.05f, 0f, TrackEditing.MaxSeconds);
-    private static readonly PendingField.Range LookAheadRange = new(0.01f, 0f, TrackEditing.MaxLookAhead);
+    private static readonly PendingField.Range LookAheadRange = new(0.05f, 0f, TrackEditing.MaxLookAhead);
     private const string LookAheadId = "look-ahead";
 
     private readonly GameSession game;
@@ -604,7 +604,7 @@ internal sealed class TrackEditorWindow : Window
         fields.Draw(
             LookAheadId,
             track.LookAhead,
-            Units.SecondsField,
+            Units.YalmsUnitField,
             Layout.FieldWidth,
             LookAheadRange,
             v => Report(session.SetLookAhead(v))

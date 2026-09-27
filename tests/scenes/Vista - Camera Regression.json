@@ -256,7 +256,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000001",
@@ -548,7 +548,7 @@
     },
     {
       "id": "00000000-0000-0000-0001-000000000003",
-      "name": "Crane shot, look ahead 0.5: looks straight up, no spin",
+      "name": "Crane shot, look ahead 2.5: looks straight up, no spin",
       "anchor": {
         "position": {
           "x": 45,
@@ -678,7 +678,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000004",
@@ -772,7 +772,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000005",
@@ -866,7 +866,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000006",
@@ -1000,7 +1000,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000007",
@@ -1094,7 +1094,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000008",
@@ -1188,7 +1188,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000009",
@@ -1282,7 +1282,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000010",
@@ -1376,11 +1376,11 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000011",
-      "name": "Straight doubleback, look ahead 0.5: snaps round once",
+      "name": "Straight doubleback, look ahead 2.5: snaps round once",
       "anchor": {
         "position": {
           "x": 45,
@@ -1470,7 +1470,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000012",
@@ -1778,7 +1778,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000014",
@@ -1852,7 +1852,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000015",
@@ -1946,7 +1946,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000016",
@@ -2040,7 +2040,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000017",
@@ -2254,7 +2254,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000018",
@@ -2388,11 +2388,11 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000019",
-      "name": "Lap back to the start, look ahead 2: no flip as it sets off",
+      "name": "Lap back to the start, look ahead 10: no flip as it sets off",
       "anchor": {
         "position": {
           "x": 45,
@@ -2402,7 +2402,7 @@
         "yaw": 0
       },
       "anchorPlaced": true,
-      "speed": 25,
+      "speed": 5,
       "aim": "PathTangent",
       "direction": "Forward",
       "loop": false,
@@ -2421,9 +2421,9 @@
       "points": [
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2432,9 +2432,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": -5
+            "z": -1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2443,9 +2443,9 @@
         },
         {
           "position": {
-            "x": 5,
+            "x": 1.25,
             "y": 0,
-            "z": -5
+            "z": -1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2454,9 +2454,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2502,11 +2502,11 @@
           "broken": false
         }
       ],
-      "lookAhead": 2
+      "lookAhead": 10
     },
     {
       "id": "00000000-0000-0000-0001-000000000020",
-      "name": "Hairpin crossing its own path, look ahead 1.69: one expected flip",
+      "name": "Hairpin crossing its own path, look ahead 8.47: one expected flip",
       "anchor": {
         "position": {
           "x": -45,
@@ -2516,7 +2516,7 @@
         "yaw": 0
       },
       "anchorPlaced": true,
-      "speed": 15,
+      "speed": 5,
       "aim": "PathTangent",
       "direction": "Forward",
       "loop": false,
@@ -2535,9 +2535,9 @@
       "points": [
         {
           "position": {
-            "x": -10,
+            "x": -3.3333333,
             "y": 0,
-            "z": -3
+            "z": -1
           },
           "yaw": 0,
           "pitch": 0,
@@ -2546,9 +2546,9 @@
         },
         {
           "position": {
-            "x": 5,
+            "x": 1.6666666,
             "y": 0,
-            "z": 3
+            "z": 1
           },
           "yaw": 0,
           "pitch": 0,
@@ -2557,9 +2557,9 @@
         },
         {
           "position": {
-            "x": 5,
+            "x": 1.6666666,
             "y": 0,
-            "z": -3
+            "z": -1
           },
           "yaw": 0,
           "pitch": 0,
@@ -2568,9 +2568,9 @@
         },
         {
           "position": {
-            "x": -10,
+            "x": -3.3333333,
             "y": 0,
-            "z": 3
+            "z": 1
           },
           "yaw": 0,
           "pitch": 0,
@@ -2616,7 +2616,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 1.6930684
+      "lookAhead": 8.465311
     },
     {
       "id": "00000000-0000-0000-0001-000000000021",
@@ -2710,11 +2710,11 @@
           "broken": false
         }
       ],
-      "lookAhead": 0.5
+      "lookAhead": 2.5
     },
     {
       "id": "00000000-0000-0000-0001-000000000022",
-      "name": "Direction of travel through a held corner, look ahead 1: holds its look, no swing",
+      "name": "Direction of travel through a held corner, look ahead 5: holds its look, no swing",
       "anchor": {
         "position": {
           "x": 15,
@@ -2804,11 +2804,11 @@
           "broken": false
         }
       ],
-      "lookAhead": 1
+      "lookAhead": 5
     },
     {
       "id": "00000000-0000-0000-0001-000000000023",
-      "name": "Lap held at its start, look ahead 2: faces back, no turn-round as it sets off",
+      "name": "Lap held at its start, look ahead 10: faces the way the lap finishes, no turn-round as it sets off",
       "anchor": {
         "position": {
           "x": 45,
@@ -2818,7 +2818,7 @@
         "yaw": 0
       },
       "anchorPlaced": true,
-      "speed": 25,
+      "speed": 5,
       "aim": "PathTangent",
       "direction": "Forward",
       "loop": false,
@@ -2837,9 +2837,9 @@
       "points": [
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2848,9 +2848,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": -5
+            "z": -1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2859,9 +2859,9 @@
         },
         {
           "position": {
-            "x": 5,
+            "x": 1.25,
             "y": 0,
-            "z": -5
+            "z": -1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2870,9 +2870,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2918,11 +2918,11 @@
           "broken": false
         }
       ],
-      "lookAhead": 2
+      "lookAhead": 10
     },
     {
       "id": "00000000-0000-0000-0001-000000000024",
-      "name": "Held where the path ends, look ahead 2: holds its look, turns round as it sets off",
+      "name": "Held where the path ends, look ahead 10: faces the way the lap finishes, no turn-round as it sets off",
       "anchor": {
         "position": {
           "x": -45,
@@ -2932,7 +2932,7 @@
         "yaw": 0
       },
       "anchorPlaced": true,
-      "speed": 25,
+      "speed": 5,
       "aim": "PathTangent",
       "direction": "Forward",
       "loop": false,
@@ -2951,9 +2951,9 @@
       "points": [
         {
           "position": {
-            "x": -15,
+            "x": -11.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2962,9 +2962,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2973,9 +2973,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": -5
+            "z": -1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2984,9 +2984,9 @@
         },
         {
           "position": {
-            "x": 5,
+            "x": 1.25,
             "y": 0,
-            "z": -5
+            "z": -1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -2995,9 +2995,9 @@
         },
         {
           "position": {
-            "x": -5,
+            "x": -1.25,
             "y": 0,
-            "z": 5
+            "z": 1.25
           },
           "yaw": 0,
           "pitch": 0,
@@ -3052,7 +3052,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 2
+      "lookAhead": 10
     }
   ]
 }

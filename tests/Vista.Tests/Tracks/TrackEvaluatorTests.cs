@@ -462,41 +462,39 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void LookingAheadFacesWhereThePathIsThatMuchLater()
+    public void LookingAheadFacesWhereThePathIsThatFarOn()
     {
-        // The first leg takes 1 s and the look runs 1 s ahead, so at the start the camera faces point 2 exactly: (10, 0, 5).
-        var track = TrackEditing.SetLookAhead(
-            TrackThrough([Point(0f), Point(10f, z: 5f), Point(20f, z: -20f)], AimMode.PathTangent, 2f),
-            1f
-        );
-        var evaluator = new TrackEvaluator(TrackEditing.SetLegDuration(track, 1, 1f));
+        // Looking as far ahead as the first leg is long, at the start the camera faces point 1 exactly: (4, 0, 2) away.
+        var track = TrackThrough([Point(0f), Point(4f, z: 2f), Point(8f, z: -8f)], AimMode.PathTangent, 2f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, new TrackEvaluator(track).LegLength(1)));
 
-        Near(Vector3.Normalize(new Vector3(10f, 0f, 5f)), Facing(evaluator, 0.0), 1e-3f);
+        Near(Vector3.Normalize(new Vector3(4f, 0f, 2f)), Facing(evaluator, 0.0), 1e-3f);
     }
 
     [Fact]
     public void LookingAheadNothingFacesStraightAlongThePath()
     {
-        // Symmetric about the middle point, the path runs parallel to x there. With the last leg taking 0.5 s,
-        // the default look 0.5 s ahead instead faces the last point: (10, 0, -10) away.
-        var track = TrackEditing.SetLegDuration(
-            TrackThrough([Point(-10f), Point(0f, z: 10f), Point(10f)], AimMode.PathTangent, 2f),
-            2,
-            0.5f
-        );
-        var middle = new TrackEvaluator(track).PointSeconds(1);
+        // Symmetric about the middle point, the path runs parallel to x there. Looking as far ahead as the last leg is
+        // long instead faces the last point: (4, 0, -4) away.
+        var track = TrackThrough([Point(-4f), Point(0f, z: 4f), Point(4f)], AimMode.PathTangent, 2f);
+        var evaluator = new TrackEvaluator(track);
+        var middle = evaluator.PointSeconds(1);
 
         Near(Vector3.UnitX, Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, 0f)), middle), 1e-3f);
-        Near(Vector3.Normalize(new Vector3(10f, 0f, -10f)), Facing(new TrackEvaluator(track), middle), 1e-3f);
+        Near(
+            Vector3.Normalize(new Vector3(1f, 0f, -1f)),
+            Facing(new TrackEvaluator(TrackEditing.SetLookAhead(track, evaluator.LegLength(2))), middle),
+            1e-3f
+        );
     }
 
     [Fact]
     public void LookingAheadSnapsRoundWhereThePathRunsStraightBackAlongItself()
     {
         // Out to x = 10 and back to 5 at 2 yalms a second, the path turns round at 10 at 5 s: the camera is at 2t and
-        // the spot 1 s ahead at 20 − 2(t + 1). They pass at 4.5 s, so the facing flips from +x to −x there at once.
+        // the spot 2 yalms ahead at 20 − (2t + 2). They pass at 4.5 s, so the facing flips from +x to −x there at once.
         var evaluator = new TrackEvaluator(
-            TrackEditing.SetLookAhead(TrackThrough([Point(0f), Point(10f), Point(5f)], AimMode.PathTangent, 2f), 1f)
+            TrackEditing.SetLookAhead(TrackThrough([Point(0f), Point(10f), Point(5f)], AimMode.PathTangent, 2f), 2f)
         );
 
         Near(Vector3.UnitX, Facing(evaluator, 4.49), 1e-3f);
@@ -512,8 +510,8 @@ public class TrackEvaluatorTests
     [InlineData(1.6e-2)]
     public void LookingAheadStaysSteadyJustBeforeTheEndFarFromTheOrigin(double early)
     {
-        // Far from the origin, a look-ahead chord this short is mostly float rounding, so it falls back to the path's own
-        // direction and matches the look at the very end to within a degree (cos 1° ≈ 0.99985).
+        // Far from the origin, just before the end the spot is carried on past it, 2.5 yalms ahead the way the path
+        // finishes, so the look matches the look at the very end to within a degree (cos 1° ≈ 0.99985).
         var track = TrackThrough(
             [Point(612f, 42f, -488f), Point(620f, 42f, -480f), Point(631f, 43f, -489f)],
             AimMode.PathTangent,
@@ -529,83 +527,85 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void LookingAheadFacesTheNextLegThroughoutAHold()
-    {
-        // Point 2 holds 1 to 3 s, then a 0.3 s leg to point 3. The look counts only travel, so from the hold's start 0.5 s
-        // of travel on is past point 3, the end: (0, 0, 10) away. Before, the camera faced the way in, +x, until 2.5 s.
-        var track = TrackThrough([Point(0f), Point(10f), Point(10f, z: 10f)], AimMode.PathTangent, 2f);
-        track = TrackEditing.SetHold(
-            TrackEditing.SetLegDuration(TrackEditing.SetLegDuration(track, 1, 1f), 2, 0.3f),
-            1,
-            2f
-        );
-        var evaluator = new TrackEvaluator(track);
-
-        Near(Vector3.UnitZ, Facing(evaluator, 1.0), 1e-3f);
-        Near(Vector3.UnitZ, Facing(evaluator, 2.0), 1e-3f);
-        Near(Vector3.UnitZ, Facing(evaluator, 2.8), 1e-3f);
-    }
-
-    [Fact]
     public void LookingAheadHoldsItsLookThroughAHeldCorner()
     {
-        // The measured corner: (0, 0, 0), (10, 0, 0), (10, 0, 10) at 5 yalms a second, held 3 s at the middle,
-        // looking 1 s ahead. Before, the spot stopped on the held point: the heading reached 31.6° approaching, swung back
-        // to 28.2° holding and turned to 77° in the hold's last second. Now through the hold the camera faces where it will
-        // be 1 s after moving off, and that spot stays put.
+        // A corner, (0, 0, 0), (5, 0, 0), (5, 0, 5) at 5 yalms a second, held 3 s at the middle, looking as far ahead as the
+        // last leg is long: through the hold the spot is the last point, (0, 0, 5) from the held camera, and it stays put.
         var track = TrackEditing.SetHold(
-            TrackThrough([Point(0f), Point(10f), Point(10f, z: 10f)], AimMode.PathTangent),
+            TrackThrough([Point(0f), Point(5f), Point(5f, z: 5f)], AimMode.PathTangent),
             1,
             3f
         );
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1f));
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, new TrackEvaluator(track).LegLength(2)));
         var arrive = evaluator.PointSeconds(1);
         var depart = evaluator.Keys[2].Time;
         var held = evaluator.Evaluate(arrive)!.Value;
 
-        // Leg 2, about D = 10.2 yalms, takes T = D / 5 s, easing from rest to its average speed 5 at the last point (slopes 0
-        // and 1 times the secant): at share s of it the camera is D(2s² - s³) along. At s = 1 / T that's 50/D - 125/D² ≈ 3.70
-        // yalms, past the 1-yalm blend, so the camera faces the spot itself.
-        AimsAt(evaluator.Evaluate(depart + 1.0)!.Value.Position, held, 4);
-
-        // Approaching at 1.5 s, the look ahead reaches across the hold: 0.54 s of travel to arriving at 2.04 s, then the
-        // other 0.46 s after leaving at 5.04 s, so the spot is where the camera is at 1.5 + 1 + 3 = 5.5 s, not 6.04 s. The
-        // camera is about 9 yalms along and the spot over 11, past the 1-yalm blend, so it faces the spot itself.
-        AimsAt(evaluator.Evaluate(1.5 + 1.0 + 3.0)!.Value.Position, evaluator.Evaluate(1.5)!.Value, 4);
+        Near(Vector3.UnitZ, held.Forward, 1e-4f);
         for (var i = 0; i <= 64; i++)
             Assert.Equal(held.Forward, Facing(evaluator, arrive + ((depart - arrive) * i / 64)));
 
-        // A millisecond either side of the hold the camera moves about 1e-5 yalm, and the spot at most 5(4s - 3s²) ≤ 20/3
-        // yalms a second, 0.0067 yalm, seen from over 3 yalms away: at most 0.0022 rad, 0.13°. 0.15° allows that. The
-        // distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
+        // A millisecond either side of the hold the camera eases through about 1e-5 yalm, and the spot the same distance
+        // along the path, seen from about 5 yalms away: about 4e-6 rad. 0.15° allows that many times over. The distance
+        // between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
         Assert.InRange(Vector3.Distance(Facing(evaluator, arrive - 1e-3), held.Forward), 0f, 0.15f * Deg);
         Assert.InRange(Vector3.Distance(Facing(evaluator, depart + 1e-3), held.Forward), 0f, 0.15f * Deg);
     }
 
     [Fact]
-    public void LookingAheadSkipsEveryHoldWithinIt()
+    public void TheLookAheadSpotIsTheLookAheadsDistanceAlongThePath()
     {
-        // Skipping neither hold would face point 1 (+x); skipping only the first would face point 2 (45°).
-        // Leg times rounded to float put the spot within about 1e-6 s of point 3, a few 1e-5 yalm, 14 yalms away.
-        Near(Vector3.UnitZ, Facing(HeldTwiceOnTheWay(), 0.0), 1e-4f);
-    }
-
-    [Fact]
-    public void TheLookAheadSpotIsTheLookAheadsTravelAheadOfTheTime()
-    {
-        // Points at x = 0, 10, 20 at 2 yalms a second run x = 2t; the default look-ahead is 0.5 s.
+        // Points at x = 0, 10, 20 at 2 yalms a second: every leg's secant is 2, so the camera runs x = 2t. At 2 s it is at
+        // 4, and the spot 3 yalms on is at 7.
         var evaluator = new TrackEvaluator(
-            TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, speed: 2f)
+            TrackEditing.SetLookAhead(TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, 2f), 3f)
         );
 
-        // 2 s + 0.5 s = 2.5 s: x = 5.
-        Near(new Vector3(5f, 0f, 0f), evaluator.LookAheadSpot(2.0)!.Value, 1e-3f);
+        Near(new Vector3(7f, 0f, 0f), evaluator.LookAheadSpot(2.0)!.Value, 1e-3f);
     }
 
     [Fact]
-    public void TheLookAheadSpotSkipsHolds() =>
-        // As LookingAheadSkipsEveryHoldWithinIt: the spot lands on point 3, (0, 0, 10), within a few 1e-5 yalm.
-        Near(new Vector3(0f, 0f, 10f), HeldTwiceOnTheWay().LookAheadSpot(0.0)!.Value, 1e-4f);
+    public void PastTheEndTheLookAheadSpotCarriesOnStraightTheWayThePathFinishes()
+    {
+        // As above, at 9 s the camera is at 18, and 3 yalms on is 1 past the end at 20. The reflected end makes the last
+        // leg straight, so the path finishes along +x and the spot carries on to (21, 0, 0), straight ahead.
+        var evaluator = new TrackEvaluator(
+            TrackEditing.SetLookAhead(TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, 2f), 3f)
+        );
+
+        Near(new Vector3(21f, 0f, 0f), evaluator.LookAheadSpot(9.0)!.Value, 1e-3f);
+        Near(Vector3.UnitX, Facing(evaluator, 9.0), 1e-3f);
+        Near(Vector3.UnitX, Facing(evaluator, evaluator.Duration), 1e-3f);
+    }
+
+    [Fact]
+    public void WhereTheSpotIsOnTheCameraTheCameraFacesAlongThePath()
+    {
+        // Out from −8 to 7 and back to −3, all on the x axis: 15 yalms out, then back. Centripetal Catmull-Rom's tangent at
+        // the turn-back point is √15 − 5/(√15 + √10) − √10 = 0, so the path stops at 7 and turns straight back. At 1 yalm
+        // a second (equal secants, so distance is time) the camera is 14 yalms along at 14 s, at (6, 0, 0), and the spot
+        // 2 yalms on is 16 along, back at (6, 0, 0) on the camera. There the camera faces along the path, +x.
+        var evaluator = new TrackEvaluator(
+            TrackEditing.SetLookAhead(TrackThrough([Point(-8f), Point(7f), Point(-3f)], AimMode.PathTangent, 1f), 2f)
+        );
+        var frame = evaluator.Evaluate(14.0)!.Value;
+
+        Near(new Vector3(6f, 0f, 0f), frame.Position, 1e-3f);
+        Near(new Vector3(6f, 0f, 0f), evaluator.LookAheadSpot(14.0)!.Value, 1e-3f);
+        Near(Vector3.UnitX, frame.Forward, 1e-3f);
+        Near(Vector3.UnitY, frame.Up, 1e-3f);
+    }
+
+    [Fact]
+    public void TheLookAheadSpotStaysPutWhileTheCameraHolds()
+    {
+        // As above, held 2 s at x = 10: the camera stays at 10 from 5 s to 7 s, so the spot 3 yalms on stays at (13, 0, 0).
+        var track = TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, 2f);
+        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 2f), 3f));
+
+        foreach (var time in new[] { 5.0, 6.0, 7.0 })
+            Near(new Vector3(13f, 0f, 0f), evaluator.LookAheadSpot(time)!.Value, 1e-3f);
+    }
 
     [Fact]
     public void ThereIsNoLookAheadSpotWithoutALookAheadOrWhenNotAimingAlongThePath()
@@ -620,26 +620,12 @@ public class TrackEvaluatorTests
         );
     }
 
-    // Legs of 0.5 s, with 1 s holds at points 1 and 2, and a 1.5 s look-ahead. At 0 s, 1.5 s of travel on crosses both
-    // holds and reaches point 3, (0, 0, 10), straight along +z from the camera at the origin.
-    private static TrackEvaluator HeldTwiceOnTheWay()
-    {
-        var track = TrackThrough(
-            [Point(0f), Point(10f), Point(10f, z: 10f), Point(0f, z: 10f), Point(-10f, z: 10f)],
-            AimMode.PathTangent
-        );
-        for (var leg = 1; leg <= 3; leg++)
-            track = TrackEditing.SetLegDuration(track, leg, 0.5f);
-        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 1, 1f), 2, 1f);
-        return new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.5f));
-    }
-
     [Fact]
     public void LookingAheadSettlesOnTheFinalDirectionIntoAHoldAtTheLastPoint()
     {
-        // The last leg runs straight along +z (points 2 and 3 and the end's repeat in a line), holding 2 s at its end. Half
-        // a second before arriving, 1 s of travel on is past the end, so the camera faces the last point, straight ahead;
-        // through the hold it faces the way in, +z, as it did before.
+        // The last leg runs straight along +z (points 2 and 3 and the end's reflection in a line), holding 2 s at its end.
+        // Half a second before arriving the spot 1 yalm on is on that leg or carried on past its end along it, so the camera
+        // faces +z; through the hold the spot stays 1 yalm past the end, and the camera keeps facing +z.
         var track = TrackThrough([Point(0f), Point(10f), Point(10f, z: 10f), Point(10f, z: 20f)], AimMode.PathTangent);
         var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 3, 2f), 1f));
         var arrive = evaluator.PointSeconds(3);
@@ -687,11 +673,12 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookingAheadAcrossAHairpinFacesTheSpotAhead()
     {
-        // The path turns back 0.2 yalm from itself. At 1.5 s the spot 2 s on is 4 yalms further along the path, so the
-        // camera faces straight at it, where the camera will be at 3.5 s, though it's under a yalm away across the gap.
+        // The path turns back 0.2 yalm from itself. At 2 yalms a second, equal secants make distance 2t, so at 1.5 s the
+        // spot 4 yalms further along the path is where the camera will be at 3.5 s, and the camera faces straight at it,
+        // though it's under a yalm away across the gap.
         var track = TrackEditing.SetLookAhead(
             TrackThrough([Point(0f), Point(5f), Point(5f, z: 0.2f), Point(0f, z: 0.2f)], AimMode.PathTangent, 2f),
-            2f
+            4f
         );
         var evaluator = new TrackEvaluator(track);
 
@@ -701,34 +688,15 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookingAheadSettlesIntoTheDemosLastPointWithoutAStep()
     {
-        // East Hawker eases into its last point turning at most 4.2°/s, 0.07° a frame at 60 fps, read from the run since a
-        // recorded track's turn can't be worked by hand. Snapping to the exact tangent 0.1 yalm out stepped 0.12° in one
-        // frame; 0.1° allows the steady turn and catches the step.
+        // East Hawker, looking 1 yalm ahead, eases into its last point turning at most 0.034° a frame at 60 fps in its last
+        // half second, read from the run since a recorded track's turn can't be worked by hand. Snapping to the exact
+        // tangent 0.1 yalm out once stepped 0.12° in one frame; 0.05° allows the steady turn and catches the step.
         var track = DemoScene().Tracks.Single(t => t.Name == "East Hawker fly through");
         var run = new Run(track);
         var end = run.Arrive(track.Points.Count - 1);
 
         // The distance between two unit directions is 2·sin(θ/2), within 1e-7 of θ at these angles.
-        Assert.InRange(run.LargestTurn(FrameSeconds, end - 1.5, end + 0.5), 0f, 0.1f * Deg);
-    }
-
-    [Fact]
-    public void LookingAheadHalfAYalmBlendsHalfwayBetweenTheSpotAndTheWayIntoIt()
-    {
-        // Along +x into a corner at the origin, then along +z; the doubled corner keeps both legs straight. At 1 yalm a
-        // second every place is reached at its distance in seconds, the collapsed corner leg counting 0.1, so looking
-        // 0.5 s ahead the spot is 0.5 yalm on and weighs 0.5. At 2 s the camera is on the corner and the spot 0.4 up the
-        // +z leg, at 90° from +x towards +z; the arrival, from 0.5 yalm before the spot, (-0.5, 0, 0), to it, (0, 0, 0.4),
-        // is at atan2(0.4, 0.5) = 38.66°. Two unit vectors weighed evenly sum along their bisector, 64.33°. The arc-length
-        // table places those points to about 1e-4 yalm, well inside the 1e-3 allowed.
-        var track = TrackThrough(
-            [Point(-2f), Point(-1f), Point(0f), Point(0f), Point(0f, z: 1f), Point(0f, z: 2f)],
-            AimMode.PathTangent,
-            2f
-        );
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetSpeed(track, 1f), 0.5f));
-
-        Near(new Vector3(0.43318873f, 0f, 0.90130324f), Facing(evaluator, 2.0), 1e-3f);
+        Assert.InRange(run.LargestTurn(FrameSeconds, end - 0.5, end + 0.5), 0f, 0.05f * Deg);
     }
 
     [Fact]
@@ -762,7 +730,7 @@ public class TrackEvaluatorTests
 
     [Theory]
     [InlineData(0f)]
-    [InlineData(0.5f)]
+    [InlineData(TrackEditing.DefaultLookAhead)]
     public void DirectionOfTravelTurnsSmoothlyAsThePathDriftsAcrossTheVertical(float lookAhead)
     {
         // The path climbs 10 yalms, bowing 0.2 to +x and back, so its direction passes the vertical from +x to -x. The facing
@@ -782,7 +750,7 @@ public class TrackEvaluatorTests
 
     [Theory]
     [InlineData(0f)]
-    [InlineData(0.5f)]
+    [InlineData(TrackEditing.DefaultLookAhead)]
     public void DirectionOfTravelLooksStraightUpThroughACraneShotWithoutSpinning(float lookAhead)
     {
         // Along -z, straight up, then along +x. FromDirection's yaw is atan2(-x, -z): 0 heading -z and -π/2 heading +x.
@@ -983,51 +951,29 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
-    public void DirectionOfTravelStartsFacingBackAtTheSpotWaitingWhereItStarts()
+    public void DirectionOfTravelStartsFacingTheWayALapWithinTheLookAheadFinishes()
     {
-        // Found by TheAimNeverSteps as a 180° step at 0 s: the path comes back to its start within the look ahead, so at
-        // 0 s the spot 1.5 s of travel ahead, past the last point reached at 1 s, is where the camera is. The first leg
-        // lies along -z (its spline's points are all on the z axis), so the chord to the waiting spot opens along +z.
+        // A lap back to its start, about 7 yalms round, under the 10-yalm look ahead: at 0 s the spot is past the end,
+        // carried on the way the path finishes. The last leg runs from (2, 0, -2) to the origin, straight with its end's
+        // reflection, so the camera faces along (-1, 0, 1)/√2, and leaves without a step.
         var track = TrackEditing.Empty(AimMode.PathTangent);
         foreach (
-            var point in new[] { Point(0f), Point(0f, 0f, -5f), Point(0f, 0f, -10f), Point(10f, 0f, -10f), Point(0f) }
+            var point in new[] { Point(0f), Point(0f, 0f, -1f), Point(0f, 0f, -2f), Point(2f, 0f, -2f), Point(0f) }
         )
             track = TrackEditing.Append(track, point);
         for (var leg = 1; leg <= 4; leg++)
             track = TrackEditing.SetLegDuration(track, leg, 0.25f);
-        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 4, 2f), 1.5f));
+        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 4, 2f), TrackEditing.MaxLookAhead));
 
-        Near(Vector3.UnitZ, run.At(0.0).Forward, 1e-6f);
+        Near(new Vector3(-0.70710677f, 0f, 0.70710677f), run.At(0.0).Forward, 1e-5f);
         Assert.Empty(run.FacingSteps());
     }
 
     [Fact]
-    public void DirectionOfTravelHoldingAtTheStartFacesBackAtTheSpotWaitingThere()
+    public void DirectionOfTravelDoesNotTurnRoundLeavingAHoldWhereThePathEnds()
     {
-        // The lap above, held 1 s at its start: 1.5 s of travel is more than the lap's 1 s, so through the hold the spot
-        // waits at the end, on the camera. Moving off down the first leg along -z leaves it behind, so the chord opens
-        // along +z, and the camera faces that way from the start.
-        var track = TrackEditing.Empty(AimMode.PathTangent);
-        foreach (
-            var point in new[] { Point(0f), Point(0f, 0f, -5f), Point(0f, 0f, -10f), Point(10f, 0f, -10f), Point(0f) }
-        )
-            track = TrackEditing.Append(track, point);
-        for (var leg = 1; leg <= 4; leg++)
-            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
-        track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 1f), 4, 2f);
-        var run = new Run(TrackEditing.SetLookAhead(track, 1.5f));
-
-        Near(Vector3.UnitZ, run.At(0.0).Forward, 1e-6f);
-        Near(Vector3.UnitZ, run.At(0.5).Forward, 1e-6f);
-        Assert.Empty(run.FacingSteps());
-    }
-
-    [Fact]
-    public void DirectionOfTravelDoesNotTurnRoundLeavingAHoldUnderTheSpotWaitingThere()
-    {
-        // Found by TheAimNeverSteps as a 114.6° step at 3 s: the path ends where it starts, held 3 s there, and its 1.93 s
-        // look ahead is more than all its travel, so through the hold the spot waits at the end, on the camera. The camera
-        // faced along the path until it moved off and the spot fell behind it; it now faces back at the spot throughout.
+        // Found by TheAimNeverSteps as a 114.6° step at 3 s, when the spot waited at the end of a path that ends where it
+        // starts, held 3 s there. Looking 1.93 yalms ahead, the spot stays ahead of the camera as it leaves.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 12f,
@@ -1037,141 +983,6 @@ public class TrackEvaluatorTests
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 0, 3f), 1, 2f);
         track = TrackEditing.SetHold(track, 3, 2.099152f);
         Assert.Empty(new Run(TrackEditing.SetLookAhead(track, 1.9320359f)).FacingSteps());
-    }
-
-    [Fact]
-    public void DirectionOfTravelStartsFacingTheSpotPassingWhereTheCameraWaits()
-    {
-        // The camera holds 1 s at the origin, then legs of 0.25 s reach the origin again after 0.75 s of travel, the look
-        // ahead, so at 0 s the spot passes through the camera. It passes between (-5, 0, 0) and (5, 0, 0), equally far
-        // either side, so the path there runs along +x, and the chord opens that way.
-        var track = TrackEditing.Empty(AimMode.PathTangent);
-        foreach (var point in new[] { Point(0f), Point(0f, 0f, -5f), Point(-5f), Point(0f), Point(5f) })
-            track = TrackEditing.Append(track, point);
-        for (var leg = 1; leg <= 4; leg++)
-            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
-        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 0, 1f), 0.75f));
-
-        Near(Vector3.UnitX, run.At(0.0).Forward, 1e-6f);
-        Assert.Empty(run.FacingSteps());
-    }
-
-    [Fact]
-    public void DirectionOfTravelFacesTheWayTheSpotWillLeaveWhileItWaitsOnTheHoldingCamera()
-    {
-        // Legs of 0.25 s: the camera holds at the origin from 0.25 s to 1.25 s, and reaches it again at 2 s, 0.75 s of
-        // travel after leaving. Looking that far ahead, through the hold the spot waits on the camera at that second visit,
-        // between (-5, 0, 0) and (5, 0, 0), equally far either side, so the path there runs along +x. Only the spot moves
-        // on from there, so the chord opens that way.
-        var track = TrackEditing.Empty(AimMode.PathTangent);
-        foreach (
-            var point in new[] { Point(0f, 0f, 5f), Point(0f), Point(0f, 0f, -5f), Point(-5f), Point(0f), Point(5f) }
-        )
-            track = TrackEditing.Append(track, point);
-        for (var leg = 1; leg <= 5; leg++)
-            track = TrackEditing.SetLegDuration(track, leg, 0.25f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), 0.75f));
-
-        Near(Vector3.UnitX, Facing(evaluator, 0.75), 1e-6f);
-    }
-
-    [Fact]
-    public void DirectionOfTravelFacesTheWayTheSpotLeavesTheMovingCameraWhereTheirPathsCross()
-    {
-        // Along +x through the origin, round a loop and back through it along +z, points 5 yalms apart through both
-        // crossings so the legs either side are straight. The legs either side of the first crossing take 0.5 s and of the
-        // second 0.25 s, so the camera crosses at 10 yalms a second and the spot at 20, each leg's secant, which the
-        // timing curve keeps at a point between equal ones. The camera is at the origin at 1 s and back at 2.75 s, the
-        // 1.75 s look ahead later, so at 1 s the spot passes through the moving camera and the chord opens along the
-        // spot's velocity less the camera's: (0, 0, 20) − (10, 0, 0), along (−1, 0, 2)/√5. Every leg time is a sum of
-        // quarters, exact, so the chord is exactly zero; the speeds are the straight legs' table lengths over their
-        // times, off by float rounding, a few 1e-7 of each.
-        var track = TrackEditing.Empty(AimMode.PathTangent);
-        foreach (
-            var point in new[]
-            {
-                Point(-10f),
-                Point(-5f),
-                Point(0f),
-                Point(5f),
-                Point(10f),
-                Point(10f, 0f, -10f),
-                Point(0f, 0f, -10f),
-                Point(0f, 0f, -5f),
-                Point(0f),
-                Point(0f, 0f, 5f),
-                Point(0f, 0f, 10f),
-            }
-        )
-            track = TrackEditing.Append(track, point);
-        for (var leg = 1; leg <= 10; leg++)
-            track = TrackEditing.SetLegDuration(track, leg, leg <= 3 ? 0.5f : 0.25f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.75f));
-
-        Near(new Vector3(-0.4472136f, 0f, 0.8944272f), Facing(evaluator, 1.0), 1e-5f);
-    }
-
-    [Fact]
-    public void DirectionOfTravelHoldsItsArrivalLookUnderTheSpotWaitingWhereThePathEndsAndTurnsRoundLeaving()
-    {
-        // Along the x axis at 20 yalms a second: in from x = -10 to the origin, held 1 s there, out to x = 10 and straight
-        // back to the origin, where the path ends. Its three 10-yalm legs take 1.5 s, under the 2 s look ahead, so the spot
-        // waits at the end, the origin, throughout. Every spline point is on the x axis, so arriving the camera faces +x,
-        // straight at the origin; held there it keeps that look; and moving off the spot falls behind it, so it faces -x
-        // to the end. The one turn-round is 180°, 2 as the distance between unit directions, as it leaves.
-        var track = TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f)], AimMode.PathTangent, 20f);
-        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), TrackEditing.MaxLookAhead));
-        var (arrive, depart) = (run.Arrive(1), run.Depart(1));
-
-        // Well out, then 1 ms out: the monotone timing curve runs at most 3 times the leg's 20 yalms a second, so that's at
-        // most 0.06 yalm, where the chord gives way to the direction of travel.
-        Near(Vector3.UnitX, run.At(arrive - 0.25).Forward, 1e-6f);
-        Near(Vector3.UnitX, run.At(arrive - 1e-3).Forward, 1e-6f);
-        for (var i = 0; i < 64; i++)
-            Near(Vector3.UnitX, run.At(arrive + ((depart - arrive) * i / 64)).Forward, 1e-6f);
-        Near(-Vector3.UnitX, run.At(depart + 1e-3).Forward, 1e-6f);
-        Near(-Vector3.UnitX, run.At(depart + 0.25).Forward, 1e-6f);
-        Near(-Vector3.UnitX, run.At(run.Duration).Forward, 1e-6f);
-
-        // The step search narrows a 10 ms window 8 times, to 10 ms / 256 ≈ 4e-5 s.
-        var step = Assert.Single(run.FacingSteps());
-        Assert.Equal(depart, step.Time, 4e-5);
-        Assert.Equal(2f, step.Size, 1e-6f);
-    }
-
-    [Fact]
-    public void DirectionOfTravelKeepsItsArrivalLookThroughAHoldWhereRoundingPutsTheWaitingSpotBesideIt()
-    {
-        // The track above with its end 1e-4 yalm off the held point along +z, as float rounding can leave it. Through the
-        // hold the chord (0, 0, 1e-4) is 1e-3 of the 0.1 yalm within which it gives way to the +x the camera arrived with,
-        // so the camera faces (0.999, 0, 0.001) normalised, 0.057° off +x, rather than along +z.
-        var track = TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f, z: 1e-4f)], AimMode.PathTangent, 20f);
-        var run = new Run(TrackEditing.SetLookAhead(TrackEditing.SetHold(track, 1, 1f), TrackEditing.MaxLookAhead));
-
-        var held = Vector3.Normalize(new Vector3(0.999f, 0f, 0.001f));
-        for (var i = 0; i < 64; i++)
-            Near(held, run.At(run.Arrive(1) + ((run.Depart(1) - run.Arrive(1)) * i / 64)).Forward, 1e-5f);
-    }
-
-    [Theory]
-    [InlineData(0f)]
-    [InlineData(1f)]
-    public void DirectionOfTravelMovesOnSmoothlyPastAPointBesideTheWaitingSpot(float hold)
-    {
-        // The track above with its end 0.07 yalm off the point it passes, or holds at, along +z: not where the path ends,
-        // so the camera doesn't turn round there. At the point the chord (0, 0, 0.07) is 0.7 of the 0.1 yalm within which it
-        // gives way to back along the path, the -x of the on-axis spline's tangent there, so the camera faces
-        // (-0.3, 0, 0.7) normalised: (-0.3939, 0, 0.9191), as 0.3 and 0.7 over √0.58. The camera's closest approach to the
-        // spot is that 0.07 yalm, more than the 0.05 at which the two could cancel, so the facing moves on without a step.
-        var track = TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f, z: 0.07f)], AimMode.PathTangent, 20f);
-        if (hold > 0f)
-            track = TrackEditing.SetHold(track, 1, hold);
-        var run = new Run(TrackEditing.SetLookAhead(track, TrackEditing.MaxLookAhead));
-
-        var beside = Vector3.Normalize(new Vector3(-0.3f, 0f, 0.7f));
-        Near(beside, run.At(run.Arrive(1)).Forward, 1e-5f);
-        Near(beside, run.At(run.Depart(1)).Forward, 1e-5f);
-        Assert.Empty(run.FacingSteps());
     }
 
     [Fact]

@@ -211,7 +211,7 @@ public class SceneJsonTests
             { "smoothing 1.5", t => t with { Smoothing = 1.5f } },
             // Look ahead runs 0 to 2 seconds.
             { "look ahead -0.1", t => t with { LookAhead = -0.1f } },
-            { "look ahead 2.5", t => t with { LookAhead = 2.5f } },
+            { "look ahead 10.5", t => t with { LookAhead = 10.5f } },
             // A camera can't look past straight up (π/2 ≈ 1.5708) or see with no field of view, or all round (π).
             { "pitch 1.6", t => WithPoint(t, Point(0f, pitch: 1.6f)) },
             { "fov 0", t => WithPoint(t, Point(0f, fov: 0f)) },

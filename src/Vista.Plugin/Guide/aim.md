@@ -14,7 +14,7 @@ Click {icon:Crosshairs} **Select aim** on the track row to choose:
 
 For **Watch Target** and **Follow Target**, click {icon:PencilAlt} beside the choice in the menu to reopen its window.
 
-With **Direction of travel**, the menu also shows **Look ahead**: how far ahead along the path the camera looks, in seconds. The camera turns into corners before it reaches them. At 0 it faces straight along the path.
+With **Direction of travel**, the menu also shows **Look ahead**: how far ahead along the path the camera looks, in yalms. The camera turns into corners before it reaches them. At 0 it faces straight along the path.
 
 ## Changing a point's aim
 

@@ -23,8 +23,9 @@ public class FixturesTests
     }
 
     [Fact]
-    public void AGeneratedTrackWhoseSpotPassesThroughTheMovingCameraIsLeftOut()
+    public void AGeneratedTrackWhoseSpotPassesThroughTheCameraIsLeftOut()
     {
+        // The look ahead is the loop's length from the crossing back to it, so the spot passes through the camera there.
         var crossing = RegressionScene.Cases.Single(c =>
             c.Name.StartsWith("Hairpin crossing", StringComparison.Ordinal)
         );
@@ -32,10 +33,21 @@ public class FixturesTests
     }
 
     [Fact]
-    public void ASpotWaitingWhereTheCameraStartsIsKept()
+    public void ATrackWhoseSpotCarriesOnPastTheEndIsKept()
     {
-        // At the start of the lap, 2 s of travel is past the end, so the spot waits there, where the camera is: it isn't
-        // moving, so the track is kept.
+        // Straight along +x, the spot 3 yalms ahead carries on straight past the end, so the gap is 3 yalms throughout.
+        var track = TrackEditing.SetLookAhead(
+            TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, 2f),
+            3f
+        );
+        Assert.False(SpotPassesThroughCamera(track));
+    }
+
+    [Fact]
+    public void ALapBackToTheStartWithinTheLookAheadIsKept()
+    {
+        // The lap is shorter than the look ahead, so at the start the spot is past the end, carried on beyond the camera,
+        // and it stays ahead of it as it sets off.
         var lap = RegressionScene.Cases.Single(c =>
             c.Name.StartsWith("Lap back to the start", StringComparison.Ordinal)
         );
@@ -43,53 +55,9 @@ public class FixturesTests
     }
 
     [Fact]
-    public void AGeneratedTrackWhoseCameraReachesTheSpotWaitingAtTheEndIsLeftOut()
+    public void ALapHeldAtItsStartIsKept()
     {
-        // The camera arrives at the held point where the path ends with the lap still to go, and turns round as it
-        // moves off, by design.
-        var held = RegressionScene.Cases.Single(c =>
-            c.Name.StartsWith("Held where the path ends", StringComparison.Ordinal)
-        );
-        Assert.True(SpotPassesThroughCamera(held.Track));
-    }
-
-    [Fact]
-    public void APointNearTheEndLeadingIntoAPointOnItIsLeftOut()
-    {
-        // Point 1 is 0.07 yalm from the end, (0, 0, 0): at least 1e-3 and under 0.1. Point 2, a middle point, is on the end.
-        // The path is about 31 yalms, 1.6 s at 20 yalms a second, under the 2 s look ahead, so the spot waits at the end
-        // from the start, and about 21 yalms are left at point 1.
-        var track = TrackEditing.SetLookAhead(
-            TrackThrough(
-                [Point(-10f), Point(0f, z: 0.07f), Point(0f), Point(10f, z: 3f), Point(0f)],
-                AimMode.PathTangent,
-                20f
-            ),
-            2f
-        );
-        Assert.True(NearTheEndBeforeAPointOnIt(track, new TrackEvaluator(track)));
-        Assert.True(SpotPassesThroughCamera(track));
-    }
-
-    [Theory]
-    [InlineData(0.07f)]
-    [InlineData(0.09f)]
-    public void APointBesideTheWaitingEndWithNoPointOnItIsKept(float dz)
-    {
-        // Out along x through (0, 0, 0) and back, ending dz yalm beside it: no point but the last is on the end, and the
-        // camera passes the end no nearer than dz, more than 0.05.
-        var track = TrackEditing.SetLookAhead(
-            TrackThrough([Point(-10f), Point(0f), Point(10f), Point(0f, z: dz)], AimMode.PathTangent, 20f),
-            2f
-        );
-        Assert.False(NearTheEndBeforeAPointOnIt(track, new TrackEvaluator(track)));
-        Assert.False(SpotPassesThroughCamera(track));
-    }
-
-    [Fact]
-    public void ASpotWaitingWhereTheCameraHoldsAtItsStartIsKept()
-    {
-        // Held at the start of the lap, the camera is under the waiting spot before it has moved, then leaves it.
+        // As above, held first: the spot stays beyond the camera through the hold and as it sets off.
         var lap = RegressionScene.Cases.Single(c =>
             c.Name.StartsWith("Lap held at its start", StringComparison.Ordinal)
         );

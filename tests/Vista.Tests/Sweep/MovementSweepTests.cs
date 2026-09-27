@@ -111,8 +111,8 @@ public class MovementSweepTests
         ps => Recorded(ps, i => (40f * i, 0f, i % 2 == 0 ? 30f : -30f))
     );
     private static readonly Aim LookAhead0 = new("Direction of travel: look ahead 0", ps => Travel(ps, 0f));
-    private static readonly Aim LookAheadHalf = new("Direction of travel: look ahead 0.5", ps => Travel(ps, 0.5f));
-    private static readonly Aim LookAhead2 = new("Direction of travel: look ahead 2", ps => Travel(ps, 2f));
+    private static readonly Aim LookAheadNear = new("Direction of travel: look ahead 2.5", ps => Travel(ps, 2.5f));
+    private static readonly Aim LookAheadFar = new("Direction of travel: look ahead 10", ps => Travel(ps, 10f));
     private static readonly Aim Above = new(
         "Look At: above",
         ps => LookAt(ps, Middle(ps) + (Vector3.UnitY * LookAtOffset))
@@ -161,8 +161,8 @@ public class MovementSweepTests
         OverTheTop,
         WithRoll,
         LookAhead0,
-        LookAheadHalf,
-        LookAhead2,
+        LookAheadNear,
+        LookAheadFar,
         Above,
         Below,
         Beside,
@@ -186,7 +186,7 @@ public class MovementSweepTests
     private static (float Yaw, float Pitch, float Roll) OverTheTopLook(int point) =>
         (180f * (point / 2), point % 2 == 1 ? 90f : 45f, 0f);
 
-    /// <summary>Direction of travel through <paramref name="positions"/>, looking <paramref name="lookAhead"/> seconds ahead.</summary>
+    /// <summary>Direction of travel through <paramref name="positions"/>, looking <paramref name="lookAhead"/> yalms ahead.</summary>
     private static Track Travel(Vector3[] positions, float lookAhead) =>
         TrackEditing.SetLookAhead(TrackThrough(Unaimed(positions), AimMode.PathTangent), lookAhead);
 
@@ -274,19 +274,19 @@ public class MovementSweepTests
         ),
         new(
             Doubleback,
-            LookAheadHalf,
+            LookAheadNear,
             Check.Snaps,
             1f,
-            "the spot ahead passes back through the camera and the aim turns round at once (2.75 s)",
-            "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there); regression case \"Straight doubleback, look ahead 0.5: snaps round once\""
+            "the spot 2.5 yalms ahead passes back through the camera and the aim turns round at once (2.75 s): 15 yalms out at 5 yalms a second, the camera 5t along meets the spot on its way back, 30 − (5t + 2.5) along",
+            "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there); distance-based aim §3 (line 38: the doubleback's flips stay declared); regression case \"Straight doubleback, look ahead 2.5: snaps round once\""
         ),
         new(
             Doubleback,
-            LookAhead2,
+            LookAheadFar,
             Check.Snaps,
             1f,
-            "the spot ahead passes back through the camera and the aim turns round at once (2 s)",
-            "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there)"
+            "the spot 10 yalms ahead passes back through the camera and the aim turns round at once (2 s): 15 yalms out at 5 yalms a second, the camera 5t along meets the spot on its way back, 30 − (5t + 10) along",
+            "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there); distance-based aim §3 (line 38: the doubleback's flips stay declared)"
         ),
         // At the turn-back point, 5 yalms/s along x, the Look At point 12.5 yalms off at sin θ = 0.8: 2 · 5 · 0.8 / 12.5 = 0.64,
         // plus RateAgreement's 0.04.

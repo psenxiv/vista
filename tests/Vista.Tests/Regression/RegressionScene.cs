@@ -37,7 +37,7 @@ internal static class RegressionScene
             0
         ),
         new("Crane shot, look ahead 0: looks straight up, no spin", Travel(Placed(PathShapes.Crane), lookAhead: 0f), 0),
-        new("Crane shot, look ahead 0.5: looks straight up, no spin", Travel(Placed(PathShapes.Crane)), 0),
+        new("Crane shot, look ahead 2.5: looks straight up, no spin", Travel(Placed(PathShapes.Crane)), 0),
         new(
             "Climb drifting across straight up: no flip, no spin",
             Travel([P(0f, -10f, 0f), P(0.4f, 0f, 0f), P(0f, 10f, 0f)]),
@@ -61,7 +61,7 @@ internal static class RegressionScene
         ),
         new("Easing into the last point: settles without a step", EasingIntoTheEnd(), 0),
         new("Recorded aim with field of view and roll: no pop on arrival", RecordedAim(), 0),
-        new("Straight doubleback, look ahead 0.5: snaps round once", Travel(Placed(PathShapes.Doubleback)), 1),
+        new("Straight doubleback, look ahead 2.5: snaps round once", Travel(Placed(PathShapes.Doubleback)), 1),
         new(
             "Straight doubleback, look ahead 0: snaps round once",
             Travel(Placed(PathShapes.Doubleback), lookAhead: 0f),
@@ -73,23 +73,23 @@ internal static class RegressionScene
         new("Look At straight overhead: turns round from point to point, no flip", PassingUnder(), 0),
         new("Climbing turn: horizon stays level", Travel(Placed(PathShapes.ClimbingTurn)), 0),
         new("Uneven spacing: steady speed through its points", Travel(Placed(PathShapes.UnevenSpacing)), 0),
-        new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
-        new("Hairpin crossing its own path, look ahead 1.69: one expected flip", HairpinCrossing(), 1),
+        new("Lap back to the start, look ahead 10: no flip as it sets off", LapBackToTheStart(), 0),
+        new("Hairpin crossing its own path, look ahead 8.47: one expected flip", HairpinCrossing(), 1),
         new("Field of view recorded at 3° and 143°: zooms from 5° to 120° and back, no pop", PastTheFovRange(), 0),
         new(
-            "Direction of travel through a held corner, look ahead 1: holds its look, no swing",
-            TrackEditing.SetHold(Travel([P(0f, 0f, 0f), P(10f, 0f, 0f), P(10f, 0f, 10f)], lookAhead: 1f), 1, 3f),
+            "Direction of travel through a held corner, look ahead 5: holds its look, no swing",
+            TrackEditing.SetHold(Travel([P(0f, 0f, 0f), P(10f, 0f, 0f), P(10f, 0f, 10f)], lookAhead: 5f), 1, 3f),
             0
         ),
         new(
-            "Lap held at its start, look ahead 2: faces back, no turn-round as it sets off",
+            "Lap held at its start, look ahead 10: faces the way the lap finishes, no turn-round as it sets off",
             TrackEditing.SetHold(LapBackToTheStart(), 0, 2f),
             0
         ),
         new(
-            "Held where the path ends, look ahead 2: holds its look, turns round as it sets off",
+            "Held where the path ends, look ahead 10: faces the way the lap finishes, no turn-round as it sets off",
             HeldWhereThePathEnds(),
-            1
+            0
         ),
     ];
 
@@ -189,32 +189,35 @@ internal static class RegressionScene
         return TrackEditing.SetHold(LegEasing.Set(track, 2, Easing.EaseOut), 2, 1.5f);
     }
 
-    /// <summary>A 10-yalm triangle at 25 yalms a second, holding 2 s back at its start: at 0 s the spot 2 s ahead waits where the camera is.</summary>
+    /// <summary>A 2.5-yalm triangle, about 8.8 yalms round, holding 2 s back at its start: under the 10-yalm look ahead, so at 0 s the spot is past the end, carried on beyond the camera.</summary>
     private static Track LapBackToTheStart()
     {
         var track = Travel(
-            [P(-5f, 0f, 5f), P(-5f, 0f, -5f), P(5f, 0f, -5f), P(-5f, 0f, 5f)],
+            [P(-1.25f, 0f, 1.25f), P(-1.25f, 0f, -1.25f), P(1.25f, 0f, -1.25f), P(-1.25f, 0f, 1.25f)],
             TrackEditing.MaxLookAhead
         );
-        return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 3, 2f);
+        return TrackEditing.SetHold(track, 3, 2f);
     }
 
-    /// <summary>In along +x to a point held 2 s, then the lap above back to it, at 25 yalms a second: the lap is under the 2 s look ahead, so the spot waits at its end, on the held camera.</summary>
+    /// <summary>In along +x to a point held 2 s, then the lap above back to it: the lap is under the 10-yalm look ahead, so while the camera holds the spot is past the end, beyond it.</summary>
     private static Track HeldWhereThePathEnds()
     {
         var track = Travel(
-            [P(-15f, 0f, 5f), P(-5f, 0f, 5f), P(-5f, 0f, -5f), P(5f, 0f, -5f), P(-5f, 0f, 5f)],
+            [
+                P(-11.25f, 0f, 1.25f),
+                P(-1.25f, 0f, 1.25f),
+                P(-1.25f, 0f, -1.25f),
+                P(1.25f, 0f, -1.25f),
+                P(-1.25f, 0f, 1.25f),
+            ],
             TrackEditing.MaxLookAhead
         );
-        return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 1, 2f);
+        return TrackEditing.SetHold(track, 1, 2f);
     }
 
-    /// <summary>A teardrop at 15 yalms a second whose way back crosses its way out, with a look ahead of the 1.69 s the loop takes from the crossing back to it: the spot ahead passes through the camera there, and the aim turns round at once.</summary>
+    /// <summary>A teardrop whose way back crosses its way out, with a look ahead of the 8.47 yalms round the loop from the crossing back to it, found numerically: the spot ahead passes through the camera there, and the aim turns round at once.</summary>
     private static Track HairpinCrossing() =>
-        TrackEditing.SetSpeed(
-            Travel([P(-10f, 0f, -3f), P(5f, 0f, 3f), P(5f, 0f, -3f), P(-10f, 0f, 3f)], 1.6930684f),
-            15f
-        );
+        Travel([P(-10f / 3f, 0f, -1f), P(5f / 3f, 0f, 1f), P(5f / 3f, 0f, -1f), P(-10f / 3f, 0f, 1f)], 8.465311f);
 
     /// <summary>Recorded aim through points recorded at 3°, 143° and 3°, past the editor's 5° to 120°, holding a second at each.</summary>
     private static Track PastTheFovRange()

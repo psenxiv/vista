@@ -44,9 +44,9 @@ public static class TrackEditing
     /// <summary>A new track's smoothing, from 0 (exact) to 1 (heavy).</summary>
     public const float DefaultSmoothing = 0.3f;
 
-    /// <summary>Seconds ahead along the path a Direction of travel camera looks, by default and at most.</summary>
-    public const float DefaultLookAhead = 0.5f;
-    public const float MaxLookAhead = 2f;
+    /// <summary>Yalms ahead along the path a Direction of travel camera looks, by default and at most.</summary>
+    public const float DefaultLookAhead = 2.5f;
+    public const float MaxLookAhead = 10f;
 
     private const int DurationSteps = 60;
 
@@ -322,12 +322,12 @@ public static class TrackEditing
         return clamped == track.AimHeight ? track : track with { AimHeight = clamped };
     }
 
-    /// <summary>Sets how far ahead along the path Direction of travel looks, clamped to 0 to <see cref="MaxLookAhead"/> seconds.</summary>
-    public static Track SetLookAhead(Track track, float seconds)
+    /// <summary>Sets how far ahead along the path Direction of travel looks, clamped to 0 to <see cref="MaxLookAhead"/> yalms.</summary>
+    public static Track SetLookAhead(Track track, float yalms)
     {
-        if (!float.IsFinite(seconds))
+        if (!float.IsFinite(yalms))
             return track;
-        var clamped = Math.Clamp(seconds, 0f, MaxLookAhead);
+        var clamped = Math.Clamp(yalms, 0f, MaxLookAhead);
         return clamped == track.LookAhead ? track : track with { LookAhead = clamped };
     }
 

@@ -15,6 +15,9 @@ public static class Units
     /// <summary>ImGui's format for a position, height or distance in yalms: two decimals.</summary>
     public const string YalmsField = "%.2f";
 
+    /// <summary>ImGui's format for yalms with their unit.</summary>
+    public const string YalmsUnitField = YalmsField + " y";
+
     /// <summary>ImGui's format for a speed in yalms per second: two decimals.</summary>
     public const string YalmsPerSecondField = "%.2f";
 
