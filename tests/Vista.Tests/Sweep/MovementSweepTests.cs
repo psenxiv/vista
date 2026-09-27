@@ -269,23 +269,6 @@ public class MovementSweepTests
         ),
     ];
 
-    /// <summary>Speed steps at a point found by the sweep, on every aim since speed is the path's.</summary>
-    private static readonly Pending[] PendingSpeed =
-    [
-        new(Hairpin, null, Check.SpeedContinuous, 1, 0.13664f),
-        new(Hairpin, null, Check.SpeedContinuous, 2, 0.13664f),
-        new(Doubleback, null, Check.SpeedContinuous, 1, 0.16694f),
-        new(Loop, null, Check.SpeedContinuous, 3, 0.030149f),
-        new(Loop, null, Check.SpeedContinuous, 5, 0.030728f),
-        new(Spiral, null, Check.SpeedContinuous, 1, 0.05279f),
-        new(Spiral, null, Check.SpeedContinuous, 7, 0.053761f),
-        new(Orbit, null, Check.SpeedContinuous, 1, 0.037662f),
-        new(Orbit, null, Check.SpeedContinuous, 7, 0.036651f),
-        new(Uneven, null, Check.SpeedContinuous, 1, 0.24588f),
-        new(Uneven, null, Check.SpeedContinuous, 2, 0.24929f),
-        new(Uneven, null, Check.SpeedContinuous, 3, 0.2943f),
-    ];
-
     /// <summary>Turn-rate jumps at a point found by the sweep.</summary>
     private static readonly Pending[] PendingTurnRate =
     [
@@ -305,13 +288,13 @@ public class MovementSweepTests
         new(Hairpin, Above, Check.TurnRateContinuous, 2, 0.67192f),
         new(Hairpin, Below, Check.TurnRateContinuous, 1, 0.67216f),
         new(Hairpin, Below, Check.TurnRateContinuous, 2, 0.67192f),
-        new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1, 1.1766f),
-        new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1, 1.1766f),
-        new(Doubleback, Above, Check.TurnRateContinuous, 1, 0.86573f),
-        new(Doubleback, Below, Check.TurnRateContinuous, 1, 0.86573f),
-        new(Doubleback, Beside, Check.TurnRateContinuous, 1, 0.86552f),
-        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1, 1.3524f),
-        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1, 1.3524f),
+        new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1, 1.2282f),
+        new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1, 1.2282f),
+        new(Doubleback, Above, Check.TurnRateContinuous, 1, 0.58965f),
+        new(Doubleback, Below, Check.TurnRateContinuous, 1, 0.58965f),
+        new(Doubleback, Beside, Check.TurnRateContinuous, 1, 0.5897f),
+        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1, 0.92128f),
+        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1, 0.92128f),
         new(Crane, Above, Check.TurnRateContinuous, 1, 0.37404f),
         new(Crane, Below, Check.TurnRateContinuous, 3, 0.37394f),
         new(Spiral, OverAPoint, Check.TurnRateContinuous, 3, 0.34834f),
@@ -320,19 +303,10 @@ public class MovementSweepTests
         new(Orbit, OverAPoint, Check.TurnRateContinuous, 5, 0.28161f),
         new(Orbit, UnderAPoint, Check.TurnRateContinuous, 3, 0.2813f),
         new(Orbit, UnderAPoint, Check.TurnRateContinuous, 5, 0.28161f),
-        new(Uneven, Above, Check.TurnRateContinuous, 2, 0.11917f),
-        new(Uneven, Above, Check.TurnRateContinuous, 3, 0.13286f),
-        new(Uneven, Below, Check.TurnRateContinuous, 2, 0.11917f),
-        new(Uneven, Below, Check.TurnRateContinuous, 3, 0.13286f),
-        new(Uneven, Beside, Check.TurnRateContinuous, 2, 0.048447f),
-        new(Uneven, OverAPoint, Check.TurnRateContinuous, 2, 0.11917f),
-        new(Uneven, OverAPoint, Check.TurnRateContinuous, 3, 0.13286f),
-        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 2, 0.11917f),
-        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 3, 0.13286f),
     ];
 
     /// <summary>Failures waiting for the user's triage.</summary>
-    private static readonly Pending[] PendingTriage = [.. PendingSpeed, .. PendingTurnRate];
+    private static readonly Pending[] PendingTriage = [.. PendingTurnRate];
 
     /// <summary>Every check that applies to <paramref name="combination"/>, measured on <paramref name="run"/>.</summary>
     private static List<Measure> MeasureAll(Combination combination, Track track, Run run)

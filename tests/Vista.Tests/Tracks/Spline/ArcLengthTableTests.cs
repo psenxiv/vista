@@ -1,6 +1,9 @@
 using System.Numerics;
+using CsCheck;
+using Vista.Core.Tracks;
 using Vista.Core.Tracks.Spline;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Tracks.Spline;
 
@@ -46,6 +49,41 @@ public class ArcLengthTableTests
         Assert.True(
             naiveDistances.Max() > naiveMean * 1.5f,
             "naive parameter spacing should be uneven on a bunched-then-spread segment"
+        );
+    }
+
+    [Fact]
+    public void AnEvenlySpacedStraightPathMapsDistanceToParameterOneToOne()
+    {
+        // Two points: with reflected ends the path is the straight line at even parameter speed (CatmullRomTests), so the
+        // distance fraction and the parameter are the same number everywhere.
+        var table = new ArcLengthTable([new Vector3(0f, 0f, 0f), new Vector3(10f, 0f, 0f)]);
+
+        Assert.Equal(0.37f, table.ParameterAt(0, 0.37f), 1e-5f);
+        Assert.Equal(0.9f, table.ParameterAt(0, 0.9f), 1e-5f);
+    }
+
+    [Fact]
+    [Trait("Category", "Property")]
+    public void TheParameterNeverRunsBackwardsAsTheDistanceGrows()
+    {
+        AnyPathTrack.Sample(
+            track =>
+            {
+                var points = track.Points.Select(p => p.Position).ToArray();
+                var table = new ArcLengthTable(points);
+                for (var segment = 0; segment < table.SegmentCount; segment++)
+                {
+                    var previous = 0f;
+                    for (var i = 0; i <= 600; i++)
+                    {
+                        var t = table.ParameterAt(segment, i / 600f);
+                        Assert.True(t >= previous, $"segment {segment}: {t} after {previous} at fraction {i / 600f}");
+                        previous = t;
+                    }
+                }
+            },
+            print: Kept<Track>(PrintTrack)
         );
     }
 
