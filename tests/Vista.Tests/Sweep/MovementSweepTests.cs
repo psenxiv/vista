@@ -267,7 +267,26 @@ public class MovementSweepTests
             "the spot ahead passes back through the camera and the aim turns round at once (2 s)",
             "full-freedom camera, Changes made while building, 2026-09-25 entries (line 126 names the straight doubleback's flip; line 127: any rule that faces a moving spot passing through the moving camera turns about 180° there)"
         ),
+        // At the turn-back point, 5 yalms/s along x, the Look At point 12.5 yalms off at sin θ = 0.8: 2 · 5 · 0.8 / 12.5 = 0.64,
+        // plus RateAgreement's 0.04.
+        TurnsBack(Above, 0.68f),
+        TurnsBack(Below, 0.68f),
+        TurnsBack(Beside, 0.68f),
+        // The Look At point straight above or below the turn-back point, 10 yalms off: 2 · 5 / 10 = 1, plus 0.04.
+        TurnsBack(OverAPoint, 1.04f),
+        TurnsBack(UnderAPoint, 1.04f),
     ];
+
+    /// <summary>Look At's turn rate flipping as the camera reverses at the doubleback's turn-back point, within <paramref name="bound"/> rad/s.</summary>
+    private static Declared TurnsBack(Aim aim, float bound) =>
+        new(
+            Doubleback,
+            aim,
+            Check.TurnRateContinuous,
+            bound,
+            "the camera reverses at full speed at the turn-back point (3 s), so the Look At's turn rate flips there",
+            "movement sweep §10 (declared 2026-09-27): a jump of 2·v·sin θ / r, plus RateAgreement"
+        );
 
     /// <summary>Turn-rate jumps at a point found by the sweep.</summary>
     private static readonly Pending[] PendingTurnRate =
@@ -290,11 +309,6 @@ public class MovementSweepTests
         new(Hairpin, Below, Check.TurnRateContinuous, 2, 0.67192f),
         new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1, 1.2282f),
         new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1, 1.2282f),
-        new(Doubleback, Above, Check.TurnRateContinuous, 1, 0.58965f),
-        new(Doubleback, Below, Check.TurnRateContinuous, 1, 0.58965f),
-        new(Doubleback, Beside, Check.TurnRateContinuous, 1, 0.5897f),
-        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1, 0.92128f),
-        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1, 0.92128f),
         new(Crane, Above, Check.TurnRateContinuous, 1, 0.37404f),
         new(Crane, Below, Check.TurnRateContinuous, 3, 0.37394f),
         new(Spiral, OverAPoint, Check.TurnRateContinuous, 3, 0.34834f),
