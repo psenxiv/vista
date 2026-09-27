@@ -3,16 +3,12 @@
 ## X.Y.Z.N
 
 - Reworked how the camera moves and turns along a track, so shots flow more smoothly through points and at their start and end. Existing shots may look slightly different.
-- Dragging the scrub bar to the end of a looping shot or a playlist entry now holds its last frame.
 - Direction of travel's Look ahead is now a distance in yalms instead of seconds. Existing tracks keep their number, now in yalms, so check any track that uses it.
-- Track, scene and preset names can be up to 100 characters long.
-- The Vista window has a menu bar: Scene, Edit, View, Preview and Help. The buttons you use now and then moved into it, and the top row keeps Undo, Redo, Timing and Fly speed.
-- Duplicate a point from its right-click menu or the Edit menu. The copy goes straight after it.
-- Hide the track names above track anchors, or change their size, from the View menu. Vista remembers both.
-- The Preview menu has a ghost camera, which plays a track in Edit on a camera outline while you keep your own view, and a playback speed for watching a track slower or faster in Edit.
-- In Edit, clicking a playlist entry edits its track, and a bar marks the entries that play the track you're editing.
-- Clicking a point's Duration, Speed or Hold field selects its row. Ctrl + click and Shift + click there select rows instead of typing.
+- A new menu bar holds the buttons you use now and then, plus new options: hide or resize track names, and in Edit a ghost camera and a playback speed for previews.
 - In Live, the scrub bar covers the whole playlist, with a stretch for each entry. Drag it to move anywhere in the playlist.
+- Duplicate points from their right-click menu or the Edit menu.
+- Clicking a point's fields selects its row, and clicking a playlist entry edits its track.
+- Names can be up to 100 characters long.
 
 ## 0.11.0.1
 
