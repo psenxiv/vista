@@ -9,14 +9,14 @@ using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>Live's scrub bar over the whole playlist, drawn like a slider: a segment per entry, pass ticks, the playing entry lit, and a readout.</summary>
+/// <summary>Live's scrub bar over the whole playlist, drawn like a slider: a segment per entry, pass ticks, the playing entry lit, and each entry's name above it on hover.</summary>
 internal static class PlaylistBar
 {
     // ImGui's inset of a slider's grab from its frame.
     private const float GrabPadding = 2f;
 
-    /// <summary>Draws the bar across the row and seeks while it's held, calling <paramref name="activated"/> as a drag starts; false, drawing nothing, when Live has no playlist.</summary>
-    public static bool Draw(SessionState session, Scrubber scrub, Action activated)
+    /// <summary>Draws the bar <paramref name="width"/> wide and seeks while it's held, calling <paramref name="activated"/> as a drag starts; false, drawing nothing, when Live has no playlist.</summary>
+    public static bool Draw(SessionState session, Scrubber scrub, Action activated, float width)
     {
         if (session.Transport.Timeline is not { } timeline || session.Director.Playlist is not { } playlist)
             return false;
@@ -26,7 +26,7 @@ internal static class PlaylistBar
         ImGui.BeginDisabled(session.Released || timeline.Total <= 0.0);
 
         var min = ImGui.GetCursorScreenPos();
-        var size = new Vector2(MathF.Max(ImGui.GetContentRegionAvail().X, 1f), ImGui.GetFrameHeight());
+        var size = new Vector2(MathF.Max(width, 1f), ImGui.GetFrameHeight());
         var max = min + size;
         ImGui.InvisibleButton("##playlist-scrub", size);
         var grab = style.GrabMinSize;
@@ -76,16 +76,16 @@ internal static class PlaylistBar
                 style.FrameBorderSize
             );
 
-        var padding = style.FramePadding.X;
-        var readout = bar.Readout(playlist.Index, head, size.X - (padding * 2f), s => ImGui.CalcTextSize(s).X);
-        var text = ImGui.CalcTextSize(readout);
-        var textAt = new Vector2(min.X + MathF.Max(padding, (size.X - text.X) / 2f), min.Y + ((size.Y - text.Y) / 2f));
-        list.PushClipRect(min, max, true);
-        list.AddText(textAt, ImGui.GetColorU32(ImGuiCol.Text), readout);
-        list.PopClipRect();
-
         if (hovered is not null && bar.Label(hovered) is { } label)
-            ImGui.SetTooltip(label);
+        {
+            // Above the bar at the mouse, cut to the bar's width.
+            ImGui.SetNextWindowPos(
+                new Vector2(ImGui.GetMousePos().X, min.Y - style.ItemSpacing.Y),
+                ImGuiCond.Always,
+                new Vector2(0.5f, 1f)
+            );
+            ImGui.SetTooltip(RowFit.Ellipsis(label, size.X, s => ImGui.CalcTextSize(s).X));
+        }
         ImGui.EndDisabled();
         return true;
     }

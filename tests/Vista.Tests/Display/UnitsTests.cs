@@ -11,6 +11,7 @@ public class UnitsTests
     {
         Assert.Equal("1.50 s", Units.Seconds(1.5));
         Assert.Equal("1.50", Units.SecondsValue(1.5));
+        Assert.Equal("3.93 / 8.17 s", Units.SecondsOf(3.93, 8.17));
         Assert.Equal("12.35 y", Units.Yalms(12.345f));
         Assert.Equal("0.25 y/s", Units.YalmsPerSecond(0.25f));
     }

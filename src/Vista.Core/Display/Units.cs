@@ -30,6 +30,9 @@ public static class Units
     /// <summary><paramref name="seconds"/> as text without its unit, to <see cref="SecondsNumber"/>'s precision.</summary>
     public static string SecondsValue(double seconds) => Invariant($"{seconds:0.00}");
 
+    /// <summary>How far through <paramref name="total"/> seconds <paramref name="seconds"/> is, as "3.93 / 8.17 s".</summary>
+    public static string SecondsOf(double seconds, double total) => $"{SecondsValue(seconds)} / {Seconds(total)}";
+
     /// <summary><paramref name="yalms"/> as text with its unit, to <see cref="YalmsField"/>'s precision.</summary>
     public static string Yalms(float yalms) => Yalms(yalms, "0.00");
 

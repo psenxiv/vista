@@ -21,7 +21,7 @@ Each entry has its own stretch, as wide as its share of the time, and the entry 
 
 An entry that repeats has a longer stretch, with a faint line where each repeat starts. An entry that plays until you stop ends the bar and shows once.
 
-The text on the bar shows the entry that is playing, how far into it you are and its length, then how far into the playlist you are and its length.
+The time beside the bar is how far into the playlist you are, and its length.
 
 ## Hiding the game UI
 

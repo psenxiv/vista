@@ -29,21 +29,6 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene)
     public string? Label(PlaylistSegment segment) =>
         Entry(segment) is (var number, var name) ? Invariant($"{number} · {name}") : null;
 
-    /// <summary>Segment <paramref name="playing"/>'s label, the time into its entry over the entry's length, then <paramref name="head"/> over the playlist's length; the track name is cut to fit <paramref name="width"/> as <paramref name="measure"/> measures text.</summary>
-    public string Readout(int playing, double head, float width, Func<string, float> measure)
-    {
-        var segment = timeline.Segments[playing];
-        var times = Invariant(
-            $"{Units.SecondsValue(head - segment.Start)} / {Units.Seconds(segment.Length)}   |   {Units.SecondsValue(head)} / {Units.Seconds(timeline.Total)}"
-        );
-        if (Entry(segment) is not (var number, var name))
-            return times;
-
-        var prefix = Invariant($"{number} · ");
-        var suffix = "  " + times;
-        return prefix + RowFit.Ellipsis(name, width - measure(prefix + suffix), measure) + suffix;
-    }
-
     /// <summary>The segment's entry as its 1-based place in the scene's playlist and its track's name, or null when either is gone.</summary>
     private (int Number, string Name)? Entry(PlaylistSegment segment)
     {

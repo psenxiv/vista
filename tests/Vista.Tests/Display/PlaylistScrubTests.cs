@@ -13,9 +13,6 @@ public class PlaylistScrubTests
 {
     private const float Tolerance = 1e-5f;
 
-    // Counts characters, so widths are string lengths.
-    private static readonly Func<string, float> Length = s => s.Length;
-
     // Entries: 1 Opening (5 s), 2 Empty (no points, so not played), 3 Hairpin (2 s three times), 4 Orbit (4 s looping forever).
     // Live plays three segments: Opening 0 to 5, Hairpin 5 to 11, Orbit 11 to 15.
     private static (PlaylistScrub Scrub, Scene Scene) Example()
@@ -131,32 +128,5 @@ public class PlaylistScrubTests
         var removed = PlaylistEditing.Remove(scene, [scene.Playlist[2].Id]);
 
         Assert.Null(new PlaylistScrub(scrub.Timeline, removed).Label(scrub.Timeline.Segments[1]));
-    }
-
-    [Fact]
-    public void TheReadoutIsTheEntryItsTimeInTheEntryAndItsTimeInThePlaylist()
-    {
-        // 8.1 s is 3.1 s into Hairpin, which runs 5 to 11 s, 6 s long; the playlist is 15 s.
-        Assert.Equal("3 · Hairpin  3.10 / 6.00 s   |   8.10 / 15.00 s", Example().Scrub.Readout(1, 8.1, 1000f, Length));
-    }
-
-    [Fact]
-    public void ANameTooWideForTheBarIsCut()
-    {
-        // "3 · " and "  3.10 / 6.00 s   |   8.10 / 15.00 s" take 4 + 36 = 40 of 46 characters,
-        // leaving 6 for the 7-letter Hairpin: its start "Hai" and the three-stop ellipsis.
-        Assert.Equal("3 · Hai...  3.10 / 6.00 s   |   8.10 / 15.00 s", Example().Scrub.Readout(1, 8.1, 46f, Length));
-    }
-
-    [Fact]
-    public void AnEntryTheSceneNoLongerHasReadsOutItsTimesAlone()
-    {
-        var (scrub, scene) = Example();
-        var removed = PlaylistEditing.Remove(scene, [scene.Playlist[2].Id]);
-
-        Assert.Equal(
-            "3.10 / 6.00 s   |   8.10 / 15.00 s",
-            new PlaylistScrub(scrub.Timeline, removed).Readout(1, 8.1, 1000f, Length)
-        );
     }
 }

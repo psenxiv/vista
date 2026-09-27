@@ -872,24 +872,34 @@ internal sealed class TrackEditorWindow : Window
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 
-    /// <summary>Play/Pause and Restart, then the scrub bar: the whole playlist in Live, otherwise the edited track with its current and total time.</summary>
+    /// <summary>Play/Pause and Restart, the scrub bar (the whole playlist in Live, otherwise the edited track), then how far through it the head is.</summary>
     private void DrawScrubRow()
+    {
+        var transport = session.Transport;
+        var (head, total) = transport.Timeline is { } timeline
+            ? (transport.PlaylistHead, timeline.Total)
+            : (transport.ScrubHead, transport.ScrubLength);
+
+        DrawTransport();
+        // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var timeWidth = ImGui.CalcTextSize(Units.SecondsOf(total, total)).X;
+        var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
+        if (!PlaylistBar.Draw(session, scrub, fields.Commit, width))
+            DrawTrackBar(width);
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted(Units.SecondsOf(head, total));
+    }
+
+    /// <summary>The edited track's scrub bar, <paramref name="width"/> wide.</summary>
+    private void DrawTrackBar(float width)
     {
         var duration = (float)session.Transport.ScrubLength;
         var head = (float)session.Transport.ScrubHead;
-
-        DrawTransport();
-        if (PlaylistBar.Draw(session, scrub, fields.Commit))
-            return;
         ImGui.BeginDisabled(session.Released || duration <= 0f);
-        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-        var moved = ImGui.SliderFloat(
-            "##scrub",
-            ref head,
-            0f,
-            MathF.Max(duration, 0.001f),
-            $"{Units.SecondsNumber} / {Units.Seconds(duration)}"
-        );
+        ImGui.SetNextItemWidth(MathF.Max(width, 1f));
+        var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), "");
         if (ImGui.IsItemActivated())
         {
             fields.Commit();
