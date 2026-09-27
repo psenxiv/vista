@@ -884,7 +884,7 @@ internal sealed class TrackEditorWindow : Window
         DrawTransport();
         // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var timeWidth = ImGui.CalcTextSize(Units.SecondsOf(total, total)).X;
+        var timeWidth = ImGui.CalcTextSize(Units.ClockOf(total, total)).X;
         var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
         using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubGrabScale))
         {
@@ -894,7 +894,7 @@ internal sealed class TrackEditorWindow : Window
         ZoomScrub(view, (float)total);
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(Units.SecondsOf(head, total));
+        ImGui.TextUnformatted(Units.ClockOf(head, total));
     }
 
     /// <summary>The scrub bar's zoom for this frame: whole for a new bar (another track, or Edit to Live) or one no longer zoomed, else kept within <paramref name="total"/>.</summary>

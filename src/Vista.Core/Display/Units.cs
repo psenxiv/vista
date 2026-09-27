@@ -30,8 +30,16 @@ public static class Units
     /// <summary><paramref name="seconds"/> as text without its unit, to <see cref="SecondsNumber"/>'s precision.</summary>
     public static string SecondsValue(double seconds) => Invariant($"{seconds:0.00}");
 
-    /// <summary>How far through <paramref name="total"/> seconds <paramref name="seconds"/> is, as "3.93 / 8.17 s".</summary>
-    public static string SecondsOf(double seconds, double total) => $"{SecondsValue(seconds)} / {Seconds(total)}";
+    /// <summary><paramref name="seconds"/> as minutes and seconds to two places, "3:12.90"; before the start reads as "0:00.00".</summary>
+    public static string Clock(double seconds)
+    {
+        // Rounded to hundredths first, so 59.999 s is 1:00.00, never 0:60.00.
+        var hundredths = (long)Math.Round(Math.Max(seconds, 0.0) * 100.0);
+        return Invariant($"{hundredths / 6000}:{hundredths % 6000 / 100:00}.{hundredths % 100:00}");
+    }
+
+    /// <summary>How far through <paramref name="total"/> seconds <paramref name="seconds"/> is, as "0:03.93 / 3:12.90".</summary>
+    public static string ClockOf(double seconds, double total) => $"{Clock(seconds)} / {Clock(total)}";
 
     /// <summary><paramref name="yalms"/> as text with its unit, to <see cref="YalmsField"/>'s precision.</summary>
     public static string Yalms(float yalms) => Yalms(yalms, "0.00");
