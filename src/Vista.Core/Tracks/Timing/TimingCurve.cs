@@ -74,8 +74,9 @@ public sealed class TimingCurve
         {
             var key = keys[k];
             var auto =
-                k == 0 ? delta[0]
-                : k == n - 1 ? delta[n - 2]
+                n == 2 ? delta[0]
+                : k == 0 ? EndRaw(h[0], delta[0], h[1], delta[1])
+                : k == n - 1 ? EndRaw(h[n - 2], delta[n - 2], h[n - 3], delta[n - 3])
                 : InteriorRaw(delta[k - 1], delta[k], h[k - 1], h[k]);
             rawIn[k] = SideRaw(key.InMode, key.InTangent, auto, k > 0 ? delta[k - 1] : 0f);
             rawOut[k] = SideRaw(key.OutMode, key.OutTangent, auto, k < n - 1 ? delta[k] : 0f);
@@ -127,6 +128,13 @@ public sealed class TimingCurve
         var w1 = (2f * hNext) + hPrev;
         var w2 = hNext + (2f * hPrev);
         return (w1 + w2) / ((w1 / deltaPrev) + (w2 / deltaNext));
+    }
+
+    /// <summary>A Smooth end key's slope by SciPy PCHIP's three-point end rule, from the end interval (<paramref name="h0"/>, <paramref name="d0"/>) and the next; 0 where it would run backwards or the end interval is still.</summary>
+    private static float EndRaw(float h0, float d0, float h1, float d1)
+    {
+        var slope = ((((2f * h0) + h1) * d0) - (h0 * d1)) / (h0 + h1);
+        return d0 > SecantEpsilon && slope > 0f ? slope : 0f;
     }
 
     /// <summary>Clamps an interval's tangent pair to the [0,3] square per ratio so its cubic stays monotone; a zero secant zeroes both.</summary>

@@ -175,17 +175,58 @@ public class TimingCurveTests
     }
 
     [Fact]
-    public void OneSidedEndsGiveFullSpeedStartAndDeadStopAtEnd()
+    public void SmoothEndsOnARisingTrackStartAtRestAndEndFast()
     {
+        // Intervals of 1 s averaging 1 and 3 (SciPy PCHIP's end rule, spec §2):
+        // start ((2·1 + 1)·1 − 1·3) / 2 = 0; end ((2·1 + 1)·3 − 1·1) / 2 = 4, within the last interval's bound of 3 × 3 = 9.
         var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(2f, 4f) };
         var curve = new TimingCurve(keys);
 
-        const double eps = 1e-3;
-        var speedAtStart = (curve.PositionAt(eps) - curve.PositionAt(0)) / eps;
-        var speedAtEnd = (curve.PositionAt(2.0) - curve.PositionAt(2.0 - eps)) / eps;
+        Assert.Equal(0f, curve.SideSlope(0, KeySide.Out), 1e-4f);
+        Assert.Equal(4f, curve.SideSlope(2, KeySide.In), 1e-4f);
+    }
 
-        Assert.Equal(1.0, speedAtStart, 2);
-        Assert.Equal(3.0, speedAtEnd, 2);
+    [Fact]
+    public void SmoothEndsFollowTheTrendOfTheirTwoNearestLegs()
+    {
+        // Intervals of 2 s averaging 5 and 4 s averaging 2.5 (SciPy PCHIP's end rule, spec §2):
+        // first key ((2·2 + 4)·5 − 2·2.5) / (2 + 4) = 35/6; last key ((2·4 + 2)·2.5 − 4·5) / (4 + 2) = 5/6.
+        var curve = new TimingCurve([Key(0f, 0f), Key(2f, 10f), Key(6f, 20f)]);
+
+        Assert.Equal(35f / 6f, curve.SideSlope(0, KeySide.Out), 1e-4f);
+        Assert.Equal(5f / 6f, curve.SideSlope(2, KeySide.In), 1e-4f);
+    }
+
+    [Fact]
+    public void ASmoothEndStartsAtRestWhereTheTrendWouldRunBackwards()
+    {
+        // Averages 5 then 50 over 2 s each: ((2·2 + 2)·5 − 2·50) / 4 = −17.5, the wrong sign, so the first key starts at 0.
+        var curve = new TimingCurve([Key(0f, 0f), Key(2f, 10f), Key(4f, 110f)]);
+
+        Assert.Equal(0f, curve.SideSlope(0, KeySide.Out));
+    }
+
+    [Fact]
+    public void SmoothEndsKeepTheLegsSpeedWithTwoKeysOrEvenLegs()
+    {
+        // Two keys: the end rule needs two intervals, so both ends keep the secant, 10 / 2 = 5.
+        var two = new TimingCurve([Key(0f, 0f), Key(2f, 10f)]);
+        Assert.Equal(5f, two.SideSlope(0, KeySide.Out), 1e-4f);
+        Assert.Equal(5f, two.SideSlope(1, KeySide.In), 1e-4f);
+
+        // Even legs, 5 yalms/s on 2 s and on 4 s: ((2·2 + 4)·5 − 2·5) / 6 = 30/6 = 5 at the first key, and 5 at the last.
+        var even = new TimingCurve([Key(0f, 0f), Key(2f, 10f), Key(6f, 30f)]);
+        Assert.Equal(5f, even.SideSlope(0, KeySide.Out), 1e-4f);
+        Assert.Equal(5f, even.SideSlope(2, KeySide.In), 1e-4f);
+    }
+
+    [Fact]
+    public void ASmoothLastKeyAfterAHoldStaysAtRest()
+    {
+        // The last interval is a hold (10 to 10), so δ₀ = 0 and the end slope is 0, as before.
+        var curve = new TimingCurve([Key(0f, 0f), Key(2f, 10f), Key(4f, 10f)]);
+
+        Assert.Equal(0f, curve.SideSlope(2, KeySide.In));
     }
 
     [Fact]
