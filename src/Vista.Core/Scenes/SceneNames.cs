@@ -4,7 +4,7 @@ namespace Vista.Core.Scenes;
 public static class SceneNames
 {
     /// <summary>The longest name, in characters, after trimming.</summary>
-    public const int MaxLength = 64;
+    public const int MaxLength = 100;
 
     private const string Unusable = "That name can't be used as a file name.";
 

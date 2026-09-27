@@ -119,8 +119,8 @@ public class SceneEditingTests
 
         Assert.Equal("Enter a name.", Refusal(""));
         Assert.Equal("Enter a name.", Refusal("   "));
-        // 65 characters is one past SceneNames.MaxLength.
-        Assert.Equal("That name is too long.", Refusal(new string('a', 65)));
+        // 101 characters is one past SceneNames.MaxLength.
+        Assert.Equal("That name is too long.", Refusal(new string('a', 101)));
     }
 
     [Fact]
@@ -131,8 +131,8 @@ public class SceneEditingTests
 
         string Renamed(string name) => SceneEditing.Rename(scene, id, name).Tracks[1].Name;
 
-        // 64 characters is SceneNames.MaxLength, counted after trimming.
-        Assert.Equal(new string('a', 64), Renamed($"  {new string('a', 64)}  "));
+        // 100 characters is SceneNames.MaxLength, counted after trimming.
+        Assert.Equal(new string('a', 100), Renamed($"  {new string('a', 100)}  "));
         // File-name rules don't apply to tracks, and neither does another track's name.
         Assert.Equal("a/b?", Renamed("a/b?"));
         Assert.Equal("CON", Renamed("CON"));
@@ -191,13 +191,13 @@ public class SceneEditingTests
             return SceneEditing.Rename(scene, scene.Tracks[0].Id, name);
         }
 
-        // A 59-character name gives "name copy", 59 + 5 = 64 characters, the longest allowed.
-        var fits = Holding(new string('a', 59));
+        // A 95-character name gives "name copy", 95 + 5 = 100 characters, the longest allowed.
+        var fits = Holding(new string('a', 95));
         var (scene, copy) = SceneEditing.Duplicate(fits, fits.Tracks[0].Id);
-        Assert.Equal($"{new string('a', 59)} copy", SceneEditing.Get(scene, copy).Name);
+        Assert.Equal($"{new string('a', 95)} copy", SceneEditing.Get(scene, copy).Name);
 
-        // A 60-character name would give 60 + 5 = 65 characters.
-        var over = Holding(new string('a', 60));
+        // A 96-character name would give 96 + 5 = 101 characters.
+        var over = Holding(new string('a', 96));
         var refused = Assert.Throws<ArgumentException>(() => SceneEditing.Duplicate(over, over.Tracks[0].Id));
         Assert.Equal("The copy's name would be too long. Shorten the track's name first.", refused.Message);
     }

@@ -23,9 +23,9 @@ public class SceneNamesTests
     [Fact]
     public void LengthIsCountedAfterTrimming()
     {
-        Assert.Null(SceneNames.Refusal(new string('a', 64)));
-        Assert.Null(SceneNames.Refusal($"  {new string('a', 64)}  "));
-        Assert.Equal("That name is too long.", SceneNames.Refusal(new string('a', 65)));
+        Assert.Null(SceneNames.Refusal(new string('a', 100)));
+        Assert.Null(SceneNames.Refusal($"  {new string('a', 100)}  "));
+        Assert.Equal("That name is too long.", SceneNames.Refusal(new string('a', 101)));
     }
 
     [Theory]

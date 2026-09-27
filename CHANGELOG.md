@@ -5,6 +5,7 @@
 - Reworked how the camera moves and turns along a track, so shots flow more smoothly through points and at their start and end. Existing shots may look slightly different.
 - Dragging the scrub bar to the end of a looping shot or a playlist entry now holds its last frame.
 - Direction of travel's Look ahead is now a distance in yalms instead of seconds. Existing tracks keep their number, now in yalms, so check any track that uses it.
+- Track, scene and preset names can be up to 100 characters long.
 
 ## 0.11.0.1
 
