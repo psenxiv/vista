@@ -68,7 +68,7 @@ public class PathRotationTests
         // wrong Jacobian factor: mutating it (2·angle·sin angle to 2·angle/sin angle) turns the two sides' axes 5.8°
         // apart, but leaves their lengths only 0.024 rad per yalm apart, inside the speed check's 0.05. Unmutated, the
         // Hermite curve's own endpoint curvature (2·from − 6·turn + 4·to either side, over the leg's squared length) puts
-        // the axes 0.19° and the lengths 0.0019 rad per yalm apart (both measured), so 2° keeps clear margin both ways;
+        // the axes 0.25° and the lengths 0.0016 rad per yalm apart (both measured), so 2° keeps clear margin both ways;
         // the speed check guards the rate's size.
         var turnX = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 140f * Deg);
         var turnTilted = Quaternion.CreateFromAxisAngle(new Vector3(0.5f, 0f, MathF.Sqrt(0.75f)), 140f * Deg);
@@ -150,13 +150,12 @@ public class PathRotationTests
     }
 
     [Fact]
-    public void TheLastPointTurnsAtTheThreePointEndRate()
+    public void TheLastPointTurnsAtItsLegsOwnRate()
     {
-        // Yaws 0, 1, 3 at distances 0, 2 and 3: the last leg turns 2 rad over 1 yalm and the one before 1 rad over 2.
-        // EndWeights(1, 2) = ((2 + 2)/(1·3), −1/(2·3)) = (1.3333, −0.16667), so the last point turns at
-        // 1.3333·2 − 0.16667·1 = 2.5 rad per yalm.
+        // Yaws 0, 1, 3 at distances 0, 2 and 3: the last leg turns 2 rad over 1 yalm, so the last point turns at 2 rad
+        // per yalm, whatever the leg before does.
         var channel = new PathRotation([At(0f), At(1f), At(3f)], [0f, 2f, 3f]);
-        Assert.Equal(2.5f, Slopes(d => YawOf(channel.At((float)d)), 3.0, 1e-3).Left, 0.02f);
+        Assert.Equal(2f, Slopes(d => YawOf(channel.At((float)d)), 3.0, 1e-3).Left, 0.02f);
     }
 
     [Fact]

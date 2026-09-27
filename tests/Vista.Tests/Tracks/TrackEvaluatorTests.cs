@@ -71,9 +71,9 @@ public class TrackEvaluatorTests
         // Key 0's end rule, EndWeights(3, 2) = (8/15, −0.3): 8/15·0.1 − 0.3·10 = −2.9467, clamped to 0.
         // Key 1's PCHIP slope, w = (2·2 + 3, 2 + 2·3) = (7, 8): 15 / (7/0.033333 + 8/5) = 15/211.6 = 0.070888 per second.
         // At 1.5 s (u = 0.5 of the 3 s leg): 0.5·0.1 − 0.125·(0.070888·3) = 0.05 − 0.026583 = 0.023417, still on the spot.
-        // Yaw by distance: the leg after point 1 doesn't turn, so point 1's slope is 0. Point 0's is EndWeights(0.1, 10)
-        // ·(90°, 0°) = 10.09901·90 = 908.911°/yalm, 1.0099 times the leg's 900, inside the bound of 3. u = 0.023417/0.1
-        // = 0.23417 gives h10 = 0.13734 and h01 = 0.13882: 0.13734·90.891 + 0.13882·90 = 24.977° = 0.43593 rad.
+        // Yaw by distance: the leg after point 1 doesn't turn, so point 1's slope is 0. Point 0 takes its leg's own
+        // 90°/0.1 = 900°/yalm, 90° over the leg. u = 0.023417/0.1 = 0.23417 gives h10 = 0.13734 and h01 = 0.13882:
+        // 0.13734·90 + 0.13882·90 = 24.855° = 0.43379 rad.
         // Along the last leg both ends' slopes are 0 (no turn), so the yaw stays 90° = 1.5708 rad.
         var points = new[] { Point(0f, yaw: 0f), Point(0f, yaw: 90f * Deg), Point(10f, yaw: 90f * Deg) };
         var evaluator = new TrackEvaluator(TrackEditing.SetLegDuration(TrackThrough(points), 1, 3f));
@@ -81,7 +81,7 @@ public class TrackEvaluatorTests
         var state = evaluator.Evaluate(1.5)!.Value;
 
         Assert.Equal(Vector3.Zero, state.Position);
-        Assert.Equal(0.43593f, CameraRotation.YawPitch(state.Forward).Yaw, 1e-4f);
+        Assert.Equal(0.43379f, CameraRotation.YawPitch(state.Forward).Yaw, 1e-4f);
         for (var t = 3.0; t <= 5.0; t += 0.25)
             Assert.Equal(1.5708f, CameraRotation.YawPitch(evaluator.Evaluate(t)!.Value.Forward).Yaw, 1e-4f);
     }
@@ -130,11 +130,17 @@ public class TrackEvaluatorTests
         Assert.Equal(expected.Pitch, actual.Pitch, 3);
     }
 
+    /// <summary>How far past its points' range a field of view may read, in radians: float round-off in the Hermite blend, a few 1.2e-7 steps of a value near 2.</summary>
+    private const float FovRoundOff = 1e-5f;
+
     [Fact]
-    public void FovIsClampedAtTheAuthoredMin()
+    public void AFieldOfViewThatRisesAndFallsBackStaysAtOrAboveItsLowestPoint()
     {
-        // Fov spikes at the middle point; uniform Catmull-Rom overshoots below the
-        // authored minimum on the far side, which must be clamped back to it.
+        // Field of view 1, 1, 2, 1, 1 at speed 10 over even 10-yalm legs: the timing's slopes all equal the secant, so
+        // the camera is 10·t yalms along. Every point sits beside a leg that doesn't change or where the change turns
+        // back, so every slope is 0, and each leg is a smoothstep between its ends: 1.5 halfway along leg 2 (1.5 s), and
+        // exactly 1 along the flat leg 4 (3.335 s). Tangents within 0 to 3 times each leg's own change keep every leg
+        // within its ends, so the whole shot stays between 1 and 2.
         var points = new[]
         {
             Point(0f, 0f, 0f, fov: 1f),
@@ -143,22 +149,21 @@ public class TrackEvaluatorTests
             Point(30f, 0f, 0f, fov: 1f),
             Point(40f, 0f, 0f, fov: 1f),
         };
-        var track = TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f);
-        var evaluator = new TrackEvaluator(track);
+        var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f));
 
-        // Speed 10 over even 10-yalm legs: the timing's slopes all equal the secant, so the camera is 10·t yalms along.
-        // Leg 4 doesn't change, so point 3's slope is 0 (its legs don't change the same way) and point 4's is 0 (its end
-        // leg doesn't change): at 3.335 s, 0.335 into leg 4, the raw value is 1, flat, and stays inside the range.
-        var state = evaluator.Evaluate(3.335);
-        Assert.NotNull(state);
-        Assert.Equal(1f, state!.Value.Fov, 2);
+        Assert.Equal(1.5f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-4f);
+        Assert.Equal(1f, evaluator.Evaluate(3.335)!.Value.Fov, 1e-5f);
+        for (var t = 0.0; t <= evaluator.Duration; t += 0.01)
+            Assert.InRange(evaluator.Evaluate(t)!.Value.Fov, 1f - FovRoundOff, 2f + FovRoundOff);
     }
 
     [Fact]
-    public void FovReachesAHigherPointsValueAndIsClampedAtTheAuthoredMax()
+    public void AFieldOfViewThatRisesToAPlateauStaysAtOrBelowItsHighestPoint()
     {
-        // Speed 10 over even 10-yalm legs: the timing's slopes all equal the secant, so the camera is 10·t yalms along.
-        // Leg 2 doesn't change, so points 1 and 2 each sit beside a leg that doesn't change and their slopes are 0.
+        // Field of view 1, 2, 2, 1 at speed 10 over even 10-yalm legs, so the camera is 10·t yalms along. Points 1 and 2
+        // sit beside the flat leg 2, so their slopes are 0; point 0 takes its leg's own 0.1 per yalm, 1 over the leg.
+        // At 0.5 s, halfway along leg 1: Hermite(1, 2, 1, 0, 0.5) = 0.5 + 0.125 + 1 = 1.625. At 1 s the camera is at
+        // point 1, and along leg 2 (1.5 s) it holds 2. The whole shot stays between 1 and 2.
         var points = new[]
         {
             Point(0f, 0f, 0f, fov: 1f),
@@ -168,11 +173,11 @@ public class TrackEvaluatorTests
         };
         var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f));
 
-        // At 1 s the camera is 10 yalms along, at point 1, with its own field of view.
-        Assert.Equal(2f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-3f);
-
-        // At 1.5 s, halfway along leg 2, Hermite(2, 2, 0, 0, 0.5) = 2, the max, not past it.
-        Assert.Equal(2f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-3f);
+        Assert.Equal(1.625f, evaluator.Evaluate(0.5)!.Value.Fov, 1e-4f);
+        Assert.Equal(2f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-4f);
+        Assert.Equal(2f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-4f);
+        for (var t = 0.0; t <= evaluator.Duration; t += 0.01)
+            Assert.InRange(evaluator.Evaluate(t)!.Value.Fov, 1f - FovRoundOff, 2f + FovRoundOff);
     }
 
     [Fact]

@@ -65,73 +65,49 @@ internal static class Hermite
     public static (float End, float Next) EndWeights(float end, float next) =>
         (((2f * end) + next) / (end * (end + next)), -end / (next * (end + next)));
 
-    /// <summary>Key <paramref name="i"/>'s slope from the <paramref name="changes"/> over the intervals between <paramref name="keys"/> (interval k runs from key k − 1 to key k): the three-point slope, limited to 0 where the intervals either side change opposite ways or not at all and otherwise to <see cref="MonotoneBound"/> times the gentler one's rate; at an end, the end rule limited against the end interval alone.</summary>
+    /// <summary>Key <paramref name="i"/>'s slope from the <paramref name="changes"/> over the intervals between <paramref name="keys"/> (interval k runs from key k − 1 to key k): the three-point slope, 0 where the intervals either side change opposite ways or not at all and otherwise at most <see cref="MonotoneBound"/> times the gentler one's rate; at an end, the end interval's own rate.</summary>
     public static float KeySlope(IReadOnlyList<float> keys, IReadOnlyList<float> changes, int i)
     {
-        var ((first, firstWeight), (second, secondWeight)) = KeyWeights(keys, i);
-        var raw = (firstWeight * changes[first]) + (secondWeight * changes[second]);
+        var last = keys.Count - 1;
         float Rate(int interval) => changes[interval] / (keys[interval] - keys[interval - 1]);
-        if (i == 0 || i == keys.Count - 1)
-        {
-            var end = Rate(first);
-            return end == 0f ? 0f : MonotoneRatio(raw / end) * end;
-        }
+        if (i == 0 || i == last)
+            return Rate(Math.Max(i, 1));
 
-        var (before, after) = (Rate(first), Rate(second));
+        var (before, after) = (Rate(i), Rate(i + 1));
         if (before * after <= 0f)
             return 0f;
         var gentler = MathF.Abs(before) < MathF.Abs(after) ? before : after;
-        return MonotoneRatio(raw / gentler) * gentler;
+        return MonotoneRatio(ThroughSlope(keys, changes, i) / gentler) * gentler;
     }
 
     /// <summary><see cref="KeySlope(IReadOnlyList{float}, IReadOnlyList{float}, int)"/> for turns as rotation vectors: 0 where the turns either side point opposite ways, and a size of at most <see cref="MonotoneBound"/> times the gentler turn rate.</summary>
     public static Vector3 KeySlope(IReadOnlyList<float> keys, IReadOnlyList<Vector3> changes, int i)
     {
-        var ((first, firstWeight), (second, secondWeight)) = KeyWeights(keys, i);
-        var raw = (firstWeight * changes[first]) + (secondWeight * changes[second]);
-        Vector3 Rate(int interval) => changes[interval] / (keys[interval] - keys[interval - 1]);
-        if (i == 0 || i == keys.Count - 1)
-        {
-            var end = Rate(first);
-            return Vector3.Dot(raw, end) <= 0f ? Vector3.Zero : AtMostBound(raw, end.Length());
-        }
-
-        var (before, after) = (Rate(first), Rate(second));
-        return Vector3.Dot(before, after) <= 0f
-            ? Vector3.Zero
-            : AtMostBound(raw, MathF.Min(before.Length(), after.Length()));
-    }
-
-    /// <summary><paramref name="slope"/> shortened, if need be, to <see cref="MonotoneBound"/> times <paramref name="rate"/>, which is above 0.</summary>
-    private static Vector3 AtMostBound(Vector3 slope, float rate)
-    {
-        var size = slope.Length();
-        return size == 0f ? slope : slope * (MonotoneRatio(size / rate) * rate / size);
-    }
-
-    /// <summary>Key <paramref name="i"/>'s three-point slope as weights on the changes over two intervals between <paramref name="keys"/>: <see cref="ThroughWeights"/> between two, <see cref="EndWeights"/> at an end (the end interval first), and the secant with two keys.</summary>
-    private static ((int Interval, float Weight) First, (int Interval, float Weight) Second) KeyWeights(
-        IReadOnlyList<float> keys,
-        int i
-    )
-    {
         var last = keys.Count - 1;
-        float Span(int interval) => keys[interval] - keys[interval - 1];
-        if (last == 1)
-            return ((1, 1f / Span(1)), (1, 0f));
-        if (i == 0)
-        {
-            var (end, next) = EndWeights(Span(1), Span(2));
-            return ((1, end), (2, next));
-        }
+        Vector3 Rate(int interval) => changes[interval] / (keys[interval] - keys[interval - 1]);
+        if (i == 0 || i == last)
+            return Rate(Math.Max(i, 1));
 
-        if (i == last)
-        {
-            var (end, next) = EndWeights(Span(last), Span(last - 1));
-            return ((last, end), (last - 1, next));
-        }
+        var (before, after) = (Rate(i), Rate(i + 1));
+        if (Vector3.Dot(before, after) <= 0f)
+            return Vector3.Zero;
+        var raw = ThroughSlope(keys, changes, i);
+        var size = raw.Length();
+        var bound = MathF.Min(before.Length(), after.Length());
+        return size == 0f ? raw : raw * (MonotoneRatio(size / bound) * bound / size);
+    }
 
-        var (before, after) = ThroughWeights(Span(i), Span(i + 1));
-        return ((i, before), (i + 1, after));
+    /// <summary>The three-point slope through interior key <paramref name="i"/>, from <see cref="ThroughWeights"/>.</summary>
+    private static float ThroughSlope(IReadOnlyList<float> keys, IReadOnlyList<float> changes, int i)
+    {
+        var (before, after) = ThroughWeights(keys[i] - keys[i - 1], keys[i + 1] - keys[i]);
+        return (before * changes[i]) + (after * changes[i + 1]);
+    }
+
+    /// <summary><see cref="ThroughSlope(IReadOnlyList{float}, IReadOnlyList{float}, int)"/> for turns as rotation vectors.</summary>
+    private static Vector3 ThroughSlope(IReadOnlyList<float> keys, IReadOnlyList<Vector3> changes, int i)
+    {
+        var (before, after) = ThroughWeights(keys[i] - keys[i - 1], keys[i + 1] - keys[i]);
+        return (before * changes[i]) + (after * changes[i + 1]);
     }
 }

@@ -31,17 +31,16 @@ public class PathChannelTests
     }
 
     [Fact]
-    public void AChannelTakesTheThreePointSlopeThroughAPointAndTheEndRuleAtItsEnds()
+    public void AChannelTakesTheThreePointSlopeThroughAPointAndItsEndLegsOwnRateAtAnEnd()
     {
-        // Values 0, 10, 40 at distances 0, 2, 6: changes 10 over 2 and 30 over 4.
-        // Through point 1: ThroughWeights(2, 4) = (4/12, 2/24) → 10·4/12 + 30·2/24 = 3.3333 + 2.5 = 5.8333 per yalm.
-        // Midway along leg 1 (distance 4, u = 0.5): Hermite(10, 40, 5.8333·4, m₂·4, 0.5), with the end slope at point 2
-        // EndWeights(4, 2) = ((8 + 2)/(4·6), −4/(2·6)) = (0.41667, −0.33333) → 30·0.41667 − 10·0.33333 = 9.1667 per yalm:
-        // 0.5·10 + 0.125·23.333 + 0.5·40 − 0.125·36.667 = 5 + 2.9167 + 20 − 4.5833 = 23.333. Neither is limited: the legs
-        // rise at 5 and 7.5 per yalm, so 5.8333 is 1.17 times the gentler 5, and 9.1667 is 1.22 times the end leg's 7.5.
+        // Values 0, 10, 40 at distances 0, 2, 6: changes 10 over 2 and 30 over 4, rates 5 and 7.5 per yalm.
+        // Through point 1: ThroughWeights(2, 4) = (4/12, 2/24) → 10·4/12 + 30·2/24 = 3.3333 + 2.5 = 5.8333 per yalm, 1.17
+        // times the gentler 5, so not limited. Point 2 takes its leg's own 7.5 per yalm. Midway along leg 1 (distance 4,
+        // u = 0.5): Hermite(10, 40, 5.8333·4, 7.5·4, 0.5) = 0.5·10 + 0.125·23.333 + 0.5·40 − 0.125·30 = 5 + 2.9167 + 20 −
+        // 3.75 = 24.167.
         var channel = new PathChannel([0f, 10f, 40f], [0f, 2f, 6f]);
 
-        Assert.Equal(23.333f, channel.At(4f), 1e-3f);
+        Assert.Equal(24.167f, channel.At(4f), 1e-3f);
         Assert.Equal(0f, channel.At(-1f));
         Assert.Equal(40f, channel.At(7f));
     }
@@ -49,26 +48,25 @@ public class PathChannelTests
     [Fact]
     public void APointWhereTheChangeReversesHasNoSlope()
     {
-        // Values 0, 40, 0 a yalm apart: the legs change opposite ways, so point 1's slope is 0. Point 0's end rule is
-        // EndWeights(1, 1)·(40, −40) = 1.5·40 + 0.5·40 = 80 per yalm, twice its leg's 40, inside the bound; point 2's is
-        // −80 by symmetry. Halfway along each leg: 0.5·40 + 0.125·80 = 30.
+        // Values 0, 40, 0 a yalm apart: the legs change opposite ways, so point 1's slope is 0. The ends take their legs'
+        // own rates, 40 and −40 per yalm. Halfway along each leg: 0.5·40 + 0.125·40 = 25.
         var channel = new PathChannel([0f, 40f, 0f], [0f, 1f, 2f]);
 
-        Assert.Equal(30f, channel.At(0.5f), 1e-4f);
-        Assert.Equal(30f, channel.At(1.5f), 1e-4f);
+        Assert.Equal(25f, channel.At(0.5f), 1e-4f);
+        Assert.Equal(25f, channel.At(1.5f), 1e-4f);
     }
 
     [Fact]
     public void ASlopeIsAtMostThreeTimesTheGentlerLegsRate()
     {
         // Values 0, 40, 44 a yalm apart: legs of 40 and 4 per yalm. Point 1's three-point slope, ThroughWeights(1, 1) =
-        // (0.5, 0.5), is 0.5·40 + 0.5·4 = 22, limited to 3·4 = 12. Point 0's end rule, EndWeights(1, 1)·(40, 4) = 1.5·40 −
-        // 0.5·4 = 58, is 1.45 times its leg's 40 and stays; point 2's, 1.5·4 − 0.5·40 = −14, runs against its leg and is 0.
-        // Halfway along leg 1: 0.5·40 + 0.125·58 − 0.125·12 = 25.75. Halfway along leg 2: 0.5·40 + 0.125·12 + 0.5·44 = 43.5.
+        // (0.5, 0.5), is 0.5·40 + 0.5·4 = 22, limited to 3·4 = 12. The ends take their legs' own rates, 40 and 4.
+        // Halfway along leg 1: 0.5·40 + 0.125·40 − 0.125·12 = 23.5. Halfway along leg 2: 0.5·40 + 0.125·12 + 0.5·44 −
+        // 0.125·4 = 43.
         var channel = new PathChannel([0f, 40f, 44f], [0f, 1f, 2f]);
 
-        Assert.Equal(25.75f, channel.At(0.5f), 1e-4f);
-        Assert.Equal(43.5f, channel.At(1.5f), 1e-4f);
+        Assert.Equal(23.5f, channel.At(0.5f), 1e-4f);
+        Assert.Equal(43f, channel.At(1.5f), 1e-4f);
     }
 
     [Fact]

@@ -31,8 +31,6 @@ public sealed class TrackEvaluator
     private readonly PathRotation? _rotation;
     private readonly PathChannel? _roll;
     private readonly PathChannel? _fov;
-    private readonly float _fovMin;
-    private readonly float _fovMax;
     private readonly float[] _arrive = [];
     private readonly float[] _depart = [];
     private LevelUp? _travelUp;
@@ -67,8 +65,6 @@ public sealed class TrackEvaluator
         _yaws = Angles.Unwrap(track.Points.Select(p => p.Yaw).ToArray());
         _pitches = track.Points.Select(p => p.Pitch).ToArray();
         var fovs = track.Points.Select(p => p.PlayedFov).ToArray();
-        _fovMin = fovs.Length == 0 ? 0f : fovs.Min();
-        _fovMax = fovs.Length == 0 ? 0f : fovs.Max();
         if (track.Points.Count == 0)
             return;
 
@@ -134,7 +130,7 @@ public sealed class TrackEvaluator
         }
 
         var (cameraPosition, segment, fraction) = PlaceAt(time);
-        var fov = Math.Clamp(_fov!.At(DistanceAt(time)), _fovMin, _fovMax);
+        var fov = _fov!.At(DistanceAt(time));
         if (target is { } at && Toward(cameraPosition, at) is not null)
         {
             var toward = at - cameraPosition;
