@@ -725,7 +725,7 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookingAheadSettlesIntoTheDemosLastPointWithoutAStep()
     {
-        // East Hawker, looking 1 yalm ahead, eases into its last point turning at most 0.034° a frame at 60 fps in its last
+        // East Hawker, looking 2.5 yalms ahead, eases into its last point turning at most 0.013° a frame at 60 fps in its last
         // half second, read from the run since a recorded track's turn can't be worked by hand. Snapping to the exact
         // tangent 0.1 yalm out once stepped 0.12° in one frame; 0.05° allows the steady turn and catches the step.
         var track = DemoScene().Tracks.Single(t => t.Name == "East Hawker fly through");
