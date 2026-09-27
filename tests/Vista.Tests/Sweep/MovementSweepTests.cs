@@ -231,7 +231,7 @@ public class MovementSweepTests
     /// <summary>Seconds each side's speed is measured over, as <see cref="Run.Speed(double, double)"/>'s half-window: each side's chord spans 10 ms, 0.05 yalm at 5 yalms a second, from the point outward.</summary>
     private const double SpeedWindow = 5e-3;
 
-    /// <summary>How far apart, in yalms a second, the speed just before and just after a point may be and still count as one speed. Rounding moves each end of a chord by up to about 1e-5 yalm (the float distance along the path, a 7.6e-6 step under 128 yalms, and the spline's coordinates, a few 3.8e-6 steps under 64), each side's speed by 2·1e-5 / 0.01 s = 2e-3 and the gap by 4e-3. A chord falls short of its arc by L²/24R² of its length L: on the tightest turn, the hairpin's, about 1.5 yalms round, 0.05² / (24·1.5²) = 4.6e-5, 2.3e-4 yalms a second. Under 5e-3 in all; 0.01, 0.2% of the default speed, keeps margin.</summary>
+    /// <summary>How far apart, in yalms a second, the speed just before and just after a point may be, beyond what braking or speeding up there moves them, and still count as one speed. On a leg whose timing is a cubic in time, the speed τ seconds out from the point is s + a·τ + j·τ²/2, with s, a and j the speed, acceleration and jerk at the point on that side, and a chord over [0, 2h] reads its mean, s + a·h + (2/3)·j·h²; so the two sides' chords differ by at most h·(|a₋| + |a₊|) + (2/3)·h²·(|j₋| + |j₊|) with no jump in the speed itself, and that allowance comes off the gap first (<see cref="SpeedGap"/>). Rounding moves each end of a chord by up to about 1e-5 yalm (the float distance along the path, a 7.6e-6 step under 128 yalms, and the spline's coordinates, a few 3.8e-6 steps under 64), each side's speed by 2·1e-5 / 0.01 s = 2e-3 and the gap by 4e-3. A chord falls short of its arc by L²/24R² of its length L: on the tightest turn, the hairpin's, about 1.5 yalms round, 0.05² / (24·1.5²) = 4.6e-5, 2.3e-4 yalms a second. Under 5e-3 in all; 0.01, 0.2% of the default speed, keeps margin.</summary>
     private const float SpeedAgreement = 0.01f;
 
     /// <summary>How far either side of a point the world turn rate is sampled, in seconds, with a second sample twice as far to extrapolate from.</summary>
@@ -340,13 +340,8 @@ public class MovementSweepTests
         new(Orbit, UnderAPoint, Check.TurnRateContinuous, 5, 0.28161f),
     ];
 
-    /// <summary>Speed jumps found by the sweep where a leg pinned to run much slower or faster than its neighbours meets them.</summary>
-    private static readonly Pending[] PendingSpeed =
-    [
-        new(SlowDrift, null, Check.SpeedContinuous, 1, 0.038743f),
-        new(SlowDrift, null, Check.SpeedContinuous, 2, 0.038826f),
-        new(OnTheSpot, null, Check.SpeedContinuous, 1, 0.12323f),
-    ];
+    /// <summary>Speed gaps beyond their allowance found by the sweep.</summary>
+    private static readonly Pending[] PendingSpeed = [new(OnTheSpot, null, Check.SpeedContinuous, 1, 0.083795f)];
 
     /// <summary>Failures waiting for the user's triage.</summary>
     private static readonly Pending[] PendingTriage = [.. PendingTurnRate, .. PendingSpeed];
@@ -362,6 +357,7 @@ public class MovementSweepTests
             .ToArray();
         var broken = frames.Where(t => WellFormed.FirstBroken(run.At(t)) is not null).ToArray();
         var snaps = run.Snaps();
+        var timing = new TrackEvaluator(track);
         var measures = new List<Measure>
         {
             new(Check.WellFormed, broken.Length, broken.Length > 0 ? $"first at {broken[0]:0.###} s" : ""),
@@ -372,7 +368,7 @@ public class MovementSweepTests
                 Enumerable.Range(0, positions.Length),
                 p => (Vector3.Distance(run.At(run.Arrive(p)).Position, positions[p]), "")
             ),
-            Worst(Check.SpeedContinuous, run, through, p => SpeedGap(run, run.Arrive(p))),
+            Worst(Check.SpeedContinuous, run, through, p => SpeedGap(run, timing, track, p)),
         };
 
         if (track.Aim == AimMode.AimKeys)
@@ -488,11 +484,47 @@ public class MovementSweepTests
         return worst is null ? new Measure(check, 0f, "", each) : new Measure(check, worst.Value, worst.Where, each);
     }
 
-    /// <summary>How far apart the speed is just before and just after <paramref name="time"/>, in yalms a second, with each.</summary>
-    private static (float Gap, string Detail) SpeedGap(Run run, double time)
+    /// <summary>How far the speed just before and just after point <paramref name="point"/> are apart beyond what braking or speeding up there allows (<see cref="SpeedAgreement"/>), in yalms a second, 0 within it, with the gap, the allowance and each speed.</summary>
+    private static (float Excess, string Detail) SpeedGap(Run run, TrackEvaluator timing, Track track, int point)
     {
+        var time = run.Arrive(point);
         var (before, after) = (run.Speed(time - SpeedWindow, SpeedWindow), run.Speed(time + SpeedWindow, SpeedWindow));
-        return (MathF.Abs(after - before), $": {before:0.###} before, {after:0.###} after yalms/s");
+        var gap = MathF.Abs(after - before);
+        var key = TrackEditing.PointKey(track, point);
+        bool SameSpot(int other) => track.Points[other].Position == track.Points[point].Position;
+        var (a0, j0) = SameSpot(point - 1) ? (0f, 0f) : Bend(timing, key, KeySide.In);
+        var (a1, j1) = SameSpot(point + 1) ? (0f, 0f) : Bend(timing, key, KeySide.Out);
+        var h = (float)SpeedWindow;
+        var allowance = (h * (MathF.Abs(a0) + MathF.Abs(a1))) + (2f / 3f * h * h * (MathF.Abs(j0) + MathF.Abs(j1)));
+        return (
+            MathF.Max(gap - allowance, 0f),
+            $": {before:0.###} before, {after:0.###} after yalms/s, a gap of {gap:G5} with {allowance:G5} allowed"
+        );
+    }
+
+    /// <summary>The timing curve's acceleration and jerk at key <paramref name="key"/> on <paramref name="side"/>, in yalms/s² and yalms/s³, from its cubic on that side.</summary>
+    private static (float Acceleration, float Jerk) Bend(TrackEvaluator timing, int key, KeySide side)
+    {
+        var (start, end) = side == KeySide.In ? (key - 1, key) : (key, key + 1);
+        var (from, to) = (timing.Keys[start], timing.Keys[end]);
+        var (atStart, atEnd, jerk) = LegBend(
+            to.Time - from.Time,
+            timing.DistanceOf(to.Position) - timing.DistanceOf(from.Position),
+            timing.SideSlope(start, KeySide.Out),
+            timing.SideSlope(end, KeySide.In)
+        );
+        return (side == KeySide.In ? atEnd : atStart, jerk);
+    }
+
+    /// <summary>The acceleration at each end and the jerk of a Hermite leg <paramref name="seconds"/> long covering <paramref name="distance"/>, with slopes <paramref name="m0"/> and <paramref name="m1"/> at its ends in distance a second. Over u = t / T with d = distance / T, x(u) = h00·p0 + h10·T·m0 + h01·p1 + h11·T·m1; the basis's second derivatives at u = 0 are (−6, −4, 6, −2), at u = 1 (6, 2, −6, 4), and its third derivatives (12, 6, −12, 6), so dividing by T² and T³: a₀ = (6d − 4m0 − 2m1) / T, a₁ = (2m0 + 4m1 − 6d) / T and j = 6(m0 + m1 − 2d) / T².</summary>
+    private static (float AtStart, float AtEnd, float Jerk) LegBend(float seconds, float distance, float m0, float m1)
+    {
+        var secant = distance / seconds;
+        return (
+            ((6f * secant) - (4f * m0) - (2f * m1)) / seconds,
+            ((2f * m0) + (4f * m1) - (6f * secant)) / seconds,
+            6f * (m0 + m1 - (2f * secant)) / (seconds * seconds)
+        );
     }
 
     /// <summary>How far apart the world turn rate is just before and just after <paramref name="time"/>, each extrapolated to it, in rad/s, with each one's size.</summary>
@@ -703,6 +735,18 @@ public class MovementSweepTests
         Assert.Single(Judged(1f).Improved!);
     }
 
+    [Fact]
+    public void ALegsBendComesFromItsEndsAndSlopes()
+    {
+        // T = 2 s over 4 yalms, so d = 2, with slopes 1 and 0.5: a₀ = (12 − 4 − 1) / 2 = 3.5, a₁ = (2 + 2 − 12) / 2 = −4 and
+        // j = 6(1.5 − 4) / 4 = −3.75. Check: x = t + 1.75t² − 0.625t³ reaches 2 + 7 − 5 = 4 at 2 s, with slope 1 + 7 − 7.5 = 0.5.
+        var (atStart, atEnd, jerk) = LegBend(2f, 4f, 1f, 0.5f);
+
+        Assert.Equal(3.5f, atStart, 1e-5f);
+        Assert.Equal(-4f, atEnd, 1e-5f);
+        Assert.Equal(-3.75f, jerk, 1e-5f);
+    }
+
     /// <summary>Writes one row per combination to a dated file under the test project's obj folder.</summary>
     private static void WriteReport(List<Outcome> outcomes)
     {
@@ -725,7 +769,7 @@ public class MovementSweepTests
             )
             .AppendLine()
             .AppendLine(
-                "| Combination | Largest turn rate (°/s) | Largest speed change through a point (yalms/s) | Largest horizon tilt (°) | Largest centring error (°) | Snaps | Result | Reason |"
+                "| Combination | Largest turn rate (°/s) | Largest speed gap through a point beyond its allowance (yalms/s) | Largest horizon tilt (°) | Largest centring error (°) | Snaps | Result | Reason |"
             )
             .AppendLine("|---|---|---|---|---|---|---|---|");
         foreach (var outcome in outcomes)
