@@ -81,6 +81,20 @@ public sealed class TimingCurve
             rawOut[k] = SideRaw(key.OutMode, key.OutTangent, auto, k < n - 1 ? delta[k] : 0f);
         }
 
+        for (var k = 1; k < n - 1; k++)
+        {
+            var key = keys[k];
+            if (key.Broken || key.InMode != TangentMode.Manual || key.OutMode != TangentMode.Manual)
+                continue;
+            if (delta[k - 1] <= SecantEpsilon || delta[k] <= SecantEpsilon)
+                continue;
+            // An unbroken key keeps one slope: its two stored sides' average, within what the slower leg allows.
+            var slower = MathF.Min(delta[k - 1], delta[k]);
+            var one = Hermite.MonotoneRatio((rawIn[k] + rawOut[k]) / 2f / slower) * slower;
+            rawIn[k] = one;
+            rawOut[k] = one;
+        }
+
         var inTangent = new float[n];
         var outTangent = new float[n];
         for (var i = 0; i < n - 1; i++)

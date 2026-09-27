@@ -20,8 +20,9 @@ public class TimingCurveTests
         TangentMode inMode,
         TangentMode outMode,
         float inTangent = 0f,
-        float outTangent = 0f
-    ) => new(time, position, inMode, outMode, inTangent, outTangent);
+        float outTangent = 0f,
+        bool broken = false
+    ) => new(time, position, inMode, outMode, inTangent, outTangent, broken);
 
     [Fact]
     public void ZeroKeysGiveZeroDurationAndZeroPosition()
@@ -355,5 +356,51 @@ public class TimingCurveTests
         var keys = new[] { Sided(0f, 0f, TangentMode.Manual, TangentMode.Manual, float.NaN, 0f), Key(1f, 1f) };
         var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
         Assert.Equal("Timing key 0 has a non-finite tangent.", ex.Message);
+    }
+
+    [Fact]
+    public void AnUnbrokenKeyKeepsOneSlopeThroughANeighbouringLegsChange()
+    {
+        // Legs of 10 yalms in 2 s and in 4 s average 5 and 2.5 yalms/s. Ratios of 1.2 on both sides store slopes of 6 and 3;
+        // unbroken, both sides take their average, 4.5, inside the monotone bound of 3 × 2.5 = 7.5.
+        TimingKey Middle(bool broken) => Sided(2f, 10f, TangentMode.Manual, TangentMode.Manual, 1.2f, 1.2f, broken);
+        var joined = new TimingCurve([Key(0f, 0f), Middle(false), Key(6f, 20f)]);
+        var apart = new TimingCurve([Key(0f, 0f), Middle(true), Key(6f, 20f)]);
+
+        Assert.Equal(4.5f, joined.SideSlope(1, KeySide.In), 1e-4f);
+        Assert.Equal(4.5f, joined.SideSlope(1, KeySide.Out), 1e-4f);
+        Assert.Equal(6f, apart.SideSlope(1, KeySide.In), 1e-4f);
+        Assert.Equal(3f, apart.SideSlope(1, KeySide.Out), 1e-4f);
+    }
+
+    [Fact]
+    public void AnUnbrokenKeysOneSlopeStaysWithinBothLegsMonotoneBound()
+    {
+        // Legs averaging 5 and 1 yalms/s (10 yalms in 2 s, then in 10 s). Ratios of 3 store 15 and 3, averaging 9; the slower
+        // leg allows 3 × 1 = 3, so both sides take 3.
+        var curve = new TimingCurve([
+            Key(0f, 0f),
+            Sided(2f, 10f, TangentMode.Manual, TangentMode.Manual, 3f, 3f),
+            Key(12f, 20f),
+        ]);
+
+        Assert.Equal(3f, curve.SideSlope(1, KeySide.In), 1e-4f);
+        Assert.Equal(3f, curve.SideSlope(1, KeySide.Out), 1e-4f);
+    }
+
+    [Fact]
+    public void AnUnbrokenKeyBesideAHoldKeepsItsMovingSide()
+    {
+        // Key 1 arrives from a leg averaging 5 yalms/s and is followed by a hold (key 2 at the same place), so it has no
+        // moving leg after it: its arrival stays 1.2 × 5 = 6, and the hold's own side is 0.
+        var curve = new TimingCurve([
+            Key(0f, 0f),
+            Sided(2f, 10f, TangentMode.Manual, TangentMode.Manual, 1.2f, 1.2f),
+            Key(4f, 10f),
+            Key(6f, 20f),
+        ]);
+
+        Assert.Equal(6f, curve.SideSlope(1, KeySide.In), 1e-4f);
+        Assert.Equal(0f, curve.SideSlope(1, KeySide.Out));
     }
 }

@@ -649,8 +649,13 @@ public class TrackEditingTests
         Assert.Equal(2f, OutSlope(TrackEditing.SetSpeed(HalfSpeedHandles(), 4f), 1), 3);
 
     [Fact]
-    public void AHandleKeepsItsShapeThroughALegDuration() =>
-        Assert.Equal(2.5f, OutSlope(TrackEditing.SetLegDuration(HalfSpeedHandles(), 2, 2f), 1), 3);
+    public void AHandleKeepsItsShapeThroughALegDuration()
+    {
+        // Leg 2's duration drops to 2 s (was 5 s), so its average speed becomes 10/2 = 5 (leg 1 stays 10/5 = 2).
+        // Key 1's stored ratios stay 0.5 each: rawIn = 0.5 * 2 = 1, rawOut = 0.5 * 5 = 2.5. Unbroken and both Manual,
+        // it takes their average, 1.75, within the slower leg's bound of 3 * 2 = 6, so both sides read 1.75.
+        Assert.Equal(1.75f, OutSlope(TrackEditing.SetLegDuration(HalfSpeedHandles(), 2, 2f), 1), 3);
+    }
 
     [Fact]
     public void AHandleKeepsItsShapeThroughAPointEdit() =>
