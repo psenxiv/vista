@@ -479,6 +479,20 @@ public class SessionStateTests
     }
 
     [Fact]
+    public void TheOverlayStaysShownAndEditableWhileAPreviewPlaysOnTheGhost()
+    {
+        var state = new SessionState();
+        state.Edit();
+        state.ChangeTrack(WithTwoPoints);
+        state.Transport.SetGhost(true);
+
+        state.Play();
+
+        Assert.True(state.OverlayShown);
+        Assert.True(state.OverlayEditable);
+    }
+
+    [Fact]
     public void TheHeadIsOnTheEditedTrackUnlessLivePlaysAnother()
     {
         var state = EditingTwoPoints();

@@ -97,8 +97,8 @@ internal sealed class EditorLayer
             )
         );
         overlay.Prune(scene.Tracks.Select(t => t.Id).ToHashSet());
-        if (game.GhostFrame is { } ghost)
-            Overlay.DrawGhost(view, ghost, game.GhostLookAhead);
+        if (session.Transport.GhostFrame is { } ghost)
+            Overlay.DrawGhost(view, ghost, session.Transport.GhostLookAhead);
 
         var editedLocal = SceneEditing.Get(scene, edited);
         DrawAnchors(view, scene, editedLocal, track, edited: true, selectedAnchor, markers);

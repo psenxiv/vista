@@ -1,0 +1,365 @@
+using Vista.Core.Session;
+using Vista.Core.Tracks.Aiming;
+using Xunit;
+using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
+
+namespace Vista.Tests.Session;
+
+// EditingThreePoints runs x = 2t over 10 s, so each frame's x is twice its shot time.
+public class SessionPreviewToolsTests
+{
+    private const string GhostOnlyInEdit = "The ghost camera is only for Edit.";
+    private const string RateOnlyInEdit = "The playback rate is only for Edit previews.";
+    private const string RateOutOfRange = "The playback rate must be above 0 and at most 2.";
+
+    [Fact]
+    public void TheGhostTurnsOnAndOffInEditAndStaysOnThroughLive()
+    {
+        var state = EditingThreePoints();
+        Assert.False(state.Transport.Ghost);
+        Assert.Null(state.Transport.SetGhost(true));
+        Assert.True(state.Transport.Ghost);
+
+        state.AddToPlaylist([state.EditedTrackId]);
+        GoLive(state);
+        Assert.Equal(GhostOnlyInEdit, state.Transport.SetGhost(false));
+        Assert.True(state.Transport.Ghost);
+
+        state.Edit();
+        Assert.True(state.Transport.Ghost);
+        Assert.Null(state.Transport.SetGhost(false));
+        Assert.False(state.Transport.Ghost);
+    }
+
+    [Fact]
+    public void TheGhostIsRefusedInOff()
+    {
+        var state = new SessionState();
+
+        Assert.Equal(GhostOnlyInEdit, state.Transport.SetGhost(true));
+        Assert.False(state.Transport.Ghost);
+    }
+
+    [Fact]
+    public void TheRateIsSetInEditUpToTwoAndStaysThroughLive()
+    {
+        var state = EditingThreePoints();
+        Assert.Equal(1f, state.Transport.PlaybackRate);
+        Assert.Null(state.Transport.SetPlaybackRate(2f));
+        Assert.Equal(2f, state.Transport.PlaybackRate);
+
+        state.AddToPlaylist([state.EditedTrackId]);
+        GoLive(state);
+        Assert.Equal(RateOnlyInEdit, state.Transport.SetPlaybackRate(1f));
+        Assert.Equal(2f, state.Transport.PlaybackRate);
+
+        state.Edit();
+        Assert.Equal(2f, state.Transport.PlaybackRate);
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(-1f)]
+    [InlineData(2.01f)]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    public void ARateOutsideItsRangeIsRefusedAndLeavesTheRate(float rate)
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetPlaybackRate(0.5f);
+
+        Assert.Equal(RateOutOfRange, state.Transport.SetPlaybackRate(rate));
+        Assert.Equal(0.5f, state.Transport.PlaybackRate);
+    }
+
+    [Fact]
+    public void APreviewPlaysAtTheRate()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetPlaybackRate(0.5f);
+        state.Play();
+
+        state.Transport.AdvancePreview(1f);
+
+        // 1 s at half speed is 0.5 s of the shot.
+        Assert.Equal(0.5, state.Transport.ScrubHead, 5);
+    }
+
+    [Fact]
+    public void APreviewShowsOnTheGameCamera()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+
+        var frame = state.Transport.EditingFrame(1f, flying: false);
+
+        // 1 s in: x = 2.
+        Assert.Equal(2f, frame.Shown!.Value.Position.X, 1e-3f);
+        Assert.Null(frame.FlyFrom);
+    }
+
+    [Fact]
+    public void FlyingStopsAPreviewAndHandsTheFreeCamItsLastFrameOnce()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+
+        var frame = state.Transport.EditingFrame(1f, flying: true);
+
+        Assert.False(state.Transport.Previewing);
+        Assert.Null(frame.Shown);
+        // The last frame shown was 1 s in: x = 2.
+        Assert.Equal(2f, frame.FlyFrom!.Value.Position.X, 1e-3f);
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+    }
+
+    [Fact]
+    public void StoppingAPreviewHandsTheFreeCamItsLastFrame()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(3f, flying: false);
+        state.Stop();
+
+        var frame = state.Transport.EditingFrame(1f, flying: false);
+
+        // Stopped 3 s in: x = 6.
+        Assert.Null(frame.Shown);
+        Assert.Equal(6f, frame.FlyFrom!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void APreviewReachingItsEndHandsTheFreeCamTheLastPoint()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(9f, flying: false);
+
+        var frame = state.Transport.EditingFrame(5f, flying: false);
+
+        // 14 s is past the 10 s track, so it finishes on the last point: x = 20.
+        Assert.False(state.Transport.Previewing);
+        Assert.Null(frame.Shown);
+        Assert.Equal(20f, frame.FlyFrom!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void ScrubbingInEditShowsTheScrubbedFrameAndTheFreeCamOtherwise()
+    {
+        var state = EditingThreePoints();
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(4.0);
+
+        // 4 s: x = 8.
+        Assert.Equal(8f, state.Transport.EditingFrame(1f, flying: false).Shown!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void WithTheGhostAPreviewPlaysOnTheGhostAndFlyingLeavesItPlaying()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetGhost(true);
+        state.Play();
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: true));
+
+        Assert.True(state.Transport.Previewing);
+        // 1 s in: x = 2.
+        Assert.Equal(2f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void AGhostPreviewStoppingHandsNothingOffAndTheGhostStaysAtTheScrubHead()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetGhost(true);
+        state.Play();
+        state.Transport.EditingFrame(3f, flying: false);
+        state.Stop();
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+        // Stopped 3 s in, where the scrub head stays: x = 6.
+        Assert.Equal(6f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void TurningTheGhostOnMidPreviewGivesTheViewBackToTheFreeCam()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+
+        state.Transport.SetGhost(true);
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+        Assert.True(state.Transport.Previewing);
+        // 2 s in: x = 4.
+        Assert.Equal(4f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void TurningTheGhostOffMidPreviewShowsThePreviewAndHandsOffWhenItStops()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetGhost(true);
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+
+        state.Transport.SetGhost(false);
+
+        // 2 s in, now on the game camera: x = 4.
+        Assert.Equal(4f, state.Transport.EditingFrame(1f, flying: false).Shown!.Value.Position.X, 1e-3f);
+        Assert.Null(state.Transport.GhostFrame);
+        state.Stop();
+        Assert.Equal(4f, state.Transport.EditingFrame(1f, flying: false).FlyFrom!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void TheGhostSitsAtTheScrubHeadAndOnlyShowsInEdit()
+    {
+        var state = EditingThreePoints();
+        state.Transport.ScrubTo(2.5);
+        Assert.Null(state.Transport.GhostFrame);
+
+        state.Transport.SetGhost(true);
+        // 2.5 s: x = 5.
+        Assert.Equal(5f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+
+        state.Release();
+        Assert.Null(state.Transport.GhostFrame);
+    }
+
+    [Fact]
+    public void TheGhostNeverShowsAnEarlierPreviewsFrame()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetGhost(true);
+        state.Play();
+        state.Transport.EditingFrame(3f, flying: false);
+        state.Stop();
+        state.Transport.ScrubTo(1.0);
+
+        state.Play();
+
+        // Before the new preview's first frame the ghost is at the scrub head, 1 s: x = 2, not the old 3 s frame's x = 6.
+        Assert.Equal(2f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void TheGhostsLookAheadIsTheSpotAheadOfTheScrubHead()
+    {
+        var state = EditingThreePoints();
+        state.ChangeTrack(t => t with { Aim = AimMode.PathTangent });
+        state.Transport.ScrubTo(2.0);
+        Assert.Null(state.Transport.GhostLookAhead);
+
+        state.Transport.SetGhost(true);
+
+        // The default look-ahead is 0.5 s, so the spot is at 2.5 s: x = 5.
+        Assert.Equal(5f, state.Transport.GhostLookAhead!.Value.X, 1e-3f);
+    }
+
+    [Fact]
+    public void ReleasingTheScrubBarInEditGivesTheFreeCamTheScrubHeadsFrameUnlessTheGhostIsOn()
+    {
+        var state = EditingThreePoints();
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(3.0);
+
+        // 3 s: x = 6.
+        Assert.Equal(6f, state.Transport.EndScrub()!.Value.Position.X, 1e-3f);
+
+        state.Transport.SetGhost(true);
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(4.0);
+        Assert.Null(state.Transport.EndScrub());
+    }
+
+    [Fact]
+    public void ReleasingTheScrubBarLiveGivesTheFreeCamNothing()
+    {
+        var state = LiveTwoPoints();
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(1.0);
+
+        Assert.Null(state.Transport.EndScrub());
+    }
+
+    [Fact]
+    public void AScrubReleaseDropsAWaitingHandOff()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+        state.Transport.BeginScrub();
+        state.Transport.ScrubTo(3.0);
+        state.Transport.EndScrub();
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+    }
+
+    [Fact]
+    public void JumpingToAPointMovesTheScrubHeadAndTheGhostThereAndGivesTheFreeCamItsFrame()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetGhost(true);
+
+        // Point 1 is at x = 10, reached at 5 s.
+        Assert.Equal(10f, state.JumpToPoint(1)!.Value.Position.X, 1e-3f);
+        Assert.Equal(5.0, state.Transport.ScrubHead, 5);
+        Assert.Equal(10f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+        Assert.Null(state.JumpToPoint(3));
+    }
+
+    [Fact]
+    public void JumpingToAPointOutsideEditDoesNothing() => Assert.Null(LiveTwoPoints().JumpToPoint(0));
+
+    [Fact]
+    public void JumpingToAPointDropsAWaitingHandOff()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+
+        state.JumpToPoint(1);
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void LeavingEditDropsAWaitingHandOff(bool toLive)
+    {
+        var state = EditingThreePoints();
+        state.AddToPlaylist([state.EditedTrackId]);
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+
+        if (toLive)
+            state.Cue();
+        else
+            state.Release();
+        state.Edit();
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+    }
+
+    [Fact]
+    public void NewPointsComeFromAPreviewOnTheGameCameraAndFromTheCameraOtherwise()
+    {
+        var state = EditingThreePoints();
+        Assert.Null(state.Transport.FrameForNewPoints);
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+
+        // 1 s in: x = 2.
+        Assert.Equal(2f, state.Transport.FrameForNewPoints!.Value.Position.X, 1e-3f);
+        state.Transport.SetGhost(true);
+        Assert.Null(state.Transport.FrameForNewPoints);
+    }
+}

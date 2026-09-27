@@ -190,8 +190,7 @@ public sealed class Plugin : IDalamudPlugin
                 SetPlaybackRate(args.Trim().Split(' ', 2) is [_, var rate] ? rate.Trim() : "");
                 break;
             case "ghost":
-                game.State.Ghost = !game.State.Ghost;
-                ChatGui.Print(game.State.Ghost ? "Ghost camera on." : "Ghost camera off.");
+                ToggleGhost();
                 break;
 #if DEBUG
             case "selftest":
@@ -204,23 +203,25 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    /// <summary>Sets the playback rate from <paramref name="text"/>, or says why it can't.</summary>
+    /// <summary>Turns the ghost camera on or off, or says why it can't.</summary>
+    private void ToggleGhost()
+    {
+        var transport = game.State.Transport;
+        ChatGui.Print(
+            transport.SetGhost(!transport.Ghost) ?? (transport.Ghost ? "Ghost camera on." : "Ghost camera off.")
+        );
+    }
+
+    /// <summary>Sets the playback rate from <paramref name="text"/>, or says why it can't; text that isn't a number is refused as not-a-number.</summary>
     private void SetPlaybackRate(string text)
     {
-        if (
-            !float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
-            || rate <= 0f
-            || rate > SessionState.MaxPlaybackRate
-        )
-        {
-            ChatGui.Print(
-                $"Playback rate must be above 0 and at most {SessionState.MaxPlaybackRate.ToString(CultureInfo.InvariantCulture)}, e.g. /vista playback 0.5."
-            );
-            return;
-        }
-
-        game.State.PlaybackRate = rate;
-        ChatGui.Print($"Playback rate {rate.ToString(CultureInfo.InvariantCulture)}×.");
+        var rate = float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : float.NaN;
+        ChatGui.Print(
+            game.State.Transport.SetPlaybackRate(rate)
+                ?? $"Playback rate {rate.ToString(CultureInfo.InvariantCulture)}×."
+        );
     }
 
     /// <summary>The safety steps first, each on its own, so a fault in one never skips another; then everything else.</summary>

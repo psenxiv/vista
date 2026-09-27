@@ -1,4 +1,5 @@
 using System.Numerics;
+using Vista.Core.Camera;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
@@ -127,17 +128,8 @@ public sealed class SessionState
     /// <summary>True when Restart has something to play, which Off and View never do.</summary>
     public bool CanRestart => !Released && CanStart;
 
-    /// <summary>True while Edit previews play a ghost camera and leave the game camera to the free-cam. Never saved.</summary>
-    public bool Ghost { get; set; }
-
-    /// <summary>The fastest playback rate, as a multiple of normal speed.</summary>
-    public const float MaxPlaybackRate = 2f;
-
-    /// <summary>How fast previews and live shots play, as a multiple of normal speed, above 0 and at most <see cref="MaxPlaybackRate"/>. Never saved.</summary>
-    public float PlaybackRate { get; set; } = 1f;
-
-    /// <summary>True in Edit while no preview plays, or while one plays as the ghost: the overlay takes clicks and shows the gizmo.</summary>
-    public bool OverlayEditable => Mode == CameraMode.Editing && (Ghost || !Transport.Previewing);
+    /// <summary>True in Edit while no preview plays, or while one plays on the ghost: the overlay takes clicks and shows the gizmo.</summary>
+    public bool OverlayEditable => Mode == CameraMode.Editing && (Transport.Ghost || !Transport.Previewing);
 
     /// <summary>True when the tracks are drawn over the game: in View, and in Edit while no preview plays or it plays as the ghost.</summary>
     public bool OverlayShown => Mode == CameraMode.View || OverlayEditable;
@@ -172,6 +164,7 @@ public sealed class SessionState
                 return EditOutcome.Unchanged;
             case CameraMode.Live:
                 Transport.DropScrub();
+                Transport.DropHandOff();
                 Transport.Park(
                     PlayingEntry?.TrackId == EditedTrackId ? Math.Clamp(Director.ShotTime, 0.0, Duration) : 0.0
                 );
@@ -180,6 +173,7 @@ public sealed class SessionState
                 return EditOutcome.FromLive;
             default:
                 Transport.DropScrub();
+                Transport.DropHandOff();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromGame;
         }
@@ -319,6 +313,16 @@ public sealed class SessionState
         ClearForSwitch();
         EditedTrackId = id;
         return null;
+    }
+
+    /// <summary>Moves the scrub head to point <paramref name="index"/> while editing. Returns the frame there for the free-cam, or null.</summary>
+    public CameraState? JumpToPoint(int index)
+    {
+        if (Mode != CameraMode.Editing || !TrackEditing.IsPoint(Track, index))
+            return null;
+        Transport.ScrubTo(World.Evaluator.PointSeconds(index));
+        Transport.DropHandOff();
+        return World.FrameAt(Transport.ScrubHead);
     }
 
     /// <summary>Edits track <paramref name="track"/> and selects its point <paramref name="index"/>. Returns why it was refused, or null.</summary>

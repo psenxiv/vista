@@ -525,9 +525,45 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookingAheadSkipsEveryHoldWithinIt()
     {
-        // Legs of 0.5 s, with 1 s holds at points 1 and 2. At 0 s, 1.5 s of travel on crosses both holds and reaches point
-        // 3, (0, 0, 10), straight along +z from the camera at the origin. Skipping neither hold would face point 1 (+x),
-        // skipping only the first would face point 2 (45°).
+        // Skipping neither hold would face point 1 (+x); skipping only the first would face point 2 (45°).
+        // Leg times rounded to float put the spot within about 1e-6 s of point 3, a few 1e-5 yalm, 14 yalms away.
+        Near(Vector3.UnitZ, Facing(HeldTwiceOnTheWay(), 0.0), 1e-4f);
+    }
+
+    [Fact]
+    public void TheLookAheadSpotIsTheLookAheadsTravelAheadOfTheTime()
+    {
+        // Points at x = 0, 10, 20 at 2 yalms a second run x = 2t; the default look-ahead is 0.5 s.
+        var evaluator = new TrackEvaluator(
+            TrackThrough([Point(0f), Point(10f), Point(20f)], AimMode.PathTangent, speed: 2f)
+        );
+
+        // 2 s + 0.5 s = 2.5 s: x = 5.
+        Near(new Vector3(5f, 0f, 0f), evaluator.LookAheadSpot(2.0)!.Value, 1e-3f);
+    }
+
+    [Fact]
+    public void TheLookAheadSpotSkipsHolds() =>
+        // As LookingAheadSkipsEveryHoldWithinIt: the spot lands on point 3, (0, 0, 10), within a few 1e-5 yalm.
+        Near(new Vector3(0f, 0f, 10f), HeldTwiceOnTheWay().LookAheadSpot(0.0)!.Value, 1e-4f);
+
+    [Fact]
+    public void ThereIsNoLookAheadSpotWithoutALookAheadOrWhenNotAimingAlongThePath()
+    {
+        var points = new[] { Point(0f), Point(10f) };
+
+        Assert.Null(new TrackEvaluator(TrackThrough(points)).LookAheadSpot(0.5));
+        Assert.Null(
+            new TrackEvaluator(TrackEditing.SetLookAhead(TrackThrough(points, AimMode.PathTangent), 0f)).LookAheadSpot(
+                0.5
+            )
+        );
+    }
+
+    // Legs of 0.5 s, with 1 s holds at points 1 and 2, and a 1.5 s look-ahead. At 0 s, 1.5 s of travel on crosses both
+    // holds and reaches point 3, (0, 0, 10), straight along +z from the camera at the origin.
+    private static TrackEvaluator HeldTwiceOnTheWay()
+    {
         var track = TrackThrough(
             [Point(0f), Point(10f), Point(10f, z: 10f), Point(0f, z: 10f), Point(-10f, z: 10f)],
             AimMode.PathTangent
@@ -535,10 +571,7 @@ public class TrackEvaluatorTests
         for (var leg = 1; leg <= 3; leg++)
             track = TrackEditing.SetLegDuration(track, leg, 0.5f);
         track = TrackEditing.SetHold(TrackEditing.SetHold(track, 1, 1f), 2, 1f);
-        var evaluator = new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.5f));
-
-        // Leg times rounded to float put the spot within about 1e-6 s of point 3, a few 1e-5 yalm, 14 yalms away.
-        Near(Vector3.UnitZ, Facing(evaluator, 0.0), 1e-4f);
+        return new TrackEvaluator(TrackEditing.SetLookAhead(track, 1.5f));
     }
 
     [Fact]

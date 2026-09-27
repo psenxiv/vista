@@ -22,8 +22,6 @@ internal sealed class GameSession
     private bool owned;
     private CameraAccess.Snapshot? snapshotBeforeTakeover;
     private CameraState? lastFrame;
-    private bool previewedLastFrame;
-    private CameraState? ghostFrame;
 
     public GameSession(Configuration config, MovementLock movement)
     {
@@ -161,7 +159,6 @@ internal sealed class GameSession
         switch (state.Edit())
         {
             case EditOutcome.FromGame:
-                previewedLastFrame = false;
                 var (yaw, pitch) = CameraAccess.ReadAngles() ?? (0f, 0f);
                 freeCam.Enable(start.Value.Position, CameraRotation.FromAngles(yaw, pitch, 0f), start.Value.Fov);
                 movement.Hold();
@@ -222,7 +219,6 @@ internal sealed class GameSession
 
         var snapshot = snapshotBeforeTakeover;
         lastFrame = null;
-        previewedLastFrame = false;
         owned = false;
         snapshotBeforeTakeover = null;
 #if DEBUG
@@ -273,22 +269,17 @@ internal sealed class GameSession
         return refusal;
     }
 
-    /// <summary>Stops dragging the scrub head; while editing without the ghost the free-cam flies on from the frame shown.</summary>
+    /// <summary>Stops dragging the scrub head; the free-cam flies on from any frame Core gives.</summary>
     public void FinishScrub()
     {
-        var fromEditing = state.Mode == CameraMode.Editing && state.Transport.Scrubbing && !state.Ghost;
-        state.Transport.EndScrub();
-        if (fromEditing && state.World.FrameAt(state.Transport.ScrubHead) is { } frame)
+        if (state.Transport.EndScrub() is { } frame)
             FlyFrom(frame);
     }
 
     /// <summary>Puts the free-cam at point <paramref name="index"/> while editing, as a scrub release would.</summary>
     public void JumpToPoint(int index)
     {
-        if (state.Mode != CameraMode.Editing || !TrackEditing.IsPoint(state.Track, index))
-            return;
-        state.Transport.ScrubTo(state.World.Evaluator.PointSeconds(index));
-        if (state.World.FrameAt(state.Transport.ScrubHead) is { } frame)
+        if (state.JumpToPoint(index) is { } frame)
             FlyFrom(frame);
     }
 
@@ -301,20 +292,13 @@ internal sealed class GameSession
         var frame = state.Mode switch
         {
             CameraMode.Editing => EditingFrame(dt),
-            CameraMode.Live => state.Director.Tick(dt * state.PlaybackRate),
+            CameraMode.Live => state.Director.Tick(dt),
             _ => null,
         };
 
         lastFrame = frame;
         return frame;
     }
-
-    /// <summary>Where the ghost camera is: the preview's frame, or the scrub head's; null unless the ghost is on in Edit.</summary>
-    public CameraState? GhostFrame => state.Ghost && state.Mode == CameraMode.Editing ? ghostFrame : null;
-
-    /// <summary>Where the ghost's look-ahead spot is, or null without a ghost or a look-ahead.</summary>
-    public Vector3? GhostLookAhead =>
-        GhostFrame is null ? null : state.World.Evaluator.LookAheadSpot(state.Transport.ScrubHead);
 
     /// <summary>Runs <paramref name="edit"/> with the current camera as a control point, or the previewed frame while previewing.</summary>
     private string? WithCurrentPoint(Func<ControlPoint, string?> edit)
@@ -327,7 +311,7 @@ internal sealed class GameSession
     /// <summary>The current camera as a control point, or the previewed frame while previewing; null when the camera can't be read.</summary>
     private ControlPoint? CameraPoint()
     {
-        if (state.Transport.Previewing && !state.Ghost && lastFrame is { } previewed)
+        if (state.Transport.FrameForNewPoints is { } previewed)
             return ControlPoint.FromFrame(previewed);
 
         var camera = CameraAccess.ReadState();
@@ -341,35 +325,13 @@ internal sealed class GameSession
             : null;
     }
 
-    /// <summary>While editing: the preview's frame, the scrubbed frame, or the free-cam, handing the free-cam the last frame when a preview stops.</summary>
+    /// <summary>While editing: the frame Core shows, or the free-cam, first flying it from any hand-off Core gives.</summary>
     private CameraState? EditingFrame(float dt)
     {
-        var transport = state.Transport;
-        if (state.Ghost)
-        {
-            previewedLastFrame = false;
-            ghostFrame = transport.AdvancePreview(dt * state.PlaybackRate) ?? state.World.FrameAt(transport.ScrubHead);
-            return freeCam.Tick(dt);
-        }
-
-        if (transport.Previewing && FreeCam.HasFlightInput())
-            transport.StopPreview();
-        var frame = transport.AdvancePreview(dt * state.PlaybackRate);
-
-        if (previewedLastFrame && !transport.Previewing)
-        {
-            previewedLastFrame = false;
-            if ((frame ?? lastFrame ?? state.World.FrameAt(transport.ScrubHead)) is { } last)
-                FlyFrom(last);
-            return freeCam.Tick(dt);
-        }
-
-        previewedLastFrame = transport.Previewing;
-        if (frame is { } previewing)
-            return previewing;
-        return transport.Scrubbing && state.World.FrameAt(transport.ScrubHead) is { } scrubbed
-            ? scrubbed
-            : freeCam.Tick(dt);
+        var step = state.Transport.EditingFrame(dt, FreeCam.HasFlightInput());
+        if (step.FlyFrom is { } handOff)
+            FlyFrom(handOff);
+        return step.Shown ?? freeCam.Tick(dt);
     }
 
     /// <summary>Carries out a play or restart outcome in game. <paramref name="previewRefusal"/> says a refusal is the edited track's, not the playlist's.</summary>
@@ -424,7 +386,6 @@ internal sealed class GameSession
     /// <summary>Puts the free-cam at <paramref name="frame"/>, facing its way with its up.</summary>
     private void FlyFrom(CameraState frame)
     {
-        previewedLastFrame = false;
         freeCam.Enable(frame.Position, CameraRotation.FromBasis(frame.LookAt - frame.Position, frame.Up), frame.Fov);
     }
 }
