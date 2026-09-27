@@ -83,6 +83,7 @@ internal sealed class TrackEditorWindow : Window
     private readonly WatchTargetWindow watchTarget;
     private readonly FollowTargetWindow followTarget;
     private readonly MainMenu menu;
+    private readonly GuideWindow guide;
     private readonly HierarchyPanel hierarchy;
     private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
@@ -126,6 +127,7 @@ internal sealed class TrackEditorWindow : Window
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
         menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup);
+        this.guide = guide;
         scrub = new Scrubber(game);
         hierarchy = new HierarchyPanel(game, files);
         playlist = new PlaylistPanel(session);
@@ -320,20 +322,29 @@ internal sealed class TrackEditorWindow : Window
             DrawFlySpeed();
         }
 
+        // User Guide at the right end, with LIVE just before it in Live.
+        var help = IconButton.Width(FontAwesomeIcon.Question);
+        ImGui.SameLine();
         if (session.Mode == CameraMode.Live)
         {
-            ImGui.SameLine();
-            Layout.RightAlign(ImGui.CalcTextSize("LIVE").X);
+            Layout.RightAlign(ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X + help);
             DrawLive();
+            ImGui.SameLine();
         }
+        Layout.RightAlign(help);
+        IconButton.WindowToggle("guide", FontAwesomeIcon.Question, "User Guide", guide);
     }
 
-    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or at the window's right edge if that's nearer; null before the first frame.</summary>
+    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before the User Guide button if that's nearer; null before the first frame.</summary>
     private float? FlySpeedStart()
     {
         if (trashRight is not { } right)
             return null;
-        var edge = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X;
+        var edge =
+            ImGui.GetWindowPos().X
+            + ImGui.GetWindowContentRegionMax().X
+            - IconButton.Width(FontAwesomeIcon.Question)
+            - ImGui.GetStyle().ItemSpacing.X;
         return MathF.Min(right, edge) - SpeedWidth;
     }
 
@@ -1013,10 +1024,11 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.ListOl)
             + IconButton.Width(FontAwesomeIcon.Undo)
             + IconButton.Width(FontAwesomeIcon.Redo)
-            + IconButton.Width(FontAwesomeIcon.ChartLine);
+            + IconButton.Width(FontAwesomeIcon.ChartLine)
+            + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 7f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 8f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));

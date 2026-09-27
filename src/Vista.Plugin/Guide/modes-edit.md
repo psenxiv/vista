@@ -31,3 +31,4 @@ The row under the menu bar holds the controls you use most. Everything else is i
 | {icon:Redo} | **Redo** | Redoes it. `Ctrl + Y` does the same. |
 | {icon:ChartLine} | **Timing** | Opens the [timing graph](timing-graph.md). |
 | | **Fly speed** | Sets how fast you fly. |
+| {icon:Question} | **User Guide** | Opens this guide. |
