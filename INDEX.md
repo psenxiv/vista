@@ -21,7 +21,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Session`: the mode, selection, undo history, Edit preview and scrub head, and the scene's tracks in the world.
 - `Tracks`: the track and its control points and anchor, editing its points and timing, and evaluating it at a moment.
 - `Tracks/Aiming`: where the camera looks and which way is up: recorded aim (with roll and field of view, blended by distance along the path), direction of travel, Look At, watched and followed characters, and smoothing.
-- `Tracks/Playback`: the Director, and playing a track or a playlist frame by frame.
+- `Tracks/Playback`: the Director, playing a track or a playlist frame by frame, and the playlist laid end to end as Live's timeline.
 - `Tracks/Spline`: the Catmull-Rom path and its arc-length table.
 - `Tracks/Timing`: timing keys, compiling them from speeds and holds, the timing curve, and easing.
 
@@ -95,6 +95,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### Playback clock
 
 - `Tracks/Playback/PlaybackClock`: a cycle's length, wrapping a clock into its cycle, and mapping a playback clock to a shot time and back.
+- `Tracks/Playback/PlaylistTimeline`: each playlist entry's start, length and passes, the total, and playlist time to and from an entry, pass and time.
 
 ### UI widgets
 
@@ -139,5 +140,5 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `TrackRuns`: playing a track, or hand-made motion, and measuring it: a run's frame at a time, length and point arrive and depart times; clocks (fixed steps, and the evaluator, a playback or the Director stepped within a frame budget); and measures: steps and snaps, picture twist, the largest change or value over samples and when, world turn rate, speed, and well-formed on every frame.
 - `Session/SessionFixtures`: the sessions the session tests start from, and track and entry ids by index.
 - `Tracks/Timing/TimingFixtures`: key times and key drags.
-- `Tracks/Playback/PlaybackFixtures`: the straight track the playback tests play.
+- `Tracks/Playback/PlaybackFixtures`: the tracks and playlist items the playback tests play, and generated played tracks and playlist scenes.
 - `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, and a scene folder in a temporary directory.

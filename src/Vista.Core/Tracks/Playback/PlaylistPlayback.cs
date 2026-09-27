@@ -22,8 +22,12 @@ public sealed class PlaylistPlayback : IPlayback
         this.items = items;
         this.loops = loops;
         evaluators = items.Select(i => new TrackEvaluator(i.Track)).ToArray();
+        Timeline = new PlaylistTimeline(items, evaluators.Select(e => e.Duration).ToArray(), loops);
         aim = new AimTracker(targets);
     }
+
+    /// <summary>The playlist laid end to end, as the playhead crosses it.</summary>
+    public PlaylistTimeline Timeline { get; }
 
     /// <summary>The index of the entry playing, among the items.</summary>
     public int Index { get; private set; }
@@ -39,6 +43,12 @@ public sealed class PlaylistPlayback : IPlayback
 
     /// <summary>Where the camera is in the playing entry's track.</summary>
     public double ShotTime => PlaybackClock.ShotTime(Direction, ShotLength, PassClock);
+
+    /// <summary>Where playback is: the playing entry, its loop pass, and the seconds into that pass; an entry looping forever stays on its first pass.</summary>
+    public PlaylistPosition Position => new(Index, Pass, PassClock);
+
+    /// <summary>Seconds through the playlist; over an entry looping forever it goes round that entry's segment.</summary>
+    public double PlaylistTime => Timeline.TimeOf(Position);
 
     /// <summary>Moves on by <paramref name="dt"/>, cutting to later entries as earlier ones finish, and returns the frame; a cut starts the smoothing afresh.</summary>
     public CameraState? Advance(float dt)
@@ -121,6 +131,17 @@ public sealed class PlaylistPlayback : IPlayback
         aim.Reset();
     }
 
+    /// <summary>Cuts to the entry and time at <paramref name="time"/> through the playlist; the very end holds the last frame until the clock moves on. The smoothing starts afresh.</summary>
+    public void SeekPlaylist(double time)
+    {
+        var position = Timeline.At(time);
+        Index = position.Index;
+        clock = (position.Pass * Cycle) + position.Time;
+        atPassEnd = position.Time >= Cycle;
+        IsFinished = !loops && Index == items.Count - 1 && clock >= Total;
+        aim.Reset();
+    }
+
     /// <summary>Goes back to the first entry's start; the smoothing starts afresh.</summary>
     public void Restart()
     {
@@ -136,11 +157,22 @@ public sealed class PlaylistPlayback : IPlayback
 
     private double Cycle => PlaybackClock.CycleLength(Direction, ShotLength);
 
-    /// <summary>How long the playing entry plays: N cycles (never fewer than one), one cycle, or for good when its track loops with no count.</summary>
+    /// <summary>How long the playing entry plays: its segment's length, or for good when it loops forever.</summary>
     private double Total =>
-        items[Index].Loops is { } n ? Math.Max(n, 1) * Cycle
-        : items[Index].Track.Loop ? double.PositiveInfinity
-        : Cycle;
+        Timeline.Segments[Index] is { LoopsForever: false } segment ? segment.Length : double.PositiveInfinity;
+
+    /// <summary>The loop pass the playing entry is on, from 0; a pass's end counts as that pass.</summary>
+    private int Pass
+    {
+        get
+        {
+            var cycle = Cycle;
+            if (cycle <= 0.0)
+                return 0;
+            var passes = Timeline.Segments[Index].Passes;
+            return (int)Math.Clamp(Math.Round((clock - PassClock) / cycle), 0, passes - 1);
+        }
+    }
 
     /// <summary>The clock within the loop pass the playing entry is on; a finished entry, or one seeked to a pass's end, sits at that pass's end.</summary>
     private double PassClock

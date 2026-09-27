@@ -51,6 +51,13 @@ public sealed class Transport
     /// <summary>The scrub bar's length: the playing entry's while live, otherwise the edited track's.</summary>
     public double ScrubLength => session.Mode == CameraMode.Live ? session.Director.ShotLength : session.Duration;
 
+    /// <summary>Live's playlist laid end to end, or null outside Live.</summary>
+    public PlaylistTimeline? Timeline => session.Mode == CameraMode.Live ? session.Director.Playlist?.Timeline : null;
+
+    /// <summary>Seconds through Live's playlist under the head; 0 outside Live.</summary>
+    public double PlaylistHead =>
+        session.Mode == CameraMode.Live ? session.Director.Playlist?.PlaylistTime ?? 0.0 : 0.0;
+
     /// <summary>Where the ghost camera is: the preview's frame while one plays, otherwise the scrub head's; null unless the ghost is on in Edit.</summary>
     public CameraState? GhostFrame =>
         GhostShown ? (Previewing ? previewFrame : null) ?? session.World.FrameAt(ScrubHead) : null;
@@ -155,6 +162,13 @@ public sealed class Transport
         scrubTime = Math.Clamp(time, 0.0, ScrubLength);
         if (session.Mode == CameraMode.Live)
             session.Director.Seek(scrubTime);
+    }
+
+    /// <summary>Live, moves the head to <paramref name="time"/> through the playlist, clamped to it, cutting to the entry there. No effect outside Live.</summary>
+    public void ScrubPlaylistTo(double time)
+    {
+        if (session.Mode == CameraMode.Live && session.Director.Playlist is { } playlist)
+            playlist.SeekPlaylist(Math.Clamp(time, 0.0, playlist.Timeline.Total));
     }
 
     /// <summary>Stops dragging the scrub head; live, playback carries on as it was. Returns the scrub head's frame for the free-cam in Edit without the ghost, otherwise null.</summary>

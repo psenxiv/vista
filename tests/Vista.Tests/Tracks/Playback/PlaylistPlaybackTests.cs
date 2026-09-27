@@ -13,8 +13,6 @@ public class PlaylistPlaybackTests
     private static Track Snap(float x, float hold, bool loop = false) =>
         TrackEditing.SetHold(TrackEditing.SetLoop(TrackEditing.Append(TrackEditing.Empty(), Point(x)), loop), 0, hold);
 
-    private static PlaylistItem Item(Track track, int? loops = null) => new(Guid.NewGuid(), track, loops);
-
     [Fact]
     public void AnEmptyPlaylistIsRefused() => Assert.Throws<ArgumentException>(() => new PlaylistPlayback([]));
 
@@ -427,6 +425,184 @@ public class PlaylistPlaybackTests
         Assert.False(playback.IsFinished);
     }
 
+    [Fact]
+    public void ThePlaylistTimeRunsThroughEveryPassAndEntry()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack(), 3), Item(StraightTrack())]);
+
+        // Segments of 10 * 3 = 30 s at 0 and 10 s at 30. Clock 23 is 3 s into pass 2 of entry 0.
+        playback.Advance(23f);
+        AssertPosition(new PlaylistPosition(0, 2, 3.0), playback.Position, 1e-4);
+        Assert.Equal(23.0, playback.PlaylistTime, 4);
+
+        // 9 s on: 32 is entry 1 at 2 s.
+        playback.Advance(9f);
+        AssertPosition(new PlaylistPosition(1, 0, 2.0), playback.Position, 1e-4);
+        Assert.Equal(32.0, playback.PlaylistTime, 4);
+
+        // Finished, the head sits at the end: 40.
+        playback.Advance(20f);
+        Assert.True(playback.IsFinished);
+        AssertPosition(new PlaylistPosition(1, 0, 10.0), playback.Position, 1e-4);
+        Assert.Equal(40.0, playback.PlaylistTime, 4);
+    }
+
+    [Fact]
+    public void ThePlaylistTimeRunsForwardWhicheverWayTheTrackRuns()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack(direction: PlaybackDirection.Reverse))]);
+
+        // 3 s in, a Reverse track is at shot time 10 - 3 = 7, but 3 s through the playlist.
+        playback.Advance(3f);
+
+        Assert.Equal(7.0, playback.ShotTime, 4);
+        Assert.Equal(3.0, playback.PlaylistTime, 4);
+    }
+
+    [Fact]
+    public void ALoopingPlaylistsTimeWrapsToTheStart()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack()), Item(StraightTrack())], loops: true);
+
+        // 23 s round a 20 s playlist is 3 s.
+        playback.Advance(23f);
+
+        Assert.Equal(3.0, playback.PlaylistTime, 4);
+    }
+
+    [Fact]
+    public void ThePlaylistTimeGoesRoundAnEntryLoopingForever()
+    {
+        var playback = new PlaylistPlayback([
+            Item(StraightTrack()),
+            Item(StraightTrack(loop: true)),
+            Item(StraightTrack()),
+        ]);
+
+        // The forever entry's segment is 10 to 20. Clock 45 is 35 s into it: 5 s into a pass, so 15.
+        playback.Advance(45f);
+
+        Assert.Equal(1, playback.Index);
+        AssertPosition(new PlaylistPosition(1, 0, 5.0), playback.Position, 1e-4);
+        Assert.Equal(15.0, playback.PlaylistTime, 4);
+    }
+
+    [Fact]
+    public void SeekingByPlaylistTimeCutsToTheEntryPassAndTimeThere()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack()), Item(StraightTrack(), 2), Item(StraightTrack())]);
+
+        // Segments at 0, 10 (two 10 s passes) and 30. 25 is 15 s into entry 1: pass 1 at 5 s.
+        playback.SeekPlaylist(25.0);
+        AssertPosition(new PlaylistPosition(1, 1, 5.0), playback.Position, 1e-4);
+        Assert.Equal(5.0, playback.ShotTime, 4);
+
+        // 1 s on plays on from there: 26.
+        playback.Advance(1f);
+        Assert.Equal(26.0, playback.PlaylistTime, 4);
+
+        // 10 s more is 36: pass 1 ended at 30, so entry 2 at 6 s.
+        playback.Advance(10f);
+        Assert.Equal(2, playback.Index);
+        Assert.Equal(6.0, playback.ShotTime, 4);
+
+        // Back to entry 0.
+        playback.SeekPlaylist(4.0);
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(4.0, playback.ShotTime, 4);
+    }
+
+    [Fact]
+    public void SeekingToAnEntrysEndLandsInTheNextSegment()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack()), Item(StraightTrack())]);
+
+        // 10 is entry 0's end and entry 1's start.
+        playback.SeekPlaylist(10.0);
+        playback.Advance(0f);
+
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(0.0, playback.ShotTime, 4);
+        Assert.False(playback.IsFinished);
+    }
+
+    [Fact]
+    public void SeekingByPlaylistTimeIntoAPingPongPassFindsItsReturn()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack(direction: PlaybackDirection.PingPong), 2)]);
+
+        // Passes of 2 * 10 = 20 s. 35 is pass 1 at 15, on the return: shot time 20 - 15 = 5.
+        playback.SeekPlaylist(35.0);
+
+        AssertPosition(new PlaylistPosition(0, 1, 15.0), playback.Position, 1e-4);
+        Assert.Equal(5.0, playback.ShotTime, 4);
+    }
+
+    [Fact]
+    public void SeekingToTheVeryEndHoldsTheLastFrame()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack()), Item(StraightTrack())]);
+        playback.Advance(3f);
+
+        // The playlist is 20 s: its end is entry 1's last frame, and playback has finished.
+        playback.SeekPlaylist(20.0);
+        Assert.True(playback.IsFinished);
+        playback.Advance(1f);
+
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(10.0, playback.ShotTime, 4);
+        Assert.Equal(20.0, playback.PlaylistTime, 4);
+    }
+
+    [Fact]
+    public void SeekingToTheEndOfALoopingPlaylistHoldsThereThenWraps()
+    {
+        var playback = new PlaylistPlayback([Item(StraightTrack()), Item(StraightTrack())], loops: true);
+
+        playback.SeekPlaylist(20.0);
+        playback.Advance(0f);
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(10.0, playback.ShotTime, 4);
+        Assert.False(playback.IsFinished);
+
+        // 1 s on: wraps to entry 0 at 1 s.
+        playback.Advance(1f);
+        Assert.Equal(0, playback.Index);
+        Assert.Equal(1.0, playback.PlaylistTime, 4);
+    }
+
+    [Fact]
+    public void SeekingToTheEndOfAnEntryLoopingForeverHoldsItsLastFrameThenLoopsIt()
+    {
+        var playback = new PlaylistPlayback([
+            Item(StraightTrack()),
+            Item(StraightTrack(loop: true)),
+            Item(StraightTrack()),
+        ]);
+
+        // The timeline ends at 20 with the forever entry; past the end is its end too.
+        playback.SeekPlaylist(99.0);
+        playback.Advance(0f);
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(10.0, playback.ShotTime, 4);
+        Assert.Equal(20.0, playback.PlaylistTime, 4);
+        Assert.False(playback.IsFinished);
+
+        // 2 s on: its next pass at 2 s, so 12 through the playlist.
+        playback.Advance(2f);
+        Assert.Equal(1, playback.Index);
+        Assert.Equal(2.0, playback.ShotTime, 4);
+        Assert.Equal(12.0, playback.PlaylistTime, 4);
+    }
+
+    // The same entry and pass, and the time within the tolerance.
+    private static void AssertPosition(PlaylistPosition expected, PlaylistPosition actual, double tolerance)
+    {
+        Assert.Equal(expected.Index, actual.Index);
+        Assert.Equal(expected.Pass, actual.Pass);
+        Assert.Equal(expected.Time, actual.Time, tolerance);
+    }
+
     // A single point at the origin, held 1 s, watching Guard with heavy smoothing.
     private static Track Watch() => WatchingGuard(smoothing: 1f, hold: 1f);
 
@@ -447,6 +623,10 @@ public class PlaylistPlaybackTests
         GuardAt(characters, -10f);
         playback.Seek(0.2);
         AimsAt(new Vector3(-10f, 0f, -10f), playback.Advance(0.01f)!.Value, 3);
+
+        GuardAt(characters, 10f);
+        playback.SeekPlaylist(0.2);
+        AimsAt(new Vector3(10f, 0f, -10f), playback.Advance(0.01f)!.Value, 3);
     }
 
     [Fact]
