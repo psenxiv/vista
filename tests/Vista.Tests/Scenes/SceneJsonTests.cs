@@ -209,7 +209,7 @@ public class SceneJsonTests
             // Aim height runs 0 to 3 yalms, smoothing 0 to 1.
             { "aim height 3.5", t => t with { AimHeight = 3.5f } },
             { "smoothing 1.5", t => t with { Smoothing = 1.5f } },
-            // Look ahead runs 0 to 2 seconds.
+            // Look ahead runs 0 to 10 yalms.
             { "look ahead -0.1", t => t with { LookAhead = -0.1f } },
             { "look ahead 10.5", t => t with { LookAhead = 10.5f } },
             // A camera can't look past straight up (π/2 ≈ 1.5708) or see with no field of view, or all round (π).

@@ -594,6 +594,43 @@ public class TrackEvaluatorTests
         Near(new Vector3(6f, 0f, 0f), evaluator.LookAheadSpot(14.0)!.Value, 1e-3f);
         Near(Vector3.UnitX, frame.Forward, 1e-3f);
         Near(Vector3.UnitY, frame.Up, 1e-3f);
+
+        // 0.2 ms later the camera is at 6.0002 and the spot at 5.9998: 4e-4 yalm away, behind it (−x), but under the
+        // 1e-3 yalm that counts as on the camera, so the camera still faces along the path, +x. 1e-4 on the gap keeps it
+        // behind and under 1e-3 whatever the arc-length table's rounding.
+        var justAfter = evaluator.Evaluate(14.0002)!.Value;
+        Near(new Vector3(-4e-4f, 0f, 0f), evaluator.LookAheadSpot(14.0002)!.Value - justAfter.Position, 1e-4f);
+        Near(Vector3.UnitX, justAfter.Forward, 1e-3f);
+
+        // 2 ms later the spot is 4e-3 behind the camera, over 1e-3, so the camera faces it, −x.
+        Near(-Vector3.UnitX, Facing(evaluator, 14.002), 1e-3f);
+    }
+
+    [Fact]
+    public void ATrackWithNoPointsHasNoLookAheadSpot()
+    {
+        // Direction of travel with the default 2.5-yalm look ahead, but no path to look along.
+        Assert.Null(new TrackEvaluator(TrackEditing.Empty(AimMode.PathTangent)).LookAheadSpot(1.0));
+    }
+
+    [Fact]
+    public void LookingAheadAlongPointsAllOnOneSpotKeepsTheFirstPointsAim()
+    {
+        // Three points at (1, 2, 3): each leg counts as MinTimingLength for timing, but has no length or direction, so
+        // the path finishes no way and the spot 2.5 yalms on is the point itself, on the camera. With no direction to face,
+        // the camera keeps point 0's aim: yaw 0 and pitch 0 face −z.
+        var point = Point(1f, 2f, 3f);
+        var evaluator = new TrackEvaluator(
+            TrackEditing.SetLookAhead(TrackThrough([point, point, point], AimMode.PathTangent, 2f), 2.5f)
+        );
+
+        foreach (var time in new[] { 0.0, evaluator.Duration / 2, evaluator.Duration })
+        {
+            Assert.Equal(point.Position, evaluator.LookAheadSpot(time)!.Value);
+            var frame = evaluator.Evaluate(time)!.Value;
+            Assert.Equal(point.Position, frame.Position);
+            Near(-Vector3.UnitZ, frame.Forward, 1e-6f);
+        }
     }
 
     [Fact]

@@ -16,14 +16,21 @@ public class PathRotationTests
 
     private static float YawOf(Quaternion rotation) => CameraRotation.ToAngles(rotation).Yaw;
 
-    /// <summary>How far either side of a middle point the world turn rate is sampled, in yalms: close enough that a leg's own curvature barely moves it (<see cref="RateAgreement"/> derives how much), far enough that float round-off in <see cref="TrackRuns.WorldTurnRate(Func{double, Quaternion}, double, double)"/>'s 1e-4-yalm window stays well under it.</summary>
+    /// <summary>How far either side of a middle point the world turn rate is sampled, in yalms on 1-yalm legs; the property scales it by the shorter leg beside each point. Close enough that the legs' own turn acceleration barely moves it (<see cref="RateAgreement"/> derives how much), and past <see cref="RateWindow"/> so each window stays on its own side.</summary>
     private const double RateOffset = 1e-3;
 
-    /// <summary>The central-difference window <see cref="TrackRuns.WorldTurnRate(Func{double, Quaternion}, double, double)"/> measures each side's rate over.</summary>
+    /// <summary>The central-difference half-window each side's rate is measured over, in yalms on 1-yalm legs; the property scales it as <see cref="RateOffset"/>.</summary>
     private const double RateWindow = 1e-4;
 
-    /// <summary>How far apart, in rad per yalm, the world turn rate either side of a middle point may be and still count as one rate. Near the point, each side's rate leads or lags the point's own by about that leg's turn acceleration times <see cref="RateOffset"/>; from the Hermite curve's endpoint second derivative (2·from − 6·turn + 4·to, PathRotation.At's own names, over the leg's squared length), that acceleration is largest for a 1-yalm leg turning near π rad, and shrinks for gentler turns or longer legs (<see cref="AnyRecordedAim"/> generates no leg shorter or turn sharper). Float round-off in the distance adds to it: below 32 yalms a float step is at most 1.9e-6 yalm, so over <see cref="RateWindow"/>'s 2e-4 yalms each side's rate, at most about 3 rad per yalm here, can read up to 3 · 1.9e-6 / 2e-4 ≈ 0.03 off. A search of 100,000 generated aims found at most 0.033 rad per yalm. 0.08 keeps comfortable margin above that, and stays far below the several tenths a one-sided rate leaves.</summary>
-    private const float RateAgreement = 0.08f;
+    /// <summary>How far apart the world turn rate either side of a middle point may be and still count as one rate, in rad per yalm times L, the shorter leg beside the point (the channel scales with distance: legs k times longer turn k times slower). Every point's rate is its legs' rates mixed with positive weights summing to 1, then shortened, so it is at most π/L; it is also at most 3 times either leg's rate, at most 1.5 times it off that leg's axis (3·cos·sin), and never against it; an end point's is its leg's own. So on a leg s ≥ L long turning τ ≤ π, with the inverse left Jacobian scaling the rate across the turn by at most π/2, the rotation vector's second derivative at the point (PathRotation.At's names: (6·turn − 4·from − 2·to)/s² leaving, (2·from − 6·turn + 4·to)/s² arriving) is at most 6π along the turn and 6π + 1.5π² ≈ 33.7 leaving or 3π + 3π² ≈ 39.0 arriving across it, per L²; arriving adds the Jacobian's own change, at most 0.68·(π·π/2)² ≈ 16.6. That is 38.6 leaving and 59.9 arriving, per L², so at <see cref="RateOffset"/>·L each side reads at most 0.039/L and 0.060/L off the point's rate. Round-off: the rate is taken between the floats actually evaluated, so rounding the distance adds nothing; rounding the leg fraction (1.2e-7) moves the rotation by at most 3π·1.2e-7 ≈ 1.1e-6 rad, and the rest of At by a few float steps of a turn under 2π, so each evaluation is within 1.5e-6 rad and each side's rate within 1.5e-6 / (<see cref="RateWindow"/>·L) = 0.015/L. 0.039 + 0.060 + 2·0.015 ≈ 0.13; a search of 100,000 generated aims found at most 0.038.</summary>
+    private const float RateAgreement = 0.13f;
+
+    /// <summary>The world turn rate per yalm between the floats nearest <paramref name="at"/> ± <paramref name="window"/>, divided by the distance between those floats, so rounding the distance adds nothing.</summary>
+    private static Vector3 RateBetweenFloats(PathRotation channel, double at, double window)
+    {
+        var (from, to) = ((float)(at - window), (float)(at + window));
+        return WorldTurnRate(d => channel.At((float)d), (from + (double)to) / 2.0, (to - (double)from) / 2.0);
+    }
 
     [Fact]
     public void ARecordedAimTrackTurnsAtOneRateThroughAMiddlePoint()
@@ -151,10 +158,10 @@ public class PathRotationTests
         Assert.True(float.IsFinite(channel.At(30f).W));
     }
 
-    /// <summary>A recorded aim through 3 to 6 points' angles (<see cref="AnyPoint"/>), at distances 1 to 5 yalms apart. 1 yalm is the shortest leg <see cref="RateAgreement"/>'s derivation assumes, where the turn-rate gap it bounds is largest; 5 buys nothing beyond that (a longer leg only shrinks the gap) and keeps the distances below 32 yalms, where its round-off holds.</summary>
+    /// <summary>A recorded aim through 3 to 6 points' angles (<see cref="AnyPoint"/>), at distances 0.1 to 10 yalms apart: the 100-to-1 neighbouring legs real tracks reach.</summary>
     private static readonly Gen<(ControlPoint[] Points, float[] Distances)> AnyRecordedAim =
         from points in AnyPoint.Array[3, 6]
-        from legs in Gen.Float[1f, 5f].Array[points.Length - 1]
+        from legs in Gen.Float[0.1f, 10f].Array[points.Length - 1]
         select (points, Distances(legs));
 
     /// <summary>Distances along the path of points <paramref name="legs"/> apart, the first at 0.</summary>
@@ -185,12 +192,13 @@ public class PathRotationTests
                 for (var point = 1; point < aim.Points.Length - 1; point++)
                 {
                     var d = aim.Distances[point];
-                    var before = WorldTurnRate(x => channel.At((float)x), d - RateOffset, RateWindow);
-                    var after = WorldTurnRate(x => channel.At((float)x), d + RateOffset, RateWindow);
-                    var diff = (before - after).Length();
-                    if (!(diff <= RateAgreement))
+                    var shorter = MathF.Min(d - aim.Distances[point - 1], aim.Distances[point + 1] - d);
+                    var before = RateBetweenFloats(channel, d - (RateOffset * shorter), RateWindow * shorter);
+                    var after = RateBetweenFloats(channel, d + (RateOffset * shorter), RateWindow * shorter);
+                    var gap = (before - after).Length() * shorter;
+                    if (!(gap <= RateAgreement))
                         Assert.Fail(
-                            $"Point {point}: turn rate differs by {diff:0.#####} rad per yalm either side of {d:0.###} yalms"
+                            $"Point {point}: turn rate differs by {gap:0.#####} rad per yalm times the shorter leg, {shorter:0.###}, either side of {d:0.###} yalms"
                         );
                 }
             },

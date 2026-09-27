@@ -12,6 +12,9 @@ public sealed class TrackEvaluator
     /// <summary>Metres a segment counts as when timing, so a leg between coincident points still takes its time.</summary>
     public const float MinTimingLength = 0.1f;
 
+    /// <summary>Closer than this, in yalms, the look-ahead spot counts as on the camera: about sixteen float steps of a coordinate 1,000 yalms from the origin.</summary>
+    private const float SpotOnCamera = 1e-3f;
+
     private readonly Track _track;
     private readonly Vector3[] _positions;
     private readonly ArcLengthTable _table;
@@ -123,19 +126,20 @@ public sealed class TrackEvaluator
             return CameraState.FromAngles(only.Position, onlyYaw, onlyPitch, only.Roll, only.PlayedFov);
         }
 
-        var (cameraPosition, segment, fraction) = PlaceAt(time);
-        var fov = _fov!.At(DistanceAt(time));
+        var distance = DistanceAt(time);
+        var (cameraPosition, segment, fraction) = PlaceAt(distance);
+        var fov = _fov!.At(distance);
         if (target is { } at && Toward(cameraPosition, at) is not null)
         {
             var toward = at - cameraPosition;
             var up =
                 _track.UsesLookAt && at == _track.LookAt ? LookAtUp().At(time, toward) : CameraRotation.Upright(toward);
-            return Framed(time, cameraPosition, toward, up, fov);
+            return Framed(distance, cameraPosition, toward, up, fov);
         }
 
         return _track.Aim == AimMode.PathTangent
-            ? Travel(time, cameraPosition, segment, fraction, fov)
-            : CameraState.FromRotation(cameraPosition, _rotation!.At(DistanceAt(time)), fov);
+            ? Travel(time, distance, cameraPosition, segment, fraction, fov)
+            : CameraState.FromRotation(cameraPosition, _rotation!.At(distance), fov);
     }
 
     /// <summary>The aim at <paramref name="target"/> from <paramref name="from"/>, or null with no target or one on the camera.</summary>
@@ -209,14 +213,14 @@ public sealed class TrackEvaluator
         return (lo, Fraction.Clamp((distance - _distances[lo]) / _lengths[lo]));
     }
 
-    /// <summary>The Direction of travel frame at <paramref name="time"/>: facing along the path or its look ahead, with up level (upright, or inverted over a loop) and the track's roll on top.</summary>
-    private CameraState Travel(double time, Vector3 from, int segment, float fraction, float fov)
+    /// <summary>The Direction of travel frame at <paramref name="time"/>, <paramref name="distance"/> along the path: facing along the path or its look ahead, with up level (upright, or inverted over a loop) and the track's roll on top.</summary>
+    private CameraState Travel(double time, float distance, Vector3 from, int segment, float fraction, float fov)
     {
-        if (TravelDirection(time, from, segment, fraction) is not { } direction)
-            return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(DistanceAt(time)), fov);
+        if (TravelDirection(distance, from, segment, fraction) is not { } direction)
+            return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(distance), fov);
 
         _travelUp ??= LevelUp.Along(TravelDirection, (float)Duration, allowInverted: true, VerticalStartUp);
-        return Framed(time, from, direction, _travelUp.At(HoldStart(time), direction), fov);
+        return Framed(distance, from, direction, _travelUp.At(HoldStart(time), direction), fov);
     }
 
     /// <summary>The start of the hold <paramref name="time"/> falls in after arriving, or <paramref name="time"/> outside a hold.</summary>
@@ -231,11 +235,11 @@ public sealed class TrackEvaluator
         return time;
     }
 
-    /// <summary>The frame at <paramref name="from"/> facing <paramref name="direction"/> with <paramref name="up"/>, the track's roll turned on top.</summary>
-    private CameraState Framed(double time, Vector3 from, Vector3 direction, Vector3 up, float fov)
+    /// <summary>The frame at <paramref name="from"/>, <paramref name="distance"/> along the path, facing <paramref name="direction"/> with <paramref name="up"/>, the track's roll turned on top.</summary>
+    private CameraState Framed(float distance, Vector3 from, Vector3 direction, Vector3 up, float fov)
     {
         var forward = Vector3.Normalize(direction);
-        var roll = _roll!.At(DistanceAt(time));
+        var roll = _roll!.At(distance);
         if (roll != 0f)
             up = CameraRotation.RollUp(up, forward, roll);
         return new CameraState(from, from + (forward * FreeCamMotion.LookAtDistance), up, fov);
@@ -248,7 +252,8 @@ public sealed class TrackEvaluator
     private LevelUp LookAtUp() =>
         _lookAtUp ??= LevelUp.Along(
             time =>
-                _track.LookAt - PlaceAt(time).Position is var toward && toward.Length() >= TrackAim.MinTargetDistance
+                _track.LookAt - PlaceAt(DistanceAt(time)).Position is var toward
+                && toward.Length() >= TrackAim.MinTargetDistance
                     ? toward
                     : null,
             (float)Duration,
@@ -257,51 +262,48 @@ public sealed class TrackEvaluator
             (_arrive, _depart)
         );
 
-    /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped: the look-ahead, else the path's own; null where the path has none.</summary>
-    private Vector3? TravelDirection(double time, Vector3 from, int segment, float fraction) =>
-        LookAhead(time, from) ?? TrackAim.PathDirection(_positions, _table, segment, fraction);
+    /// <summary>The Direction of travel direction at <paramref name="distance"/> along the path, unclamped: the look-ahead, else the path's own; null where the path has none.</summary>
+    private Vector3? TravelDirection(float distance, Vector3 from, int segment, float fraction) =>
+        LookAhead(distance, from) ?? TrackAim.PathDirection(_positions, _table, segment, fraction);
 
     /// <summary>The Direction of travel direction at <paramref name="time"/>, unclamped; null where the path has none.</summary>
     private Vector3? TravelDirection(double time)
     {
-        var (position, segment, fraction) = PlaceAt(time);
-        return TravelDirection(time, position, segment, fraction);
+        var distance = DistanceAt(time);
+        var (position, segment, fraction) = PlaceAt(distance);
+        return TravelDirection(distance, position, segment, fraction);
     }
 
-    /// <summary>The direction from <paramref name="from"/> to the spot the track's look-ahead distance further along the path; null with no look ahead, or where the spot is on the camera, which faces along the path instead.</summary>
-    private Vector3? LookAhead(double time, Vector3 from) =>
-        _track.LookAhead <= 0f ? null : TrackAim.Usable(SpotAhead(_curve.PositionAt(time) + _track.LookAhead) - from);
+    /// <summary>The direction from <paramref name="from"/>, <paramref name="distance"/> along the path, to its look-ahead spot; null with no look ahead, or where the spot is within <see cref="SpotOnCamera"/> of the camera, which faces along the path instead.</summary>
+    private Vector3? LookAhead(float distance, Vector3 from)
+    {
+        if (_track.LookAhead <= 0f)
+            return null;
+        var toward = SpotAhead(distance) - from;
+        return toward.Length() < SpotOnCamera ? null : toward;
+    }
 
-    /// <summary>Where the look-ahead spot is at <paramref name="time"/>, or null unless the track aims along its path with a look-ahead.</summary>
+    /// <summary>Where the look-ahead spot is at <paramref name="time"/>, or null unless the track has points and aims along its path with a look-ahead.</summary>
     public Vector3? LookAheadSpot(double time) =>
-        _track.Aim == AimMode.PathTangent && _track.LookAhead > 0f
-            ? SpotAhead(DistanceAt(time) + _track.LookAhead)
+        _track.Points.Count > 0 && _track.Aim == AimMode.PathTangent && _track.LookAhead > 0f
+            ? SpotAhead(DistanceAt(time))
             : null;
 
-    /// <summary>The place <paramref name="distance"/> along the path, carried on straight the way the path finishes past its end.</summary>
+    /// <summary>The look-ahead spot for a camera <paramref name="distance"/> along the path: the track's look ahead further on, carried on straight the way the path finishes past its end.</summary>
     private Vector3 SpotAhead(float distance)
     {
-        var past = distance - _distances[^1];
+        var spot = distance + _track.LookAhead;
+        var past = spot - _distances[^1];
         if (past <= 0f)
-            return PointAt(distance);
+            return PlaceAt(spot).Position;
         var end = TrackAim.PathDirection(_positions, _table, _lengths.Length - 1, 1f);
         return _positions[^1] + (end is { } way ? Vector3.Normalize(way) * past : Vector3.Zero);
     }
 
-    /// <summary>Where the camera is on the path at <paramref name="time"/>, and the segment and arc fraction it's in.</summary>
-    private (Vector3 Position, int Segment, float Fraction) PlaceAt(double time)
-    {
-        var (segment, fraction) = LocateDistance(_curve.PositionAt(time));
-        return (PointAt(segment, fraction), segment, fraction);
-    }
-
-    /// <summary>The place on the path <paramref name="distance"/> along it.</summary>
-    private Vector3 PointAt(float distance)
+    /// <summary>The place on the path <paramref name="distance"/> along it, and the segment and arc fraction it's in.</summary>
+    private (Vector3 Position, int Segment, float Fraction) PlaceAt(float distance)
     {
         var (segment, fraction) = LocateDistance(distance);
-        return PointAt(segment, fraction);
+        return (CatmullRom.Evaluate(_positions, segment, _table.ParameterAt(segment, fraction)), segment, fraction);
     }
-
-    private Vector3 PointAt(int segment, float fraction) =>
-        CatmullRom.Evaluate(_positions, segment, _table.ParameterAt(segment, fraction));
 }
