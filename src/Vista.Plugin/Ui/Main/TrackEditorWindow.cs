@@ -866,6 +866,9 @@ internal sealed class TrackEditorWindow : Window
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 
+    /// <summary>The scrub bars' grab, as a share of the style's usual slider grab.</summary>
+    private const float ScrubGrabScale = 0.5f;
+
     /// <summary>Play/Pause and Restart, the scrub bar (the whole playlist in Live, otherwise the edited track), then how far through it the head is.</summary>
     private void DrawScrubRow()
     {
@@ -879,8 +882,11 @@ internal sealed class TrackEditorWindow : Window
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var timeWidth = ImGui.CalcTextSize(Units.SecondsOf(total, total)).X;
         var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
-        if (!PlaylistBar.Draw(session, scrub, fields.Commit, width))
-            DrawTrackBar(width);
+        using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubGrabScale))
+        {
+            if (!PlaylistBar.Draw(session, scrub, fields.Commit, width))
+                DrawTrackBar(width);
+        }
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(Units.SecondsOf(head, total));
