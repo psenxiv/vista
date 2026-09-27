@@ -8,6 +8,7 @@
 - Hide the track names above track anchors, or change their size, from the View menu. Vista remembers both.
 - The Preview menu has a ghost camera, which plays a track in Edit on a camera outline while you keep your own view, and a playback speed for watching a track slower or faster in Edit.
 - In Live, the scrub bar covers the whole playlist, with a stretch for each entry. Drag it to move anywhere in the playlist.
+- Scroll over the scrub bar to zoom in and out.
 - Dragging the scrub bar to the end of a looping shot shows its last frame instead of its first.
 - Duplicate points from their right-click menu or the Edit menu.
 - Alt + R levels the camera's roll in Edit.

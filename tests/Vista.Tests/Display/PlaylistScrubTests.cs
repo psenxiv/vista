@@ -49,6 +49,67 @@ public class PlaylistScrubTests
         return new PlaylistScrub(new PlaylistPlayback(state.PlaylistItems()).Timeline, state.Scene);
     }
 
+    /// <summary>The example's bar zoomed to <paramref name="from"/> to <paramref name="to"/> seconds.</summary>
+    private static PlaylistScrub Zoomed(float from, float to)
+    {
+        var (scrub, scene) = Example();
+        return new PlaylistScrub(scrub.Timeline, scene, new TimingView(from, to));
+    }
+
+    [Theory]
+    // Zoomed to Hairpin's 5 to 11 s, 8 s is halfway along; times outside the view hold at the ends.
+    [InlineData(8.0, 0.5f)]
+    [InlineData(2.0, 0f)]
+    [InlineData(12.0, 1f)]
+    public void ZoomedATimeIsItsShareOfTheView(double time, float fraction)
+    {
+        Assert.Equal(fraction, Zoomed(5f, 11f).FractionOf(time), Tolerance);
+    }
+
+    [Fact]
+    public void ZoomedAPlaceAlongTheBarIsInTheView()
+    {
+        // Halfway along 5 to 11 s is 8 s, in Hairpin, the second segment.
+        var bar = Zoomed(5f, 11f);
+
+        Assert.Equal(8.0, bar.TimeAt(0.5f), Tolerance);
+        Assert.Equal(1, bar.SegmentAt(0.5f).Index);
+    }
+
+    [Fact]
+    public void ZoomedOnlyTheTicksInTheViewShow()
+    {
+        // Hairpin's repeats start at 7 and 9 s: over 5 to 11 s they're 2/6 and 4/6 along; over 8 to 11 s only 9 s shows, 1/3 along.
+        var hairpin = Zoomed(5f, 11f).Timeline.Segments[1];
+
+        Assert.Equal([1f / 3f, 2f / 3f], Zoomed(5f, 11f).PassTicks(hairpin), (x, y) => Math.Abs(x - y) <= Tolerance);
+        Assert.Equal([1f / 3f], Zoomed(8f, 11f).PassTicks(hairpin), (x, y) => Math.Abs(x - y) <= Tolerance);
+    }
+
+    [Fact]
+    public void ZoomedOnlyTheSegmentsOverlappingTheViewAreVisible()
+    {
+        // Segments run 0 to 5, 5 to 11 and 11 to 15 s. Over 6 to 10 s only Hairpin is visible; over 4 to 12 s all three are.
+        var inside = Zoomed(6f, 10f);
+        var across = Zoomed(4f, 12f);
+        var segments = inside.Timeline.Segments;
+
+        Assert.Equal([false, true, false], segments.Select(inside.Visible));
+        Assert.Equal([true, true, true], segments.Select(across.Visible));
+    }
+
+    [Theory]
+    // Over 5 to 11 s, the head shows from 5 to 11 s and not outside.
+    [InlineData(4.0, false)]
+    [InlineData(5.0, true)]
+    [InlineData(8.0, true)]
+    [InlineData(11.0, true)]
+    [InlineData(12.0, false)]
+    public void ZoomedTheHeadShowsOnlyInTheView(double head, bool shows)
+    {
+        Assert.Equal(shows, Zoomed(5f, 11f).Shows(head));
+    }
+
     [Theory]
     // 7.5 of 15 s is halfway; before the start and past the end hold at the ends.
     [InlineData(7.5, 0.5f)]

@@ -87,6 +87,8 @@ internal sealed class TrackEditorWindow : Window
     private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
     private readonly Scrubber scrub;
+    private TimingView? scrubView;
+    private (CameraMode Mode, Guid Track) scrubViewFor;
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
@@ -873,9 +875,11 @@ internal sealed class TrackEditorWindow : Window
     private void DrawScrubRow()
     {
         var transport = session.Transport;
-        var (head, total) = transport.Timeline is { } timeline
-            ? (transport.PlaylistHead, timeline.Total)
-            : (transport.ScrubHead, transport.ScrubLength);
+        var timeline = transport.Timeline;
+        var (head, total) = timeline is null
+            ? (transport.ScrubHead, transport.ScrubLength)
+            : (transport.PlaylistHead, timeline.Total);
+        var view = ScrubView(timeline is not null, (float)total);
 
         DrawTransport();
         // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
@@ -884,22 +888,54 @@ internal sealed class TrackEditorWindow : Window
         var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
         using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubGrabScale))
         {
-            if (!PlaylistBar.Draw(session, scrub, fields.Commit, width))
-                DrawTrackBar(width);
+            if (!PlaylistBar.Draw(session, scrub, fields.Commit, width, view))
+                DrawTrackBar(width, view);
         }
+        ZoomScrub(view, (float)total);
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(Units.SecondsOf(head, total));
     }
 
-    /// <summary>The edited track's scrub bar, <paramref name="width"/> wide.</summary>
-    private void DrawTrackBar(float width)
+    /// <summary>The scrub bar's zoom for this frame: whole for a new bar (another track, or Edit to Live) or one no longer zoomed, else kept within <paramref name="total"/>.</summary>
+    private TimingView ScrubView(bool live, float total)
+    {
+        var bar = (session.Mode, live ? Guid.Empty : session.EditedTrackId);
+        if (bar != scrubViewFor)
+        {
+            scrubView = null;
+            scrubViewFor = bar;
+        }
+        scrubView = scrubView?.Clamp(total).UnlessWhole(total);
+        return scrubView ?? TimingView.Whole(total);
+    }
+
+    /// <summary>The wheel over the scrub bar zooms it around the mouse, while it isn't being dragged.</summary>
+    private void ZoomScrub(TimingView view, float total)
+    {
+        if (!ImGui.IsItemHovered())
+            return;
+        ImGuiP.SetItemUsingMouseWheel();
+        var wheel = ImGui.GetIO().MouseWheel;
+        if (wheel == 0f || scrub.Active)
+            return;
+        var along = Fraction.Between(ImGui.GetMousePos().X, ImGui.GetItemRectMin().X, ImGui.GetItemRectMax().X, 0.5f);
+        var anchor = view.From + (along * view.Span);
+        scrubView = view.Zoom(anchor, MathF.Pow(TimingView.ZoomPerNotch, -wheel), total).UnlessWhole(total);
+    }
+
+    /// <summary>The edited track's scrub bar, <paramref name="width"/> wide over <paramref name="view"/>; the grab hides while the head is outside it.</summary>
+    private void DrawTrackBar(float width, TimingView view)
     {
         var duration = (float)session.Transport.ScrubLength;
         var head = (float)session.Transport.ScrubHead;
         ImGui.BeginDisabled(session.Released || duration <= 0f);
         ImGui.SetNextItemWidth(MathF.Max(width, 1f));
-        var moved = ImGui.SliderFloat("##scrub", ref head, 0f, MathF.Max(duration, 0.001f), "");
+        var outside = head < view.From || head > view.To;
+        using var hidden = ImRaii
+            .PushColor(ImGuiCol.SliderGrab, 0u, outside)
+            .Push(ImGuiCol.SliderGrabActive, 0u, outside);
+        var moved = ImGui.SliderFloat("##scrub", ref head, view.From, MathF.Max(view.To, view.From + 0.001f), "");
         if (ImGui.IsItemActivated())
         {
             fields.Commit();

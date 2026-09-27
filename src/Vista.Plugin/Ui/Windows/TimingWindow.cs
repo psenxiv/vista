@@ -37,7 +37,6 @@ internal sealed class TimingWindow : Window
     private const string KeyPopup = "##timing-key";
 
     private static readonly KeySide[] Sides = [KeySide.In, KeySide.Out];
-    private const float ZoomPerNotch = 1.25f;
     private const int TimeTicks = 16;
     private const int YalmTicks = 6;
 
@@ -573,7 +572,7 @@ internal sealed class TimingWindow : Window
         if (wheel == 0f || !ImGui.IsItemHovered() || drag is not null || scrub.Active || pan is not null)
             return;
         var from = view ?? TimingView.Whole(graph.Duration);
-        var next = from.Zoom(graph.TimeAt(mouse.X), MathF.Pow(ZoomPerNotch, -wheel), graph.Duration);
+        var next = from.Zoom(graph.TimeAt(mouse.X), MathF.Pow(TimingView.ZoomPerNotch, -wheel), graph.Duration);
         view = next.UnlessWhole(graph.Duration);
     }
 

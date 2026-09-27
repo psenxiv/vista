@@ -15,13 +15,13 @@ internal static class PlaylistBar
     // ImGui's inset of a slider's grab from its frame.
     private const float GrabPadding = 2f;
 
-    /// <summary>Draws the bar <paramref name="width"/> wide and seeks while it's held, calling <paramref name="activated"/> as a drag starts; false, drawing nothing, when Live has no playlist.</summary>
-    public static bool Draw(SessionState session, Scrubber scrub, Action activated, float width)
+    /// <summary>Draws the bar <paramref name="width"/> wide over <paramref name="view"/> and seeks while it's held, calling <paramref name="activated"/> as a drag starts; false, drawing nothing, when Live has no playlist.</summary>
+    public static bool Draw(SessionState session, Scrubber scrub, Action activated, float width, TimingView view)
     {
         if (session.Transport.Timeline is not { } timeline || session.Director.Playlist is not { } playlist)
             return false;
 
-        var bar = new PlaylistScrub(timeline, session.Scene);
+        var bar = new PlaylistScrub(timeline, session.Scene, view);
         var style = ImGui.GetStyle();
         ImGui.BeginDisabled(session.Released || timeline.Total <= 0.0);
 
@@ -59,13 +59,16 @@ internal static class PlaylistBar
             DrawSegment(list, bar, segment, segment == hovered, segment.Index == playlist.Index, min, max, left, right);
 
         var head = session.Transport.PlaylistHead;
-        var at = float.Lerp(left, right, bar.FractionOf(head));
-        list.AddRectFilled(
-            new Vector2(at - (grab / 2f), min.Y + GrabPadding),
-            new Vector2(at + (grab / 2f), max.Y - GrabPadding),
-            ImGui.GetColorU32(active ? ImGuiCol.SliderGrabActive : ImGuiCol.SliderGrab),
-            style.GrabRounding
-        );
+        if (bar.Shows(head))
+        {
+            var at = float.Lerp(left, right, bar.FractionOf(head));
+            list.AddRectFilled(
+                new Vector2(at - (grab / 2f), min.Y + GrabPadding),
+                new Vector2(at + (grab / 2f), max.Y - GrabPadding),
+                ImGui.GetColorU32(active ? ImGuiCol.SliderGrabActive : ImGuiCol.SliderGrab),
+                style.GrabRounding
+            );
+        }
         if (style.FrameBorderSize > 0f)
             list.AddRect(
                 min,
@@ -103,8 +106,11 @@ internal static class PlaylistBar
         float right
     )
     {
-        var first = segment.Index == 0;
-        var last = segment.Index == bar.Timeline.Segments.Count - 1;
+        if (!bar.Visible(segment))
+            return;
+        // A segment reaching either end of the view runs to the frame's edge there, rounded like it.
+        var first = bar.FractionOf(segment.Start) <= 0f;
+        var last = bar.FractionOf(segment.End) >= 1f;
         var from = first ? min.X : float.Lerp(left, right, bar.FractionOf(segment.Start));
         var to = last ? max.X : float.Lerp(left, right, bar.FractionOf(segment.End));
         var corners =

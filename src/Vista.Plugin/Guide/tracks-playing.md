@@ -9,7 +9,7 @@ Play a track to watch its shot. In Edit, playing shows only the track you are ed
 
 Flying or changing the track stops playback, and you fly on from that frame.
 
-Drag the scrub bar beside the buttons to move through the track by hand. The time beside it is how far into the track you are, and its length.
+Drag the scrub bar beside the buttons to move through the track by hand. The time beside it is how far into the track you are, and its length. Scroll over the bar to zoom in and out around the mouse.
 
 ## Ghost camera
 

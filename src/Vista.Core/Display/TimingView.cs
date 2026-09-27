@@ -2,9 +2,12 @@ using Vista.Core.Tracks;
 
 namespace Vista.Core.Display;
 
-/// <summary>The stretch of the shot, in seconds, that the timing graph shows.</summary>
+/// <summary>The stretch of the shot or playlist, in seconds, that the timing graph or a scrub bar shows.</summary>
 public readonly record struct TimingView(float From, float To)
 {
+    /// <summary>How much one wheel notch zooms by.</summary>
+    public const float ZoomPerNotch = 1.25f;
+
     /// <summary>The shortest stretch the graph zooms to.</summary>
     public const float MinSpan = 0.2f;
 

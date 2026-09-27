@@ -15,7 +15,7 @@ At the end of the playlist the camera holds its last frame, unless {icon:Repeat}
 
 ## The scrub bar
 
-In Live the scrub bar covers the whole playlist. Drag it to move anywhere in the playlist.
+In Live the scrub bar covers the whole playlist. Drag it to move anywhere in the playlist, and scroll over it to zoom in and out around the mouse.
 
 Each entry has its own stretch, as wide as its share of the time, and the entry that is playing is lit. Hover a stretch to see its entry's number and track.
 
