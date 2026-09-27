@@ -40,7 +40,7 @@ internal readonly record struct EditorView(
         var near = render->NearPlane;
         var far = render->FarPlane;
 
-        // BDTHPlugin's fix-up: re-express the game's reversed-Z, infinite-far projection for ImGuizmo.
+        // Re-express the game's reversed-Z, infinite-far projection for ImGuizmo.
         var gizmoProjection = projection;
         gizmoProjection.M43 = -(far / (far - near) * near);
         gizmoProjection.M33 = -((far + near) / (far - near));

@@ -6,7 +6,7 @@ namespace Vista.Plugin.Game;
 internal sealed unsafe class MovementLock : IDisposable
 {
     // Static int the game treats as a reference count: non-zero disables movement.
-    // Signature from Hypostasis, which Cammy uses for the same purpose. The instruction
+    // The instruction
     // loads a float; the counter is the next dword, so the 4 applies to the resolved
     // address, not to the scan. Passing it to the scanner decodes mid-instruction.
     private const string Signature = "F3 0F 10 05 ?? ?? ?? ?? 0F 2E C7";

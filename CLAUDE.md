@@ -2,11 +2,15 @@
 
 FFXIV Dalamud plugin: camera tracks, organised into scenes and played back live.
 
+Read `WORKFLOW.md` in its entirety.
+
 ## Requirements
 
 **Requirements come from the spec, not from reasoning about the use case.** Background explains motivation; it doesn't create requirements. If the spec is ambiguous, ask rather than adding a feature.
 
 **Verify Dalamud and FFXIVClientStructs APIs against their source before use.** Don't rely on recall, or on how other plugins use an API, since they may predate the current API level. Read the source at the version Vista builds against, from a local clone. If there isn't one, ask the user before cloning it.
+
+**Research, don't recall.** Reference clones live in `~/code`. Read a pinned version with `git show <tag>:<path>`; never check out another ref in a reference clone. A clone with no licence file is read, never copied. Never decompile open-source code. When comparing Vista with other software, read its real code, docs or papers and cite them, or say the claim is unverified.
 
 ## Writing
 
