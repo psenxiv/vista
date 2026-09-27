@@ -58,8 +58,8 @@ public class MovementSweepTests
     /// <summary>A failure a spec implies: the shape, the aim setting (every aim when null), the check, the count it has or the bound it stays within, why, and the spec it follows from.</summary>
     private sealed record Declared(Shape Shape, Aim? Aim, Check Check, float Expected, string Reason, string Spec);
 
-    /// <summary>A failure waiting for the user's triage: the shape, the aim setting (every aim when null), the check, the point it was found at (the whole measure when null, only for a check not measured at each point), the value measured when it was listed, and what's seen. It fails if that value moves further than the check's own limit or falls within the limit, and every other point is held to the limit.</summary>
-    private sealed record Pending(Shape Shape, Aim? Aim, Check Check, int? Point, float Measured, string Seen);
+    /// <summary>A failure waiting for the user's triage, written up in the triage folder's pending.md: the shape, the aim setting (every aim when null), the check, the point it was found at (the whole measure when null, only for a check not measured at each point), and the value measured when it was listed. It fails once that value gets worse or falls within the limit; every other point is held to the limit.</summary>
+    private sealed record Pending(Shape Shape, Aim? Aim, Check Check, int? Point, float Measured);
 
     /// <summary>The seconds the middle-hold shape holds its middle point.</summary>
     private const float HoldSeconds = 2f;
@@ -272,100 +272,75 @@ public class MovementSweepTests
     /// <summary>Speed steps at a point found by the sweep, on every aim since speed is the path's.</summary>
     private static readonly Pending[] PendingSpeed =
     [
-        new(Straight, null, Check.SpeedContinuous, 1, 0.056458f, SpeedStep("2", 4.944f, 5f)),
-        new(Straight, null, Check.SpeedContinuous, 2, 0.056458f, SpeedStep("4", 5f, 4.943f)),
-        new(GentleCurve, null, Check.SpeedContinuous, 1, 0.045676f, SpeedStep("1.565", 4.951f, 4.996f)),
-        new(GentleCurve, null, Check.SpeedContinuous, 3, 0.045897f, SpeedStep("4.705", 4.996f, 4.95f)),
-        new(SCurve, null, Check.SpeedContinuous, 1, 0.046873f, SpeedStep("1.544", 4.953f, 5f)),
-        new(SCurve, null, Check.SpeedContinuous, 3, 0.047042f, SpeedStep("4.632", 5f, 4.953f)),
-        new(Hairpin, null, Check.SpeedContinuous, 1, 0.13664f, SpeedStep("3.028", 4.863f, 5f)),
-        new(Hairpin, null, Check.SpeedContinuous, 2, 0.13664f, SpeedStep("3.679", 5f, 4.863f)),
-        new(Doubleback, null, Check.SpeedContinuous, 1, 0.16694f, SpeedStep("3", 4.979f, 4.812f)),
-        new(Loop, null, Check.SpeedContinuous, 1, 0.068068f, SpeedStep("2.803", 4.924f, 4.992f)),
-        new(Loop, null, Check.SpeedContinuous, 3, 0.030149f, SpeedStep("6.498", 4.986f, 4.956f)),
-        new(Loop, null, Check.SpeedContinuous, 5, 0.030728f, SpeedStep("10.347", 4.956f, 4.986f)),
-        new(Loop, null, Check.SpeedContinuous, 7, 0.068163f, SpeedStep("14.042", 4.991f, 4.923f)),
-        new(Crane, null, Check.SpeedContinuous, 1, 0.049431f, SpeedStep("2.04", 4.948f, 4.998f)),
-        new(Crane, null, Check.SpeedContinuous, 3, 0.049113f, SpeedStep("6.126", 4.998f, 4.949f)),
-        new(Orbit, null, Check.SpeedContinuous, 1, 0.037662f, SpeedStep("1.853", 4.947f, 4.984f)),
-        new(Orbit, null, Check.SpeedContinuous, 7, 0.036651f, SpeedStep("13.113", 4.984f, 4.947f)),
-        new(Uneven, null, Check.SpeedContinuous, 1, 0.24588f, SpeedStep("0.2", 5.001f, 4.755f)),
-        new(Uneven, null, Check.SpeedContinuous, 2, 0.24929f, SpeedStep("4.2", 4.755f, 5.005f)),
-        new(Uneven, null, Check.SpeedContinuous, 3, 0.2943f, SpeedStep("4.4", 5.005f, 4.71f)),
+        new(Straight, null, Check.SpeedContinuous, 1, 0.056458f),
+        new(Straight, null, Check.SpeedContinuous, 2, 0.056458f),
+        new(GentleCurve, null, Check.SpeedContinuous, 1, 0.045676f),
+        new(GentleCurve, null, Check.SpeedContinuous, 3, 0.045897f),
+        new(SCurve, null, Check.SpeedContinuous, 1, 0.046873f),
+        new(SCurve, null, Check.SpeedContinuous, 3, 0.047042f),
+        new(Hairpin, null, Check.SpeedContinuous, 1, 0.13664f),
+        new(Hairpin, null, Check.SpeedContinuous, 2, 0.13664f),
+        new(Doubleback, null, Check.SpeedContinuous, 1, 0.16694f),
+        new(Loop, null, Check.SpeedContinuous, 1, 0.068068f),
+        new(Loop, null, Check.SpeedContinuous, 3, 0.030149f),
+        new(Loop, null, Check.SpeedContinuous, 5, 0.030728f),
+        new(Loop, null, Check.SpeedContinuous, 7, 0.068163f),
+        new(Crane, null, Check.SpeedContinuous, 1, 0.049431f),
+        new(Crane, null, Check.SpeedContinuous, 3, 0.049113f),
+        new(Orbit, null, Check.SpeedContinuous, 1, 0.037662f),
+        new(Orbit, null, Check.SpeedContinuous, 7, 0.036651f),
+        new(Uneven, null, Check.SpeedContinuous, 1, 0.24588f),
+        new(Uneven, null, Check.SpeedContinuous, 2, 0.24929f),
+        new(Uneven, null, Check.SpeedContinuous, 3, 0.2943f),
     ];
 
     /// <summary>Turn-rate jumps at a point found by the sweep.</summary>
     private static readonly Pending[] PendingTurnRate =
     [
-        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 1, 0.15702f, SpanEdge("1.565", 28.2f, 0.324f, 0.32f)),
-        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 3, 0.15708f, SpanEdge("4.705", 28.2f, 0.32f, 0.324f)),
-        new(GentleCurve, UnderAPoint, Check.TurnRateContinuous, 1, 0.15702f, SpanEdge("1.565", 28.2f, 0.324f, 0.32f)),
-        new(GentleCurve, UnderAPoint, Check.TurnRateContinuous, 3, 0.15708f, SpanEdge("4.705", 28.2f, 0.32f, 0.324f)),
-        new(SCurve, Above, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, Above, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
-        new(SCurve, Below, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, Below, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
-        new(SCurve, OverAPoint, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, OverAPoint, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
-        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 1, 0.31151f, SpanEdge("1.544", 50.6f, 0.378f, 0.349f)),
-        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 3, 0.31138f, SpanEdge("4.632", 50.6f, 0.348f, 0.377f)),
-        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 1, 0.053182f, WithSpeed("3.028", 2.156f, 2.209f)),
-        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 2, 0.046849f, WithSpeed("3.679", 1.384f, 1.338f)),
-        new(Hairpin, Above, Check.TurnRateContinuous, 1, 0.67216f, SpanEdge("3.028", 83.2f, 0.43f, 0.57f)),
-        new(Hairpin, Above, Check.TurnRateContinuous, 2, 0.67192f, SpanEdge("3.679", 83.1f, 0.57f, 0.43f)),
-        new(Hairpin, Below, Check.TurnRateContinuous, 1, 0.67216f, SpanEdge("3.028", 83.2f, 0.43f, 0.57f)),
-        new(Hairpin, Below, Check.TurnRateContinuous, 2, 0.67192f, SpanEdge("3.679", 83.1f, 0.57f, 0.43f)),
-        new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1, 1.1766f, SpanEdge("3.028", 79.7f, 1.164f, 0.478f)),
-        new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1, 1.1766f, SpanEdge("3.028", 79.7f, 1.164f, 0.478f)),
-        new(Doubleback, Above, Check.TurnRateContinuous, 1, 0.86573f, TurnsBack(0.519f, 0.346f)),
-        new(Doubleback, Below, Check.TurnRateContinuous, 1, 0.86573f, TurnsBack(0.519f, 0.346f)),
-        new(Doubleback, Beside, Check.TurnRateContinuous, 1, 0.86552f, TurnsBack(0.519f, 0.346f)),
-        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1, 1.3524f, TurnsBack(0.811f, 0.541f)),
-        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1, 1.3524f, TurnsBack(0.811f, 0.541f)),
-        new(Crane, Above, Check.TurnRateContinuous, 1, 0.37404f, SpanEdge("2.04", 70.0f, 0.205f, 0.391f)),
-        new(Crane, Below, Check.TurnRateContinuous, 3, 0.37394f, SpanEdge("6.126", 70.1f, 0.39f, 0.205f)),
-        new(Spiral, OverAPoint, Check.TurnRateContinuous, 3, 0.34834f, SpanEdge("9.016", 86.5f, 0.244f, 0.264f)),
-        new(Spiral, UnderAPoint, Check.TurnRateContinuous, 5, 0.34839f, SpanEdge("15.085", 86.5f, 0.264f, 0.244f)),
-        new(Orbit, OverAPoint, Check.TurnRateContinuous, 3, 0.2813f, SpanEdge("5.606", 52.3f, 0.325f, 0.313f)),
-        new(Orbit, OverAPoint, Check.TurnRateContinuous, 5, 0.28161f, SpanEdge("9.36", 52.3f, 0.314f, 0.325f)),
-        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 3, 0.2813f, SpanEdge("5.606", 52.3f, 0.325f, 0.313f)),
-        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 5, 0.28161f, SpanEdge("9.36", 52.3f, 0.314f, 0.325f)),
-        new(Uneven, Above, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
-        new(Uneven, Above, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
-        new(Uneven, Below, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
-        new(Uneven, Below, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
-        new(Uneven, Beside, Check.TurnRateContinuous, 2, 0.048447f, WithSpeed("4.2", 0.461f, 0.51f)),
-        new(Uneven, Beside, Check.TurnRateContinuous, 3, 0.054605f, WithSpeed("4.4", 0.504f, 0.45f)),
-        new(Uneven, OverAPoint, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
-        new(Uneven, OverAPoint, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
-        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 2, 0.11917f, WithSpeed("4.2", 1.136f, 1.255f)),
-        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 3, 0.13286f, WithSpeed("4.4", 1.218f, 1.085f)),
+        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 1, 0.15702f),
+        new(GentleCurve, OverAPoint, Check.TurnRateContinuous, 3, 0.15708f),
+        new(GentleCurve, UnderAPoint, Check.TurnRateContinuous, 1, 0.15702f),
+        new(GentleCurve, UnderAPoint, Check.TurnRateContinuous, 3, 0.15708f),
+        new(SCurve, Above, Check.TurnRateContinuous, 1, 0.31151f),
+        new(SCurve, Above, Check.TurnRateContinuous, 3, 0.31138f),
+        new(SCurve, Below, Check.TurnRateContinuous, 1, 0.31151f),
+        new(SCurve, Below, Check.TurnRateContinuous, 3, 0.31138f),
+        new(SCurve, OverAPoint, Check.TurnRateContinuous, 1, 0.31151f),
+        new(SCurve, OverAPoint, Check.TurnRateContinuous, 3, 0.31138f),
+        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 1, 0.31151f),
+        new(SCurve, UnderAPoint, Check.TurnRateContinuous, 3, 0.31138f),
+        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 1, 0.053182f),
+        new(Hairpin, LookAheadHalf, Check.TurnRateContinuous, 2, 0.046849f),
+        new(Hairpin, Above, Check.TurnRateContinuous, 1, 0.67216f),
+        new(Hairpin, Above, Check.TurnRateContinuous, 2, 0.67192f),
+        new(Hairpin, Below, Check.TurnRateContinuous, 1, 0.67216f),
+        new(Hairpin, Below, Check.TurnRateContinuous, 2, 0.67192f),
+        new(Hairpin, OverAPoint, Check.TurnRateContinuous, 1, 1.1766f),
+        new(Hairpin, UnderAPoint, Check.TurnRateContinuous, 1, 1.1766f),
+        new(Doubleback, Above, Check.TurnRateContinuous, 1, 0.86573f),
+        new(Doubleback, Below, Check.TurnRateContinuous, 1, 0.86573f),
+        new(Doubleback, Beside, Check.TurnRateContinuous, 1, 0.86552f),
+        new(Doubleback, OverAPoint, Check.TurnRateContinuous, 1, 1.3524f),
+        new(Doubleback, UnderAPoint, Check.TurnRateContinuous, 1, 1.3524f),
+        new(Crane, Above, Check.TurnRateContinuous, 1, 0.37404f),
+        new(Crane, Below, Check.TurnRateContinuous, 3, 0.37394f),
+        new(Spiral, OverAPoint, Check.TurnRateContinuous, 3, 0.34834f),
+        new(Spiral, UnderAPoint, Check.TurnRateContinuous, 5, 0.34839f),
+        new(Orbit, OverAPoint, Check.TurnRateContinuous, 3, 0.2813f),
+        new(Orbit, OverAPoint, Check.TurnRateContinuous, 5, 0.28161f),
+        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 3, 0.2813f),
+        new(Orbit, UnderAPoint, Check.TurnRateContinuous, 5, 0.28161f),
+        new(Uneven, Above, Check.TurnRateContinuous, 2, 0.11917f),
+        new(Uneven, Above, Check.TurnRateContinuous, 3, 0.13286f),
+        new(Uneven, Below, Check.TurnRateContinuous, 2, 0.11917f),
+        new(Uneven, Below, Check.TurnRateContinuous, 3, 0.13286f),
+        new(Uneven, Beside, Check.TurnRateContinuous, 2, 0.048447f),
+        new(Uneven, Beside, Check.TurnRateContinuous, 3, 0.054605f),
+        new(Uneven, OverAPoint, Check.TurnRateContinuous, 2, 0.11917f),
+        new(Uneven, OverAPoint, Check.TurnRateContinuous, 3, 0.13286f),
+        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 2, 0.11917f),
+        new(Uneven, UnderAPoint, Check.TurnRateContinuous, 3, 0.13286f),
     ];
-
-    /// <summary>What's seen where the speed steps at a point <paramref name="time"/> seconds in.</summary>
-    private static string SpeedStep(string time, float before, float after) =>
-        string.Create(CultureInfo.InvariantCulture, $"at {time} s: {before} yalms/s just before, {after} just after");
-
-    /// <summary>What's seen where Look At's turn rate swings its axis at a point, as it does where the up rejoins upright at a turn span's end.</summary>
-    private static string SpanEdge(string time, float axes, float before, float after) =>
-        string.Create(
-            CultureInfo.InvariantCulture,
-            $"at {time} s the turn rate's axis swings {axes}°, {before} rad/s before and {after} after; the camera passes under or over the Look At point next to it, so a turn span (aim-flow §2) likely starts or ends there, as on the crane, where the up is seen meeting upright at an angle at point 1"
-        );
-
-    /// <summary>What's seen where Look At's turn rate reverses at the doubleback's turn-back point.</summary>
-    private static string TurnsBack(float before, float after) =>
-        string.Create(
-            CultureInfo.InvariantCulture,
-            $"the turn rate reverses at the turn-back point (3 s), {before} rad/s before and {after} after, axes 180° apart: the camera reverses at full speed there, which constant speed along a path that runs straight back seems to imply, but no spec says so for Look At"
-        );
-
-    /// <summary>What's seen where the turn rate keeps its axis but changes size at a point, with the speed step there.</summary>
-    private static string WithSpeed(string time, float before, float after) =>
-        string.Create(
-            CultureInfo.InvariantCulture,
-            $"at {time} s the turn rate keeps its axis but goes from {before} to {after} rad/s, where the speed steps too"
-        );
 
     /// <summary>Failures waiting for the user's triage.</summary>
     private static readonly Pending[] PendingTriage = [.. PendingSpeed, .. PendingTurnRate];
@@ -546,8 +521,8 @@ public class MovementSweepTests
         Fail,
     }
 
-    /// <summary>A check's measure on a combination, how it came out, and why.</summary>
-    private sealed record Verdict(Measure Measure, Status Status, string Why);
+    /// <summary>A check's measure on a combination, how it came out, why, and any pending entries it has improved on.</summary>
+    private sealed record Verdict(Measure Measure, Status Status, string Why, IReadOnlyList<string>? Improved = null);
 
     /// <summary>One combination's verdicts, and the largest turn between 60 fps frames in degrees a second, for the report.</summary>
     private sealed record Outcome(Combination Combination, List<Verdict> Verdicts, float TurnRate)
@@ -598,25 +573,33 @@ public class MovementSweepTests
         );
     }
 
-    /// <summary>How <paramref name="measure"/> comes out against its <paramref name="pending"/> entries: each still where it was listed and still over the limit, and every other point within the limit.</summary>
+    /// <summary>How <paramref name="measure"/> comes out against its <paramref name="pending"/> entries: each still over the limit and no worse than listed, and every other point within the limit.</summary>
     private static Verdict JudgePending(Measure measure, Pending[] pending)
     {
         var check = measure.Check;
         var limit = Limit(check);
         var points = measure.Points ?? [];
         var problems = new List<string>();
+        var seen = new List<string>();
+        var improved = new List<string>();
         foreach (var entry in pending)
         {
             var at = entry.Point is { } p ? points.FirstOrDefault(m => m.Point == p) : null;
             var (value, where) = at is null ? (measure.Value, measure.Where) : (at.Value, at.Where);
             if (entry.Point is null && measure.Points is not null)
-                problems.Add($"{check} is measured at each point, so its pending entry needs one ({entry.Seen})");
+                problems.Add($"{check} is measured at each point, so its pending entry needs one");
             else if (entry.Point is not null && at is null)
-                problems.Add($"{check} has no point {entry.Point}, pending ({entry.Seen})");
+                problems.Add($"{check} has no point {entry.Point}, pending at {entry.Measured:G5}");
             else if (value <= limit)
-                problems.Add($"{check} {value:G5} {where} is within {limit:G5}: drop the pending entry ({entry.Seen})");
-            else if (!(Counts(check) ? value == entry.Measured : MathF.Abs(value - entry.Measured) <= limit))
-                problems.Add($"{check} {value:G5}, pending at {entry.Measured:G5} ({entry.Seen}) {where}");
+                problems.Add($"{check} {value:G5} {where} is within {limit:G5}: drop the pending entry");
+            else if (Worse(check, value, entry.Measured))
+                problems.Add($"{check} {value:G5} {where}, worse than its pending {entry.Measured:G5}");
+            else
+            {
+                seen.Add($"{check} {value:G5} {where}");
+                if (Better(check, value, entry.Measured))
+                    improved.Add($"{check} {where}: listed {entry.Measured:G5}, now {value:G5}");
+            }
         }
 
         var listed = pending.Select(e => e.Point).OfType<int>().ToHashSet();
@@ -627,9 +610,17 @@ public class MovementSweepTests
         );
 
         return problems.Count == 0
-            ? new Verdict(measure, Status.Pending, $"{check}: {string.Join("; ", pending.Select(e => e.Seen))}")
+            ? new Verdict(measure, Status.Pending, string.Join("; ", seen), improved)
             : new Verdict(measure, Status.Fail, string.Join("; ", problems));
     }
+
+    /// <summary>Whether <paramref name="value"/> is worse than a pending entry's <paramref name="listed"/> one: a count by any amount, a measure by more than its check's limit, or not a number.</summary>
+    private static bool Worse(Check check, float value, float listed) =>
+        !(value <= listed + (Counts(check) ? 0f : Limit(check)));
+
+    /// <summary>Whether <paramref name="value"/> has improved on a pending entry's <paramref name="listed"/> one: a count by any amount, a measure by more than its check's limit.</summary>
+    private static bool Better(Check check, float value, float listed) =>
+        value < listed - (Counts(check) ? 0f : Limit(check));
 
     /// <summary>Plays and judges <paramref name="combination"/>.</summary>
     private static Outcome Play(Combination combination)
@@ -667,6 +658,45 @@ public class MovementSweepTests
         Assert.True(problems.Count == 0, $"{problems.Count} undeclared:\n{string.Join("\n", problems)}");
     }
 
+    // Listed at 0.05 with the speed limit 0.01: worse above 0.06, improved below 0.04, passing at or under 0.01.
+    [Theory]
+    [InlineData(0.0701f, true, false)]
+    [InlineData(0.059f, false, false)]
+    [InlineData(0.05f, false, false)]
+    [InlineData(0.041f, false, false)]
+    [InlineData(0.03f, false, true)]
+    [InlineData(0.005f, true, false)]
+    [InlineData(float.NaN, true, false)]
+    public void APendingEntryFailsOnlyWhenWorseOrPassing(float value, bool fails, bool improved)
+    {
+        var entry = new Pending(Straight, null, Check.SpeedContinuous, 1, 0.05f);
+        var measure = new Measure(
+            Check.SpeedContinuous,
+            value,
+            "at point 1",
+            [new PointMeasure(1, value, "at point 1")]
+        );
+
+        var verdict = JudgePending(measure, [entry]);
+
+        Assert.Equal(fails, verdict.Status == Status.Fail);
+        Assert.Equal(improved, verdict.Improved is { Count: > 0 });
+    }
+
+    [Fact]
+    public void APendingCountFailsOnAnyRiseAndImprovesOnAnyFall()
+    {
+        // Snaps count, with a limit of 0: listed at 2, three is worse and one is better but still over.
+        var entry = new Pending(Straight, null, Check.Snaps, null, 2f);
+        Verdict Judged(float count) => JudgePending(new Measure(Check.Snaps, count, ""), [entry]);
+
+        Assert.Equal(Status.Fail, Judged(3f).Status);
+        Assert.Equal(Status.Pending, Judged(2f).Status);
+        Assert.Empty(Judged(2f).Improved!);
+        Assert.Equal(Status.Pending, Judged(1f).Status);
+        Assert.Single(Judged(1f).Improved!);
+    }
+
     /// <summary>Writes one row per combination to a dated file under the test project's obj folder.</summary>
     private static void WriteReport(List<Outcome> outcomes)
     {
@@ -700,6 +730,15 @@ public class MovementSweepTests
                 $"| {outcome.Combination.Name} | {Figure(outcome.TurnRate, 1f, "0.#")} | {Figure(outcome.Value(Check.SpeedContinuous), 1f, "0.####")} | {Figure(outcome.Value(Check.HorizonLevel), 1f / Deg, "0.#####")} | {Figure(outcome.Value(Check.LookAtCentred), 1f / Deg, "0.#####")} | {Figure(outcome.Value(Check.Snaps), 1f, "0")} | {outcome.Status.ToString().ToLowerInvariant()} | {string.Join("<br>", reasons).Replace("|", "\\|", StringComparison.Ordinal)} |"
             );
         }
+
+        var improved = outcomes
+            .SelectMany(o => o.Verdicts.SelectMany(v => (v.Improved ?? []).Select(i => $"- {o.Combination.Name}: {i}")))
+            .ToList();
+        text.AppendLine().AppendLine("## Improved pending entries").AppendLine();
+        if (improved.Count == 0)
+            text.AppendLine("None: every pending entry is where it was listed.");
+        foreach (var line in improved)
+            text.AppendLine(line);
 
         var folder = Path.Combine(RepositoryRoot(), "tests", "Vista.Tests", "obj", "sweep-reports");
         Directory.CreateDirectory(folder);
