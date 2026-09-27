@@ -22,4 +22,4 @@ With **Recorded aim**, change a point's aim with **Pitch** and **Yaw** in the [P
 
 ## Seeing where it turns
 
-Press `G` in Edit or View to colour the path of the track you're editing by how fast the camera turns. It goes from the path's usual colour to yellow, then red where it turns hardest. Press `G` again to go back.
+Press `G` in Edit or View, or tick **Colour path by turn speed** in the **View** menu, to colour the path of the track you're editing by how fast the camera turns. It goes from the path's usual colour to yellow, then red where it turns hardest. Press `G` again to go back.

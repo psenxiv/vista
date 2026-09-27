@@ -126,9 +126,9 @@ internal sealed class MainMenu
         if (!menu)
             return;
         var selected = session.Selection.Point is not null;
-        if (Menu.Item("At end", shortcut: "Backtick"))
+        if (Menu.Item("Add to end", shortcut: "Backtick"))
             Report(game.AddToEnd());
-        if (Menu.Item("After selected", selected, "Alt + Backtick"))
+        if (Menu.Item("Add after selected", selected, "Alt + Backtick"))
             Report(game.AddAfterSelected());
         if (Menu.Item("Overwrite selected", selected, "Ctrl + Backtick"))
             Report(game.OverwriteSelected());

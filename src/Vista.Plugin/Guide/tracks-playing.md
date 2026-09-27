@@ -21,7 +21,7 @@ Turn on **Ghost camera** in the **Preview** menu. When you play the track in Edi
 
 Playback speed slows a track down or speeds it up while you watch it in Edit, so you can study a quick move closely or skim a long one. It doesn't change the shot, and Live always plays at normal speed.
 
-Drag **Playback speed** in the **Preview** menu, where 1.00x is normal speed. Dragging moves in steps of 0.1. `Ctrl` + click the slider to type an exact speed, as slow as 0.01x.
+Drag **Playback speed** in the **Preview** menu, where 1.00x is normal speed, or `Ctrl` + click it to type a speed.
 
 ## Direction
 

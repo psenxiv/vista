@@ -40,7 +40,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 |---|---|
 | **Play / Pause** | Plays or pauses (`Space`). |
 | **Restart** | Plays from the beginning (`Ctrl + Space`). |
-| **Ghost camera** | Plays the track on a ghost camera while you keep your own view. See [Playing a track](tracks-playing.md). |
+| **Ghost camera** | Plays the track on a camera outline in the world while you keep your own view. See [Playing a track](tracks-playing.md). |
 | **Playback speed** | Sets how fast the track plays in Edit. See [Playing a track](tracks-playing.md). |
 
 ## Help

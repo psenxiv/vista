@@ -15,13 +15,13 @@ At the end of the playlist the camera holds its last frame, unless {icon:Repeat}
 
 ## The scrub bar
 
-In Live the scrub bar shows the whole playlist. Each entry has its own stretch of the bar, as wide as its share of the time, and the entry that is playing is lit. Hover a stretch to see its entry's number and track.
+In Live the scrub bar covers the whole playlist. Drag it to move anywhere in the playlist.
 
-An entry that repeats is that many times as long, with faint lines where each repeat starts. An entry that plays until you stop ends the bar, and its stretch shows one pass.
+Each entry has its own stretch, as wide as its share of the time, and the entry that is playing is lit. Hover a stretch to see its entry's number and track.
+
+An entry that repeats has a longer stretch, with a faint line where each repeat starts. An entry that plays until you stop ends the bar and shows once.
 
 The text on the bar shows the entry that is playing, how far into it you are and its length, then how far into the playlist you are and its length.
-
-Drag the bar to move anywhere in the playlist.
 
 ## Hiding the game UI
 
