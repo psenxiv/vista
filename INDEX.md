@@ -13,7 +13,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 ### Core
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
-- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, tick spacing, row text fitting, edge scrolling, panel widths and the track name size.
+- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and Live's scrub bar over the playlist.
 - `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Scenes`: scenes, playlists and presets as data, their edits and names, their place in the world, and their files.
@@ -31,7 +31,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Game`: reading and writing the game: the camera and its hook, the free-cam, input blocking, movement lock, the UI toggle, ground and nearby characters, and faults.
 - `SelfTest`: running `/vista selftest` in the game.
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
-- `Ui/Main`: the main Vista window, with its menu bar and its Hierarchy and Playlist panels.
+- `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, and Live's playlist scrub bar.
 - `Ui/Widgets`: the ImGui pieces the windows share.
 - `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup and Welcome.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.

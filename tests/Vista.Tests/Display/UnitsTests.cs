@@ -10,6 +10,7 @@ public class UnitsTests
     public void EachQuantityShowsTwoDecimalsAndItsUnit()
     {
         Assert.Equal("1.50 s", Units.Seconds(1.5));
+        Assert.Equal("1.50", Units.SecondsValue(1.5));
         Assert.Equal("12.35 y", Units.Yalms(12.345f));
         Assert.Equal("0.25 y/s", Units.YalmsPerSecond(0.25f));
     }
@@ -22,6 +23,7 @@ public class UnitsTests
         {
             CultureInfo.CurrentCulture = new CultureInfo("de-DE");
             Assert.Equal("1.50 s", Units.Seconds(1.5));
+            Assert.Equal("1.50", Units.SecondsValue(1.5));
             Assert.Equal("2.00 y", Units.Yalms(2f));
             Assert.Equal("3.00 y/s", Units.YalmsPerSecond(3f));
         }

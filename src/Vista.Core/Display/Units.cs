@@ -25,7 +25,10 @@ public static class Units
     public const string DegreesField = "%.1f°";
 
     /// <summary><paramref name="seconds"/> as text with its unit, to <see cref="SecondsField"/>'s precision.</summary>
-    public static string Seconds(double seconds) => Invariant($"{seconds:0.00} s");
+    public static string Seconds(double seconds) => $"{SecondsValue(seconds)} s";
+
+    /// <summary><paramref name="seconds"/> as text without its unit, to <see cref="SecondsNumber"/>'s precision.</summary>
+    public static string SecondsValue(double seconds) => Invariant($"{seconds:0.00}");
 
     /// <summary><paramref name="yalms"/> as text with its unit, to <see cref="YalmsField"/>'s precision.</summary>
     public static string Yalms(float yalms) => Yalms(yalms, "0.00");

@@ -872,13 +872,15 @@ internal sealed class TrackEditorWindow : Window
             Report(session.SetLegSpeed(index, TrackEditing.LegSpeed(track, index)));
     }
 
-    /// <summary>Play/Pause and Restart, then the scrub bar showing current and total time.</summary>
+    /// <summary>Play/Pause and Restart, then the scrub bar: the whole playlist in Live, otherwise the edited track with its current and total time.</summary>
     private void DrawScrubRow()
     {
         var duration = (float)session.Transport.ScrubLength;
         var head = (float)session.Transport.ScrubHead;
 
         DrawTransport();
+        if (PlaylistBar.Draw(session, scrub, fields.Commit))
+            return;
         ImGui.BeginDisabled(session.Released || duration <= 0f);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
         var moved = ImGui.SliderFloat(
