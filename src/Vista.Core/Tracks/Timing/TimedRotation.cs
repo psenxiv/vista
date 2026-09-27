@@ -72,7 +72,8 @@ public sealed class TimedRotation
         var after = arrive[i + 1] - depart[i];
         if (before <= TimedChannel.MinSeconds || after <= TimedChannel.MinSeconds)
             return Vector3.Zero;
-        return ((turns[i] / before * after) + (turns[i + 1] / after * before)) / (before + after);
+        var (w0, w1) = Hermite.ThroughWeights(before, after);
+        return (w0 * turns[i]) + (w1 * turns[i + 1]);
     }
 
     /// <summary>Leg <paramref name="leg"/>'s average turn rate per second, or zero when it takes no time.</summary>

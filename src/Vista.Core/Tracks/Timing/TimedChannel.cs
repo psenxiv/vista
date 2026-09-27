@@ -55,8 +55,8 @@ public sealed class TimedChannel
         var after = arrive[i + 1] - depart[i];
         if (before <= MinSeconds || after <= MinSeconds)
             return 0f;
-        return (((values[i] - values[i - 1]) / before * after) + ((values[i + 1] - values[i]) / after * before))
-            / (before + after);
+        var (w0, w1) = Hermite.ThroughWeights(before, after);
+        return (w0 * (values[i] - values[i - 1])) + (w1 * (values[i + 1] - values[i]));
     }
 
     /// <summary>Leg <paramref name="leg"/>'s average slope per second, or 0 when it takes no time.</summary>

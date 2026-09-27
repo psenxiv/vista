@@ -56,4 +56,12 @@ internal static class Hermite
 
     /// <summary>The Fritsch–Carlson bound on a tangent-to-secant ratio.</summary>
     private const float MonotoneBound = 3f;
+
+    /// <summary>Weights on the changes over the interval before a point and the one after, <paramref name="before"/> and <paramref name="after"/> long, whose sum is the three-point (Catmull-Rom) slope there.</summary>
+    public static (float Before, float After) ThroughWeights(float before, float after) =>
+        (after / (before * (before + after)), before / (after * (before + after)));
+
+    /// <summary>Weights on the changes over an end interval <paramref name="end"/> long and the next, <paramref name="next"/> long, whose sum is the three-point end slope (SciPy PCHIP's end rule, unclamped).</summary>
+    public static (float End, float Next) EndWeights(float end, float next) =>
+        (((2f * end) + next) / (end * (end + next)), -end / (next * (end + next)));
 }

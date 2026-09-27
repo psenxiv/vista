@@ -131,8 +131,11 @@ public sealed class TimingCurve
     }
 
     /// <summary>A Smooth end key's slope by SciPy PCHIP's three-point end rule, from the end interval (<paramref name="h0"/>, <paramref name="d0"/>) and the next; the monotone clamp that follows zeroes it where it would run backwards or the end interval is still.</summary>
-    private static float EndRaw(float h0, float d0, float h1, float d1) =>
-        ((((2f * h0) + h1) * d0) - (h0 * d1)) / (h0 + h1);
+    private static float EndRaw(float h0, float d0, float h1, float d1)
+    {
+        var (end, next) = Hermite.EndWeights(h0, h1);
+        return (end * d0 * h0) + (next * d1 * h1);
+    }
 
     /// <summary>Clamps an interval's tangent pair to the [0,3] square per ratio so its cubic stays monotone; a zero secant zeroes both.</summary>
     private static (float M0, float M1) ClampPair(float m0, float m1, float delta)
