@@ -4,6 +4,7 @@ using Dalamud.Interface.Windowing;
 using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Session;
+using Vista.Core.Tracks;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Widgets;
@@ -103,7 +104,7 @@ internal sealed class MainMenu
         ImGui.Separator();
         DrawAddPoint(editing);
         var points = session.Selection.Points;
-        if (Menu.Item("Duplicate point", editing && points.Count > 0))
+        if (Menu.Item("Duplicate point", editing && points.Count > 0 && TrackEditing.CanDuplicate(session.Track)))
         {
             fields.Commit();
             Report(session.DuplicatePoints(points));
@@ -125,13 +126,7 @@ internal sealed class MainMenu
         using var menu = ImRaii.Menu("Add point", editing);
         if (!menu)
             return;
-        var selected = session.Selection.Point is not null;
-        if (Menu.Item("Add to end", shortcut: "Backtick"))
-            Report(game.AddToEnd());
-        if (Menu.Item("Add after selected", selected, "Alt + Backtick"))
-            Report(game.AddAfterSelected());
-        if (Menu.Item("Overwrite selected", selected, "Ctrl + Backtick"))
-            Report(game.OverwriteSelected());
+        AddPointItems.Draw(game);
     }
 
     private void DrawView(bool editing, ref bool showHierarchy, ref bool showPlaylist)

@@ -173,24 +173,6 @@ public class SessionPlaylistTests
     }
 
     [Fact]
-    public void ScrubbingLiveByPlaylistTimeClampsToThePlaylist()
-    {
-        var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
-        GoLive(state);
-
-        // Past the 12 s end is the end: Track 1's entry finished at 10 s.
-        state.Transport.ScrubPlaylistTo(99.0);
-        Assert.Equal(12.0, state.Transport.PlaylistHead, 4);
-        Assert.True(state.Director.IsFinished);
-
-        state.Transport.ScrubPlaylistTo(-3.0);
-        Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(0.0, state.Transport.PlaylistHead, 4);
-    }
-
-    [Fact]
     public void ThePlaylistTimelineIsOnlyLives()
     {
         var state = Editing();

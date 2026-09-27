@@ -127,19 +127,6 @@ public class PlaylistTimelineTests
         Assert.Equal(new PlaylistPosition(1, 0, 0.0), last.At(last.Total));
     }
 
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(true, false, true)]
-    // A forever entry at the end loops over its own segment instead.
-    [InlineData(true, true, false)]
-    [InlineData(false, true, false)]
-    public void OnlyALoopingPlaylistWithNoForeverEntryWraps(bool loops, bool forever, bool wraps)
-    {
-        var timeline = new PlaylistPlayback([Item(OneLeg(5f)), Item(OneLeg(2f, loop: forever))], loops).Timeline;
-
-        Assert.Equal(wraps, timeline.Wraps);
-    }
-
     /// <summary>The timeline Live plays for <paramref name="scene"/>'s playlist.</summary>
     private static PlaylistTimeline LiveTimeline(Scene scene)
     {

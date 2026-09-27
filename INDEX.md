@@ -103,6 +103,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Widgets/Layout`: the spacing and field and dialog widths the windows share, right-aligning, centring a window as it appears, and minimum window sizes.
 - `Ui/Widgets/WindowStyle`: a window's spacing, popup style and selected-row colours, or the popup style alone.
 - `Ui/Widgets/Tooltip` and `Menu`: a tooltip on the item just drawn, shown even while disabled, and a menu's items: plain, ticked, and a labelled slider.
+- `Ui/Main/AddPointItems`: the three ways to add a point at the camera as menu items, shared by the Edit menu and the track row's add menu.
 - `Ui/Widgets/PoseGrid`: the Point and Camera windows' shared layout and fields.
 - `Ui/Widgets/BorderedField`, `PendingField`, `LiveDrag` and `TextEdit`: a bordered number field, a field drawn for a `PendingEdit`, a field previewed live as one undo step, and text edited in place; with `FieldDraw`, `PendingField` and `LiveDrag` run a field the caller draws.
 - `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name.

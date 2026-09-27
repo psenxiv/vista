@@ -22,7 +22,7 @@ public sealed class PlaylistPlayback : IPlayback
         this.items = items;
         this.loops = loops;
         evaluators = items.Select(i => new TrackEvaluator(i.Track)).ToArray();
-        Timeline = new PlaylistTimeline(items, evaluators.Select(e => e.Duration).ToArray(), loops);
+        Timeline = new PlaylistTimeline(items, evaluators.Select(e => e.Duration).ToArray());
         aim = new AimTracker(targets);
     }
 

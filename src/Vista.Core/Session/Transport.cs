@@ -168,7 +168,7 @@ public sealed class Transport
     public void ScrubPlaylistTo(double time)
     {
         if (session.Mode == CameraMode.Live && session.Director.Playlist is { } playlist)
-            playlist.SeekPlaylist(Math.Clamp(time, 0.0, playlist.Timeline.Total));
+            playlist.SeekPlaylist(time);
     }
 
     /// <summary>Stops dragging the scrub head; live, playback carries on as it was. Returns the scrub head's frame for the free-cam in Edit without the ghost, otherwise null.</summary>

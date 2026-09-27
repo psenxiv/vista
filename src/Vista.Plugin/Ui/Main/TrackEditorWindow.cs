@@ -639,13 +639,7 @@ internal sealed class TrackEditorWindow : Window
         if (!ImGui.BeginPopup("add-menu"))
             return;
 
-        var selected = session.Selection.Point is not null;
-        if (Menu.Item("Add to end", shortcut: "Backtick"))
-            Report(game.AddToEnd());
-        if (Menu.Item("Add after selected", selected, "Alt + Backtick"))
-            Report(game.AddAfterSelected());
-        if (Menu.Item("Overwrite selected", selected, "Ctrl + Backtick"))
-            Report(game.OverwriteSelected());
+        AddPointItems.Draw(game);
         ImGui.EndPopup();
     }
 
@@ -994,7 +988,7 @@ internal sealed class TrackEditorWindow : Window
             ImGui.EndMenu();
         }
 
-        if (Menu.Item("Duplicate"))
+        if (Menu.Item("Duplicate", TrackEditing.CanDuplicate(session.Track)))
         {
             fields.Commit();
             Report(session.DuplicatePoints(points));

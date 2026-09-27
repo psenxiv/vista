@@ -505,6 +505,8 @@ public class TrackEditingTests
             TrackEditing.FollowHasOnePoint,
             Assert.Throws<ArgumentException>(() => TrackEditing.Duplicate(follow, 0)).Message
         );
+        Assert.False(TrackEditing.CanDuplicate(follow));
+        Assert.True(TrackEditing.CanDuplicate(Build3PointTrack()));
     }
 
     [Fact]

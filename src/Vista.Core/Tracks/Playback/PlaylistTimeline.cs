@@ -4,7 +4,7 @@ namespace Vista.Core.Tracks.Playback;
 public sealed class PlaylistTimeline
 {
     /// <summary>Lays out <paramref name="items"/> whose tracks run for <paramref name="durations"/> seconds, stopping after an entry that loops forever.</summary>
-    internal PlaylistTimeline(IReadOnlyList<PlaylistItem> items, IReadOnlyList<double> durations, bool loops)
+    internal PlaylistTimeline(IReadOnlyList<PlaylistItem> items, IReadOnlyList<double> durations)
     {
         var segments = new List<PlaylistSegment>();
         var start = 0.0;
@@ -29,7 +29,6 @@ public sealed class PlaylistTimeline
 
         Segments = segments;
         Total = start;
-        Wraps = loops && !segments[^1].LoopsForever;
     }
 
     /// <summary>One segment per entry in playing order, up to and including an entry that loops forever.</summary>
@@ -37,9 +36,6 @@ public sealed class PlaylistTimeline
 
     /// <summary>The whole timeline's length in seconds.</summary>
     public double Total { get; }
-
-    /// <summary>True when the playhead wraps from the end back to the start: the playlist loops and doesn't end on an entry looping forever.</summary>
-    public bool Wraps { get; }
 
     /// <summary>The entry, pass and time at <paramref name="time"/>, clamped to the timeline; a segment's end is the next one's start, except at the very end.</summary>
     public PlaylistPosition At(double time)

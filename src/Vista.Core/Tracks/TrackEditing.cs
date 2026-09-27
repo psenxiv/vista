@@ -182,11 +182,14 @@ public static class TrackEditing
         };
     }
 
+    /// <summary>Whether <paramref name="track"/>'s points can be duplicated: not on a Follow Target track, which has one point.</summary>
+    public static bool CanDuplicate(Track track) => track.Aim != AimMode.FollowTarget;
+
     /// <summary>Inserts an exact copy of point <paramref name="index"/> and its timing straight after it; refused on a Follow Target track.</summary>
     public static Track Duplicate(Track track, int index)
     {
         ValidatePointIndex(track, index, "Duplicate");
-        if (track.Aim == AimMode.FollowTarget)
+        if (!CanDuplicate(track))
             throw new ArgumentException(FollowHasOnePoint);
         return track with
         {
