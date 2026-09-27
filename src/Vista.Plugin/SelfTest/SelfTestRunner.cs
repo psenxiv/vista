@@ -48,6 +48,12 @@ internal sealed class SelfTestRunner(GameSession game, Func<IReadOnlyList<(strin
         stopNotified = false;
         game.SelfTestRunning = true;
         Say(SelfTestReport.StartLine(Plugin.Build, DateTime.Now));
+        if (CameraAccess.ReadFovLimits() is { } limits)
+            Plugin.Log.Information(
+                "[selftest] the game's field of view limits: {Min:G9} to {Max:G9}",
+                limits.Min,
+                limits.Max
+            );
         steps = Run().GetEnumerator();
     }
 

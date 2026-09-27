@@ -50,6 +50,14 @@ internal static unsafe class CameraAccess
         camera->DirV = pitch;
     }
 
+    /// <summary>The world camera's own field of view limits, MinFoV and MaxFoV, in radians.</summary>
+    public static (float Min, float Max)? ReadFovLimits()
+    {
+        if (!TryGetWorldCamera(out var camera))
+            return null;
+        return (camera->MinFoV, camera->MaxFoV);
+    }
+
     /// <summary>Everything WriteState touches, so release can put it all back.</summary>
     public readonly record struct Snapshot(Vector3 Position, Vector3 LookAt, Vector3 Up, float Fov);
 
