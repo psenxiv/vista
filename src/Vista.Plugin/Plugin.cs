@@ -198,7 +198,7 @@ public sealed class Plugin : IDalamudPlugin
                 break;
 #endif
             default:
-                Log.Information("[vista] unknown verb '{Verb}'.", verb);
+                Log.Information("unknown verb '{Verb}'.", verb);
                 break;
         }
     }
@@ -261,7 +261,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         var checks = LoadTouchPoints();
         Log.Information(
-            "[vista] touch points: {Results}",
+            "touch points: {Results}",
             string.Join(", ", checks.Select(c => $"{c.Name} {Result(c.Passed)}"))
         );
         foreach (var (name, passed) in checks)
@@ -274,7 +274,7 @@ public sealed class Plugin : IDalamudPlugin
         if (cameraHookChecked || Camera.Hooked is not { } hooked)
             return;
         cameraHookChecked = true;
-        Log.Information("[vista] touch points: {Name:l} {Result}", CameraController.Name, Result(hooked));
+        Log.Information("touch points: {Name:l} {Result}", CameraController.Name, Result(hooked));
         CheckTouchPoint(CameraController.Name, hooked);
     }
 
@@ -292,7 +292,7 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>Logs why Vista stopped and, unless Dalamud already tells the player, shows the stop message.</summary>
     private void AnnounceStop(bool notify)
     {
-        Log.Error("[vista] stopped: {Reason}", game.State.StopReason ?? "unknown");
+        Log.Error("stopped: {Reason}", game.State.StopReason ?? "unknown");
         if (!notify)
             return;
         Notifications.AddNotification(

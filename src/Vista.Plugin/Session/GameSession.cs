@@ -152,7 +152,7 @@ internal sealed class GameSession
         var start = state.Mode == CameraMode.Live ? lastFrame ?? CameraAccess.ReadState() : CameraAccess.ReadState();
         if (start is null)
         {
-            Plugin.Log.Error("[vista] cannot read camera state.");
+            Plugin.Log.Error("cannot read camera state.");
             return;
         }
 
@@ -172,7 +172,7 @@ internal sealed class GameSession
         }
 
         GameUi.Restore();
-        Plugin.Log.Information("[vista] mode: editing");
+        Plugin.Log.Information("mode: editing");
     }
 
     /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live with the playlist. Refused when nothing can play.</summary>
@@ -197,7 +197,7 @@ internal sealed class GameSession
     {
         var editing = state.Mode == CameraMode.Editing;
         if (state.Stop())
-            Plugin.Log.Information(editing ? "[vista] preview stopped" : "[vista] paused");
+            Plugin.Log.Information(editing ? "preview stopped" : "paused");
     }
 
     /// <summary>What Play/Pause does: stops a running shot or preview, starts one otherwise.</summary>
@@ -234,7 +234,7 @@ internal sealed class GameSession
             Faults.Attempt("restoring the camera", () => CameraAccess.Restore(taken));
         Faults.Attempt("disabling the input hooks", () => Plugin.Input.DisableHooks());
 
-        Plugin.Log.Information("[vista] camera released: {Reason}", reason);
+        Plugin.Log.Information("camera released: {Reason}", reason);
     }
 
     /// <summary>Adds a preset as a new track on the ground under the camera and edits it. Returns why it was refused, or null.</summary>
@@ -340,13 +340,13 @@ internal sealed class GameSession
         switch (outcome)
         {
             case PlayOutcome.Previewed:
-                Plugin.Log.Information("[vista] preview");
+                Plugin.Log.Information("preview");
                 return;
             case PlayOutcome.Refused:
                 Plugin.Log.Debug(
                     previewRefusal
-                        ? "[vista] cannot preview a track with no points."
-                        : "[vista] nothing to play: add a track with points to the playlist."
+                        ? "cannot preview a track with no points."
+                        : "nothing to play: add a track with points to the playlist."
                 );
                 return;
             case PlayOutcome.ReHid:
@@ -356,7 +356,7 @@ internal sealed class GameSession
             case PlayOutcome.Resumed:
                 if (HideUiInLive)
                     GameUi.Hide();
-                Plugin.Log.Information("[vista] resumed");
+                Plugin.Log.Information("resumed");
                 return;
             case PlayOutcome.StartedFromGame or PlayOutcome.CuedFromGame:
                 movement.Hold();
@@ -367,13 +367,13 @@ internal sealed class GameSession
         freeCam.Disable();
         if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromGame)
         {
-            Plugin.Log.Information("[vista] mode: live, cued, {Count} playlist entries", state.Scene.Playlist.Count);
+            Plugin.Log.Information("mode: live, cued, {Count} playlist entries", state.Scene.Playlist.Count);
             return;
         }
 
         if (HideUiInLive)
             GameUi.Hide();
-        Plugin.Log.Information("[vista] mode: live, {Count} playlist entries", state.Scene.Playlist.Count);
+        Plugin.Log.Information("mode: live, {Count} playlist entries", state.Scene.Playlist.Count);
     }
 
     /// <summary>Takes the camera, remembering what to put back on release.</summary>

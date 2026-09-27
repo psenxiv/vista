@@ -21,7 +21,7 @@ internal sealed class Faults(Func<CameraMode> mode)
     {
         any = true;
         if (logged.TryAdd(where, 0))
-            Plugin.Log.Error(exception, "[vista] fault in {Where} while {Mode}", where, mode());
+            Plugin.Log.Error(exception, "fault in {Where} while {Mode}", where, mode());
         waiting.Enqueue(new Fault(where, notifies));
     }
 
@@ -50,7 +50,7 @@ internal sealed class Faults(Func<CameraMode> mode)
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[vista] {Step} failed", name);
+            Plugin.Log.Error(ex, "{Step} failed", name);
         }
     }
 }
