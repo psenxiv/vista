@@ -1,3 +1,4 @@
+using System.Numerics;
 using Vista.Core.Session;
 using Vista.Core.Tracks.Aiming;
 using Xunit;
@@ -184,6 +185,11 @@ public class SessionPreviewToolsTests
         Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
         // Stopped 3 s in, where the scrub head stays: x = 6.
         Assert.Equal(6f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
+
+        state.Transport.ScrubTo(1.0);
+
+        // Scrubbed to 1 s: x = 2, not the stopped preview's x = 6.
+        Assert.Equal(2f, state.Transport.GhostFrame!.Value.Position.X, 1e-3f);
     }
 
     [Fact]
@@ -361,5 +367,74 @@ public class SessionPreviewToolsTests
         Assert.Equal(2f, state.Transport.FrameForNewPoints!.Value.Position.X, 1e-3f);
         state.Transport.SetGhost(true);
         Assert.Null(state.Transport.FrameForNewPoints);
+    }
+
+    [Fact]
+    public void TurningTheGhostOffWhileNothingPlaysHandsNothingOff()
+    {
+        var state = EditingThreePoints();
+        state.Transport.SetGhost(true);
+        state.Transport.EditingFrame(1f, flying: false);
+
+        state.Transport.SetGhost(false);
+
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+    }
+
+    [Fact]
+    public void AHandOffBeforeAPreviewShowsAFrameStartsFromTheScrubHead()
+    {
+        var state = EditingThreePoints();
+        state.Play();
+        state.Transport.EditingFrame(1f, flying: false);
+        state.Stop();
+        state.Transport.ScrubTo(4.0);
+
+        // A second preview starts and stops before any editing frame shows it.
+        state.Play();
+        state.Stop();
+
+        // The free-cam starts from the scrub head, 4 s: x = 8.
+        Assert.Equal(8f, state.Transport.EditingFrame(1f, flying: false).FlyFrom!.Value.Position.X, 1e-3f);
+    }
+
+    [Fact]
+    public void TheGhostShowsThePreviewsSmoothedFrame()
+    {
+        var (state, characters) = EditingWatchingGuard();
+        state.Transport.SetGhost(true);
+        state.Play();
+        state.Transport.EditingFrame(1f / 60f, flying: false);
+        GuardAt(characters, WatchedAtB);
+
+        var played = state.Transport.AdvancePreview(1f / 60f)!.Value;
+
+        // Heavy smoothing keeps the preview looking well short of Guard's new spot, where the scrub head's frame would snap.
+        Assert.True(Vector3.Dot(played.Forward, Vector3.Normalize(WatchedAtB - played.Position)) < 0.999f);
+        Assert.Equal(played, state.Transport.GhostFrame);
+    }
+
+    [Fact]
+    public void AHandOffStartsFromExactlyTheFrameLastShown()
+    {
+        var (state, characters) = EditingWatchingGuard();
+        state.Play();
+        state.Transport.EditingFrame(1f / 60f, flying: false);
+        GuardAt(characters, WatchedAtB);
+        var shown = state.Transport.EditingFrame(1f / 60f, flying: false).Shown!.Value;
+        state.Stop();
+
+        // Heavy smoothing keeps the shown frame well short of Guard's new spot, where the scrub head's frame would snap.
+        Assert.True(Vector3.Dot(shown.Forward, Vector3.Normalize(WatchedAtB - shown.Position)) < 0.999f);
+        Assert.Equal(shown, state.Transport.EditingFrame(1f / 60f, flying: false).FlyFrom);
+    }
+
+    [Fact]
+    public void TheRateIsRefusedInOff()
+    {
+        var state = new SessionState();
+
+        Assert.Equal(RateOnlyInEdit, state.Transport.SetPlaybackRate(0.5f));
+        Assert.Equal(1f, state.Transport.PlaybackRate);
     }
 }

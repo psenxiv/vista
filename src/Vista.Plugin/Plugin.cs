@@ -212,7 +212,7 @@ public sealed class Plugin : IDalamudPlugin
         );
     }
 
-    /// <summary>Sets the playback rate from <paramref name="text"/>, or says why it can't; text that isn't a number is refused as not-a-number.</summary>
+    /// <summary>Sets the playback rate from <paramref name="text"/>, or says why it can't; text that isn't a number goes to Core as not-a-number, which it refuses.</summary>
     private void SetPlaybackRate(string text)
     {
         var rate = float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)

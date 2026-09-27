@@ -1,4 +1,6 @@
+using System.Numerics;
 using Vista.Core.Session;
+using Vista.Core.Tracks.Aiming;
 using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.Session;
@@ -6,6 +8,25 @@ namespace Vista.Tests.Session;
 /// <summary>Sessions set up the way the session tests start them.</summary>
 internal static class SessionFixtures
 {
+    /// <summary>Where Guard's aim point starts in <see cref="EditingWatchingGuard"/>, ahead of the track's start along −z.</summary>
+    internal static readonly Vector3 WatchedAtA = new(0f, 0f, -10f);
+
+    /// <summary>A second spot for Guard's aim point, level with the track's end.</summary>
+    internal static readonly Vector3 WatchedAtB = new(10f, 0f, -10f);
+
+    /// <summary>Editing a 2 s track, x = 0 to 10, watching Guard with heavy smoothing; Guard aimed at <see cref="WatchedAtA"/>.</summary>
+    internal static (SessionState State, NearbyCharacters Characters) EditingWatchingGuard()
+    {
+        var characters = new NearbyCharacters();
+        GuardAt(characters, WatchedAtA);
+        var state = new SessionState(null, characters);
+        state.Edit();
+        state.AddToEnd(Point(0f));
+        state.AddToEnd(Point(10f));
+        state.ChangeTrack(t => t with { Aim = AimMode.WatchTarget, TargetName = "Guard", Smoothing = 1f });
+        return (state, characters);
+    }
+
     /// <summary>Editing; Track 1 has points at x = 0, 10, 20 at 2 yalms per second: two 5 s legs, keys at 0, 5 and 10 s, nothing selected.</summary>
     internal static SessionState EditingThreePoints()
     {

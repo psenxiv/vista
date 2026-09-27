@@ -104,7 +104,7 @@ public sealed class Transport
         if (previewShown && !Previewing)
         {
             previewShown = false;
-            return new EditFrame(null, frame ?? previewFrame ?? session.World.FrameAt(ScrubHead));
+            return new EditFrame(null, previewFrame ?? session.World.FrameAt(ScrubHead));
         }
 
         previewShown = Previewing;
