@@ -658,4 +658,15 @@ public class PlaylistPlaybackTests
         Assert.Equal(1, playback.Index);
         AimsAt(new Vector3(10f, 0f, -10f), cut, 3);
     }
+
+    [Fact]
+    public void ThePositionCountsWholePassesAndTheTimeIntoThisOne()
+    {
+        // A 2 s entry played three times: 3.5 s in is the second pass (from 0, pass 1), 1.5 s into it.
+        var playback = new PlaylistPlayback([Item(OneLeg(2f), 3)]);
+
+        playback.Advance(3.5f);
+
+        Assert.Equal(new PlaylistPosition(0, 1, 1.5), playback.Position);
+    }
 }

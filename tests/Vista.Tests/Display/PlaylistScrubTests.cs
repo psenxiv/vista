@@ -90,12 +90,15 @@ public class PlaylistScrubTests
     public void ZoomedOnlyTheSegmentsOverlappingTheViewAreVisible()
     {
         // Segments run 0 to 5, 5 to 11 and 11 to 15 s. Over 6 to 10 s only Hairpin is visible; over 4 to 12 s all three are.
+        // Over exactly 5 to 11 s, Opening only touches the view's start and Orbit its end, so neither shows.
         var inside = Zoomed(6f, 10f);
         var across = Zoomed(4f, 12f);
+        var exact = Zoomed(5f, 11f);
         var segments = inside.Timeline.Segments;
 
         Assert.Equal([false, true, false], segments.Select(inside.Visible));
         Assert.Equal([true, true, true], segments.Select(across.Visible));
+        Assert.Equal([false, true, false], segments.Select(exact.Visible));
     }
 
     [Theory]

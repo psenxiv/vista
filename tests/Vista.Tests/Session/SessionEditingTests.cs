@@ -160,6 +160,9 @@ public class SessionEditingTests
         var state = EditingThreePoints();
         Assert.Equal(TrackEditing.NoSuchPoint, state.DuplicatePoints([3]));
         Assert.Equal(TrackEditing.NoSuchPoint, state.DuplicatePoints([]));
+        // One point not there refuses the lot, leaving the three points as they were.
+        Assert.Equal(TrackEditing.NoSuchPoint, state.DuplicatePoints([0, 3]));
+        Assert.Equal(3, state.Track.Points.Count);
 
         state.AddToPlaylist([state.EditedTrackId]);
         GoLive(state);
