@@ -64,4 +64,74 @@ internal static class Hermite
     /// <summary>Weights on the changes over an end interval <paramref name="end"/> long and the next, <paramref name="next"/> long, whose sum is the three-point end slope (SciPy PCHIP's end rule, unclamped).</summary>
     public static (float End, float Next) EndWeights(float end, float next) =>
         (((2f * end) + next) / (end * (end + next)), -end / (next * (end + next)));
+
+    /// <summary>Key <paramref name="i"/>'s slope from the <paramref name="changes"/> over the intervals between <paramref name="keys"/> (interval k runs from key k − 1 to key k): the three-point slope, limited to 0 where the intervals either side change opposite ways or not at all and otherwise to <see cref="MonotoneBound"/> times the gentler one's rate; at an end, the end rule limited against the end interval alone.</summary>
+    public static float KeySlope(IReadOnlyList<float> keys, IReadOnlyList<float> changes, int i)
+    {
+        var ((first, firstWeight), (second, secondWeight)) = KeyWeights(keys, i);
+        var raw = (firstWeight * changes[first]) + (secondWeight * changes[second]);
+        float Rate(int interval) => changes[interval] / (keys[interval] - keys[interval - 1]);
+        if (i == 0 || i == keys.Count - 1)
+        {
+            var end = Rate(first);
+            return end == 0f ? 0f : MonotoneRatio(raw / end) * end;
+        }
+
+        var (before, after) = (Rate(first), Rate(second));
+        if (before * after <= 0f)
+            return 0f;
+        var gentler = MathF.Abs(before) < MathF.Abs(after) ? before : after;
+        return MonotoneRatio(raw / gentler) * gentler;
+    }
+
+    /// <summary><see cref="KeySlope(IReadOnlyList{float}, IReadOnlyList{float}, int)"/> for turns as rotation vectors: 0 where the turns either side point opposite ways, and a size of at most <see cref="MonotoneBound"/> times the gentler turn rate.</summary>
+    public static Vector3 KeySlope(IReadOnlyList<float> keys, IReadOnlyList<Vector3> changes, int i)
+    {
+        var ((first, firstWeight), (second, secondWeight)) = KeyWeights(keys, i);
+        var raw = (firstWeight * changes[first]) + (secondWeight * changes[second]);
+        Vector3 Rate(int interval) => changes[interval] / (keys[interval] - keys[interval - 1]);
+        if (i == 0 || i == keys.Count - 1)
+        {
+            var end = Rate(first);
+            return Vector3.Dot(raw, end) <= 0f ? Vector3.Zero : AtMostBound(raw, end.Length());
+        }
+
+        var (before, after) = (Rate(first), Rate(second));
+        return Vector3.Dot(before, after) <= 0f
+            ? Vector3.Zero
+            : AtMostBound(raw, MathF.Min(before.Length(), after.Length()));
+    }
+
+    /// <summary><paramref name="slope"/> shortened, if need be, to <see cref="MonotoneBound"/> times <paramref name="rate"/>, which is above 0.</summary>
+    private static Vector3 AtMostBound(Vector3 slope, float rate)
+    {
+        var size = slope.Length();
+        return size == 0f ? slope : slope * (MonotoneRatio(size / rate) * rate / size);
+    }
+
+    /// <summary>Key <paramref name="i"/>'s three-point slope as weights on the changes over two intervals between <paramref name="keys"/>: <see cref="ThroughWeights"/> between two, <see cref="EndWeights"/> at an end (the end interval first), and the secant with two keys.</summary>
+    private static ((int Interval, float Weight) First, (int Interval, float Weight) Second) KeyWeights(
+        IReadOnlyList<float> keys,
+        int i
+    )
+    {
+        var last = keys.Count - 1;
+        float Span(int interval) => keys[interval] - keys[interval - 1];
+        if (last == 1)
+            return ((1, 1f / Span(1)), (1, 0f));
+        if (i == 0)
+        {
+            var (end, next) = EndWeights(Span(1), Span(2));
+            return ((1, end), (2, next));
+        }
+
+        if (i == last)
+        {
+            var (end, next) = EndWeights(Span(last), Span(last - 1));
+            return ((last, end), (last - 1, next));
+        }
+
+        var (before, after) = ThroughWeights(Span(i), Span(i + 1));
+        return ((i, before), (i + 1, after));
+    }
 }

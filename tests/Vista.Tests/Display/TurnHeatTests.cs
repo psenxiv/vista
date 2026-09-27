@@ -16,7 +16,8 @@ public class TurnHeatTests
     [Fact]
     public void AnEvenTurnReadsAsItsAngularSpeed()
     {
-        // Yaw 0, 1, 2, 3 a second apart: the middle leg's slopes are both 1 per second, so it turns at exactly 1 rad/s ≈ 57.296°/s.
+        // Yaw 0, 1, 2, 3 a second apart: even 10-yalm legs keep the camera at 10 yalms/s, and the middle leg's slopes are both
+        // 0.1 per yalm, so it turns at exactly 1 rad/s ≈ 57.296°/s.
         var samples = TurnHeat.Samples(Turning(0f, 1f, 2f, 3f));
 
         foreach (var sample in samples.Skip(32).Take(27))

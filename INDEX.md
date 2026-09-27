@@ -20,10 +20,10 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `SelfTest`: the rules that decide whether each `/vista selftest` check passed, and its report lines.
 - `Session`: the mode, selection, undo history, Edit preview and scrub head, and the scene's tracks in the world.
 - `Tracks`: the track and its control points and anchor, editing its points and timing, and evaluating it at a moment.
-- `Tracks/Aiming`: where the camera looks and which way is up: recorded aim, direction of travel, Look At, watched and followed characters, and smoothing.
+- `Tracks/Aiming`: where the camera looks and which way is up: recorded aim (with roll and field of view, blended by distance along the path), direction of travel, Look At, watched and followed characters, and smoothing.
 - `Tracks/Playback`: the Director, and playing a track or a playlist frame by frame.
 - `Tracks/Spline`: the Catmull-Rom path and its arc-length table.
-- `Tracks/Timing`: timing keys, compiling them from speeds and holds, the timing curve, easing, and the timed aim channels.
+- `Tracks/Timing`: timing keys, compiling them from speeds and holds, the timing curve, and easing.
 
 ### Plugin
 
@@ -52,7 +52,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### Scalars and curves
 
 - `Tracks/Fraction`: clamping to [0, 1], and how far a value lies along a span, with the answer for an empty span given by the caller.
-- `Tracks/Timing/Hermite`: the cubic Hermite basis on numbers and on points in space, its slope, smoothstep, the Fritsch–Carlson clamp that keeps a cubic monotone, and the three-point slope weights through a point and at an end.
+- `Tracks/Timing/Hermite`: the cubic Hermite basis on numbers and on points in space, its slope, smoothstep, the Fritsch–Carlson clamp that keeps a cubic monotone, the three-point slope weights through a point and at an end, and a key's slope from them, limited so it doesn't overshoot (on numbers and on turns).
 - `Tracks/Aiming/AimSmoother`: the share of the way an eased value moves in a frame at a smoothing, and easing a position with it.
 - `Tracks/Search`: the binary search over an ascending array that curves and tables use to find their interval.
 - `Tracks/Spline/CatmullRom` and `ArcLengthTable`: the path through points, its derivative, and walking it by distance.

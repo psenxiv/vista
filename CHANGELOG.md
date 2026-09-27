@@ -10,6 +10,7 @@
 - Dragging the scrub bar to the end of a playlist entry holds its last frame instead of jumping to the next entry.
 - A track's first and last legs curve a little differently, so the camera sets off and arrives heading the way the track runs.
 - Smooth timing at a track's first and last points follows the pace of the legs beside them, so a track that speeds up or slows down keeps doing so right to its ends.
+- Recorded aim, roll and zoom follow the camera's movement along the track, so on an eased leg they speed up and slow down with it.
 
 ## 0.11.0.1
 

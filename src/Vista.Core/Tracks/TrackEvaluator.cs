@@ -28,9 +28,9 @@ public sealed class TrackEvaluator
     private readonly TimingCurve _curve;
     private readonly float[] _yaws;
     private readonly float[] _pitches;
-    private readonly TimedRotation? _rotation;
-    private readonly TimedChannel? _roll;
-    private readonly TimedChannel? _fov;
+    private readonly PathRotation? _rotation;
+    private readonly PathChannel? _roll;
+    private readonly PathChannel? _fov;
     private readonly float _fovMin;
     private readonly float _fovMax;
     private readonly float[] _arrive = [];
@@ -47,7 +47,7 @@ public sealed class TrackEvaluator
     /// <summary>The path's length as timing measures it, each segment at least <see cref="MinTimingLength"/>.</summary>
     public float TotalDistance => _distances[^1];
 
-    /// <summary>Builds the spline, arc-length table, compiled keys, distance timing curve and timed aim channels once for <paramref name="track"/>.</summary>
+    /// <summary>Builds the spline, arc-length table, compiled keys, distance timing curve and aim channels once for <paramref name="track"/>.</summary>
     public TrackEvaluator(Track track)
     {
         _track = track;
@@ -78,13 +78,12 @@ public sealed class TrackEvaluator
             .Select((at, i) => track.Timing[i].Hold > 0f ? _keys[TrackEditing.PointKey(track, i) + 1].Time : at)
             .ToArray();
         var rolls = Angles.Unwrap(track.Points.Select(p => p.Roll).ToArray());
-        _rotation = new TimedRotation(
+        _rotation = new PathRotation(
             _yaws.Select((yaw, i) => CameraRotation.FromAngles(yaw, _pitches[i], rolls[i])).ToArray(),
-            _arrive,
-            _depart
+            _distances
         );
-        _roll = new TimedChannel(rolls, _arrive, _depart);
-        _fov = new TimedChannel(fovs, _arrive, _depart);
+        _roll = new PathChannel(rolls, _distances);
+        _fov = new PathChannel(fovs, _distances);
     }
 
     /// <summary>Leg <paramref name="leg"/>'s length as timing measures it.</summary>
@@ -135,7 +134,7 @@ public sealed class TrackEvaluator
         }
 
         var (cameraPosition, segment, fraction) = PlaceAt(time);
-        var fov = Math.Clamp(_fov!.At(time), _fovMin, _fovMax);
+        var fov = Math.Clamp(_fov!.At(DistanceAt(time)), _fovMin, _fovMax);
         if (target is { } at && Toward(cameraPosition, at) is not null)
         {
             var toward = at - cameraPosition;
@@ -146,7 +145,7 @@ public sealed class TrackEvaluator
 
         return _track.Aim == AimMode.PathTangent
             ? Travel(time, cameraPosition, segment, fraction, fov)
-            : CameraState.FromRotation(cameraPosition, _rotation!.At(time), fov);
+            : CameraState.FromRotation(cameraPosition, _rotation!.At(DistanceAt(time)), fov);
     }
 
     /// <summary>The aim at <paramref name="target"/> from <paramref name="from"/>, or null with no target or one on the camera.</summary>
@@ -224,7 +223,7 @@ public sealed class TrackEvaluator
     private CameraState Travel(double time, Vector3 from, int segment, float fraction, float fov)
     {
         if (TravelDirection(time, from, segment, fraction) is not { } direction)
-            return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(time), fov);
+            return CameraState.FromAngles(from, _yaws[0], _pitches[0], _roll!.At(DistanceAt(time)), fov);
 
         _travelUp ??= LevelUp.Along(TravelDirection, (float)Duration, allowInverted: true, VerticalStartUp);
         return Framed(time, from, direction, _travelUp.At(HoldStart(time), direction), fov);
@@ -246,7 +245,7 @@ public sealed class TrackEvaluator
     private CameraState Framed(double time, Vector3 from, Vector3 direction, Vector3 up, float fov)
     {
         var forward = Vector3.Normalize(direction);
-        var roll = _roll!.At(time);
+        var roll = _roll!.At(DistanceAt(time));
         if (roll != 0f)
             up = CameraRotation.RollUp(up, forward, roll);
         return new CameraState(from, from + (forward * FreeCamMotion.LookAtDistance), up, fov);

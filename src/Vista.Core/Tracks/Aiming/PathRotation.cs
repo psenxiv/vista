@@ -1,46 +1,44 @@
 using System.Numerics;
+using Vista.Core.Tracks.Timing;
 
-namespace Vista.Core.Tracks.Timing;
+namespace Vista.Core.Tracks.Aiming;
 
-/// <summary>A rotation blended over time through each point's rotation, held while the point holds, turning at one rate through each point: <see cref="TimedChannel"/> for orientation.</summary>
-public sealed class TimedRotation
+/// <summary>A rotation blended by distance along the path through each point's rotation, turning at one rate through each point, limited by <see cref="Hermite.KeySlope(IReadOnlyList{float}, IReadOnlyList{Vector3}, int)"/>: <see cref="PathChannel"/> for orientation.</summary>
+public sealed class PathRotation
 {
     /// <summary>Below this, in radians, a turn is small enough to treat as straight, avoiding a divide by its angle.</summary>
     private const float SmallAngle = 1e-6f;
 
     private readonly Quaternion[] rotations;
-    private readonly float[] arrive;
-    private readonly float[] depart;
+    private readonly float[] distances;
     private readonly Vector3[] turns;
     private readonly Vector3[] rates;
 
-    /// <summary>A rotation through <paramref name="rotations"/>, each reached at <paramref name="arrive"/> and left at <paramref name="depart"/>, in seconds.</summary>
-    public TimedRotation(IReadOnlyList<Quaternion> rotations, IReadOnlyList<float> arrive, IReadOnlyList<float> depart)
+    /// <summary>A rotation through <paramref name="rotations"/>, each at <paramref name="distances"/> along the path, which strictly increase.</summary>
+    public PathRotation(IReadOnlyList<Quaternion> rotations, IReadOnlyList<float> distances)
     {
-        if (rotations.Count == 0 || arrive.Count != rotations.Count || depart.Count != rotations.Count)
-            throw new ArgumentException("A rotation needs an arrival and a departure for every point.");
+        PathChannel.Validate(rotations.Count, distances);
         this.rotations = [.. rotations];
-        this.arrive = [.. arrive];
-        this.depart = [.. depart];
+        this.distances = [.. distances];
         turns = Enumerable.Range(0, rotations.Count).Select(Turn).ToArray();
-        rates = Enumerable.Range(0, rotations.Count).Select(Rate).ToArray();
+        rates = Enumerable
+            .Range(0, rotations.Count)
+            .Select(i => rotations.Count == 1 ? Vector3.Zero : Hermite.KeySlope(distances, turns, i))
+            .ToArray();
     }
 
-    /// <summary>The rotation at <paramref name="time"/> seconds, held before the first point and after the last.</summary>
-    public Quaternion At(double time)
+    /// <summary>The rotation at <paramref name="distance"/> along the path, held before the first point and after the last.</summary>
+    public Quaternion At(float distance)
     {
         var n = rotations.Length;
-        if (n == 1)
+        if (n == 1 || distance <= distances[0])
             return rotations[0];
-        if (time >= arrive[n - 1])
+        if (distance >= distances[n - 1])
             return rotations[n - 1];
 
-        var leg = Search.LastAtOrBelow(arrive, time, 0, n - 1) + 1;
-        var start = depart[leg - 1];
-        if (time <= start)
-            return rotations[leg - 1];
-        var span = arrive[leg] - start;
-        var u = (float)((time - start) / span);
+        var leg = Search.LastAtOrBelow(distances, distance, 0, n - 1) + 1;
+        var span = distances[leg] - distances[leg - 1];
+        var u = (distance - distances[leg - 1]) / span;
         var from = rates[leg - 1] * span;
         var to = InverseLeftJacobian(turns[leg], rates[leg] * span);
         var turned = Hermite.At(Vector3.Zero, turns[leg], from, to, u);
@@ -55,32 +53,6 @@ public sealed class TimedRotation
         var relative = Quaternion.Concatenate(Quaternion.Inverse(rotations[leg - 1]), rotations[leg]);
         // At half a turn (W = 0, give or take float round-off in cos(π/2)) the sign is kept, so it turns the way the points' angles do.
         return Log(relative.W < -SmallAngle ? Quaternion.Negate(relative) : relative);
-    }
-
-    /// <summary>Point <paramref name="i"/>'s turn rate as a world rotation vector per second: 0 through a hold, half the one-sided rate at an end, and the time-weighted Catmull-Rom rate between, as <see cref="TimedChannel"/>'s slope.</summary>
-    private Vector3 Rate(int i)
-    {
-        var n = rotations.Length;
-        if (n == 1 || depart[i] - arrive[i] > TimedChannel.MinSeconds)
-            return Vector3.Zero;
-        if (i == 0)
-            return OneSided(1) / 2f;
-        if (i == n - 1)
-            return OneSided(n - 1) / 2f;
-
-        var before = arrive[i] - depart[i - 1];
-        var after = arrive[i + 1] - depart[i];
-        if (before <= TimedChannel.MinSeconds || after <= TimedChannel.MinSeconds)
-            return Vector3.Zero;
-        var (w0, w1) = Hermite.ThroughWeights(before, after);
-        return (w0 * turns[i]) + (w1 * turns[i + 1]);
-    }
-
-    /// <summary>Leg <paramref name="leg"/>'s average turn rate per second, or zero when it takes no time.</summary>
-    private Vector3 OneSided(int leg)
-    {
-        var span = arrive[leg] - depart[leg - 1];
-        return span <= TimedChannel.MinSeconds ? Vector3.Zero : turns[leg] / span;
     }
 
     /// <summary>The rotation-vector rate at turn <paramref name="turn"/> that gives world turn rate <paramref name="rate"/>: the inverse left Jacobian of the exponential map; <paramref name="rate"/> unchanged below <see cref="SmallAngle"/>.</summary>

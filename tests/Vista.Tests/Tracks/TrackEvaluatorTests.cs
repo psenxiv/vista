@@ -63,6 +63,57 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void RecordedAimPansOverALegBetweenTwoPointsOnOneSpotAndStopsAtItsEnd()
+    {
+        // Points at x = 0, 0 and 10, yaws 0°, 90° and 90°, the first leg pinned to 3 s. Distances: 0, 0.1 (the
+        // coincident leg counts as MinTimingLength) and 10.1 (a straight 10-yalm leg, 2 s at speed 5).
+        // Timing keys (0 s, 0), (3 s, 0.1), (5 s, 10.1), all Smooth: secants 0.1/3 = 0.033333 and 5 per second.
+        // Key 0's end rule, EndWeights(3, 2) = (8/15, −0.3): 8/15·0.1 − 0.3·10 = −2.9467, clamped to 0.
+        // Key 1's PCHIP slope, w = (2·2 + 3, 2 + 2·3) = (7, 8): 15 / (7/0.033333 + 8/5) = 15/211.6 = 0.070888 per second.
+        // At 1.5 s (u = 0.5 of the 3 s leg): 0.5·0.1 − 0.125·(0.070888·3) = 0.05 − 0.026583 = 0.023417, still on the spot.
+        // Yaw by distance: the leg after point 1 doesn't turn, so point 1's slope is 0. Point 0's is EndWeights(0.1, 10)
+        // ·(90°, 0°) = 10.09901·90 = 908.911°/yalm, 1.0099 times the leg's 900, inside the bound of 3. u = 0.023417/0.1
+        // = 0.23417 gives h10 = 0.13734 and h01 = 0.13882: 0.13734·90.891 + 0.13882·90 = 24.977° = 0.43593 rad.
+        // Along the last leg both ends' slopes are 0 (no turn), so the yaw stays 90° = 1.5708 rad.
+        var points = new[] { Point(0f, yaw: 0f), Point(0f, yaw: 90f * Deg), Point(10f, yaw: 90f * Deg) };
+        var evaluator = new TrackEvaluator(TrackEditing.SetLegDuration(TrackThrough(points), 1, 3f));
+
+        var state = evaluator.Evaluate(1.5)!.Value;
+
+        Assert.Equal(Vector3.Zero, state.Position);
+        Assert.Equal(0.43593f, CameraRotation.YawPitch(state.Forward).Yaw, 1e-4f);
+        for (var t = 3.0; t <= 5.0; t += 0.25)
+            Assert.Equal(1.5708f, CameraRotation.YawPitch(evaluator.Evaluate(t)!.Value.Forward).Yaw, 1e-4f);
+    }
+
+    [Fact]
+    public void RecordedAimOnAnEasedLegTurnsWithTheTravel()
+    {
+        // One 10-yalm leg over 2 s, Ease In/Out: flat at both ends, so the distance is 10·smoothstep(u). A quarter of the
+        // way through (0.5 s, u = 0.25): 10·(3·0.0625 − 2·0.015625) = 1.5625 yalms, 0.15625 of the leg. Two points blend
+        // at one rate (the secant at both ends), so the yaw is 90°·0.15625 = 14.0625° = 0.24544 rad.
+        var points = new[] { Point(0f, yaw: 0f), Point(10f, yaw: 90f * Deg) };
+        var track = LegEasing.Set(TrackEditing.SetLegDuration(TrackThrough(points), 1, 2f), 1, Easing.EaseInOut);
+
+        var state = new TrackEvaluator(track).Evaluate(0.5)!.Value;
+
+        Assert.Equal(1.5625f, state.Position.X, 1e-4f);
+        Assert.Equal(0.24544f, CameraRotation.YawPitch(state.Forward).Yaw, 1e-4f);
+    }
+
+    [Fact]
+    public void RecordedAimHoldsStillWhileTheCameraHolds()
+    {
+        // Points at x = 0, 10 and 20 at speed 5: point 1 is reached at 2 s and held to 4 s, where the camera's distance
+        // stays 10, point 1's own, so the yaw is point 1's 30° = 0.5236 rad throughout.
+        var points = new[] { Point(0f, yaw: 0f), Point(10f, yaw: 30f * Deg), Point(20f, yaw: 90f * Deg) };
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(TrackThrough(points), 1, 2f));
+
+        for (var t = 2.0; t <= 4.0; t += 0.25)
+            Assert.Equal(0.5236f, CameraRotation.YawPitch(evaluator.Evaluate(t)!.Value.Forward).Yaw, 1e-4f);
+    }
+
+    [Fact]
     public void PathTangentAimFollowsTheDirectionOfTravelOnAStraightLeg()
     {
         var points = new[] { Point(0f, 0f, 0f), Point(10f, 0f, 0f), Point(20f, 0f, 0f) };
@@ -95,8 +146,9 @@ public class TrackEvaluatorTests
         var track = TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f);
         var evaluator = new TrackEvaluator(track);
 
-        // Speed 10 over 10-yalm legs reaches the points at 0, 1, 2, 3 and 4 s. Point 3's slope is ((1 - 2) + (1 - 1)) / 2 = -0.5
-        // and point 4's is 0, so at 3.335 s, 0.335 into leg 4, the raw value is 1 + h10(0.335)·(-0.5) = 1 - 0.148·0.5 ≈ 0.926.
+        // Speed 10 over even 10-yalm legs: the timing's slopes all equal the secant, so the camera is 10·t yalms along.
+        // Leg 4 doesn't change, so point 3's slope is 0 (its legs don't change the same way) and point 4's is 0 (its end
+        // leg doesn't change): at 3.335 s, 0.335 into leg 4, the raw value is 1, flat, and stays inside the range.
         var state = evaluator.Evaluate(3.335);
         Assert.NotNull(state);
         Assert.Equal(1f, state!.Value.Fov, 2);
@@ -105,8 +157,8 @@ public class TrackEvaluatorTests
     [Fact]
     public void FovReachesAHigherPointsValueAndIsClampedAtTheAuthoredMax()
     {
-        // Speed 10 over 10-yalm legs reaches the points at 0, 1, 2 and 3 s. Each point's slope is the time-weighted
-        // Catmull-Rom one: point 1's is ((2 - 1) + (2 - 2)) / 2 = 0.5 and point 2's is ((2 - 2) + (1 - 2)) / 2 = -0.5.
+        // Speed 10 over even 10-yalm legs: the timing's slopes all equal the secant, so the camera is 10·t yalms along.
+        // Leg 2 doesn't change, so points 1 and 2 each sit beside a leg that doesn't change and their slopes are 0.
         var points = new[]
         {
             Point(0f, 0f, 0f, fov: 1f),
@@ -116,10 +168,10 @@ public class TrackEvaluatorTests
         };
         var evaluator = new TrackEvaluator(TrackEditing.SetSpeed(TrackThrough(points, speed: 2f), 10f));
 
-        // At 1 s the camera is at point 1, with its own field of view.
+        // At 1 s the camera is 10 yalms along, at point 1, with its own field of view.
         Assert.Equal(2f, evaluator.Evaluate(1.0)!.Value.Fov, 1e-3f);
 
-        // Halfway along leg 2, Hermite(2, 2, 0.5, -0.5, 0.5) = 0.5·2 + 0.125·0.5 + 0.5·2 + (-0.125)·(-0.5) = 2.125, past the max of 2.
+        // At 1.5 s, halfway along leg 2, Hermite(2, 2, 0, 0, 0.5) = 2, the max, not past it.
         Assert.Equal(2f, evaluator.Evaluate(1.5)!.Value.Fov, 1e-3f);
     }
 
@@ -138,10 +190,13 @@ public class TrackEvaluatorTests
         // In the hold, the first point's field of view raised to the editor's 5°.
         Assert.Equal(EditLimits.MinFov, evaluator.Evaluate(0.030769)!.Value.Fov, 0f);
 
-        // Halfway along the leg the held first point's slope is 0 and the last point's is half the leg's average,
-        // (MaxFov - MinFov) / 5 / 2 per second, so Hermite gives 0.5·(0.0872665 + 2.0943951) - 0.125·(2.0943951 - 0.0872665) / 2
-        // = 1.0908308 - 0.1254455 = 0.9653853. Between the raw 0.087266445 and 2.5 it would be 1.1428374.
-        Assert.Equal(0.9653853f, evaluator.Evaluate(5.5)!.Value.Fov, 1e-4f);
+        // Two points blend at one rate by distance, so the field of view is MinFov + (MaxFov − MinFov)·s/10 at s yalms along.
+        // Timing keys (0 s, 0), (3 s, 0) and (8 s, 10): the hold's still interval zeroes the slope leaving it, and the last
+        // key's end rule is EndWeights(5, 3)·(10, 0) = ((10 + 3)/(5·8))·10 = 3.25 yalms/s. Halfway along the leg, at 5.5 s,
+        // Hermite(0, 10, 0, 3.25·5, 0.5) = 5 − 0.125·16.25 = 2.96875 yalms, so the field of view is
+        // 0.0872665 + 0.296875·(2.0943951 − 0.0872665) = 0.0872665 + 0.5958663 = 0.6831328. Between the raw 0.087266445
+        // and 2.5 it would be 0.8035467.
+        Assert.Equal(0.6831328f, evaluator.Evaluate(5.5)!.Value.Fov, 1e-4f);
 
         // At the end, the last point's field of view lowered to the editor's 120°.
         Assert.Equal(EditLimits.MaxFov, evaluator.Evaluate(8.0)!.Value.Fov, 0f);
