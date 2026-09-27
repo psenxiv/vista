@@ -1,6 +1,6 @@
 # Changelog
 
-## X.Y.Z.N
+## 0.12.0.1
 
 - Reworked how the camera moves and turns along a track, so shots flow more smoothly through points and at their start and end. Existing shots may look slightly different.
 - Direction of travel's Look ahead is now a distance in yalms instead of seconds. Existing tracks keep their number, now in yalms, so check any track that uses it.
