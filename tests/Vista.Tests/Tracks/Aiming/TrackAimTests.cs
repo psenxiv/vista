@@ -93,7 +93,7 @@ public class TrackAimTests
         Assert.Null(TrackAim.Toward(Vector3.Zero, new Vector3(0.05f, 0f, 0f)));
     }
 
-    // The last three points of a curved track from the game, where the path slows to nothing at its end.
+    // The last three points of a curved track from the game.
     private static readonly Vector3[] CurvedEnd =
     [
         new(-158.79079f, 19.590088f, 25.831505f),
@@ -108,8 +108,7 @@ public class TrackAimTests
     [InlineData(0, 0f, 0.00001f)]
     public void PathDirectionHoldsSteadyAtEitherEndOfThePath(int segment, float atEnd, float nearEnd)
     {
-        // Where the path's speed falls to zero its direction is rounding noise: a hair from the end once read 1.7° off.
-        // A camera settling there must not flick, so the end and a hair from it agree to within 0.01°.
+        // A camera settling at either end must not flick, so the end and a hair from it agree to within 0.01°.
         var table = new ArcLengthTable(CurvedEnd);
 
         var (endYaw, endPitch) = CameraRotation.YawPitch(
@@ -138,4 +137,29 @@ public class TrackAimTests
     [Fact]
     public void ATargetExactlyTheShortestDistanceAwayGivesAnAim() =>
         Assert.Equal((0f, 0f), TrackAim.Toward(Vector3.Zero, new Vector3(0f, 0f, -TrackAim.MinTargetDistance)));
+
+    [Fact]
+    public void TheDirectionExactlyAtThePathsStartIsItsFirstLeg()
+    {
+        Vector3[] points = [new(0f, 0f, 0f), new(10f, 0f, 0f), new(10f, 0f, 10f)];
+        var table = new ArcLengthTable(points);
+
+        // The derivative at the start is p₁ − p₀ = (10, 0, 0) (CatmullRomTests), read at the start itself with no nudge.
+        Near(new Vector3(10f, 0f, 0f), TrackAim.PathDirection(points, table, 0, 0f)!.Value, 1e-4f);
+    }
+
+    [Fact]
+    public void AStartOnCoincidentPointsTakesTheNearestDirection()
+    {
+        Vector3[] points = [new(0f, 0f, 0f), new(0f, 0f, 0f), new(10f, 0f, 0f), new(10f, 0f, 10f)];
+        var table = new ArcLengthTable(points);
+
+        // Segment 0 has no length, so its direction comes from segment 1, (0,0,0) to (10,0,0) with d0 = 0 and d1 = d2 = √10.
+        // Its start tangent is √10·[−(10,0,0)/√10 + (10,0,0)/√10] = 0, so it is read a nudge inside, at t = 1e-3. Its end
+        // tangent is √10·[(10,0,0)/√10 − (10,0,10)/(2√10) + (0,0,10)/√10] = (5, 0, 5), and the Hermite slope there is
+        // (6t − 6t²)·(10,0,0) + (3t² − 2t)·(5,0,5) = (50t − 45t², 0, 15t² − 10t) = (0.049955, 0, −0.009985). Starting from
+        // rest it leans away from the bend, about 11.3° off +x: unit (0.980603, 0, −0.196003).
+        var direction = TrackAim.PathDirection(points, table, 0, 0f)!.Value;
+        Near(new Vector3(0.980603f, 0f, -0.196003f), Vector3.Normalize(direction), 1e-4f);
+    }
 }

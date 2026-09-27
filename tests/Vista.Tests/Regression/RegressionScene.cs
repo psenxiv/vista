@@ -73,7 +73,7 @@ internal static class RegressionScene
         new("Look At straight overhead: turns round from point to point, no flip", PassingUnder(), 0),
         new("Climbing turn: horizon stays level", Travel(Placed(PathShapes.ClimbingTurn)), 0),
         new("Lap back to the start, look ahead 2: no flip as it sets off", LapBackToTheStart(), 0),
-        new("Hairpin crossing its own path, look ahead 1.74: one expected flip", HairpinCrossing(), 1),
+        new("Hairpin crossing its own path, look ahead 1.69: one expected flip", HairpinCrossing(), 1),
         new("Field of view recorded at 3° and 143°: zooms from 5° to 120° and back, no pop", PastTheFovRange(), 0),
         new(
             "Direction of travel through a held corner, look ahead 1: holds its look, no swing",
@@ -208,10 +208,10 @@ internal static class RegressionScene
         return TrackEditing.SetHold(TrackEditing.SetSpeed(track, 25f), 1, 2f);
     }
 
-    /// <summary>A teardrop at 15 yalms a second whose way back crosses its way out, with a look ahead of the 1.74 s the loop takes from the crossing back to it: the spot ahead passes through the camera there, and the aim turns round at once.</summary>
+    /// <summary>A teardrop at 15 yalms a second whose way back crosses its way out, with a look ahead of the 1.69 s the loop takes from the crossing back to it: the spot ahead passes through the camera there, and the aim turns round at once.</summary>
     private static Track HairpinCrossing() =>
         TrackEditing.SetSpeed(
-            Travel([P(-10f, 0f, -3f), P(5f, 0f, 3f), P(5f, 0f, -3f), P(-10f, 0f, 3f)], 1.7412066f),
+            Travel([P(-10f, 0f, -3f), P(5f, 0f, 3f), P(5f, 0f, -3f), P(-10f, 0f, 3f)], 1.6930684f),
             15f
         );
 

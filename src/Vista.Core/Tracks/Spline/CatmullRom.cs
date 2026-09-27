@@ -56,9 +56,14 @@ public static class CatmullRom
     /// <summary>Centripetal knot interval: the square root of the distance.</summary>
     private static float KnotDelta(Vector3 a, Vector3 b) => MathF.Sqrt(Vector3.Distance(a, b));
 
-    /// <summary>Endpoints duplicate to supply the phantom points.</summary>
-    private static Vector3 GetPoint(IReadOnlyList<Vector3> points, int index) =>
-        points[Math.Clamp(index, 0, points.Count - 1)];
+    /// <summary>The point at <paramref name="index"/>, or just past either end the end point reflected through its neighbour.</summary>
+    private static Vector3 GetPoint(IReadOnlyList<Vector3> points, int index)
+    {
+        var last = points.Count - 1;
+        return index < 0 ? (2f * points[0]) - points[1]
+            : index > last ? (2f * points[last]) - points[last - 1]
+            : points[index];
+    }
 
     private static void ValidateSegment(int pointCount, int segment)
     {

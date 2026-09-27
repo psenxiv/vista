@@ -1922,7 +1922,7 @@
           "broken": false
         },
         {
-          "legSpeed": 4.9999995,
+          "legSpeed": 5,
           "hold": 0,
           "inMode": "Auto",
           "outMode": "Auto",
@@ -2366,7 +2366,7 @@
     },
     {
       "id": "00000000-0000-0000-0001-000000000019",
-      "name": "Hairpin crossing its own path, look ahead 1.74: one expected flip",
+      "name": "Hairpin crossing its own path, look ahead 1.69: one expected flip",
       "anchor": {
         "position": {
           "x": 45,
@@ -2476,7 +2476,7 @@
           "broken": false
         }
       ],
-      "lookAhead": 1.7412066
+      "lookAhead": 1.6930684
     },
     {
       "id": "00000000-0000-0000-0001-000000000020",

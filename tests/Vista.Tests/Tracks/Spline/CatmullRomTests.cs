@@ -139,4 +139,29 @@ public class CatmullRomTests
             }
         }
     }
+
+    [Fact]
+    public void ThePathLeavesItsFirstPointAlongItsFirstLegAndReachesItsLastAlongItsLast()
+    {
+        Vector3[] points = [new(0f, 0f, 0f), new(10f, 0f, 0f), new(10f, 0f, 10f)];
+
+        // The point invented before the first is (-10, 0, 0), as far behind it as the second is ahead, so the knot intervals
+        // there are both √10 and the tangent is √10·[(10,0,0)/√10 − (20,0,0)/(2√10) + (10,0,0)/√10] = (10, 0, 0) = p₁ − p₀.
+        Near(new Vector3(10f, 0f, 0f), CatmullRom.Derivative(points, 0, 0f), 1e-4f);
+        // Mirrored at the far end: p₂ − p₁ = (0, 0, 10).
+        Near(new Vector3(0f, 0f, 10f), CatmullRom.Derivative(points, 1, 1f), 1e-4f);
+    }
+
+    [Fact]
+    public void TwoPointsRunInAStraightLineAtEvenSpeed()
+    {
+        Vector3[] points = [new(0f, 0f, 0f), new(10f, 0f, 0f)];
+
+        // Reflected ends extend the line evenly, so both tangents are p₁ − p₀ = (10, 0, 0) and the Hermite curve is that
+        // line at even speed: at t = 0.3, (3, 0, 0), heading (10, 0, 0) all the way.
+        Near(new Vector3(3f, 0f, 0f), CatmullRom.Evaluate(points, 0, 0.3f), 1e-4f);
+        Near(new Vector3(10f, 0f, 0f), CatmullRom.Derivative(points, 0, 0f), 1e-4f);
+        Near(new Vector3(10f, 0f, 0f), CatmullRom.Derivative(points, 0, 0.5f), 1e-4f);
+        Near(new Vector3(10f, 0f, 0f), CatmullRom.Derivative(points, 0, 1f), 1e-4f);
+    }
 }

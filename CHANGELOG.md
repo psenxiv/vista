@@ -8,6 +8,7 @@
 - With a look ahead, Direction of travel keeps looking the way it came in while it holds at a point the track later ends at, and turns round as it moves off instead of as it stops.
 - Dragging the scrub bar to the end of a looping shot shows its last frame instead of its first.
 - Dragging the scrub bar to the end of a playlist entry holds its last frame instead of jumping to the next entry.
+- A track's first and last legs curve a little differently, so the camera sets off and arrives heading the way the track runs.
 
 ## 0.11.0.1
 
