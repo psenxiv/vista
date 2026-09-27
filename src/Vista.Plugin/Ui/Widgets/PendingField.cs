@@ -10,7 +10,7 @@ internal static class PendingField
     /// <summary>How far a field moves per pixel dragged, and the values it stops at.</summary>
     public readonly record struct Range(float Speed, float Min, float Max);
 
-    /// <summary>Draws a drag field showing <paramref name="current"/> within <paramref name="range"/>; double-click to type. Applies the new value once the field is let go.</summary>
+    /// <summary>Draws a drag field showing <paramref name="current"/> within <paramref name="range"/>; double-click to type, unless <paramref name="flags"/> say otherwise. Applies the new value once the field is let go.</summary>
     public static void Draw(
         this PendingEdit<float> edit,
         string id,
@@ -18,7 +18,8 @@ internal static class PendingField
         string format,
         float width,
         Range range,
-        Action<float> apply
+        Action<float> apply,
+        ImGuiSliderFlags flags = ImGuiSliderFlags.None
     )
     {
         var value = edit.ValueOr(id, current);
@@ -31,7 +32,7 @@ internal static class PendingField
                 range.Min,
                 range.Max,
                 format,
-                ImGuiSliderFlags.AlwaysClamp
+                ImGuiSliderFlags.AlwaysClamp | flags
             )
         )
             edit.Hold(id, value, current, apply);

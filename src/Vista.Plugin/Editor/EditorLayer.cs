@@ -30,6 +30,7 @@ internal sealed class EditorLayer
 
     private readonly GameSession game;
     private readonly SessionState session;
+    private readonly Configuration config;
     private readonly PointGizmo gizmo;
     private readonly AnchorGizmo anchorGizmo;
     private readonly Overlay overlay = new();
@@ -38,10 +39,11 @@ internal sealed class EditorLayer
     /// <summary>True while the edited track's path is drawn by how fast its camera turns.</summary>
     public bool Heat { get; set; }
 
-    public EditorLayer(GameSession game, PointGizmo gizmo)
+    public EditorLayer(GameSession game, Configuration config, PointGizmo gizmo)
     {
         this.game = game;
         session = game.State;
+        this.config = config;
         this.gizmo = gizmo;
         anchorGizmo = new AnchorGizmo(gizmo);
     }
@@ -158,8 +160,8 @@ internal sealed class EditorLayer
         ImGui.PopStyleVar();
     }
 
-    /// <summary>Draws a track's anchor and Look At point where placed, adding their markers.</summary>
-    private static void DrawAnchors(
+    /// <summary>Draws a track's anchor, with its name while names are shown, and Look At point where placed, adding their markers.</summary>
+    private void DrawAnchors(
         EditorView view,
         Scene scene,
         Track local,
@@ -180,7 +182,8 @@ internal sealed class EditorLayer
                         FirstPosition(world),
                         edited,
                         selected == AnchorKind.Track,
-                        local.Name
+                        config.ShowTrackNames ? local.Name : null,
+                        config.TrackNameScale
                     ),
                     MarkerKind.TrackAnchor
                 )

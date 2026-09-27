@@ -12,4 +12,10 @@ public static class TrackNameSize
 
     /// <summary><paramref name="size"/> within range; a value that isn't finite gives <see cref="Default"/>.</summary>
     public static float Clamp(float size) => float.IsFinite(size) ? Math.Clamp(size, Min, Max) : Default;
+
+    /// <summary><paramref name="size"/> as a percentage of <see cref="Default"/>, as the size slider shows it.</summary>
+    public static float Percent(float size) => size / Default * 100f;
+
+    /// <summary>The size <paramref name="percent"/> of <see cref="Default"/> gives, clamped as <see cref="Clamp"/> does.</summary>
+    public static float FromPercent(float percent) => Clamp(percent / 100f * Default);
 }

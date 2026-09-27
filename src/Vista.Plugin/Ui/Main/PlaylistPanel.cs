@@ -17,6 +17,9 @@ internal sealed class PlaylistPanel
 {
     private const float LoopWidth = 44f;
 
+    /// <summary>The width of the bar marking an entry that plays the edited track.</summary>
+    private const float EditedBarWidth = 3f;
+
     private readonly SessionState session;
 
     // A repeat count being dragged, applied when the field is let go; its field is the entry's id.
@@ -84,9 +87,10 @@ internal sealed class PlaylistPanel
         {
             var held = false;
             var selected = session.Selection.Entries;
+            var marked = session.Selection.EditedEntries;
             for (var i = 0; i < scene.Playlist.Count; i++)
             {
-                DrawRow(scene, scene.Playlist[i], i, held, playing?.Id, selected, editing);
+                DrawRow(scene, scene.Playlist[i], i, held, playing?.Id, selected, marked, editing);
                 held |= PlaylistEditing.HoldsPlaylist(scene, scene.Playlist[i]);
             }
 
@@ -102,7 +106,7 @@ internal sealed class PlaylistPanel
             wheel.Reset();
     }
 
-    /// <summary>One entry: its number and track, a warning when its watched or followed character isn't found, click to select, drag to reorder or drop tracks on it, right-click several for their menu, its loop cell and its remove button, shown on hover; greyed when never reached.</summary>
+    /// <summary>One entry: its number and track, a warning when its watched or followed character isn't found, click to edit its track and select it, drag to reorder or drop tracks on it, right-click several for their menu, its loop cell and its remove button, shown on hover; greyed when never reached, and barred at its left when <paramref name="marked"/> says it plays the edited track.</summary>
     private void DrawRow(
         Scene scene,
         PlaylistEntry entry,
@@ -110,6 +114,7 @@ internal sealed class PlaylistPanel
         bool unreachable,
         Guid? playing,
         IReadOnlyList<Guid> selected,
+        IReadOnlyList<Guid> marked,
         bool editing
     )
     {
@@ -135,6 +140,17 @@ internal sealed class PlaylistPanel
             )
         )
             Report(session.Selection.ClickEntry(entry.Id, DragRows.Click()));
+        if (marked.Contains(entry.Id))
+        {
+            var min = ImGui.GetItemRectMin();
+            ImGui
+                .GetWindowDrawList()
+                .AddRectFilled(
+                    min,
+                    new Vector2(min.X + EditedBarWidth, ImGui.GetItemRectMax().Y),
+                    ImGui.GetColorU32(UiColours.Accent)
+                );
+        }
         RowText.Draw(entry.Id, FormattableString.Invariant($"{index + 1}  {name}"), nameWidth);
         var rowHovered = editing && IconButton.RowHovered(ImGui.GetItemRectMin(), ImGui.GetItemRectMax().Y);
 

@@ -56,6 +56,17 @@ internal sealed class GuideWindow : Window, IDisposable
             .ToArray();
     }
 
+    /// <summary>The page listing Vista's keys.</summary>
+    public const string HotkeysPage = "hotkeys.md";
+
+    /// <summary>Opens the guide in front at page <paramref name="file"/>.</summary>
+    public void Show(string file)
+    {
+        IsOpen = true;
+        BringToFront();
+        followed = file;
+    }
+
     public void Dispose()
     {
         foreach (var font in headings)
@@ -90,7 +101,7 @@ internal sealed class GuideWindow : Window, IDisposable
 
         ImGui.EndChild();
 
-        // A link clicked this frame shows its page from the next, so this frame's page finishes drawing.
+        // A link clicked or a page asked for this frame shows from the next, so this frame's page finishes drawing.
         if (followed is { } target && files.Contains(target))
             shown = target;
         followed = null;

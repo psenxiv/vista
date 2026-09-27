@@ -30,7 +30,6 @@ internal sealed class Overlay
     private const float SceneAnchorArrow = 1.6f;
     private const int AnchorSegments = 24;
     private const float NameGap = 4f;
-    private const float NameScale = 1.5f;
     private const float NameRounding = 3f;
     private static readonly Vector2 NamePadding = new(6f, 3f);
     private const float LookAtCross = 0.5f;
@@ -92,14 +91,15 @@ internal sealed class Overlay
             caches.Remove(id);
     }
 
-    /// <summary>A track anchor: a ground ring, an arrow along its yaw, a faint line to the first point and its name above. Returns its centre on screen, or null.</summary>
+    /// <summary>A track anchor: a ground ring, an arrow along its yaw, a faint line to the first point, and its name above when given, <paramref name="nameSize"/> times the font size. Returns its centre on screen, or null.</summary>
     public static Vector2? DrawTrackAnchor(
         EditorView view,
         Anchor world,
         Vector3? firstPoint,
         bool edited,
         bool selected,
-        string? name
+        string? name,
+        float nameSize
     )
     {
         var list = ImGui.GetBackgroundDrawList();
@@ -122,7 +122,7 @@ internal sealed class Overlay
 
         DrawArrow(list, view, world, AnchorArrow, colour, selected ? SelectedLineThickness : LineThickness);
         if (name is not null)
-            DrawName(list, view, world.Position, name);
+            DrawName(list, view, world.Position, name, nameSize);
         return view.ToScreen(world.Position);
     }
 
@@ -205,8 +205,8 @@ internal sealed class Overlay
     /// <summary>An offset on the ground at angle <paramref name="angle"/>, measured like yaw.</summary>
     private static Vector3 Ring(float angle, float radius) => Anchor.Turn(new Vector3(0f, 0f, -radius), angle);
 
-    /// <summary>Draws <paramref name="name"/> on a plate centred above the ring round <paramref name="centre"/>, unless the centre is behind the camera.</summary>
-    private static void DrawName(ImDrawListPtr list, EditorView view, Vector3 centre, string name)
+    /// <summary>Draws <paramref name="name"/> <paramref name="size"/> times the font size on a plate centred above the ring round <paramref name="centre"/>, unless the centre is behind the camera.</summary>
+    private static void DrawName(ImDrawListPtr list, EditorView view, Vector3 centre, string name, float size)
     {
         if (view.ToScreenBeyondNear(centre) is not { } at)
             return;
@@ -217,10 +217,10 @@ internal sealed class Overlay
                 top = MathF.Min(top, p.Y);
         }
 
-        var size = ImGui.CalcTextSize(name) * NameScale;
-        var origin = new Vector2(at.X - (size.X / 2f), top - NameGap - size.Y);
-        list.AddRectFilled(origin - NamePadding, origin + size + NamePadding, EditorColours.NamePlate, NameRounding);
-        list.AddText(ImGui.GetFont(), ImGui.GetFontSize() * NameScale, origin, EditorColours.NameText, name);
+        var plate = ImGui.CalcTextSize(name) * size;
+        var origin = new Vector2(at.X - (plate.X / 2f), top - NameGap - plate.Y);
+        list.AddRectFilled(origin - NamePadding, origin + plate + NamePadding, EditorColours.NamePlate, NameRounding);
+        list.AddText(ImGui.GetFont(), ImGui.GetFontSize() * size, origin, EditorColours.NameText, name);
     }
 
     private static void DrawArrow(

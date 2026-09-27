@@ -59,21 +59,14 @@ internal sealed class HierarchyPanel
         this.files = files;
     }
 
-    /// <summary>The scene selector with its anchor and add buttons, then one row per track; disabled unless editing.</summary>
+    /// <summary>The scene selector with its add button, then one row per track; disabled unless editing.</summary>
     public void Draw(bool editing)
     {
         ImGui.BeginDisabled(!editing);
-        var buttons = IconButton.RowWidth(IconButton.Width(FontAwesomeIcon.Anchor), LastSlot());
         ImGui.SetNextItemWidth(
-            MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons - ImGui.GetStyle().ItemSpacing.X)
+            MathF.Max(0f, ImGui.GetContentRegionAvail().X - LastSlot() - ImGui.GetStyle().ItemSpacing.X)
         );
         DrawSelector();
-        ImGui.SameLine();
-        Layout.RightAlign(buttons);
-        ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
-        if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor"))
-            Report(session.Selection.SelectSceneAnchor());
-        ImGui.EndDisabled();
         CentreInLastSlot(FontAwesomeIcon.Plus);
         if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track"))
             ImGui.OpenPopup("add-track-menu");
@@ -350,7 +343,7 @@ internal sealed class HierarchyPanel
         ImGui.EndDisabled();
     }
 
-    /// <summary>The width kept for the rightmost button in the header and every row, so the anchors above it line up.</summary>
+    /// <summary>The width kept for the rightmost button in the header and every row, so they line up.</summary>
     private static float LastSlot() =>
         MathF.Max(
             IconButton.Width(FontAwesomeIcon.Plus),

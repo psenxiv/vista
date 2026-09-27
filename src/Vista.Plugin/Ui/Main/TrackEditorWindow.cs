@@ -12,6 +12,7 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using Vista.Core.Tracks.Playback;
+using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Widgets;
 using Vista.Plugin.Ui.Windows;
@@ -19,7 +20,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>The main Vista window: modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
+/// <summary>The main Vista window: the menu bar, modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
 internal sealed class TrackEditorWindow : Window
 {
     private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
@@ -79,11 +80,9 @@ internal sealed class TrackEditorWindow : Window
     private bool aimMenuOpen;
     private readonly PendingEdit<float> fields;
     private readonly TimingWindow timing;
-    private readonly CameraWindow camera;
-    private readonly GuideWindow guide;
     private readonly WatchTargetWindow watchTarget;
     private readonly FollowTargetWindow followTarget;
-    private readonly SetupWindow setup;
+    private readonly MainMenu menu;
     private readonly HierarchyPanel hierarchy;
     private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
@@ -109,22 +108,22 @@ internal sealed class TrackEditorWindow : Window
         WatchTargetWindow watchTarget,
         FollowTargetWindow followTarget,
         SceneFiles files,
-        SetupWindow setup
+        SetupWindow setup,
+        EditorLayer layer
     )
-        : base("Vista###vista-track-editor")
+        : base("Vista###vista-track-editor", ImGuiWindowFlags.MenuBar)
     {
         this.game = game;
         session = game.State;
         this.config = config;
         config.HierarchyWidth = PanelWidth.Clamp(config.HierarchyWidth);
         config.PlaylistWidth = PanelWidth.Clamp(config.PlaylistWidth);
+        config.TrackNameScale = TrackNameSize.Clamp(config.TrackNameScale);
         this.fields = fields;
         this.timing = timing;
-        this.camera = camera;
-        this.guide = guide;
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
-        this.setup = setup;
+        menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup);
         scrub = new Scrubber(game);
         hierarchy = new HierarchyPanel(game, files);
         playlist = new PlaylistPanel(session);
@@ -163,6 +162,7 @@ internal sealed class TrackEditorWindow : Window
 
         using var style = WindowStyle.Push();
         var editing = session.Mode == CameraMode.Editing;
+        DrawMenuBar();
         DrawTopRow(editing);
 
         if (showHierarchy)
@@ -239,40 +239,19 @@ internal sealed class TrackEditorWindow : Window
         return PanelWidth.Clamp(grabbed + (sign * ImGui.GetMouseDragDelta(ImGuiMouseButton.Left, 0f).X));
     }
 
+    /// <summary>The menu bar; showing or hiding a panel grows or shrinks the window by its width.</summary>
+    private void DrawMenuBar()
+    {
+        var (hierarchyShown, playlistShown) = (showHierarchy, showPlaylist);
+        menu.Draw(ref showHierarchy, ref showPlaylist);
+        if (showHierarchy != hierarchyShown)
+            pendingWidth += (showHierarchy ? 1f : -1f) * (config.HierarchyWidth + Layout.Spacing.X);
+        if (showPlaylist != playlistShown)
+            pendingWidth += (showPlaylist ? 1f : -1f) * (config.PlaylistWidth + Layout.Spacing.X);
+    }
+
     private void DrawTopRow(bool editing)
     {
-        if (
-            IconButton.Toggle(
-                "hierarchy",
-                FontAwesomeIcon.Sitemap,
-                showHierarchy,
-                showHierarchy ? "Hide hierarchy" : "Show hierarchy"
-            )
-        )
-        {
-            showHierarchy = !showHierarchy;
-            pendingWidth += showHierarchy
-                ? config.HierarchyWidth + Layout.Spacing.X
-                : -(config.HierarchyWidth + Layout.Spacing.X);
-        }
-
-        ImGui.SameLine();
-        if (
-            IconButton.Toggle(
-                "playlist",
-                FontAwesomeIcon.ListOl,
-                showPlaylist,
-                showPlaylist ? "Hide playlist" : "Show playlist"
-            )
-        )
-        {
-            showPlaylist = !showPlaylist;
-            pendingWidth += showPlaylist
-                ? config.PlaylistWidth + Layout.Spacing.X
-                : -(config.PlaylistWidth + Layout.Spacing.X);
-        }
-
-        ImGui.SameLine();
         DrawModeCombo();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
@@ -299,52 +278,25 @@ internal sealed class TrackEditorWindow : Window
 
         if (editing)
         {
-            AlignTo(CameraToolsStart(), gap);
-            if (IconButton.Draw("level-roll", FontAwesomeIcon.RulerHorizontal, "Level camera roll"))
-                game.LevelCameraRoll();
-            ImGui.SameLine();
-            IconButton.WindowToggle("camera", FontAwesomeIcon.Camera, "Camera", camera);
-            ImGui.SameLine();
+            AlignTo(FlySpeedStart(), gap);
             DrawFlySpeed();
         }
 
-        var live = session.Mode == CameraMode.Live ? ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X : 0f;
-        ImGui.SameLine();
-        Layout.RightAlign(
-            live + IconButton.RowWidth(FontAwesomeIcon.EyeSlash, FontAwesomeIcon.Cog, FontAwesomeIcon.Question)
-        );
         if (session.Mode == CameraMode.Live)
         {
-            DrawLive();
             ImGui.SameLine();
+            Layout.RightAlign(ImGui.CalcTextSize("LIVE").X);
+            DrawLive();
         }
-
-        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, game.HideUiInLive, "Hide game UI when Live"))
-            game.HideUiInLive = !game.HideUiInLive;
-
-        // A new folder loads a scene, which Live refuses.
-        ImGui.SameLine();
-        ImGui.BeginDisabled(session.Mode == CameraMode.Live);
-        IconButton.WindowToggle("save-folder", FontAwesomeIcon.Cog, "Save folder", setup);
-        ImGui.EndDisabled();
-
-        ImGui.SameLine();
-        IconButton.WindowToggle("guide", FontAwesomeIcon.Question, "User Guide", guide);
     }
 
-    /// <summary>Where the camera tools start so fly speed's slider still ends under the track row's trash, leaving room for the eye, the gear and the ?; null before the first frame.</summary>
-    private float? CameraToolsStart()
+    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or at the window's right edge if that's nearer; null before the first frame.</summary>
+    private float? FlySpeedStart()
     {
         if (trashRight is not { } right)
             return null;
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var eyeLeft =
-            ImGui.GetWindowPos().X
-            + ImGui.GetWindowContentRegionMax().X
-            - IconButton.RowWidth(FontAwesomeIcon.Question, FontAwesomeIcon.Cog, FontAwesomeIcon.EyeSlash)
-            - spacing;
-        var tools = IconButton.RowWidth(FontAwesomeIcon.RulerHorizontal, FontAwesomeIcon.Camera) + spacing;
-        return MathF.Min(right, eyeLeft) - SpeedWidth - tools;
+        var edge = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X;
+        return MathF.Min(right, edge) - SpeedWidth;
     }
 
     /// <summary>Continues the row at <paramref name="screenX"/> when that's at least <paramref name="gap"/> past the last item, else just after it.</summary>
@@ -825,6 +777,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.TableNextColumn();
         if (index > 0)
             DrawValueCell(
+                index,
                 $"leg{index}",
                 evaluator.LegSeconds(index),
                 Units.SecondsNumber,
@@ -836,6 +789,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.TableNextColumn();
         if (index > 0)
             DrawValueCell(
+                index,
                 $"leg-speed{index}",
                 evaluator.LegLength(index) / evaluator.LegSeconds(index),
                 Units.YalmsPerSecondField,
@@ -846,6 +800,7 @@ internal sealed class TrackEditorWindow : Window
 
         ImGui.TableNextColumn();
         DrawValueCell(
+            index,
             $"hold{index}",
             TrackEditing.HoldSeconds(track, index),
             Units.SecondsNumber,
@@ -871,8 +826,9 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndDisabled();
     }
 
-    /// <summary>A value field filling its whole cell, square and flat: faint while its row is hovered, lit when it is hovered or held.</summary>
+    /// <summary>Point <paramref name="index"/>'s value field filling its whole cell, square and flat: faint while its row is hovered, lit when it is hovered or held. A click selects the row as a click beside it does, and with Ctrl or Shift doesn't start typing.</summary>
     private void DrawValueCell(
+        int index,
         string id,
         float current,
         string format,
@@ -888,7 +844,18 @@ internal sealed class TrackEditorWindow : Window
             .PushStyle(ImGuiStyleVar.FrameRounding, 0f)
             .Push(ImGuiStyleVar.FramePadding, framePadding with { Y = framePadding.Y + RowPadding });
         using var colour = ImRaii.PushColor(ImGuiCol.FrameBg, rowHovered ? UiColours.FrameHint() : 0u);
-        fields.Draw(id, current, format, width, range, apply);
+        var click = DragRows.Click();
+        fields.Draw(
+            id,
+            current,
+            format,
+            width,
+            range,
+            apply,
+            click == RowClick.Plain ? ImGuiSliderFlags.None : ImGuiSliderFlags.NoInput
+        );
+        if (ImGui.IsItemClicked())
+            session.Selection.ClickPoint(index, click);
     }
 
     /// <summary>The leg's pin: always shown in the accent colour when pinned, shown only on row hover when following the track speed.</summary>
@@ -957,23 +924,13 @@ internal sealed class TrackEditorWindow : Window
     {
         var style = ImGui.GetStyle();
         var items =
-            IconButton.Width(FontAwesomeIcon.Sitemap)
-            + IconButton.Width(FontAwesomeIcon.ListOl)
-            + ModeWidth
+            ModeWidth
             + IconButton.Width(FontAwesomeIcon.Undo)
             + IconButton.Width(FontAwesomeIcon.Redo)
-            + IconButton.Width(FontAwesomeIcon.ChartLine)
-            + IconButton.Width(FontAwesomeIcon.EyeSlash)
-            + IconButton.Width(FontAwesomeIcon.Cog)
-            + IconButton.Width(FontAwesomeIcon.Question);
-        var live = ImGui.CalcTextSize("LIVE").X + Layout.Spacing.X;
-        var tools =
-            IconButton.Width(FontAwesomeIcon.RulerHorizontal)
-            + Layout.Spacing.X
-            + IconButton.Width(FontAwesomeIcon.Camera)
-            + Layout.Spacing.X;
-        var flySpeed = (Layout.Spacing.X * 3f) + tools + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 10f) + (style.WindowPadding.X * 2f);
+            + IconButton.Width(FontAwesomeIcon.ChartLine);
+        var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
+        var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 5f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));
@@ -1007,7 +964,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndDragDropTarget();
     }
 
-    /// <summary>The menu for points: move them to a new track or another one, or delete them.</summary>
+    /// <summary>The menu for points: move them to a new track or another one, duplicate them, or delete them.</summary>
     private void DrawPointMenu(IReadOnlyList<int> points)
     {
         var scene = session.Scene;
@@ -1023,6 +980,12 @@ internal sealed class TrackEditorWindow : Window
             }
 
             ImGui.EndMenu();
+        }
+
+        if (Menu.Item("Duplicate"))
+        {
+            fields.Commit();
+            Report(session.DuplicatePoints(points));
         }
 
         if (Menu.Item("Delete"))

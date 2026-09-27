@@ -31,7 +31,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Game`: reading and writing the game: the camera and its hook, the free-cam, input blocking, movement lock, the UI toggle, ground and nearby characters, and faults.
 - `SelfTest`: running `/vista selftest` in the game.
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
-- `Ui/Main`: the main Vista window, with its Hierarchy and Playlist panels.
+- `Ui/Main`: the main Vista window, with its menu bar and its Hierarchy and Playlist panels.
 - `Ui/Widgets`: the ImGui pieces the windows share.
 - `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup and Welcome.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.
@@ -102,7 +102,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Widgets/IconButton`: frameless icon buttons with tooltips, toggles, window toggles, row actions, row hover, icons drawn as text, the not-found warning, and icon and row widths.
 - `Ui/Widgets/Layout`: the spacing and field and dialog widths the windows share, right-aligning, centring a window as it appears, and minimum window sizes.
 - `Ui/Widgets/WindowStyle`: a window's spacing, popup style and selected-row colours, or the popup style alone.
-- `Ui/Widgets/Tooltip` and `Menu`: a tooltip on the item just drawn, shown even while disabled, and a menu item.
+- `Ui/Widgets/Tooltip` and `Menu`: a tooltip on the item just drawn, shown even while disabled, and a menu's items: plain, ticked, and a labelled slider.
 - `Ui/Widgets/PoseGrid`: the Point and Camera windows' shared layout and fields.
 - `Ui/Widgets/BorderedField`, `PendingField`, `LiveDrag` and `TextEdit`: a bordered number field, a field drawn for a `PendingEdit`, a field previewed live as one undo step, and text edited in place; with `FieldDraw`, `PendingField` and `LiveDrag` run a field the caller draws.
 - `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name.

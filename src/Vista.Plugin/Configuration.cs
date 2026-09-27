@@ -30,6 +30,12 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>True to hide the game's UI while Live plays.</summary>
     public bool HideUiInLive { get; set; }
 
+    /// <summary>True to show track names above their anchors.</summary>
+    public bool ShowTrackNames { get; set; } = true;
+
+    /// <summary>The track names' size, as a multiple of the font size.</summary>
+    public float TrackNameScale { get; set; } = TrackNameSize.Default;
+
     /// <summary>Writes the settings to disk.</summary>
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

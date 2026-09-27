@@ -1,4 +1,3 @@
-using System.Globalization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
@@ -113,7 +112,7 @@ public sealed class Plugin : IDalamudPlugin
         Input = new InputBlocker(() => game.LocksInput, () => blockEscape, faults);
         sceneFiles = new SceneFiles(config, game);
         fields = new PendingEdit<float>(() => game.State.Mode == CameraMode.Editing);
-        editorLayer = new EditorLayer(game, pointGizmo);
+        editorLayer = new EditorLayer(game, config, pointGizmo);
 
         setupWindow = new SetupWindow(sceneFiles, OpenTrackEditor);
         pointWindow = new PointWindow(game, pointGizmo);
@@ -132,7 +131,8 @@ public sealed class Plugin : IDalamudPlugin
             watchTargetWindow,
             followTargetWindow,
             sceneFiles,
-            setupWindow
+            setupWindow,
+            editorLayer
         );
 
         windows.AddWindow(trackEditor);
@@ -186,12 +186,6 @@ public sealed class Plugin : IDalamudPlugin
 #endif
                 game.Release("command");
                 break;
-            case "playback":
-                SetPlaybackRate(args.Trim().Split(' ', 2) is [_, var rate] ? rate.Trim() : "");
-                break;
-            case "ghost":
-                ToggleGhost();
-                break;
 #if DEBUG
             case "selftest":
                 selfTest.Start();
@@ -201,27 +195,6 @@ public sealed class Plugin : IDalamudPlugin
                 Log.Information("unknown verb '{Verb}'.", verb);
                 break;
         }
-    }
-
-    /// <summary>Turns the ghost camera on or off, or says why it can't.</summary>
-    private void ToggleGhost()
-    {
-        var transport = game.State.Transport;
-        ChatGui.Print(
-            transport.SetGhost(!transport.Ghost) ?? (transport.Ghost ? "Ghost camera on." : "Ghost camera off.")
-        );
-    }
-
-    /// <summary>Sets the playback rate from <paramref name="text"/>, or says why it can't; text that isn't a number goes to Core as not-a-number, which it refuses.</summary>
-    private void SetPlaybackRate(string text)
-    {
-        var rate = float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : float.NaN;
-        ChatGui.Print(
-            game.State.Transport.SetPlaybackRate(rate)
-                ?? $"Playback rate {rate.ToString(CultureInfo.InvariantCulture)}×."
-        );
     }
 
     /// <summary>The safety steps first, each on its own, so a fault in one never skips another; then everything else.</summary>
