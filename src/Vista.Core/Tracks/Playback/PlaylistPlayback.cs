@@ -60,7 +60,7 @@ public sealed class PlaylistPlayback : IPlayback
         var wrapped = false;
         var cut = false;
         // A frame that doesn't move the clock never cuts, so a seek to an entry's end holds there.
-        while (step > 0f && !IsFinished && clock >= Total && (Total > 0 || clock > 0))
+        while (step > 0f && !IsFinished && clock >= Total)
         {
             if (Index == items.Count - 1)
             {
@@ -116,7 +116,7 @@ public sealed class PlaylistPlayback : IPlayback
         var onReturn = PlaybackClock.OnReturnPass(Direction, ShotLength, pass);
         var passClock = PlaybackClock.ClockFor(Direction, ShotLength, time, onReturn);
         clock = clock - pass + passClock;
-        atPassEnd = Cycle > 0 && passClock >= Cycle;
+        atPassEnd = passClock >= Cycle;
         IsFinished = !loops && Index == items.Count - 1 && clock >= Total;
         aim.Reset();
     }
@@ -148,7 +148,7 @@ public sealed class PlaylistPlayback : IPlayback
         get
         {
             var cycle = Cycle;
-            if (cycle > 0 && (atPassEnd || (!double.IsInfinity(Total) && clock >= Total)))
+            if (atPassEnd || (!double.IsInfinity(Total) && clock >= Total))
                 return cycle;
             return PlaybackClock.Wrap(clock, cycle);
         }
