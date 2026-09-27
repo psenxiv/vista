@@ -247,9 +247,48 @@ internal sealed class TrackEditorWindow : Window
         var (hierarchyShown, playlistShown) = (showHierarchy, showPlaylist);
         menu.Draw(ref showHierarchy, ref showPlaylist);
         if (showHierarchy != hierarchyShown)
-            pendingWidth += (showHierarchy ? 1f : -1f) * (config.HierarchyWidth + Layout.Spacing.X);
+            PanelShown(showHierarchy, config.HierarchyWidth);
         if (showPlaylist != playlistShown)
-            pendingWidth += (showPlaylist ? 1f : -1f) * (config.PlaylistWidth + Layout.Spacing.X);
+            PanelShown(showPlaylist, config.PlaylistWidth);
+    }
+
+    /// <summary>Grows the window by a panel <paramref name="width"/> wide as it shows, or shrinks it as it hides.</summary>
+    private void PanelShown(bool shown, float width) => pendingWidth += (shown ? 1f : -1f) * (width + Layout.Spacing.X);
+
+    /// <summary>The Hierarchy and Playlist toggles, ending a gap before Undo.</summary>
+    private void DrawPanelToggles(float gap)
+    {
+        var toggles =
+            IconButton.Width(FontAwesomeIcon.Sitemap)
+            + ImGui.GetStyle().ItemSpacing.X
+            + IconButton.Width(FontAwesomeIcon.ListOl);
+        AlignTo(aimX - gap - toggles, gap);
+        if (
+            IconButton.Toggle(
+                "hierarchy",
+                FontAwesomeIcon.Sitemap,
+                showHierarchy,
+                showHierarchy ? "Hide hierarchy" : "Show hierarchy"
+            )
+        )
+        {
+            showHierarchy = !showHierarchy;
+            PanelShown(showHierarchy, config.HierarchyWidth);
+        }
+
+        ImGui.SameLine();
+        if (
+            IconButton.Toggle(
+                "playlist",
+                FontAwesomeIcon.ListOl,
+                showPlaylist,
+                showPlaylist ? "Hide playlist" : "Show playlist"
+            )
+        )
+        {
+            showPlaylist = !showPlaylist;
+            PanelShown(showPlaylist, config.PlaylistWidth);
+        }
     }
 
     private void DrawTopRow(bool editing)
@@ -257,6 +296,7 @@ internal sealed class TrackEditorWindow : Window
         DrawModeCombo();
 
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
+        DrawPanelToggles(gap);
         AlignTo(aimX, gap);
         ImGui.BeginDisabled(!session.CanUndo);
         if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo"))
@@ -973,12 +1013,14 @@ internal sealed class TrackEditorWindow : Window
         var style = ImGui.GetStyle();
         var items =
             ModeWidth
+            + IconButton.Width(FontAwesomeIcon.Sitemap)
+            + IconButton.Width(FontAwesomeIcon.ListOl)
             + IconButton.Width(FontAwesomeIcon.Undo)
             + IconButton.Width(FontAwesomeIcon.Redo)
             + IconButton.Width(FontAwesomeIcon.ChartLine);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 5f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 9f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));

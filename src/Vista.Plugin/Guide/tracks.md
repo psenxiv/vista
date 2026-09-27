@@ -6,7 +6,7 @@ A scene holds several tracks. You edit one at a time. The others are drawn in gr
 
 ## The Hierarchy
 
-The Hierarchy is the panel on the left of the **Vista** window. **Hierarchy** in the **View** menu shows or hides it. Drag its right edge to make it wider or narrower.
+The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} **Show hierarchy** on the top row, or **Hierarchy** in the **View** menu, shows or hides it. Drag its right edge to make it wider or narrower.
 
 | | Control | Does |
 |---|---|---|

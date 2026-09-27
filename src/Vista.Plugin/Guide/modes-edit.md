@@ -25,6 +25,8 @@ The row under the menu bar holds the controls you use most. Everything else is i
 
 | | Button | Does |
 |---|---|---|
+| {icon:Sitemap} | **Show hierarchy** | Shows or hides the [Hierarchy](tracks.md). |
+| {icon:ListOl} | **Show playlist** | Shows or hides the [Playlist](playlist.md). |
 | {icon:Undo} | **Undo** | Undoes your last change. `Ctrl + Z` does the same. |
 | {icon:Redo} | **Redo** | Redoes it. `Ctrl + Y` does the same. |
 | {icon:ChartLine} | **Timing** | Opens the [timing graph](timing-graph.md). |
