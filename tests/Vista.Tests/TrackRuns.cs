@@ -182,21 +182,6 @@ internal static class TrackRuns
         /// <summary>The camera's speed at <paramref name="time"/>, in yalms a second: the straight distance from <paramref name="time"/> − <paramref name="h"/> to <paramref name="time"/> + <paramref name="h"/> over 2·<paramref name="h"/>.</summary>
         internal float Speed(double time, double h) =>
             Vector3.Distance(At(time - h).Position, At(time + h).Position) / (float)(2.0 * h);
-
-        /// <summary>How far the horizon leans at <paramref name="time"/>, in radians: the picture's right vector's angle from level.</summary>
-        internal float HorizonTilt(double time)
-        {
-            var at = At(time);
-            var right = Vector3.Normalize(Vector3.Cross(at.Forward, at.Up));
-            return MathF.Asin(MathF.Min(MathF.Abs(right.Y), 1f));
-        }
-
-        /// <summary>How far off <paramref name="point"/> the camera faces at <paramref name="time"/>, in radians: the angle between the facing and the direction to it.</summary>
-        internal float Centring(double time, Vector3 point)
-        {
-            var at = At(time);
-            return Vectors.AngleBetween(at.Forward, point - at.Position);
-        }
     }
 
     /// <summary>The angle, in degrees, between unit directions <paramref name="distance"/> apart.</summary>

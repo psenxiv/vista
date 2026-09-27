@@ -130,32 +130,6 @@ public class TrackRunsTests
     }
 
     [Fact]
-    public void HorizonTiltIsTheRightVectorsAngleFromLevel()
-    {
-        // Facing 45° up along -z, f = (0, a, -a) with a = √½, rolled by r = 0.3t: the upright up (0, a, a) and right
-        // (1, 0, 0) turn about f, giving up (-sin r, a cos r, a cos r) and right f × up = (cos r, a sin r, a sin r). Its
-        // angle from level is asin(a sin r): 0 at 0 s, where only pitch leans the picture, and asin(√½ sin 0.3) = 0.21052
-        // at 1 s. Float round-off in the frame is about 1e-7.
-        var a = MathF.Sqrt(0.5f);
-        var run = new Run(
-            t =>
-            {
-                var r = 0.3f * (float)t;
-                return new CameraState(
-                    Vector3.Zero,
-                    new Vector3(0f, a, -a),
-                    new Vector3(-MathF.Sin(r), a * MathF.Cos(r), a * MathF.Cos(r)),
-                    1f
-                );
-            },
-            1.0
-        );
-
-        Assert.Equal(0f, run.HorizonTilt(0.0), 1e-6f);
-        Assert.Equal(0.21052f, run.HorizonTilt(1.0), 1e-5f);
-    }
-
-    [Fact]
     public void WorldTurnRateReadsASteadyTurnAboutTheWorldVertical()
     {
         // A frame tilted 1 rad about +x, then turned about the world's +y at 0.5 rad/s: q(t) = Y(0.5t)·B. Across t ± h,
@@ -168,18 +142,5 @@ public class TrackRunsTests
             Quaternion.Concatenate(tilt, Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f * (float)t));
 
         Near(new Vector3(0f, 0.5f, 0f), WorldTurnRate(Rotation, 0.7, 0.01), 1e-4f);
-    }
-
-    [Fact]
-    public void CentringIsTheAngleBetweenTheFacingAndThePoint()
-    {
-        // At (1, 2, 3) facing -z: a point straight ahead is 0 off, and one 10 along +x and 10 along -z is 45° off.
-        var run = new Run(
-            _ => new CameraState(new Vector3(1f, 2f, 3f), new Vector3(1f, 2f, -7f), Vector3.UnitY, 1f),
-            1.0
-        );
-
-        Assert.Equal(0f, run.Centring(0.5, new Vector3(1f, 2f, -20f)), 1e-6f);
-        Assert.Equal(MathF.PI / 4f, run.Centring(0.5, new Vector3(11f, 2f, -7f)), 1e-6f);
     }
 }
