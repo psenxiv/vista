@@ -458,6 +458,56 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void DuplicatingAPointCopiesItAndItsTimingStraightAfterIt()
+    {
+        var track = Build3PointTrack();
+        track = TrackEditing.Replace(track, 1, Point(10f, yaw: 0.5f, pitch: 0.2f, fov: 1.2f, roll: 0.1f));
+        track = TrackEditing.SetLegSpeed(track, 1, 4f);
+        track = TrackEditing.SetHold(track, 1, 2f);
+
+        var result = TrackEditing.Duplicate(track, 1);
+        var evaluator = new TrackEvaluator(result);
+
+        Assert.Equal([0f, 10f, 10f, 20f], result.Points.Select(p => p.Position.X));
+        Assert.Equal(track.Points[1], result.Points[2]);
+        Assert.Equal(track.Timing[1], result.Timing[2]);
+        Assert.Equal(track.Timing[2], result.Timing[3]);
+        // Leg 1 is 10 yalms at its pinned 4: 2.5 s, then point 1 holds 2 s to 4.5 s. The copy's leg is 0 yalms,
+        // timed as 0.1 at its copied 4 (0.025 s), so it takes the shortest leg, 0.1 s: 4.6 s. It holds 2 s to 6.6 s,
+        // then 10 yalms at the track's 2 is 5 s: 11.6 s.
+        Assert.Equal(2.5f, evaluator.PointSeconds(1), 1e-3f);
+        Assert.Equal(4.6f, evaluator.PointSeconds(2), 1e-3f);
+        Assert.Equal(11.6f, evaluator.PointSeconds(3), 1e-3f);
+        Assert.Equal(11.6, evaluator.Duration, 1e-3);
+    }
+
+    [Fact]
+    public void DuplicatingTheLastPointAddsAShortLegAtTheTrackSpeed()
+    {
+        var result = TrackEditing.Duplicate(Build3PointTrack(), 2);
+
+        // The copy's leg is 0 yalms, timed as 0.1 at 2 yalms a second (0.05 s), so it takes the shortest leg, 0.1 s.
+        Assert.Equal(4, result.Points.Count);
+        Assert.Equal(result.Points[2], result.Points[3]);
+        Assert.Equal(10.1, new TrackEvaluator(result).Duration, 1e-3);
+    }
+
+    [Fact]
+    public void DuplicatingRefusesAPointOutOfRangeAndAFollowTargetTrack()
+    {
+        var follow = TrackEditing.Append(TrackEditing.Empty(AimMode.FollowTarget), Point(0f));
+
+        Assert.Equal(
+            "Duplicate index must be 0..2 for a 3-point track.",
+            Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Duplicate(Build3PointTrack(), 3)).Message
+        );
+        Assert.Equal(
+            TrackEditing.FollowHasOnePoint,
+            Assert.Throws<ArgumentException>(() => TrackEditing.Duplicate(follow, 0)).Message
+        );
+    }
+
+    [Fact]
     public void DeletingAMiddlePointMergesItsLegsAndDropsItsHold()
     {
         var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);

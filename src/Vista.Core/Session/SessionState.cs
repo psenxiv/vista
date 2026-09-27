@@ -467,6 +467,26 @@ public sealed class SessionState
         return refusal;
     }
 
+    /// <summary>Inserts an exact copy of each of points <paramref name="points"/> straight after it and selects the copies, as one undo step. Returns why it was refused, or null.</summary>
+    public string? DuplicatePoints(IReadOnlyList<int> points)
+    {
+        if (Mode != CameraMode.Editing)
+            return TrackOnlyWhileEditing;
+        if (points.Count == 0 || !points.All(i => TrackEditing.IsPoint(Local, i)))
+            return TrackEditing.NoSuchPoint;
+
+        var copied = points.Distinct().Order().ToArray();
+
+        // A point moves down one for each copy at or above it, so a copied point's index lands on its copy.
+        int Shifted(int p) => p + copied.Count(c => c <= p);
+        var copies = copied.Select(Shifted).ToArray();
+        var last = Selection.LastPoint is { } l ? Shifted(l) : (int?)null;
+        var refusal = Apply(t => copied.OrderDescending().Aggregate(t, TrackEditing.Duplicate), _ => copies);
+        if (refusal is null)
+            Selection.LastPoint = last;
+        return refusal;
+    }
+
     /// <summary>Moves points <paramref name="indices"/> to the end of track <paramref name="destination"/>, or a new track when null, keeping their places in the world, then edits it with them selected. Returns why it was refused, or null.</summary>
     public string? MovePointsTo(IReadOnlyCollection<int> indices, Guid? destination)
     {

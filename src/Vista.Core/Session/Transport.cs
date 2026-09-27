@@ -8,8 +8,14 @@ namespace Vista.Core.Session;
 /// <summary>The Edit preview, its tools and the scrub head: what plays while editing, and where the scrub bar stands in any mode.</summary>
 public sealed class Transport
 {
+    /// <summary>The slowest playback rate, as a multiple of normal speed.</summary>
+    public const float MinPlaybackRate = 0.01f;
+
     /// <summary>The fastest playback rate, as a multiple of normal speed.</summary>
     public const float MaxPlaybackRate = 2f;
+
+    /// <summary>The step a dragged playback rate moves in.</summary>
+    public const float PlaybackRateStep = 0.1f;
 
     private readonly SessionState session;
     private TrackPlayback? preview;
@@ -29,7 +35,7 @@ public sealed class Transport
     /// <summary>True while Edit previews play on the ghost camera and the game camera stays with the free-cam. Never saved.</summary>
     public bool Ghost { get; private set; }
 
-    /// <summary>How fast Edit previews play, as a multiple of normal speed: above 0 and at most <see cref="MaxPlaybackRate"/>. Never saved.</summary>
+    /// <summary>How fast Edit previews play, as a multiple of normal speed, from <see cref="MinPlaybackRate"/> to <see cref="MaxPlaybackRate"/>. Never saved.</summary>
     public float PlaybackRate { get; private set; } = 1f;
 
     /// <summary>Seconds under the scrub head: shot time while live or previewing, otherwise the last scrubbed or jumped-to time.</summary>
@@ -69,11 +75,15 @@ public sealed class Transport
     {
         if (session.Mode != CameraMode.Editing)
             return "The playback rate is only for Edit previews.";
-        if (!(rate > 0f && rate <= MaxPlaybackRate))
-            return $"The playback rate must be above 0 and at most {MaxPlaybackRate.ToString(CultureInfo.InvariantCulture)}.";
+        if (!(rate >= MinPlaybackRate && rate <= MaxPlaybackRate))
+            return $"The playback rate must be from {MinPlaybackRate.ToString(CultureInfo.InvariantCulture)} to {MaxPlaybackRate.ToString(CultureInfo.InvariantCulture)}.";
         PlaybackRate = rate;
         return null;
     }
+
+    /// <summary>A dragged playback rate: to the nearest <see cref="PlaybackRateStep"/>, then from <see cref="MinPlaybackRate"/> to <see cref="MaxPlaybackRate"/>.</summary>
+    public static float SnapPlaybackRate(float rate) =>
+        Math.Clamp(MathF.Round(rate / PlaybackRateStep) * PlaybackRateStep, MinPlaybackRate, MaxPlaybackRate);
 
     /// <summary>Advances an Edit preview by <paramref name="dt"/> at the playback rate, stopping it at the end of a cycle that doesn't loop. Returns its frame, or null when not previewing.</summary>
     public CameraState? AdvancePreview(float dt)

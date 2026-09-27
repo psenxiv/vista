@@ -13,7 +13,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 ### Core
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
-- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, tick spacing, row text fitting, edge scrolling and panel widths.
+- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, tick spacing, row text fitting, edge scrolling, panel widths and the track name size.
 - `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Scenes`: scenes, playlists and presets as data, their edits and names, their place in the world, and their files.

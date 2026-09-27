@@ -128,6 +128,46 @@ public class SessionEditingTests
     }
 
     [Fact]
+    public void DuplicatingPointsPutsEachCopyAfterItsPointAndSelectsTheCopies()
+    {
+        var state = EditingThreePoints();
+        state.Selection.Select(1);
+
+        Assert.Null(state.DuplicatePoints([2, 0]));
+
+        // 0 and 20 are copied: 0, 0, 10, 20, 20, with the copies at 1 and 4.
+        Assert.Equal([0f, 0f, 10f, 20f, 20f], state.Track.Points.Select(p => p.Position.X));
+        Assert.Equal([1, 4], state.Selection.Points);
+    }
+
+    [Fact]
+    public void DuplicatingIsOneUndoStepThatBringsBackTheSelection()
+    {
+        var state = EditingThreePoints();
+        state.Selection.Select(1);
+        Assert.Null(state.DuplicatePoints([1]));
+        Assert.Equal(2, state.Selection.Point);
+
+        Assert.True(state.Undo());
+
+        Assert.Equal([0f, 10f, 20f], state.Track.Points.Select(p => p.Position.X));
+        Assert.Equal(1, state.Selection.Point);
+    }
+
+    [Fact]
+    public void DuplicatingIsRefusedOutsideEditOrForAPointNotThere()
+    {
+        var state = EditingThreePoints();
+        Assert.Equal(TrackEditing.NoSuchPoint, state.DuplicatePoints([3]));
+        Assert.Equal(TrackEditing.NoSuchPoint, state.DuplicatePoints([]));
+
+        state.AddToPlaylist([state.EditedTrackId]);
+        GoLive(state);
+        Assert.Equal("The track can only change while editing.", state.DuplicatePoints([0]));
+        Assert.Equal(3, state.Track.Points.Count);
+    }
+
+    [Fact]
     public void EditFromLiveMovesTheScrubHeadToThePlaybackTime()
     {
         var state = EditingThreePoints();

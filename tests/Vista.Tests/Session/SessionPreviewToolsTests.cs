@@ -12,7 +12,7 @@ public class SessionPreviewToolsTests
 {
     private const string GhostOnlyInEdit = "The ghost camera is only for Edit.";
     private const string RateOnlyInEdit = "The playback rate is only for Edit previews.";
-    private const string RateOutOfRange = "The playback rate must be above 0 and at most 2.";
+    private const string RateOutOfRange = "The playback rate must be from 0.01 to 2.";
 
     [Fact]
     public void TheGhostTurnsOnAndOffInEditAndStaysOnThroughLive()
@@ -59,7 +59,17 @@ public class SessionPreviewToolsTests
         Assert.Equal(2f, state.Transport.PlaybackRate);
     }
 
+    [Fact]
+    public void TheSlowestRateIsAHundredthOfNormalSpeed()
+    {
+        var state = EditingThreePoints();
+
+        Assert.Null(state.Transport.SetPlaybackRate(0.01f));
+        Assert.Equal(0.01f, state.Transport.PlaybackRate);
+    }
+
     [Theory]
+    [InlineData(0.009f)]
     [InlineData(0f)]
     [InlineData(-1f)]
     [InlineData(2.01f)]
@@ -72,6 +82,21 @@ public class SessionPreviewToolsTests
 
         Assert.Equal(RateOutOfRange, state.Transport.SetPlaybackRate(rate));
         Assert.Equal(0.5f, state.Transport.PlaybackRate);
+    }
+
+    [Theory]
+    [InlineData(1.04f, 1f)] // 10.4 tenths rounds to 10
+    [InlineData(1.06f, 1.1f)] // 10.6 tenths rounds to 11
+    [InlineData(0.26f, 0.3f)] // 2.6 tenths rounds to 3
+    [InlineData(1.94f, 1.9f)] // 19.4 tenths rounds to 19
+    [InlineData(2f, 2f)] // already a tenth, and the fastest
+    [InlineData(0.01f, 0.01f)] // the far left rounds to 0, below the slowest, so it clamps back to 0.01
+    [InlineData(0.04f, 0.01f)] // 0.4 tenths rounds to 0, which clamps to 0.01
+    [InlineData(0.06f, 0.1f)] // 0.6 tenths rounds to 1
+    [InlineData(2.3f, 2f)] // 23 tenths is past the fastest, so it clamps to 2
+    public void ADraggedRateSnapsToTheNearestTenthWithinRange(float dragged, float expected)
+    {
+        Assert.Equal(expected, Transport.SnapPlaybackRate(dragged), 1e-6f);
     }
 
     [Fact]

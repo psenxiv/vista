@@ -41,6 +41,12 @@ public sealed class SelectionState
     public IReadOnlyList<Guid> Entries =>
         session.Scene.Playlist.Select(e => e.Id).Where(selection.Entries.Contains).ToArray();
 
+    /// <summary>The playlist entries that play the edited track, in playlist order; none outside Edit.</summary>
+    public IReadOnlyList<Guid> EditedEntries =>
+        session.Mode == CameraMode.Editing
+            ? session.Scene.Playlist.Where(e => e.TrackId == session.EditedTrackId).Select(e => e.Id).ToArray()
+            : [];
+
     /// <summary>The selected timing key's index, or null. Never set together with <see cref="Leg"/>.</summary>
     public int? Key { get; internal set; }
 
@@ -142,17 +148,20 @@ public sealed class SelectionState
         return null;
     }
 
-    /// <summary>Applies a click to playlist entry <paramref name="id"/>: plain selects only it; Ctrl and Shift add to the entry selection, unless two or more of another kind are selected. Returns why it was refused, or null.</summary>
+    /// <summary>Applies a click to playlist entry <paramref name="id"/>: plain edits its track and selects only it; Ctrl and Shift add to the entry selection, unless two or more of another kind are selected. Returns why it was refused, or null.</summary>
     public string? ClickEntry(Guid id, RowClick click)
     {
-        var scene = session.Scene;
         if (session.Mode != CameraMode.Editing)
             return "Playlist entries can only be selected while editing.";
-        if (PlaylistEditing.IndexOf(scene, id) < 0)
+        var at = PlaylistEditing.IndexOf(session.Scene, id);
+        if (at < 0)
             return PlaylistEditing.NoSuchEntry;
+        if (click == RowClick.Plain && session.SwitchTrack(session.Scene.Playlist[at].TrackId) is { } refusal)
+            return refusal;
         if (click != RowClick.Plain && (selection.Points.Count >= 2 || Tracks.Count >= 2))
             return null;
 
+        var scene = session.Scene;
         var (entries, last) = RowPicking.Click(
             scene.Playlist.Select(e => e.Id).ToArray(),
             Entries,

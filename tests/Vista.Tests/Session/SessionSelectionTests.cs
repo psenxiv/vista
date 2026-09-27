@@ -241,6 +241,50 @@ public class SessionSelectionTests
     }
 
     [Fact]
+    public void APlainClickOnAnEntryEditsItsTrackAndSelectsTheEntry()
+    {
+        var state = Editing();
+        state.Selection.Select(0);
+
+        Assert.Null(state.Selection.ClickEntry(EntryId(state, 1), RowClick.Plain));
+
+        Assert.Equal(TrackId(state, 1), state.EditedTrackId);
+        Assert.Equal([TrackId(state, 1)], state.Selection.Tracks);
+        Assert.Equal([EntryId(state, 1)], state.Selection.Entries);
+        Assert.Empty(state.Selection.Points);
+    }
+
+    [Fact]
+    public void CtrlAndShiftClicksOnEntriesSelectThemWithoutSwitchingTrack()
+    {
+        var state = Editing();
+        state.Selection.ClickEntry(EntryId(state, 0), RowClick.Plain);
+
+        state.Selection.ClickEntry(EntryId(state, 1), RowClick.Toggle);
+        Assert.Equal(TrackId(state, 0), state.EditedTrackId);
+
+        state.Selection.ClickEntry(EntryId(state, 2), RowClick.Range);
+        Assert.Equal(TrackId(state, 0), state.EditedTrackId);
+        Assert.Equal([EntryId(state, 0), EntryId(state, 1), EntryId(state, 2)], state.Selection.Entries);
+    }
+
+    [Fact]
+    public void TheEditedTracksEntriesAreEveryEntryPlayingItAndNoneOutsideEdit()
+    {
+        var state = Editing();
+        state.AddToPlaylist([TrackId(state, 0)]);
+
+        // Track 1 plays at entries 1 and 4.
+        Assert.Equal([EntryId(state, 0), EntryId(state, 3)], state.Selection.EditedEntries);
+
+        state.Selection.ClickTrack(TrackId(state, 1), RowClick.Plain);
+        Assert.Equal([EntryId(state, 1)], state.Selection.EditedEntries);
+
+        state.Release();
+        Assert.Empty(state.Selection.EditedEntries);
+    }
+
+    [Fact]
     public void SelectingNothingClearsEveryKind()
     {
         var state = Editing();
@@ -518,6 +562,19 @@ public class SessionSelectionTests
         state.Selection.ClickPoint(3, RowClick.Range);
 
         Assert.Equal([2, 3], state.Selection.Points);
+    }
+
+    [Fact]
+    public void ShiftRangesFromTheCopyOfADuplicatedPoint()
+    {
+        var state = Editing();
+        state.Selection.Select(1);
+
+        // Point 1 is copied to 2, pushing the old 2 and 3 to 3 and 4; the range runs from the copy.
+        Assert.Null(state.DuplicatePoints([1]));
+        state.Selection.ClickPoint(4, RowClick.Range);
+
+        Assert.Equal([2, 3, 4], state.Selection.Points);
     }
 
     [Fact]
