@@ -44,7 +44,7 @@ public class SelfTestReportTests
     [Fact]
     public void ACheckLineGivesItsOutcomeNameAndNumbers()
     {
-        // The spec's own example line.
+        // A typical passing line.
         Assert.Equal(
             "[selftest] FAIL movement lock: counter 2 then 2, expected 3",
             SelfTestResult.Fail("movement lock", "counter 2 then 2, expected 3").Line

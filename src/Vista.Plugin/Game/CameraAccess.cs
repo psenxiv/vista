@@ -98,7 +98,7 @@ internal static unsafe class CameraAccess
 
         // Distance and InterpDistance are deliberately NOT written. They are saved
         // settings: writing them corrupted a character's stored camera on 2026-09-21,
-        // surviving relog, client restart and disabling Dalamud. See the spec.
+        // surviving relog, client restart and disabling Dalamud.
         // Scrolling during a takeover can jitter slightly; suppress the input instead.
     }
 }

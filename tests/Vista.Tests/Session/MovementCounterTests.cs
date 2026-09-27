@@ -5,7 +5,7 @@ namespace Vista.Tests.Session;
 
 public class MovementCounterTests
 {
-    // The counter is plausible from 0 (nobody holds it) to 16 holds, the spec's provisional bound, inclusive.
+    // The counter is plausible from 0 (nobody holds it) to 16 holds, a provisional bound, inclusive.
     [Theory]
     [InlineData(int.MinValue, false)]
     [InlineData(-1, false)]

@@ -177,7 +177,7 @@ public class TimingCurveTests
     [Fact]
     public void SmoothEndsOnARisingTrackStartAtRestAndEndFast()
     {
-        // Intervals of 1 s averaging 1 and 3 (SciPy PCHIP's end rule, spec §2):
+        // Intervals of 1 s averaging 1 and 3 (SciPy PCHIP's end rule):
         // start ((2·1 + 1)·1 − 1·3) / 2 = 0; end ((2·1 + 1)·3 − 1·1) / 2 = 4, within the last interval's bound of 3 × 3 = 9.
         var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(2f, 4f) };
         var curve = new TimingCurve(keys);
@@ -189,7 +189,7 @@ public class TimingCurveTests
     [Fact]
     public void SmoothEndsFollowTheTrendOfTheirTwoNearestLegs()
     {
-        // Intervals of 2 s averaging 5 and 4 s averaging 2.5 (SciPy PCHIP's end rule, spec §2):
+        // Intervals of 2 s averaging 5 and 4 s averaging 2.5 (SciPy PCHIP's end rule):
         // first key ((2·2 + 4)·5 − 2·2.5) / (2 + 4) = 35/6; last key ((2·4 + 2)·2.5 − 4·5) / (4 + 2) = 5/6.
         var curve = new TimingCurve([Key(0f, 0f), Key(2f, 10f), Key(6f, 20f)]);
 
@@ -263,7 +263,7 @@ public class TimingCurveTests
     {
         // Legs of very different width (1s / 10s / 1s) either side of key 1: the square
         // clamp must not couple the two intervals' ratios together, or key 1's in- and
-        // out-tangent diverge and the pass-through stops being smooth (spec 255-257).
+        // out-tangent diverge and the pass-through stops being smooth.
         var keys = new[] { Key(0f, 0f), Key(1f, 1f), Key(11f, 2f), Key(12f, 3f) };
         var curve = new TimingCurve(keys);
 

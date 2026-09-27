@@ -104,7 +104,7 @@ internal static class RegressionScene
         );
     }
 
-    /// <summary>Recorded aim east 45° up, straight up with the picture's top to the north, west 45° up, 2 s a leg: the shot that found the turn-rate jump at a middle point (spec:7).</summary>
+    /// <summary>Recorded aim east 45° up, straight up with the picture's top to the north, west 45° up, 2 s a leg: the shot that found the turn-rate jump at a middle point.</summary>
     private static Track RecordedAimUpAndOverAMiddlePoint()
     {
         (float Yaw, float Pitch)[] looks =
