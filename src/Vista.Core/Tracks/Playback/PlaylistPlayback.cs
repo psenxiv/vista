@@ -12,6 +12,7 @@ public sealed class PlaylistPlayback : IPlayback
     private readonly AimTracker aim;
     private double clock;
     private bool shownFirstFrame;
+    private bool atPassEnd;
 
     /// <summary>Plays <paramref name="items"/> from the first, wrapping at the end when <paramref name="loops"/>; <paramref name="targets"/> finds watched or followed characters. Refused when empty.</summary>
     public PlaylistPlayback(IReadOnlyList<PlaylistItem> items, bool loops = false, NearbyCharacters? targets = null)
@@ -50,12 +51,16 @@ public sealed class PlaylistPlayback : IPlayback
                 return Frame(dt);
         }
 
+        var step = Math.Max(dt, 0f);
         if (!IsFinished)
-            clock += Math.Max(dt, 0f);
+            clock += step;
+        if (step > 0f)
+            atPassEnd = false;
 
         var wrapped = false;
         var cut = false;
-        while (!IsFinished && clock >= Total && (Total > 0 || clock > 0))
+        // A frame that doesn't move the clock never cuts, so a seek to an entry's end holds there.
+        while (step > 0f && !IsFinished && clock >= Total && (Total > 0 || clock > 0))
         {
             if (Index == items.Count - 1)
             {
@@ -104,12 +109,14 @@ public sealed class PlaylistPlayback : IPlayback
     private CameraState? Frame(float dt) =>
         aim.Frame(evaluators[Index], items[Index].Track, ShotTime, Math.Max(dt, 0f));
 
-    /// <summary>Jumps to <paramref name="time"/> in the playing entry, staying in the loop pass it is on; the smoothing starts afresh.</summary>
+    /// <summary>Jumps to <paramref name="time"/> in the playing entry, staying in the loop pass it is on; a seek to a pass's end stays there until the clock moves on. The smoothing starts afresh.</summary>
     public void Seek(double time)
     {
         var pass = PassClock;
         var onReturn = PlaybackClock.OnReturnPass(Direction, ShotLength, pass);
-        clock = clock - pass + PlaybackClock.ClockFor(Direction, ShotLength, time, onReturn);
+        var passClock = PlaybackClock.ClockFor(Direction, ShotLength, time, onReturn);
+        clock = clock - pass + passClock;
+        atPassEnd = Cycle > 0 && passClock >= Cycle;
         IsFinished = !loops && Index == items.Count - 1 && clock >= Total;
         aim.Reset();
     }
@@ -121,6 +128,7 @@ public sealed class PlaylistPlayback : IPlayback
         clock = 0;
         IsFinished = false;
         shownFirstFrame = false;
+        atPassEnd = false;
         aim.Reset();
     }
 
@@ -134,13 +142,13 @@ public sealed class PlaylistPlayback : IPlayback
         : items[Index].Track.Loop ? double.PositiveInfinity
         : Cycle;
 
-    /// <summary>The clock within the loop pass the playing entry is on; a finished entry sits at the end of its last pass.</summary>
+    /// <summary>The clock within the loop pass the playing entry is on; a finished entry, or one seeked to a pass's end, sits at that pass's end.</summary>
     private double PassClock
     {
         get
         {
             var cycle = Cycle;
-            if (cycle > 0 && !double.IsInfinity(Total) && clock >= Total)
+            if (cycle > 0 && (atPassEnd || (!double.IsInfinity(Total) && clock >= Total)))
                 return cycle;
             return PlaybackClock.Wrap(clock, cycle);
         }

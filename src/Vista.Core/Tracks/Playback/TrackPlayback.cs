@@ -28,15 +28,17 @@ public sealed class TrackPlayback : IPlayback
         aim = new AimTracker(targets);
     }
 
-    /// <summary>Adds <paramref name="dt"/> to the clock, stops or wraps it at the end of the cycle, and evaluates the shot time.</summary>
+    /// <summary>Adds <paramref name="dt"/> to the clock, stops it at the end of the cycle or wraps it once it moves past, and evaluates the shot time.</summary>
     public CameraState? Advance(float dt)
     {
         var cycle = Cycle;
-        var next = _clock + Math.Max(dt, 0f);
+        var step = Math.Max(dt, 0f);
+        var next = _clock + step;
 
         if (_track.Loop)
         {
-            _clock = PlaybackClock.Wrap(next, cycle);
+            if (step > 0f)
+                _clock = PlaybackClock.Wrap(next, cycle);
         }
         else if (next >= cycle)
         {
@@ -48,7 +50,7 @@ public sealed class TrackPlayback : IPlayback
             _clock = next;
         }
 
-        return aim.Frame(_evaluator, _track, ShotTime, Math.Max(dt, 0f));
+        return aim.Frame(_evaluator, _track, ShotTime, step);
     }
 
     /// <summary>Puts the clock back to the start of the cycle, clears <see cref="IsFinished"/> and starts the smoothing afresh.</summary>
@@ -59,23 +61,14 @@ public sealed class TrackPlayback : IPlayback
         IsFinished = false;
     }
 
-    /// <summary>Jumps to shot time <paramref name="time"/>, clamped to the shot, keeping a Ping-pong shot's pass; the smoothing starts afresh.</summary>
+    /// <summary>Jumps to shot time <paramref name="time"/>, clamped to the shot, keeping a Ping-pong shot's pass; a seek to the end of a looping cycle stays there until the clock moves on. The smoothing starts afresh.</summary>
     public void Seek(double time)
     {
         aim.Reset();
         var length = _evaluator.Duration;
-        var cycle = Cycle;
         var onReturn = PlaybackClock.OnReturnPass(_track.Direction, length, _clock);
-        var clock = PlaybackClock.ClockFor(_track.Direction, length, time, onReturn);
-
-        if (_track.Loop)
-        {
-            _clock = PlaybackClock.Wrap(clock, cycle);
-            return;
-        }
-
-        _clock = clock;
-        IsFinished = _clock >= cycle;
+        _clock = PlaybackClock.ClockFor(_track.Direction, length, time, onReturn);
+        IsFinished = !_track.Loop && _clock >= Cycle;
     }
 
     private double Cycle => PlaybackClock.CycleLength(_track.Direction, _evaluator.Duration);

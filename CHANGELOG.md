@@ -6,6 +6,8 @@
 - Look At turns the picture round gradually from point to point when the camera passes under or over its point, instead of quickly as it passes.
 - With a look ahead, Direction of travel keeps looking where it's going while it holds at a point.
 - With a look ahead, Direction of travel keeps looking the way it came in while it holds at a point the track later ends at, and turns round as it moves off instead of as it stops.
+- Dragging the scrub bar to the end of a looping shot shows its last frame instead of its first.
+- Dragging the scrub bar to the end of a playlist entry holds its last frame instead of jumping to the next entry.
 
 ## 0.11.0.1
 

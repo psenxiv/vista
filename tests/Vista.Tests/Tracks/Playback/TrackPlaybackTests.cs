@@ -165,27 +165,68 @@ public class TrackPlaybackTests
     }
 
     [Fact]
-    public void SeekingALoopToItsEndShowsTheFirstFrame()
+    public void SeekingALoopToItsEndShowsTheLastFrameUntilPlaybackMovesOn()
     {
         var playback = new TrackPlayback(StraightTrack(true));
+
+        // Forward, L = 10: a seek to 10 leaves the clock at 10, the last frame.
         playback.Seek(10.0);
-        Assert.Equal(0.0, playback.ShotTime, 5);
+        Assert.Equal(10.0, playback.ShotTime, 5);
         Assert.False(playback.IsFinished);
 
-        playback.Seek(23.0);
-        Assert.Equal(0.0, playback.ShotTime, 5);
+        // A paused frame (0) or a negative one doesn't move the clock, so it stays.
+        playback.Advance(0f);
+        Assert.Equal(10.0, playback.ShotTime, 5);
+        playback.Advance(-1f);
+        Assert.Equal(10.0, playback.ShotTime, 5);
 
+        // Moving on 1 s: clock 11 wraps by the 10 s cycle to 1.
+        playback.Advance(1f);
+        Assert.Equal(1.0, playback.ShotTime, 5);
+
+        // Past the end clamps to 10; before the start clamps to 0.
+        playback.Seek(23.0);
+        Assert.Equal(10.0, playback.ShotTime, 5);
         playback.Seek(-1.0);
         Assert.Equal(0.0, playback.ShotTime, 5);
     }
 
     [Fact]
-    public void SeekingALoopingReverseShotToItsStartShowsItsEnd()
+    public void SeekingALoopingReverseShotToItsStartShowsItsLastFrame()
     {
         var playback = new TrackPlayback(StraightTrack(true, PlaybackDirection.Reverse));
+
+        // Reverse, L = 10: shot time 0 is clock 10 - 0 = 10, the cycle's end, so shot time stays 0.
         playback.Seek(0.0);
-        Assert.Equal(10.0, playback.ShotTime, 5);
+        Assert.Equal(0.0, playback.ShotTime, 5);
         Assert.False(playback.IsFinished);
+        playback.Advance(0f);
+        Assert.Equal(0.0, playback.ShotTime, 5);
+
+        // Moving on 2 s: clock 12 wraps to 2, shot time 10 - 2 = 8.
+        playback.Advance(2f);
+        Assert.Equal(8.0, playback.ShotTime, 5);
+    }
+
+    [Fact]
+    public void SeekingALoopingPingPongToItsStartOnTheReturnPassStaysOnThatPass()
+    {
+        var playback = new TrackPlayback(StraightTrack(true, PlaybackDirection.PingPong));
+
+        // Clock 13 is on the return pass (past L = 10): shot time 2 * 10 - 13 = 7.
+        playback.Advance(13f);
+        Assert.Equal(7.0, playback.ShotTime, 5);
+
+        // Return pass, shot time 0: clock 2 * 10 - 0 = 20, the end of the 20 s cycle.
+        playback.Seek(0.0);
+        Assert.Equal(0.0, playback.ShotTime, 5);
+        playback.Advance(0f);
+        Assert.Equal(0.0, playback.ShotTime, 5);
+
+        // Still on the return pass: shot time 4 is clock 20 - 4 = 16; 1 s on, clock 17 is shot time 3.
+        playback.Seek(4.0);
+        playback.Advance(1f);
+        Assert.Equal(3.0, playback.ShotTime, 5);
     }
 
     [Fact]
