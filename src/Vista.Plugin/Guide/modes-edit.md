@@ -21,10 +21,11 @@ Click a point, an anchor or a Look At point in the world to select it. Clicking 
 
 ## The top row
 
+The row under the menu bar holds the controls you use most. Everything else is in the menus. See [The menu bar](menu-bar.md).
+
 | | Button | Does |
 |---|---|---|
 | {icon:Undo} | **Undo** | Undoes your last change. `Ctrl + Z` does the same. |
 | {icon:Redo} | **Redo** | Redoes it. `Ctrl + Y` does the same. |
 | {icon:ChartLine} | **Timing** | Opens the [timing graph](timing-graph.md). |
-| {icon:RulerHorizontal} | **Level camera roll** | Levels the camera's roll. |
-| {icon:Camera} | **Camera** | Opens [the Camera window](camera-window.md). |
+| | **Fly speed** | Sets how fast you fly. |

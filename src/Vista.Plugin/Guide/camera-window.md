@@ -1,6 +1,6 @@
 # The Camera window
 
-The **Camera** window shows the free camera's numbers in Edit, and lets you type exact values. Click {icon:Camera} **Camera** on the top row to open it.
+The **Camera** window shows the free camera's numbers in Edit, and lets you type exact values. Choose **Camera** in the **View** menu to open it.
 
 - {icon:ArrowsAlt} **Position**: **X**, **Y** and **Z**.
 - {icon:SyncAlt} **Rotation**: **Pitch**, **Yaw** and **Roll**, in degrees.

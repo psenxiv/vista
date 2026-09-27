@@ -12,7 +12,7 @@ Vista is a hobby project built for my own use and a small group of friends. It's
 
 It's also built with heavy use of AI coding tools. I've tried to do it sensibly: I design it, review it and test it in game, and changes go through a written spec and automated tests.
 
-Install steps are below. Once it's installed, open the User Guide with the ? at the top right of the Vista window.
+Install steps are below. Once it's installed, open the User Guide from **Help** in the Vista window's menu bar.
 
 ## Demo
 

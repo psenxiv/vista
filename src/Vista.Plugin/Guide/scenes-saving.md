@@ -21,7 +21,7 @@ You can switch scenes in Edit. Undo starts fresh each time you open a scene.
 
 The first time you open Vista, it asks where to save. Each scene is a file named after it, in a `vistaxiv` folder inside the folder you choose. To share a scene, share its file. To use a scene someone sent you, put its file in the `scenes` folder.
 
-{icon:Cog} **Save folder** on the top row changes where Vista saves.
+**Save folder...** in the **Scene** menu changes where Vista saves.
 
 ## The demo scene
 

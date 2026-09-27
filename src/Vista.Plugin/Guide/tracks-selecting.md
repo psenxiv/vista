@@ -12,6 +12,8 @@ Select several tracks, points or playlist entries to move or change them togethe
 
 These work in the Hierarchy, the points table and the Playlist, and on the points of the track you are editing in the world. That track is always one of the selected tracks.
 
+In the points table, clicking a **Duration (s)**, **Speed** or **Hold (s)** field selects its row too. There, `Ctrl` + click and `Shift` + click select rows rather than typing. Double-click a field to type in it.
+
 ## Right-click menus
 
 Right-click a selected row to act on the whole selection.
@@ -19,7 +21,7 @@ Right-click a selected row to act on the whole selection.
 | Selected | Menu |
 |---|---|
 | Several tracks | **Add to playlist**, **Show**, **Hide**, **Delete** |
-| Points | **Move to new track**, **Move to**, **Delete** |
+| Points | **Move to new track**, **Move to**, **Duplicate**, **Delete** |
 | Several playlist entries | **Remove from playlist** |
 
 Every point row has the points menu, so you can use it on one point too. **Move to** lists the other tracks.

@@ -1,6 +1,6 @@
 # Playlist
 
-The playlist is the list of tracks Live plays, top to bottom, cutting from one to the next. It is the panel on the right of the **Vista** window. {icon:ListOl} **Show playlist** on the top row shows or hides it. Drag its left edge to make it wider or narrower.
+The playlist is the list of tracks Live plays, top to bottom, cutting from one to the next. It is the panel on the right of the **Vista** window. **Playlist** in the **View** menu shows or hides it. Drag its left edge to make it wider or narrower.
 
 You change the playlist in Edit. A track can be in it more than once, or not at all.
 
@@ -10,11 +10,14 @@ You change the playlist in Edit. A track can be in it more than once, or not at 
 |---|---|---|
 | {icon:Plus} | **Add to playlist** | Adds a track to the end. |
 | | Drag tracks from the Hierarchy | Adds them where you drop them. |
+| | Click an entry | Edits its track. |
 | | Drag an entry | Changes the order. |
 | {icon:Times} | **Remove from playlist** | Removes the entry. Shows on hover. |
 | {icon:Repeat} | **Loop playlist** | Starts again from the top after the last entry. |
 
-Select several tracks to drag them in at once, or several entries to reorder or remove them together. See [Selecting several](tracks-selecting.md).
+An accent bar at the left edge marks each entry that plays the track you are editing.
+
+Select several tracks to drag them in at once, or several entries to reorder or remove them together. `Ctrl` + click and `Shift` + click select entries without changing the track you are editing. See [Selecting several](tracks-selecting.md).
 
 ## Repeats
 

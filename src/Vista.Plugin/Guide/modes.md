@@ -1,6 +1,6 @@
 # Modes
 
-The mode decides who moves the camera. Choose it from the mode menu at the top left of the **Vista** window.
+The mode decides who moves the camera. Choose it from the mode menu at the top left of the **Vista** window, under the menu bar.
 
 | Mode | Camera | What you can do |
 |---|---|---|

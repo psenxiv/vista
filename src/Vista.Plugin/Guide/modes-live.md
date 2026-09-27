@@ -11,11 +11,21 @@ To go Live, the playlist needs a track with points. Choosing Live waits at the f
 | `Space` | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses. |
 | `Ctrl + Space` | {icon:StepBackward} **Restart** | Plays the playlist from the start. |
 
-Drag the scrub bar to move through the track that is playing. At the end of the playlist the camera holds its last frame, unless {icon:Repeat} **Loop playlist** is on.
+At the end of the playlist the camera holds its last frame, unless {icon:Repeat} **Loop playlist** is on.
+
+## The scrub bar
+
+In Live the scrub bar shows the whole playlist. Each entry has its own stretch of the bar, as wide as its share of the time, and the entry that is playing is lit. Hover a stretch to see its entry's number and track.
+
+An entry that repeats is that many times as long, with faint lines where each repeat starts. An entry that plays until you stop ends the bar, and its stretch shows one pass.
+
+The text on the bar shows the entry that is playing, how far into it you are and its length, then how far into the playlist you are and its length.
+
+Drag the bar to move anywhere in the playlist.
 
 ## Hiding the game UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play. Vista remembers the setting.
+Turn on **Hide game UI when Live** in the **Scene** menu to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play. Vista remembers the setting.
 
 ## Leaving Live
 

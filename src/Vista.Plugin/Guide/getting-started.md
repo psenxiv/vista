@@ -6,7 +6,7 @@ Type `/vista` in chat to open the **Vista** window. The first time, Vista asks w
 
 ## Your first shot
 
-1. Open the mode menu at the top left of the **Vista** window and choose Edit. Your character stays put and the camera comes loose.
+1. Open the mode menu at the top left of the **Vista** window, under the menu bar, and choose Edit. Your character stays put and the camera comes loose.
 2. Fly to where the shot should start. `W` `A` `S` `D` move, `E` and `Q` go up and down, and the mouse looks around.
 3. Press `Backtick` to add a point.
 4. Fly on and add a few more points along the path you want.

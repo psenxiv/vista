@@ -11,9 +11,13 @@ An anchor is a marker on the ground that other things hang off. Move or turn an 
 
 Anchors appear on the ground under the first point you add, so you never place them yourself.
 
+## Track names
+
+Each track anchor shows its track's name above it. Untick **Track names** in the **View** menu to hide the names, or drag **Track name size** to make them bigger or smaller. Vista remembers both.
+
 ## Moving an anchor
 
-1. Select it. Click it in the world, or click {icon:Anchor} in the Hierarchy: **Select scene anchor** at the top, or **Select track anchor** on a track's row.
+1. Select it. Click it in the world. For the scene anchor you can also choose **Select scene anchor** in the **Scene** menu, and for a track anchor, click {icon:Anchor} **Select track anchor** on the track's row in the Hierarchy.
 2. Drag the gizmo's arrows to move it. With {icon:Cube} **Move (local)** in the **Point** window, the arrows follow the way the anchor faces.
 3. To turn it, click {icon:SyncAlt} **Rotate** in the **Point** window or press `R`, then drag the ring.
 
