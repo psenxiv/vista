@@ -2,15 +2,9 @@
 
 ## X.Y.Z.N
 
-- Recorded aim turns smoothly through each point instead of changing direction slightly at it.
-- Look At turns the picture round gradually from point to point when the camera passes under or over its point, instead of quickly as it passes.
-- With a look ahead, Direction of travel keeps looking where it's going while it holds at a point.
-- Dragging the scrub bar to the end of a looping shot shows its last frame instead of its first.
-- Dragging the scrub bar to the end of a playlist entry holds its last frame instead of jumping to the next entry.
-- A track's first and last legs curve a little differently, so the camera sets off and arrives heading the way the track runs.
-- Smooth timing at a track's first and last points follows the pace of the legs beside them, so a track that speeds up or slows down keeps doing so right to its ends.
-- Recorded aim, roll and zoom follow the camera's movement along the track, so on an eased leg they speed up and slow down with it.
-- Direction of travel's Look ahead is a distance in yalms instead of seconds; existing tracks keep their number, now in yalms.
+- Reworked how the camera moves and turns along a track, so shots flow more smoothly through points and at their start and end. Existing shots may look slightly different.
+- Dragging the scrub bar to the end of a looping shot or a playlist entry now holds its last frame.
+- Direction of travel's Look ahead is now a distance in yalms instead of seconds. Existing tracks keep their number, now in yalms, so check any track that uses it.
 
 ## 0.11.0.1
 
