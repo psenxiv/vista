@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
@@ -56,8 +57,13 @@ internal sealed class PlaylistPanel
                 $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {scene.Playlist.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
             )
             : "Playlist";
+        // Cut to the room left of the buttons, so a long name can't widen the panel.
+        var room =
+            ImGui.GetContentRegionAvail().X
+            - IconButton.RowWidth(FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus)
+            - ImGui.GetStyle().ItemSpacing.X;
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted(), playing is null))
-            ImGui.TextUnformatted(header);
+            ImGui.TextUnformatted(RowFit.Ellipsis(header, room, s => ImGui.CalcTextSize(s).X));
 
         ImGui.BeginDisabled(!editing);
         ImGui.SameLine();
