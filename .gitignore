@@ -6,4 +6,5 @@ analysis
 tests/in-game/cases/
 docs/
 HANDOVER.md
+TASKS.md
 StrykerOutput/
