@@ -70,6 +70,28 @@ public class PathChannelTests
     }
 
     [Fact]
+    public void TheLimitTakesTheGentlerLegWhicheverSideItIs()
+    {
+        // Values 0, 4, 44 a yalm apart: the gentler leg, 4 per yalm, is before point 1. Its three-point slope, 0.5·4 + 0.5·40
+        // = 22, is limited to 3·4 = 12; the ends take 4 and 40. Halfway along leg 1: 0.125·4 + 0.5·4 − 0.125·12 = 1.
+        // Halfway along leg 2: 0.5·4 + 0.125·12 + 0.5·44 − 0.125·40 = 20.5.
+        var channel = new PathChannel([0f, 4f, 44f], [0f, 1f, 2f]);
+
+        Assert.Equal(1f, channel.At(0.5f), 1e-4f);
+        Assert.Equal(20.5f, channel.At(1.5f), 1e-4f);
+    }
+
+    [Fact]
+    public void AChannelNeedNotStartAtZero()
+    {
+        // AChannelTakesTheThreePointSlopeThroughAPointAndItsEndLegsOwnRateAtAnEnd's channel moved 5 yalms on: only the
+        // distances between points count, so distance 9 is its distance 4, 24.167.
+        var channel = new PathChannel([0f, 10f, 40f], [5f, 7f, 11f]);
+
+        Assert.Equal(24.167f, channel.At(9f), 1e-3f);
+    }
+
+    [Fact]
     public void TwoPointsBlendAtOneRate()
     {
         // The secant at both ends, 10 per 2 yalms: a straight blend, 7.5 at distance 1.5.
