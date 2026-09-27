@@ -80,7 +80,7 @@ internal static class Hermite
         return MonotoneRatio(ThroughSlope(keys, changes, i) / gentler) * gentler;
     }
 
-    /// <summary><see cref="KeySlope(IReadOnlyList{float}, IReadOnlyList{float}, int)"/> for turns as rotation vectors: 0 where the turns either side point opposite ways, and a size of at most <see cref="MonotoneBound"/> times the gentler turn rate.</summary>
+    /// <summary><see cref="KeySlope(IReadOnlyList{float}, IReadOnlyList{float}, int)"/> for turns as rotation vectors: a size of at most <see cref="MonotoneBound"/> times the gentler turn rate times the cosine between the two turns' axes, so 0 from right angles to opposite.</summary>
     public static Vector3 KeySlope(IReadOnlyList<float> keys, IReadOnlyList<Vector3> changes, int i)
     {
         var last = keys.Count - 1;
@@ -89,11 +89,12 @@ internal static class Hermite
             return Rate(Math.Max(i, 1));
 
         var (before, after) = (Rate(i), Rate(i + 1));
-        if (Vector3.Dot(before, after) <= 0f)
+        // min(|b|, |a|)·cos θ as b·a / max(|b|, |a|): a turn too small to square (its size underflows to 0) can't make it NaN.
+        var bound = Vector3.Dot(before, after) / MathF.Max(before.Length(), after.Length());
+        if (!(bound > 0f))
             return Vector3.Zero;
         var raw = ThroughSlope(keys, changes, i);
         var size = raw.Length();
-        var bound = MathF.Min(before.Length(), after.Length());
         return size == 0f ? raw : raw * (MonotoneRatio(size / bound) * bound / size);
     }
 

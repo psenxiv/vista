@@ -88,6 +88,69 @@ public class PathRotationTests
         );
     }
 
+    /// <summary>How far past point 1 <see cref="LeavingPointOne"/> samples, in yalms, at once and twice this.</summary>
+    private const double LeavingOffset = 4e-3;
+
+    /// <summary>The central-difference half-window <see cref="LeavingPointOne"/> measures over, in yalms: wide enough that a rotation's float round-off, about 1.2e-7 rad, reads as under 3e-5 rad/yalm.</summary>
+    private const double LeavingWindow = 2e-3;
+
+    /// <summary>How far <see cref="LeavingPointOne"/> may read from the rate it measures, in rad/yalm. Extrapolating from <see cref="LeavingOffset"/> and twice it cancels the leg's curvature and leaves the rate's second derivative, at most 12·0.1745 + 6·0.2618 + 6·0.1745 ≈ 4.7 rad/yalm³ on these 1-yalm legs of 10° between rates of at most 15° and 10°, times 1.6e-5 yalm²: 7.5e-5; round-off, tripled by extrapolating (2a − b), adds 9e-5. 5e-4 keeps margin, far below the 15°/yalm (0.26 rad/yalm) the cap sets.</summary>
+    private const float LeavingAgreement = 5e-4f;
+
+    /// <summary>The world turn rate per yalm leaving point 1, at distance 1, extrapolated from <see cref="LeavingOffset"/> and twice it past the point so a leg's own curvature cancels.</summary>
+    private static Vector3 LeavingPointOne(PathRotation channel)
+    {
+        Vector3 At(double offset) => WorldTurnRate(d => channel.At((float)d), 1.0 + offset, LeavingWindow);
+        return (2f * At(LeavingOffset)) - At(2.0 * LeavingOffset);
+    }
+
+    /// <summary>A rotation through the identity, 90° about x, then <paramref name="degrees"/> more about <paramref name="axis"/>, a yalm apart.</summary>
+    private static PathRotation FastThenSlow(Vector3 axis, float degrees)
+    {
+        var first = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 90f * Deg);
+        var second = Quaternion.Concatenate(first, Quaternion.CreateFromAxisAngle(axis, degrees * Deg));
+        return new PathRotation([Quaternion.Identity, first, second], [0f, 1f, 2f]);
+    }
+
+    [Fact]
+    public void ATurnBetweenLegsWhoseAxesAreSixtyDegreesApartIsCappedAtHalfTheFullCap()
+    {
+        // Legs turning 90°/yalm about x and 10°/yalm about (0.5, 0, 0.866), 60° away: cos 60° = 0.5, so the cap is
+        // 3·10·0.5 = 15°/yalm, half the full 30. The three-point rate, ThroughWeights(1, 1) = (0.5, 0.5), is
+        // 0.5·(90·x + 10·(0.5, 0, 0.866)) = (47.5, 0, 4.330)°/yalm, 47.70 long, so it is shortened to 15 along itself:
+        // (14.938, 0, 1.3618)°/yalm = (0.26072, 0, 0.023767) rad/yalm. Leaving point 1 the turn so far is nothing, so
+        // the world rate there is that rate.
+        var leaving = LeavingPointOne(FastThenSlow(new Vector3(0.5f, 0f, MathF.Sqrt(0.75f)), 10f));
+
+        Near(new Vector3(0.26072f, 0f, 0.023767f), leaving, LeavingAgreement);
+    }
+
+    [Fact]
+    public void ATurnBetweenLegsWhoseAxesAreAtRightAnglesHasNoRate()
+    {
+        // Legs turning 90°/yalm about x and 10°/yalm about z: cos 90° = 0, so point 1 turns at no rate. (A hard switch
+        // on the sign of the axes' dot product gave the full 3·10 = 30°/yalm here whenever float noise tipped it positive.)
+        var leaving = LeavingPointOne(FastThenSlow(Vector3.UnitZ, 10f));
+
+        Assert.InRange(leaving.Length(), 0f, LeavingAgreement);
+    }
+
+    [Fact]
+    public void ALegWhoseTurnIsTooSmallToMeasureLeavesTheRotationFinite()
+    {
+        // TheAimNeverSteps' counterexample, cut to the rotation: the first leg rolls by −1.585e-26 rad, whose squared
+        // size underflows, so the leg's turn rate measures 0 long while its dot product with the next leg's stays
+        // positive. Point 1's cap is then 3·(that dot product)/(the larger rate): about 0, so the first leg barely
+        // turns and halfway along it the camera still faces point 0's way, (0, 0, −1).
+        var channel = new PathRotation(
+            [At(0f), At(0f, 0f, -1.585e-26f), At(0f, 0.20689656f, -1.6255603f)],
+            [0f, 11.826f, 57.703f]
+        );
+
+        Near(new Vector3(0f, 0f, -1f), CameraRotation.Forward(channel.At(5.913f)), 1e-6f);
+        Assert.True(float.IsFinite(channel.At(30f).W));
+    }
+
     /// <summary>A recorded aim through 3 to 6 points' angles (<see cref="AnyPoint"/>), at distances 1 to 5 yalms apart. 1 yalm is the shortest leg <see cref="RateAgreement"/>'s derivation assumes, where the turn-rate gap it bounds is largest; 5 buys nothing beyond that (a longer leg only shrinks the gap) and keeps the distances below 32 yalms, where its round-off holds.</summary>
     private static readonly Gen<(ControlPoint[] Points, float[] Distances)> AnyRecordedAim =
         from points in AnyPoint.Array[3, 6]
