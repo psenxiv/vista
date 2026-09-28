@@ -31,8 +31,11 @@ public sealed class SceneLibrary
     /// <summary>The name "New scene" suggests: the first free "Scene N" among every scene file, readable or not.</summary>
     public string NewSuggestion() => SceneNames.NextFree(Stem, Folder.SceneFiles());
 
+    /// <summary>The name "Duplicate scene" suggests for <paramref name="name"/>: its first free copy name among every scene file, readable or not.</summary>
+    public string CopySuggestion(string name) => SceneNames.CopyOf(name, Folder.SceneFiles());
+
     /// <summary>The name "Duplicate scene" suggests: the open scene's first free copy name among every scene file, readable or not.</summary>
-    public string CopySuggestion() => SceneNames.CopyOf(CurrentName, Folder.SceneFiles());
+    public string CopySuggestion() => CopySuggestion(CurrentName);
 
     /// <summary>Opens <paramref name="last"/> if it exists, else the first scene by name, else a new Scene N. Returns why it was refused, or null.</summary>
     public string? Open(string? last)

@@ -491,6 +491,20 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void CopySuggestionByNameSkipsUnreadableFilesForAnyScene()
+    {
+        Save("Scene 1", "Crane");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Scene 2.json"), "{");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Scene 1 copy.json"), "{");
+        library.Open("Scene 1");
+
+        // Scene 1 copy is taken by the unreadable file, so the open scene's suggestion skips to copy 2.
+        Assert.Equal("Scene 1 copy 2", library.CopySuggestion("Scene 1"));
+        // Scene 2 copy is free, even though Scene 2 itself is only picked from the unreadable listing.
+        Assert.Equal("Scene 2 copy", library.CopySuggestion("Scene 2"));
+    }
+
+    [Fact]
     public void NameRefusalCountsUnreadableFilesAndLetsARenameKeepItsName()
     {
         Save("Dawn", "Crane");
