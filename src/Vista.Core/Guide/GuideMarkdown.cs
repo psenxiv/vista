@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Vista.Core.Input;
 
 namespace Vista.Core.Guide;
 
@@ -151,6 +152,16 @@ public static partial class GuideMarkdown
                 Add(link.Groups["text"].Value, RunStyle.Link, link.Groups["target"].Value.Trim());
                 i += link.Length;
             }
+            else if (
+                text[i] == '{'
+                && KeyTag().Match(text, i) is { Success: true } keyTag
+                && keyTag.Index == i
+                && HotkeyTable.Find(keyTag.Groups["name"].Value) is { } entry
+            )
+            {
+                Add(entry.Hotkey.DisplayName, RunStyle.Key);
+                i += keyTag.Length;
+            }
             else if (text[i] == '{' && IconTag().Match(text, i) is { Success: true } icon && icon.Index == i)
             {
                 Add(icon.Groups["name"].Value, RunStyle.Icon);
@@ -199,4 +210,7 @@ public static partial class GuideMarkdown
 
     [GeneratedRegex(@"\{icon:(?<name>[A-Za-z0-9]+)\}")]
     private static partial Regex IconTag();
+
+    [GeneratedRegex(@"\{key:(?<name>[A-Za-z0-9]+)\}")]
+    private static partial Regex KeyTag();
 }

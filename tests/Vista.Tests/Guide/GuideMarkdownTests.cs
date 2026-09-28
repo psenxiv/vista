@@ -141,6 +141,30 @@ public class GuideMarkdownTests
     }
 
     [Fact]
+    public void AKeyTagBecomesAKeyRunNamedByTheTableEntrysDisplayName()
+    {
+        Assert.Equal(
+            [P("Press "), K("Ctrl + Space"), P(" to restart.")],
+            GuideMarkdown.Inline("Press {key:Restart} to restart.")
+        );
+    }
+
+    [Fact]
+    public void AnUnknownKeyTagStaysAsTyped()
+    {
+        Assert.Equal([P("a {key:Nope} b")], GuideMarkdown.Inline("a {key:Nope} b"));
+    }
+
+    [Fact]
+    public void ALineCanMixAnIconTagAndAKeyTag()
+    {
+        Assert.Equal(
+            [P("Click "), new Run("ChartLine", RunStyle.Icon), P(" then press "), K("Space"), P(".")],
+            GuideMarkdown.Inline("Click {icon:ChartLine} then press {key:Play}.")
+        );
+    }
+
+    [Fact]
     public void ASectionHeadingGetsADividerAboveIt()
     {
         var blocks = GuideMarkdown.Parse("# Page\nIntro.\n## Section\nText.");
