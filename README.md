@@ -31,7 +31,7 @@ https://raw.githubusercontent.com/psenxiv/vista/main/repo.json
 
 ## Keys
 
-These work in Edit mode. Space and Ctrl + Space also work in Live, and G in View. Escape only works in Live. A key only works with the Ctrl or Alt its row shows. Holding Shift to fly faster doesn't stop any of them.
+These work in Edit mode. Space and Ctrl + Space also work in Live, and G in View. Escape only works in Live.
 
 | Key                              | Does                                                              |
 | -------------------------------- | ----------------------------------------------------------------- |
