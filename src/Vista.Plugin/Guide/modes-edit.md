@@ -32,4 +32,5 @@ The row under the menu bar holds the controls you use most. Everything else is i
 | {icon:Camera} | **Camera** | Opens the **Camera** window. See [The Camera window](camera-window.md). |
 | | **Fly speed** | Sets how fast you fly. |
 | {icon:EyeSlash} | **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |
+| {icon:Comment} | **Give feedback** | Opens a short feedback form in your browser. |
 | {icon:Question} | **User Guide** | Opens this guide. |

@@ -348,7 +348,7 @@ internal sealed class TrackEditorWindow : Window
         }
 
         // Hide game UI and User Guide at the right end, with LIVE just before them in Live.
-        var rightEnd = IconButton.RowWidth(FontAwesomeIcon.EyeSlash, FontAwesomeIcon.Question);
+        var rightEnd = RightEndWidth();
         ImGui.SameLine();
         if (session.Mode == CameraMode.Live)
         {
@@ -360,8 +360,15 @@ internal sealed class TrackEditorWindow : Window
         if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, game.HideUiInLive, "Hide game UI when Live"))
             game.HideUiInLive = !game.HideUiInLive;
         ImGui.SameLine();
+        if (IconButton.Draw("feedback", FontAwesomeIcon.Comment, Feedback.Label))
+            Feedback.Open();
+        ImGui.SameLine();
         IconButton.WindowToggle("guide", FontAwesomeIcon.Question, "User Guide", guide);
     }
+
+    /// <summary>Hide game UI, Give feedback and User Guide, at the top row's right end.</summary>
+    private static float RightEndWidth() =>
+        IconButton.RowWidth(FontAwesomeIcon.EyeSlash, FontAwesomeIcon.Comment, FontAwesomeIcon.Question);
 
     /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before the Hide game UI button if that's nearer; null before the first frame.</summary>
     private float? FlySpeedStart()
@@ -371,7 +378,7 @@ internal sealed class TrackEditorWindow : Window
         var edge =
             ImGui.GetWindowPos().X
             + ImGui.GetWindowContentRegionMax().X
-            - IconButton.RowWidth(FontAwesomeIcon.EyeSlash, FontAwesomeIcon.Question)
+            - RightEndWidth()
             - ImGui.GetStyle().ItemSpacing.X;
         return MathF.Min(right, edge) - SpeedWidth;
     }
@@ -809,10 +816,11 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.RulerHorizontal)
             + IconButton.Width(FontAwesomeIcon.Camera)
             + IconButton.Width(FontAwesomeIcon.EyeSlash)
+            + IconButton.Width(FontAwesomeIcon.Comment)
             + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 11f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 12f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));

@@ -58,3 +58,4 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 |---|---|
 | **User Guide** | Opens this guide. |
 | **Hotkeys** | Opens the [Hotkeys](hotkeys.md) page. |
+| **Give feedback** | Opens a short feedback form in your browser. |

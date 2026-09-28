@@ -301,6 +301,8 @@ internal sealed class MainMenu
             Show(guide);
         if (Menu.Item("Hotkeys"))
             guide.Show(GuideWindow.HotkeysPage);
+        if (Menu.Item(Feedback.Label))
+            Feedback.Open();
     }
 
     /// <summary>A ticked item that opens or closes <paramref name="window"/>.</summary>

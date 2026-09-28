@@ -65,6 +65,10 @@ make test      # Core tests
 make package   # Release build and latest.zip
 ```
 
+## Feedback
+
+Tell us what's working and what isn't in the [feedback form](https://forms.gle/p9hAJvQZT7qZLN5T7). It's anonymous and takes a couple of minutes.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
