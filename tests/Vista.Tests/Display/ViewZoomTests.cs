@@ -30,6 +30,21 @@ public class ViewZoomTests
     }
 
     [Fact]
+    public void ASecondNotchZoomsFromTheZoomedView()
+    {
+        var zoom = new ViewZoom<int>();
+        zoom.View(1, 10f);
+        zoom.Zoom(anchor: 5f, notches: 1f, length: 10f);
+
+        zoom.Zoom(anchor: 5f, notches: 1f, length: 10f);
+
+        // From 1 s to 9 s: span 8 / 1.25 = 6.4 s, anchor 5 s at (5 − 1) / 8 = 0.5 across: 5 − 3.2 = 1.8 s to 8.2 s.
+        var view = zoom.View(1, 10f);
+        Assert.Equal(1.8f, view.From, 1e-5f);
+        Assert.Equal(8.2f, view.To, 1e-5f);
+    }
+
+    [Fact]
     public void ANewKeyShowsTheWholeLengthAgainAndSaysSo()
     {
         var zoom = new ViewZoom<int>();
