@@ -23,9 +23,6 @@ public class PlaylistEditingTests
     }
 
     [Fact]
-    public void ANewSceneHasAnEmptyPlaylist() => Assert.Empty(SceneEditing.New().Playlist);
-
-    [Fact]
     public void AddAppendsOrInsertsAnEntryWithNoLoopCount()
     {
         var scene = TwoTracks();

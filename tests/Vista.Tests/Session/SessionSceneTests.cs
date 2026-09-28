@@ -105,6 +105,18 @@ public class SessionSceneTests
         Assert.Equal("Crane", state.Track.Name);
     }
 
+    // Renaming the only track to the name it has leaves the scene's values as they were, so no undo step is recorded.
+    [Fact]
+    public void ASceneChangeThatChangesNothingIsNotAnUndoStep()
+    {
+        var state = new SessionState();
+        state.Edit();
+
+        Assert.Null(state.RenameTrack(state.Scene.Tracks[0].Id, state.Scene.Tracks[0].Name));
+
+        Assert.False(state.CanUndo);
+    }
+
     [Fact]
     public void DuplicateSwitchesToTheCopy()
     {

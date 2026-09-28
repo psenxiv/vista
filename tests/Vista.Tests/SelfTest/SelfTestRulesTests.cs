@@ -4,19 +4,12 @@ using Vista.Core.Camera;
 using Vista.Core.SelfTest;
 using Vista.Core.Session;
 using Xunit;
+using static Vista.Tests.Fixtures;
 
 namespace Vista.Tests.SelfTest;
 
 public class SelfTestRulesTests
 {
-    // At (1, 2, 3) looking 10 yalms along -Z with up +Y and a 1 rad field of view.
-    private static readonly CameraState Before = new(
-        new Vector3(1f, 2f, 3f),
-        new Vector3(1f, 2f, -7f),
-        Vector3.UnitY,
-        1f
-    );
-
     // No game field of view floor: every field of view Vista writes is above 0.
     private const float NoFloor = 0f;
 
@@ -77,27 +70,28 @@ public class SelfTestRulesTests
     public void TheRoundTripWritesTheCameraOneTwoAndThreeYalmsUpFacingTheSameWay() =>
         Assert.Equal(
             [
-                Before with
+                WellFormedFrame with
                 {
                     Position = new Vector3(1f, 3f, 3f),
                     LookAt = new Vector3(1f, 3f, -7f),
                 },
-                Before with
+                WellFormedFrame with
                 {
                     Position = new Vector3(1f, 4f, 3f),
                     LookAt = new Vector3(1f, 4f, -7f),
                 },
-                Before with
+                WellFormedFrame with
                 {
                     Position = new Vector3(1f, 5f, 3f),
                     LookAt = new Vector3(1f, 5f, -7f),
                 },
             ],
-            SelfTestRules.RoundTripFrames(Before)
+            SelfTestRules.RoundTripFrames(WellFormedFrame)
         );
 
     [Fact]
-    public void AnExactReadBackMatches() => Assert.Null(SelfTestRules.ReadBackMismatch(Before, Before, NoFloor));
+    public void AnExactReadBackMatches() =>
+        Assert.Null(SelfTestRules.ReadBackMismatch(WellFormedFrame, WellFormedFrame, NoFloor));
 
     // Each read-back is one float step from what was written: 2.00000024 is 2 + 2^-22, the next float above 2;
     // -7.00000048 is 7 + 2^-21 below -7; 1.00000012 is 1 + 2^-23. -0 differs from 0 only in its sign bit.
@@ -105,27 +99,33 @@ public class SelfTestRulesTests
         new()
         {
             {
-                Before with
+                WellFormedFrame with
                 {
                     Position = new Vector3(1f, 2.00000024f, 3f),
                 },
                 "the position read back as (1, 2.00000024, 3), written (1, 2, 3)"
             },
             {
-                Before with
+                WellFormedFrame with
                 {
                     LookAt = new Vector3(1f, 2f, -7.00000048f),
                 },
                 "the look-at read back as (1, 2, -7.00000048), written (1, 2, -7)"
             },
-            { Before with { Up = new Vector3(-0f, 1f, 0f) }, "the up read back as (-0, 1, 0), written (0, 1, 0)" },
-            { Before with { Fov = 1.00000012f }, "the field of view read back as 1.00000012, written 1" },
+            {
+                WellFormedFrame with
+                {
+                    Up = new Vector3(-0f, 1f, 0f),
+                },
+                "the up read back as (-0, 1, 0), written (0, 1, 0)"
+            },
+            { WellFormedFrame with { Fov = 1.00000012f }, "the field of view read back as 1.00000012, written 1" },
         };
 
     [Theory]
     [MemberData(nameof(Mismatches))]
     public void AReadBackOffByOneBitNamesThePartAndBothValues(CameraState read, string mismatch) =>
-        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read, NoFloor));
+        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(WellFormedFrame, read, NoFloor));
 
     // Position, look-at, up and field of view are compared in that order, and the first that differs is named.
     public static TheoryData<CameraState, string> FirstMismatches =>
@@ -136,7 +136,7 @@ public class SelfTestRulesTests
                 "the position read back as (1, 2.5, 3), written (1, 2, 3)"
             },
             {
-                Before with
+                WellFormedFrame with
                 {
                     LookAt = new Vector3(1f, 2f, -6f),
                     Up = -Vector3.UnitY,
@@ -144,18 +144,35 @@ public class SelfTestRulesTests
                 },
                 "the look-at read back as (1, 2, -6), written (1, 2, -7)"
             },
-            { Before with { Up = -Vector3.UnitY, Fov = 2f }, "the up read back as (-0, -1, -0), written (0, 1, 0)" },
+            {
+                WellFormedFrame with
+                {
+                    Up = -Vector3.UnitY,
+                    Fov = 2f,
+                },
+                "the up read back as (-0, -1, -0), written (0, 1, 0)"
+            },
         };
 
     [Theory]
     [MemberData(nameof(FirstMismatches))]
     public void TheFirstPartThatDiffersIsNamed(CameraState read, string mismatch) =>
-        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(Before, read, NoFloor));
+        Assert.Equal(mismatch, SelfTestRules.ReadBackMismatch(WellFormedFrame, read, NoFloor));
 
     [Fact]
     public void AFieldOfViewBelowTheGamesFloorMayReadBackAsTheFloor() =>
         Assert.Null(
-            SelfTestRules.ReadBackMismatch(Before with { Fov = 0.6f }, Before with { Fov = GameFloor }, GameFloor)
+            SelfTestRules.ReadBackMismatch(
+                WellFormedFrame with
+                {
+                    Fov = 0.6f,
+                },
+                WellFormedFrame with
+                {
+                    Fov = GameFloor,
+                },
+                GameFloor
+            )
         );
 
     // 0.6f is 0.600000024 and 0.7f is 0.699999988 to nine digits; 0.69f is 0.689999998.
@@ -171,14 +188,24 @@ public class SelfTestRulesTests
     public void OnlyAFieldOfViewBelowTheFloorMayReadBackAsTheFloor(float written, float read, string mismatch) =>
         Assert.Equal(
             mismatch,
-            SelfTestRules.ReadBackMismatch(Before with { Fov = written }, Before with { Fov = read }, GameFloor)
+            SelfTestRules.ReadBackMismatch(
+                WellFormedFrame with
+                {
+                    Fov = written,
+                },
+                WellFormedFrame with
+                {
+                    Fov = read,
+                },
+                GameFloor
+            )
         );
 
     [Fact]
     public void ANotANumberReadBackWithTheSameBitsMatches()
     {
         // Bit for bit, NaN equals the same NaN; the well-formed rules are what reject it.
-        var nan = Before with
+        var nan = WellFormedFrame with
         {
             Fov = float.NaN,
         };
@@ -196,7 +223,12 @@ public class SelfTestRulesTests
                 "camera round trip",
                 "3 frames read back exactly; handed back 0.00 cm and 0.000° from where it was"
             ),
-            SelfTestRules.CameraRoundTrip(Exact(SelfTestRules.RoundTripFrames(Before)), 3, Before, Before)
+            SelfTestRules.CameraRoundTrip(
+                Exact(SelfTestRules.RoundTripFrames(WellFormedFrame)),
+                3,
+                WellFormedFrame,
+                WellFormedFrame
+            )
         );
 
     [Fact]
@@ -206,13 +238,18 @@ public class SelfTestRulesTests
                 "camera round trip",
                 "the hook read back 2 of 3 frames; handed back 0.00 cm and 0.000° from where it was"
             ),
-            SelfTestRules.CameraRoundTrip(Exact(SelfTestRules.RoundTripFrames(Before))[..2], 3, Before, Before)
+            SelfTestRules.CameraRoundTrip(
+                Exact(SelfTestRules.RoundTripFrames(WellFormedFrame))[..2],
+                3,
+                WellFormedFrame,
+                WellFormedFrame
+            )
         );
 
     [Fact]
     public void AFrameReadBackDifferentlyFailsNamingIt()
     {
-        var readBacks = Exact(SelfTestRules.RoundTripFrames(Before));
+        var readBacks = Exact(SelfTestRules.RoundTripFrames(WellFormedFrame));
         readBacks[1] = (readBacks[1].Item1, readBacks[1].Item1 with { Fov = 1.00000012f });
 
         Assert.Equal(
@@ -220,7 +257,7 @@ public class SelfTestRulesTests
                 "camera round trip",
                 "frame 2: the field of view read back as 1.00000012, written 1; handed back 0.00 cm and 0.000° from where it was"
             ),
-            SelfTestRules.CameraRoundTrip(readBacks, 3, Before, Before)
+            SelfTestRules.CameraRoundTrip(readBacks, 3, WellFormedFrame, WellFormedFrame)
         );
     }
 
@@ -233,10 +270,10 @@ public class SelfTestRulesTests
                 "3 frames read back exactly; handed back 2.00 cm and 0.000° from where it was, expected within 1 cm and 0.1°"
             ),
             SelfTestRules.CameraRoundTrip(
-                Exact(SelfTestRules.RoundTripFrames(Before)),
+                Exact(SelfTestRules.RoundTripFrames(WellFormedFrame)),
                 3,
-                Before,
-                Before with
+                WellFormedFrame,
+                WellFormedFrame with
                 {
                     Position = new Vector3(1.02f, 2f, 3f),
                     LookAt = new Vector3(1.02f, 2f, -7f),
@@ -253,10 +290,10 @@ public class SelfTestRulesTests
                 "3 frames read back exactly; handed back 0.00 cm and 0.200° from where it was, expected within 1 cm and 0.1°"
             ),
             SelfTestRules.CameraRoundTrip(
-                Exact(SelfTestRules.RoundTripFrames(Before)),
+                Exact(SelfTestRules.RoundTripFrames(WellFormedFrame)),
                 3,
-                Before,
-                Before with
+                WellFormedFrame,
+                WellFormedFrame with
                 {
                     LookAt = new Vector3(1f, 2.0349067f, -7f),
                 }
@@ -272,10 +309,10 @@ public class SelfTestRulesTests
                 "3 frames read back exactly; handed back 0.90 cm and 0.090° from where it was"
             ),
             SelfTestRules.CameraRoundTrip(
-                Exact(SelfTestRules.RoundTripFrames(Before)),
+                Exact(SelfTestRules.RoundTripFrames(WellFormedFrame)),
                 3,
-                Before,
-                Before with
+                WellFormedFrame,
+                WellFormedFrame with
                 {
                     Position = new Vector3(1.009f, 2f, 3f),
                     LookAt = new Vector3(1.009f, 2.0157f, -7f),
@@ -306,7 +343,12 @@ public class SelfTestRulesTests
                 "camera round trip",
                 "3 frames read back exactly; the camera couldn't be read after release"
             ),
-            SelfTestRules.CameraRoundTrip(Exact(SelfTestRules.RoundTripFrames(Before)), 3, Before, null)
+            SelfTestRules.CameraRoundTrip(
+                Exact(SelfTestRules.RoundTripFrames(WellFormedFrame)),
+                3,
+                WellFormedFrame,
+                null
+            )
         );
 
     [Theory]

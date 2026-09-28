@@ -12,9 +12,6 @@ public class SessionLookAtTests
 {
     private static readonly ControlPoint Camera = new(new Vector3(0f, 5f, 0f), 0f, 0f, 1f);
 
-    // These tests put every point at head height, so y defaults to 5 here.
-    private static ControlPoint Point(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
-
     // EditingOverGround() set to Look At; its point sits 10 yalms along the first point's aim, at (10, 5, −10).
     private static SessionState Looking()
     {
@@ -44,7 +41,7 @@ public class SessionLookAtTests
         state.SetAim(AimMode.LookAt, new ControlPoint(new Vector3(50f, 5f, 50f), 0f, 0f, 1f));
         Near(new Vector3(50f, 5f, 40f), state.Track.LookAt, 1e-4f);
 
-        state.AddToEnd(Point(10f));
+        state.AddToEnd(HeadHeightPoint(10f));
 
         Near(new Vector3(50f, 5f, 40f), state.Track.LookAt, 1e-4f);
     }
@@ -185,7 +182,7 @@ public class SessionLookAtTests
         var state = Looking();
         var first = state.EditedTrackId;
         state.AddTrack();
-        state.AddToEnd(Point(40f));
+        state.AddToEnd(HeadHeightPoint(40f));
 
         Assert.Null(state.Selection.SelectLookAt(first));
 

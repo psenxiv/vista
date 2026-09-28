@@ -40,7 +40,10 @@ public class AnchorTests
         var local = new Vector3(3f, 1.5f, -4f);
 
         Near(local, anchor.ToLocal(anchor.ToWorld(local)), 1e-4f);
-        Near(new Vector3(10f, -0.5f, 7f) + Anchor.Turn(new Vector3(3f, 0f, -4f), 1.1f), anchor.ToWorld(local), 1e-4f);
+
+        // Turn((3, 0, -4), 1.1) is (3 cos 1.1 - 4 sin 1.1, 0, -4 cos 1.1 - 3 sin 1.1) = (-2.20404, 0, -4.48801);
+        // plus the anchor (10, -2, 7) and the local height 1.5: (7.79596, -0.5, 2.51199).
+        Near(new Vector3(7.79596f, -0.5f, 2.51199f), anchor.ToWorld(local), 1e-4f);
     }
 
     [Fact]

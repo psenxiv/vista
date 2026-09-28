@@ -24,6 +24,7 @@ public class SceneEditingTests
         Assert.Equal("Track 1", track.Name);
         Assert.Empty(track.Points);
         Assert.Empty(scene.Hidden);
+        Assert.Empty(scene.Playlist);
     }
 
     [Fact]
@@ -141,17 +142,6 @@ public class SceneEditingTests
     }
 
     [Fact]
-    public void RenameTrimsTheName()
-    {
-        var scene = Three();
-        var id = scene.Tracks[1].Id;
-
-        var renamed = SceneEditing.Rename(scene, id, "  Crane  ");
-
-        Assert.Equal("Crane", renamed.Tracks[1].Name);
-    }
-
-    [Fact]
     public void DuplicateInsertsACopyAfterTheOriginalWithANewIdAndCopyName()
     {
         var scene = Three();
@@ -185,19 +175,13 @@ public class SceneEditingTests
     [Fact]
     public void ACopysNameMayReachTheLongestNameButNoFurther()
     {
-        static Scene Holding(string name)
-        {
-            var scene = SceneEditing.New();
-            return SceneEditing.Rename(scene, scene.Tracks[0].Id, name);
-        }
-
         // A 95-character name gives "name copy", 95 + 5 = 100 characters, the longest allowed.
-        var fits = Holding(new string('a', 95));
+        var fits = SceneFixtures.Named(new string('a', 95));
         var (scene, copy) = SceneEditing.Duplicate(fits, fits.Tracks[0].Id);
         Assert.Equal($"{new string('a', 95)} copy", SceneEditing.Get(scene, copy).Name);
 
         // A 96-character name would give 96 + 5 = 101 characters.
-        var over = Holding(new string('a', 96));
+        var over = SceneFixtures.Named(new string('a', 96));
         var refused = Assert.Throws<ArgumentException>(() => SceneEditing.Duplicate(over, over.Tracks[0].Id));
         Assert.Equal("The copy's name would be too long. Shorten the track's name first.", refused.Message);
     }

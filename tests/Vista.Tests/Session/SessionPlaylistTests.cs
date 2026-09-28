@@ -18,6 +18,13 @@ public class SessionPlaylistTests
         return state;
     }
 
+    // Adds Track 2's entry then Track 1's: Track 2's 2 s shot, then Track 1's 10 s.
+    private static void TwoEntries(SessionState state)
+    {
+        state.AddToPlaylist([TrackId(state, 1)]);
+        state.AddToPlaylist([TrackId(state, 0)]);
+    }
+
     [Fact]
     public void PlaylistItemsAreTheEntriesWithPointsInOrder()
     {
@@ -70,8 +77,7 @@ public class SessionPlaylistTests
     public void DeletingATrackRemovesItsEntriesInOneStep()
     {
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
 
         state.DeleteTracks([TrackId(state, 1)]);
         Assert.Single(state.Scene.Playlist);
@@ -106,8 +112,7 @@ public class SessionPlaylistTests
         var state = Editing();
         state.AddTrack();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
@@ -124,8 +129,7 @@ public class SessionPlaylistTests
     public void ScrubbingLiveSeeksWithinThePlayingEntry()
     {
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
         GoLive(state);
         state.Director.Tick(3f);
 
@@ -141,8 +145,7 @@ public class SessionPlaylistTests
     public void ScrubbingPastThePlayingEntrysLengthClampsAndStaysOnIt()
     {
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
         GoLive(state);
 
         state.Transport.BeginScrub();
@@ -157,8 +160,7 @@ public class SessionPlaylistTests
     public void ScrubbingLiveByPlaylistTimeCutsToTheEntryThere()
     {
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
         GoLive(state);
 
         // Track 2's 2 s, then Track 1's 10 s: 12 s. 5 is 3 s into Track 1's entry.
@@ -206,8 +208,7 @@ public class SessionPlaylistTests
     public void RestartInLiveGoesBackToTheFirstEntry()
     {
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
         GoLive(state);
         state.Director.Tick(5f);
 
@@ -237,8 +238,7 @@ public class SessionPlaylistTests
     public void EditFromLiveTakesTheShotTimeOnlyWhenTheEditedTrackIsPlaying()
     {
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
         GoLive(state);
         state.Director.Tick(1f);
 
@@ -293,8 +293,7 @@ public class SessionPlaylistTests
         var state = Editing();
         state.AddTrack();
         state.AddToPlaylist([state.EditedTrackId]);
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.AddToPlaylist([TrackId(state, 0)]);
+        TwoEntries(state);
         state.SetPlaylistLoops(true);
         GoLive(state);
 

@@ -136,10 +136,10 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Test fixtures
 
-- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, and vector assertions.
+- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, a well-formed frame value, and vector assertions.
 - `PathShapes`: the path shapes the movement sweep and the camera regression scene play, as positions, and the field of view their points are recorded at.
 - `TrackRuns`: playing a track, or hand-made motion, and measuring it: a run's frame at a time, length and point arrive and depart times; clocks (fixed steps, and the evaluator, a playback or the Director stepped within a frame budget); and measures: steps and snaps, picture twist, the largest change or value over samples and when, world turn rate, speed, and well-formed on every frame.
-- `Session/SessionFixtures`: the sessions the session tests start from, and track and entry ids by index.
-- `Tracks/Timing/TimingFixtures`: key times and key drags.
+- `Session/SessionFixtures`: the sessions the session tests start from, track and entry ids by index, and a control point at head height.
+- `Tracks/Timing/TimingFixtures`: key times, key drags, and asserting a track's key times within tolerance.
 - `Tracks/Playback/PlaybackFixtures`: the tracks and playlist items the playback tests play, and generated played tracks and playlist scenes.
 - `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, and a scene folder in a temporary directory.

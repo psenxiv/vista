@@ -47,10 +47,12 @@ public class TimingCurveTests
         Assert.Equal(5f, curve.PositionAt(100));
     }
 
-    [Fact]
-    public void ConstructorThrowsWhenTimeDoesNotStrictlyIncrease()
+    [Theory]
+    [InlineData(0f, 0f)] // Equal times.
+    [InlineData(1f, 0f)] // Decreasing time.
+    public void ConstructorThrowsWhenTimeDoesNotStrictlyIncrease(float first, float second)
     {
-        var keys = new[] { Key(0f, 0f), Key(0f, 1f) };
+        var keys = new[] { Key(first, 0f), Key(second, 1f) };
         var ex = Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
         Assert.Equal("Timing keys must have strictly increasing times.", ex.Message);
     }
@@ -72,13 +74,6 @@ public class TimingCurveTests
         var curve = new TimingCurve(keys);
 
         Assert.Equal(1f, curve.PositionAt(1_000_000.04), 4);
-    }
-
-    [Fact]
-    public void ConstructorThrowsWhenTimeDecreases()
-    {
-        var keys = new[] { Key(1f, 0f), Key(0f, 1f) };
-        Assert.Throws<ArgumentException>(() => new TimingCurve(keys));
     }
 
     [Fact]

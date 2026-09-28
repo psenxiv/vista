@@ -5,6 +5,7 @@ using Vista.Core.Tracks.Playback;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Tracks.Timing.TimingFixtures;
 
 namespace Vista.Tests.Tracks;
 
@@ -161,14 +162,6 @@ public class TrackEditingTests
     }
 
     [Fact]
-    public void LegSecondsReadsTheCurrentGapBetweenPoints()
-    {
-        var track = Build3PointTrack();
-        Assert.Equal(5f, LegSeconds(track, 1), 3);
-        Assert.Equal(5f, LegSeconds(track, 2), 3);
-    }
-
-    [Fact]
     public void SetLegDurationShiftsLaterKeysByTheDifference()
     {
         var track = Build3PointTrack(); // times 0, 5, 10
@@ -178,20 +171,18 @@ public class TrackEditingTests
         Assert.Equal(8f, keys[1].Time, 3);
         Assert.Equal(13f, keys[2].Time, 3);
         Assert.Equal(5f, LegSeconds(track, 2), 3);
+        // Leg 1 is now 10 yalms in 8 s, pinned to that speed.
+        Assert.Equal(1.25f, TrackEditing.LegSpeed(track, 1), 0.01f);
+        Assert.True(TrackEditing.IsPinned(track, 1));
     }
 
-    [Fact]
-    public void SetLegDurationRejectsLegZero()
-    {
-        var track = Build3PointTrack();
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 0, 5f));
-    }
-
-    [Fact]
-    public void SetLegDurationRejectsAnIndexAtOrAboveThePointCount()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public void SetLegDurationRejectsAnOutOfRangeIndex(int leg)
     {
         var track = Build3PointTrack(); // 3 points; valid legs are 1..2
-        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, 3, 5f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.SetLegDuration(track, leg, 5f));
     }
 
     [Fact]
@@ -246,6 +237,67 @@ public class TrackEditingTests
         Assert.Equal(600f, LegSeconds(TrackEditing.SetLegDuration(track, 1, 9999f), 1), 1);
     }
 
+    // Duration
+
+    [Fact]
+    public void SetDurationSolvesForTheTrackSpeed()
+    {
+        var track = TrackEditing.SetDuration(Build3PointTrack(), 20f);
+        Assert.Equal(1f, track.Speed, 0.01f);
+        AssertTimes([0f, 10f, 20f], track);
+    }
+
+    [Fact]
+    public void SetDurationLeavesHoldsAndPinnedLegsAlone()
+    {
+        var track = TrackEditing.SetHold(TrackEditing.SetLegSpeed(Build3PointTrack(), 2, 2f), 1, 1f);
+        track = TrackEditing.SetDuration(track, 16f);
+
+        Assert.Equal(1f, track.Speed, 0.01f);
+        Assert.Equal(16f, (float)new TrackEvaluator(track).Duration, 0.05f);
+    }
+
+    [Fact]
+    public void SetDurationWithEveryLegPinnedChangesNothing()
+    {
+        var track = TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 3f), 2, 4f);
+        Assert.True(TrackEditing.AllPinned(track));
+        Assert.Same(track, TrackEditing.SetDuration(track, 30f));
+    }
+
+    [Fact]
+    public void ATrackWithFewerThanTwoPointsIsAllPinned()
+    {
+        Assert.True(TrackEditing.AllPinned(TrackEditing.Empty()));
+        Assert.True(TrackEditing.AllPinned(TrackEditing.Append(TrackEditing.Empty(), Point(0f))));
+        Assert.False(TrackEditing.AllPinned(Build3PointTrack()));
+    }
+
+    [Fact]
+    public void SetDurationStopsAtTheShortestShot()
+    {
+        var track = TrackEditing.SetDuration(Build3PointTrack(), 0f);
+        Assert.Equal(TrackEditing.MaxSpeed, track.Speed);
+        Assert.Equal(0.2f, (float)new TrackEvaluator(track).Duration, 0.01f);
+    }
+
+    [Fact]
+    public void SetDurationStopsAtTheShortestShotBeforeTheFastestSpeed()
+    {
+        // One 10 yalm leg takes 0.1 s at MaxSpeed, under the 0.2 s shortest shot, so 0 asks for 0.2 s: 10 / 0.2 = 50 yalms per second.
+        var track = TrackEditing.SetDuration(WithTwoPoints(TrackEditing.Empty()), 0f);
+        Assert.Equal(50f, track.Speed, 0.01f);
+        Assert.Equal(0.2f, (float)new TrackEvaluator(track).Duration, 0.001f);
+    }
+
+    [Fact]
+    public void SetDurationStopsAtTheLongestLegs()
+    {
+        var track = TrackEditing.SetDuration(Build3PointTrack(), 99999f);
+        Assert.Equal(TrackEditing.MinSpeed, track.Speed);
+        Assert.Equal(1200f, (float)new TrackEvaluator(track).Duration, 0.01f);
+    }
+
     [Theory]
     [InlineData(float.NaN)]
     [InlineData(float.PositiveInfinity)]
@@ -261,6 +313,51 @@ public class TrackEditingTests
         Assert.Same(track, TrackEditing.SetHold(track, 1, value));
     }
 
+    // Leg and track speed
+
+    [Fact]
+    public void SetLegSpeedClamps()
+    {
+        Assert.Equal(
+            TrackEditing.MaxSpeed,
+            TrackEditing.LegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1000f), 1)
+        );
+        Assert.Equal(
+            TrackEditing.MinSpeed,
+            TrackEditing.LegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 0f), 1)
+        );
+    }
+
+    [Fact]
+    public void ResetLegClearsThePin()
+    {
+        var track = TrackEditing.ResetLeg(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 1);
+        Assert.False(TrackEditing.IsPinned(track, 1));
+        Assert.Equal(2f, TrackEditing.LegSpeed(track, 1));
+        AssertTimes([0f, 5f, 10f], track);
+    }
+
+    [Fact]
+    public void ResettingAnUnpinnedLegChangesNothing()
+    {
+        var track = Build3PointTrack();
+        Assert.Same(track, TrackEditing.ResetLeg(track, 1));
+    }
+
+    [Fact]
+    public void SetSpeedClamps()
+    {
+        Assert.Equal(TrackEditing.MaxSpeed, TrackEditing.SetSpeed(Build3PointTrack(), 500f).Speed);
+        Assert.Equal(TrackEditing.MinSpeed, TrackEditing.SetSpeed(Build3PointTrack(), -1f).Speed);
+    }
+
+    [Fact]
+    public void SettingTheSameSpeedReturnsTheSameTrack()
+    {
+        var track = Build3PointTrack();
+        Assert.Same(track, TrackEditing.SetSpeed(track, 2f));
+    }
+
     [Fact]
     public void HoldSecondsIsZeroWhenThereIsNoSecondKey()
     {
@@ -274,9 +371,7 @@ public class TrackEditingTests
         var track = Build3PointTrack(); // times 0, 5, 10
         track = TrackEditing.SetHold(track, 1, 3f);
 
-        Assert.Equal(4, Keys(track).Count);
         Assert.Equal(3f, TrackEditing.HoldSeconds(track, 1), 5);
-        Assert.Equal(13f, Keys(track)[^1].Time, 3);
         Assert.Equal(5f, LegSeconds(track, 2), 3);
     }
 
@@ -408,6 +503,59 @@ public class TrackEditingTests
         Assert.Equal(track.Timing, updated.Timing);
         Assert.Equal(track.Speed, updated.Speed);
         Assert.Same(updated, TrackEditing.SetLoop(updated, true));
+    }
+
+    // Point edits
+
+    [Fact]
+    public void MovingAPointKeepsItsLegsSpeed()
+    {
+        var track = TrackEditing.Replace(Build3PointTrack(), 2, Point(40f));
+        Assert.False(TrackEditing.IsPinned(track, 2));
+        AssertTimes([0f, 5f, 20f], track);
+    }
+
+    [Fact]
+    public void InsertingSplitsAPinnedLegIntoTwoPinnedHalves()
+    {
+        var track = TrackEditing.InsertAfter(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 0, Point(5f));
+        Assert.True(TrackEditing.IsPinned(track, 1));
+        Assert.True(TrackEditing.IsPinned(track, 2));
+        AssertTimes([0f, 5f, 10f, 15f], track);
+    }
+
+    [Fact]
+    public void InsertingSplitsTheEasingAcrossTheHalves()
+    {
+        var track = TrackEditing.InsertAfter(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseInOut), 0, Point(5f));
+        Assert.Equal(Easing.EaseIn, LegEasing.Read(track, 1));
+        Assert.Equal(Easing.EaseOut, LegEasing.Read(track, 2));
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointKeepsTheFirstLegsPin()
+    {
+        var track = TrackEditing.Delete(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 1);
+        Assert.True(TrackEditing.IsPinned(track, 1));
+        AssertTimes([0f, 20f], track);
+    }
+
+    [Fact]
+    public void DeletingAMiddlePointJoinsTheOuterEasing()
+    {
+        var track = LegEasing.Set(LegEasing.Set(Build3PointTrack(), 1, Easing.EaseIn), 2, Easing.EaseOut);
+        Assert.Equal(Easing.EaseInOut, LegEasing.Read(TrackEditing.Delete(track, 1), 1));
+    }
+
+    [Fact]
+    public void DeletingTheFirstPointDropsItsLeg()
+    {
+        var track = TrackEditing.Delete(
+            TrackEditing.SetLegSpeed(TrackEditing.SetLegSpeed(Build3PointTrack(), 1, 1f), 2, 2f),
+            0
+        );
+        AssertTimes([0f, 5f], track);
+        Assert.Null(track.Timing[0].LegSpeed);
     }
 
     [Fact]
@@ -617,16 +765,6 @@ public class TrackEditingTests
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.InsertAfter(track, 3, Point(0f, 0f, 0f)));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Delete(track, -1));
         Assert.Throws<ArgumentOutOfRangeException>(() => TrackEditing.Replace(track, 3, Point(0f, 0f, 0f)));
-    }
-
-    [Fact]
-    public void PointSecondsIsWhenThePointIsReached()
-    {
-        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f));
-        Assert.Equal(0f, evaluator.PointSeconds(0));
-        Assert.Equal(5f, evaluator.PointSeconds(1), 3);
-        Assert.Equal(12f, evaluator.PointSeconds(2), 3);
-        Assert.Throws<ArgumentOutOfRangeException>(() => evaluator.PointSeconds(3));
     }
 
     [Fact]

@@ -325,4 +325,12 @@ internal static class Fixtures
         Assert.Equal(expected.Y, actual.Y, tolerance);
         Assert.Equal(expected.Z, actual.Z, tolerance);
     }
+
+    /// <summary>A well-formed frame: at (1, 2, 3) looking 10 yalms along -Z with up +Y and a 1 rad field of view.</summary>
+    internal static readonly CameraState WellFormedFrame = new(
+        new Vector3(1f, 2f, 3f),
+        new Vector3(1f, 2f, -7f),
+        Vector3.UnitY,
+        1f
+    );
 }

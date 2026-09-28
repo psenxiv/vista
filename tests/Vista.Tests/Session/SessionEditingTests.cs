@@ -49,6 +49,10 @@ public class SessionEditingTests
     }
 
     [Fact]
+    public void AddingAfterTheSelectedPointIsRefusedOutsideEditing() =>
+        Assert.Equal("The track can only change while editing.", new SessionState().AddAfterSelected(Point(0f)));
+
+    [Fact]
     public void OverwriteSelectedKeepsSelectionAndTiming()
     {
         var state = EditingThreePoints();
@@ -124,6 +128,19 @@ public class SessionEditingTests
     {
         var state = EditingThreePoints();
         Assert.NotNull(state.DeletePoints([3]));
+        Assert.Equal(3, state.Track.Points.Count);
+    }
+
+    // Three points (0, 1, 2): index 99 isn't one, so a list holding it is refused whole, and so is an empty list.
+    [Fact]
+    public void DeletingOrMovingPointsRefusesAnyIndexThatIsNotAPoint()
+    {
+        var state = EditingThreePoints();
+
+        Assert.Equal("There is no such point.", state.DeletePoints([0, 99]));
+        Assert.Equal("There is no such point.", state.DeletePoints([]));
+        Assert.Equal("There is no such point.", state.MovePointsTo([0, 99], null));
+        Assert.Equal("There is no such point.", state.MovePointsTo([], null));
         Assert.Equal(3, state.Track.Points.Count);
     }
 

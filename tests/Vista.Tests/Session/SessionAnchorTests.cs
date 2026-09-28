@@ -10,9 +10,6 @@ namespace Vista.Tests.Session;
 
 public class SessionAnchorTests
 {
-    // These tests put every point at head height, so y defaults to 5 here.
-    private static ControlPoint Point(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
-
     [Fact]
     public void TheFirstPointPlacesBothAnchorsOnTheGroundUnderIt()
     {
@@ -31,7 +28,7 @@ public class SessionAnchorTests
     {
         var state = EditingOverGround();
         state.AddTrack();
-        state.AddToEnd(Point(50f, 7f, 5f));
+        state.AddToEnd(HeadHeightPoint(50f, 7f, 5f));
 
         Assert.Equal(new Vector3(10f, 1f, 0f), state.Scene.Anchor.Position);
         Near(new Vector3(50f, 1f, 5f), SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[1]).Position, 1e-4f);
@@ -71,7 +68,7 @@ public class SessionAnchorTests
         var state = EditingOverGround();
         var first = state.EditedTrackId;
         state.AddTrack();
-        state.AddToEnd(Point(40f));
+        state.AddToEnd(HeadHeightPoint(40f));
 
         Assert.Null(state.Selection.SelectTrackAnchor(first));
         Assert.Equal(first, state.EditedTrackId);
@@ -109,7 +106,7 @@ public class SessionAnchorTests
     {
         var state = EditingOverGround();
         state.BeginLiveEdit();
-        Assert.Null(state.PreviewPoint(1, Point(25f)));
+        Assert.Null(state.PreviewPoint(1, HeadHeightPoint(25f)));
 
         Assert.Null(state.Selection.SelectSceneAnchor());
 
@@ -220,7 +217,7 @@ public class SessionAnchorTests
         });
         state.Edit();
 
-        state.AddToEnd(Point(10f));
+        state.AddToEnd(HeadHeightPoint(10f));
 
         Assert.Equal(new Vector3(10f, 5f, 0f), asked);
         Assert.Equal(2f, state.Scene.Anchor.Position.Y);
@@ -233,7 +230,7 @@ public class SessionAnchorTests
         var state = new SessionState(_ => null);
         state.Edit();
 
-        state.AddToEnd(Point(10f));
+        state.AddToEnd(HeadHeightPoint(10f));
 
         Assert.Equal(new Vector3(10f, 5f, 0f), state.Scene.Anchor.Position);
     }
@@ -248,12 +245,12 @@ public class SessionAnchorTests
             return 1f;
         });
         state.Edit();
-        state.AddToEnd(Point(10f));
+        state.AddToEnd(HeadHeightPoint(10f));
         Assert.Equal(1, reads);
 
-        state.AddToEnd(Point(20f));
+        state.AddToEnd(HeadHeightPoint(20f));
         state.Selection.Select(0);
-        state.AddAfterSelected(Point(15f));
+        state.AddAfterSelected(HeadHeightPoint(15f));
 
         Assert.Equal(1, reads);
         Assert.Equal(3, state.Track.Points.Count);
@@ -270,7 +267,7 @@ public class SessionAnchorTests
         var anchor = state.Scene.Tracks[0].Anchor;
 
         state.ChangeTrack(TrackEditing.Clear);
-        state.AddToEnd(Point(90f));
+        state.AddToEnd(HeadHeightPoint(90f));
 
         Assert.Equal(anchor, state.Scene.Tracks[0].Anchor);
         Near(new Vector3(90f, 5f, 0f), state.Track.Points[0].Position, 1e-4f);
@@ -291,7 +288,7 @@ public class SessionAnchorTests
     {
         var state = new SessionState(_ => 1f);
         state.Edit();
-        state.AddToEnd(Point(10f));
+        state.AddToEnd(HeadHeightPoint(10f));
         state.Selection.SelectSceneAnchor();
 
         Assert.True(state.Undo());
@@ -308,7 +305,7 @@ public class SessionAnchorTests
     {
         var state = EditingOverGround();
         state.AddTrack();
-        state.AddToEnd(Point(40f));
+        state.AddToEnd(HeadHeightPoint(40f));
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
 
         Assert.True(state.Undo());
@@ -337,7 +334,7 @@ public class SessionAnchorTests
         var state = EditingOverGround();
         var first = state.EditedTrackId;
         state.AddTrack();
-        state.AddToEnd(Point(40f));
+        state.AddToEnd(HeadHeightPoint(40f));
         var second = state.EditedTrackId;
         state.SwitchTrack(first);
         state.Selection.SelectSceneAnchor();

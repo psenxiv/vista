@@ -92,7 +92,7 @@ public class TimingGraphTests
     }
 
     [Fact]
-    public void AnOpenEndedReadOfTheWholeShotIsTheOldDragFormula()
+    public void AnOpenEndedReadPastThePlotCarriesOnAtTheWholeShotsScale()
     {
         // Graph is 400 px from x = 100 over 10 s: 600 px is 1.25 widths in, 12.5 s.
         Assert.Equal(12.5f, Graph.TimeAtOpenEnded(600f), 1e-4f);

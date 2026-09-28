@@ -41,8 +41,6 @@ public class PathChannelTests
         var channel = new PathChannel([0f, 10f, 40f], [0f, 2f, 6f]);
 
         Assert.Equal(24.167f, channel.At(4f), 1e-3f);
-        Assert.Equal(0f, channel.At(-1f));
-        Assert.Equal(40f, channel.At(7f));
     }
 
     [Fact]

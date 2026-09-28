@@ -227,6 +227,44 @@ public class TrackEvaluatorTests
     }
 
     [Fact]
+    public void LegSecondsReadsTheCurrentGapBetweenPoints()
+    {
+        var evaluator = new TrackEvaluator(Build3PointTrack());
+        Assert.Equal(5f, evaluator.LegSeconds(1), 3);
+        Assert.Equal(5f, evaluator.LegSeconds(2), 3);
+    }
+
+    [Fact]
+    public void PointSecondsIsWhenThePointIsReached()
+    {
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f));
+        Assert.Equal(0f, evaluator.PointSeconds(0));
+        Assert.Equal(5f, evaluator.PointSeconds(1), 3);
+        Assert.Equal(12f, evaluator.PointSeconds(2), 3);
+        Assert.Throws<ArgumentOutOfRangeException>(() => evaluator.PointSeconds(3));
+    }
+
+    [Fact]
+    public void LegAtFindsTheLegAndSkipsHolds()
+    {
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f)); // keys at 0, 5, 7, 12
+        Assert.Equal(1, evaluator.LegAt(2f));
+        Assert.Null(evaluator.LegAt(6f));
+        Assert.Equal(2, evaluator.LegAt(9f));
+        Assert.Null(evaluator.LegAt(13f));
+    }
+
+    [Fact]
+    public void ALegHoldsBothItsEndKeysAndTheEarlierLegWinsATie()
+    {
+        var evaluator = new TrackEvaluator(TrackEditing.SetHold(Build3PointTrack(), 1, 2f)); // keys at 0, 5, 7, 12
+        Assert.Equal(1, evaluator.LegAt(0f));
+        Assert.Equal(1, evaluator.LegAt(5f));
+        Assert.Equal(2, evaluator.LegAt(7f));
+        Assert.Equal(2, evaluator.LegAt(12f));
+    }
+
+    [Fact]
     public void WorldSpeedIsContinuousThroughAKeyBetweenUnequalSegments()
     {
         // Collinear points, so arc length is chord length: a 10 m leg then a 30 m leg, 5 s each.
@@ -886,9 +924,9 @@ public class TrackEvaluatorTests
     [Fact]
     public void DirectionOfTravelHasNoStepOnATrackThatSweptThroughTheVertical()
     {
-        // Found by TheAimNeverSteps as a 1.86° step at 7.63 s, when the aim was capped at 89° and its yaw read from the
-        // sideways part: the facing is now the path's own, so there's no step, and up turns once through each vertical
-        // passage, so no whip.
+        // Found by TheAimNeverSteps, when look ahead was a time, as a 1.86° step at 7.63 s, when the aim was capped at
+        // 89° and its yaw read from the sideways part: the facing is now the path's own, so there's no step, and up
+        // turns once through each vertical passage, so no whip.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 4f,
@@ -915,8 +953,8 @@ public class TrackEvaluatorTests
     [Fact]
     public void DirectionOfTravelDoesNotFlipDivingPastStraightDownAndBack()
     {
-        // Found by TheAimNeverSteps as a 180° flip at 1.06 s, carrying up: the path dives and doubles back, and its look
-        // ahead sweeps the facing within 10° of straight down and out again in 4 ms.
+        // Found by TheAimNeverSteps, when look ahead was a time, as a 180° flip at 1.06 s, carrying up: the path dives
+        // and doubles back, and its look ahead sweeps the facing within 10° of straight down and out again in 4 ms.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 19.566769f,
@@ -937,9 +975,10 @@ public class TrackEvaluatorTests
     [Fact]
     public void DirectionOfTravelDoesNotFlipWhereTheFacingWhipsThroughStraightUpBetweenSamples()
     {
-        // Found by TheAimNeverSteps as a 180° flip at 2.64 s: the look ahead swings the facing through straight up at
-        // about 10,000° a second, across the whole vertical passage between two 10 ms samples. Sampling finer where the
-        // facing turns fast finds the passage, so the picture turns through it rather than flipping.
+        // Found by TheAimNeverSteps, when look ahead was a time, as a 180° flip at 2.64 s: the look ahead swings the
+        // facing through straight up at about 10,000° a second, across the whole vertical passage between two 10 ms
+        // samples. Sampling finer where the facing turns fast finds the passage, so the picture turns through it rather
+        // than flipping.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 17f,
@@ -960,9 +999,9 @@ public class TrackEvaluatorTests
     [Fact]
     public void DirectionOfTravelKeepsLevelAsTheViewWhipsRoundADoubleback()
     {
-        // Found by TheAimNeverSteps as an 11.2° picture step at 3.595 s: at a 177° doubleback the look ahead whips the
-        // facing round about 180° in a millisecond, through 69° up. Keeping level, the picture turns with it, at most 1.6
-        // times as far: a turn that follows the view, not a step.
+        // Found by TheAimNeverSteps, when look ahead was a time, as an 11.2° picture step at 3.595 s: at a 177°
+        // doubleback the look ahead whips the facing round about 180° in a millisecond, through 69° up. Keeping level,
+        // the picture turns with it, at most 1.6 times as far: a turn that follows the view, not a step.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 13f,
@@ -1044,9 +1083,9 @@ public class TrackEvaluatorTests
     [Fact]
     public void DirectionOfTravelKeepsItsUpExactlyThroughAHoldReachedLeavingAVerticalPassage()
     {
-        // Found by AHoldIsStill as a last-bit change in up just after arriving at point 1's hold: the facing leaves a vertical
-        // passage as the camera stops, and the passage's end is sampled within a millisecond after, so the arrival was still
-        // in its turn. Through a hold the up is now read at the hold's start.
+        // Found by AHoldIsStill, when look ahead was a time, as a last-bit change in up just after arriving at point 1's
+        // hold: the facing leaves a vertical passage as the camera stops, and the passage's end is sampled within a
+        // millisecond after, so the arrival was still in its turn. Through a hold the up is now read at the hold's start.
         var track = TrackEditing.Empty(AimMode.PathTangent) with
         {
             Speed = 14f,
@@ -1072,8 +1111,9 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookAtKeepsItsUpExactlyToTheEndOfAHold()
     {
-        // Found by AHoldIsStill as a last-bit change in up at the end of point 0's hold, where the camera travels on:
-        // settling for no time at all still squared the up again. The up is now level there, from the same facing.
+        // Found by AHoldIsStill, when look ahead was a time, as a last-bit change in up at the end of point 0's hold,
+        // where the camera travels on: settling for no time at all still squared the up again. The up is now level
+        // there, from the same facing.
         var track = TrackEditing.Empty(AimMode.LookAt) with
         {
             Speed = 12.873444f,
@@ -1087,7 +1127,7 @@ public class TrackEvaluatorTests
         )
             track = TrackEditing.Append(track, point);
         track = TrackEditing.SetLegSpeed(TrackEditing.SetHold(track, 0, 0.6363636f), 1, 21.570787f);
-        track = TrackEditing.SetLookAt(TrackEditing.SetLookAhead(track, 0.7317672f), new Vector3(0f, 15f, 0f));
+        track = TrackEditing.SetLookAt(track, new Vector3(0f, 15f, 0f));
         var evaluator = new TrackEvaluator(track);
 
         Assert.Equal(

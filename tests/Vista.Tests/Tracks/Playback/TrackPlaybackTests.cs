@@ -265,18 +265,6 @@ public class TrackPlaybackTests
     }
 
     [Fact]
-    public void PingPongGoesOutAndComesBack()
-    {
-        var playback = new TrackPlayback(StraightTrack(false, PlaybackDirection.PingPong));
-        playback.Advance(4f);
-        Assert.Equal(4.0, playback.ShotTime, 5);
-
-        playback.Advance(10f);
-        Assert.Equal(6.0, playback.ShotTime, 3);
-        Assert.False(playback.IsFinished);
-    }
-
-    [Fact]
     public void PingPongFinishesAfterTwiceTheShot()
     {
         var playback = new TrackPlayback(StraightTrack(false, PlaybackDirection.PingPong));

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Vista.Core.Session;
+using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
 using static Vista.Tests.Fixtures;
 
@@ -14,6 +15,9 @@ internal static class SessionFixtures
     /// <summary>A second spot for Guard's aim point, level with the track's end.</summary>
     internal static readonly Vector3 WatchedAtB = new(10f, 0f, -10f);
 
+    /// <summary>A control point at head height: <see cref="Fixtures.Point"/> with <paramref name="y"/> defaulting to 5.</summary>
+    internal static ControlPoint HeadHeightPoint(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
+
     /// <summary>Editing a 2 s track, x = 0 to 10, watching Guard with heavy smoothing; Guard aimed at <see cref="WatchedAtA"/>.</summary>
     internal static (SessionState State, NearbyCharacters Characters) EditingWatchingGuard()
     {
@@ -21,8 +25,8 @@ internal static class SessionFixtures
         GuardAt(characters, WatchedAtA);
         var state = new SessionState(null, characters);
         state.Edit();
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
+        state.AddToEnd(Fixtures.Point(0f));
+        state.AddToEnd(Fixtures.Point(10f));
         state.ChangeTrack(t => t with { Aim = AimMode.WatchTarget, TargetName = "Guard", Smoothing = 1f });
         return (state, characters);
     }
@@ -33,9 +37,9 @@ internal static class SessionFixtures
         var state = new SessionState();
         state.Edit();
         state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(10f));
-        state.AddToEnd(Point(20f));
+        state.AddToEnd(Fixtures.Point(0f));
+        state.AddToEnd(Fixtures.Point(10f));
+        state.AddToEnd(Fixtures.Point(20f));
         return state;
     }
 
@@ -45,7 +49,7 @@ internal static class SessionFixtures
         var state = new SessionState(_ => 1f);
         state.Edit();
         foreach (var x in new[] { 10f, 20f, 30f })
-            state.AddToEnd(Point(x, 5f));
+            state.AddToEnd(HeadHeightPoint(x));
         return state;
     }
 

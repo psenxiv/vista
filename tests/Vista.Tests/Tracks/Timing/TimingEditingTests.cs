@@ -31,6 +31,18 @@ public class TimingEditingTests
     }
 
     [Fact]
+    public void SetKeyModeOnAHoldSetsOneSidePerKey()
+    {
+        var held = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);
+
+        var arrival = TimingEditing.SetKeyMode(held, 1, TangentMode.Flat);
+        Assert.Equal((TangentMode.Flat, TangentMode.Auto), (arrival.Timing[1].InMode, arrival.Timing[1].OutMode));
+
+        var departure = TimingEditing.SetKeyMode(held, 2, TangentMode.Flat);
+        Assert.Equal((TangentMode.Auto, TangentMode.Flat), (departure.Timing[1].InMode, departure.Timing[1].OutMode));
+    }
+
+    [Fact]
     public void MovingAPointKeySqueezesItsNeighboursAndKeepsTheLength()
     {
         var track = MoveKey(Build3PointTrack(), 1, 3f);
@@ -71,6 +83,31 @@ public class TimingEditingTests
         Assert.Equal(new[] { 0f, 5f, 8f, 13f }, Times(track));
         Assert.Equal(1f, new TrackEvaluator(track).Keys[2].Position);
         Assert.Equal(3f, TrackEditing.HoldSeconds(track, 1), 2);
+    }
+
+    [Fact]
+    public void DraggingAHoldingPointsKeyTradesTimeWithItsHold()
+    {
+        var track = MoveKey(TrackEditing.SetHold(Build3PointTrack(), 1, 3f), 1, 6f);
+        Assert.Equal(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1), 0.01f);
+        Assert.Equal(2f, TrackEditing.HoldSeconds(track, 1), 0.01f);
+        Assert.Equal(new[] { 0f, 6f, 8f, 13f }, Times(track));
+    }
+
+    [Fact]
+    public void AHoldEndDragKeepsTheHoldAboveTheKeyGap() =>
+        Assert.Equal(
+            TrackEditing.MinKeyGap,
+            TrackEditing.HoldSeconds(MoveKey(TrackEditing.SetHold(Build3PointTrack(), 1, 3f), 2, 0f), 1),
+            0.001f
+        );
+
+    [Fact]
+    public void DraggingAKeyToWhereItIsChangesNothing()
+    {
+        var track = Build3PointTrack();
+        var evaluator = new TrackEvaluator(track);
+        Assert.Same(track, TimingEditing.MoveKey(track, evaluator, 1, evaluator.Keys[1].Time));
     }
 
     [Fact]
@@ -207,6 +244,14 @@ public class TimingEditingTests
         Assert.Throws<ArgumentOutOfRangeException>(() => TimingEditing.SetBroken(track, -1, true));
     }
 
+    [Fact]
+    public void SetBrokenRoundTrips()
+    {
+        var broken = TimingEditing.SetBroken(Build3PointTrack(), 1, true);
+        Assert.True(broken.Timing[1].Broken);
+        Assert.False(TimingEditing.SetBroken(broken, 1, false).Timing[1].Broken);
+    }
+
     // Build3PointTrack is x = 0, 10, 20 at 2 yalms per second: two 10-yalm legs of 5 s, keys at
     // 0, 5 and 10. A leg of 10 yalms may last between 10 / MaxSpeed = 0.1 s and 10 / MinSpeed
     // clamped to MaxSeconds, so 0.1 s to 600 s — wide enough that nothing below clamps by accident.
@@ -223,9 +268,9 @@ public class TimingEditingTests
     [Fact]
     public void RipplingDiffersFromTrimmingOnTheSameDrag()
     {
-        // Trimming holds the last key at 10 by giving leg 2 the 3 s that leg 1 took.
+        // Trimming holds the last key at 10 by giving leg 2 the 3 s that leg 1 took; rippling instead carries it to
+        // 12, as RipplingAKeyCarriesTheLaterKeysAndChangesTheLength pins.
         Assert.Equal(new[] { 0f, 7f, 10f }, Times(MoveKey(Build3PointTrack(), 1, 7f)));
-        Assert.Equal(new[] { 0f, 7f, 12f }, Times(RippleKey(Build3PointTrack(), 1, 7f)));
     }
 
     [Fact]

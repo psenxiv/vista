@@ -117,20 +117,17 @@ public class PresetsTests
     public void APlacedTracksNameMayReachTheLongestNameButNoFurther()
     {
         static Preset Named(string name) => Crane() with { Track = Crane().Track with { Name = name } };
-        static Scene Holding(string name)
-        {
-            var scene = SceneEditing.New();
-            return SceneEditing.Rename(scene, scene.Tracks[0].Id, name);
-        }
 
         // A 98-character name taken gives "name 2", 98 + 2 = 100 characters, the longest allowed.
         var fits = new string('a', 98);
-        var (scene, id) = Presets.Place(Holding(fits), Named(fits), Ground);
+        var (scene, id) = Presets.Place(SceneFixtures.Named(fits), Named(fits), Ground);
         Assert.Equal($"{fits} 2", SceneEditing.Get(scene, id).Name);
 
         // A 99-character name taken would give 99 + 2 = 101 characters.
         var over = new string('a', 99);
-        var refused = Assert.Throws<ArgumentException>(() => Presets.Place(Holding(over), Named(over), Ground));
+        var refused = Assert.Throws<ArgumentException>(() =>
+            Presets.Place(SceneFixtures.Named(over), Named(over), Ground)
+        );
         Assert.Equal("The track's name would be too long. Shorten the preset's name first.", refused.Message);
     }
 
