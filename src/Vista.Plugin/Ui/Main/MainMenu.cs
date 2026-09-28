@@ -129,7 +129,7 @@ internal sealed class MainMenu
         ImGui.Separator();
         if (Menu.Item("Select scene anchor", editing && session.Scene.AnchorPlaced))
             Report(session.Selection.SelectSceneAnchor());
-        DrawMoveAnchorToMe(editing);
+        DrawMoveAnchorToMe();
         ImGui.Separator();
         // A new folder loads a scene, which Live refuses.
         if (Menu.Item("Select save folder", mode != CameraMode.Live))
@@ -139,12 +139,9 @@ internal sealed class MainMenu
     }
 
     /// <summary>Move anchor to me's submenu: the selected scene or track anchor to the player, with its points or on its own.</summary>
-    private void DrawMoveAnchorToMe(bool editing)
+    private void DrawMoveAnchorToMe()
     {
-        var enabled = session.CanMoveAnchor;
-        using var menu = ImRaii.Menu("Move anchor to me", enabled);
-        if (!enabled)
-            Tooltip.OnHover(editing ? "Select the scene anchor or a track anchor first." : "Works in Edit.");
+        using var menu = ImRaii.Menu("Move anchor to me", session.CanMoveAnchor);
         if (!menu)
             return;
         if (Menu.Item("With its points"))
