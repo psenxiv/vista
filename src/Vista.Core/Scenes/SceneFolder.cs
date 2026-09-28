@@ -46,7 +46,10 @@ public sealed class SceneFolder
     }
 
     /// <summary>The names of the scene files that can be read, sorted ignoring case.</summary>
-    public IReadOnlyList<string> SceneNames() => Names(ScenesDir, json => SceneJson.Read(json));
+    public IReadOnlyList<string> SceneNames() => SceneEntries().Select(e => e.Name).ToList();
+
+    /// <summary>The scene files that can be read, with their track count, sorted by name ignoring case.</summary>
+    public IReadOnlyList<FileEntry> SceneEntries() => Entries(ScenesDir, json => SceneJson.Read(json).Tracks.Count);
 
     /// <summary>The scene in file <paramref name="name"/>.</summary>
     public Scene LoadScene(string name) => SceneJson.Read(File.ReadAllText(PathOf(ScenesDir, name)));
@@ -85,7 +88,18 @@ public sealed class SceneFolder
     public void DeleteScene(string name) => File.Delete(PathOf(ScenesDir, name));
 
     /// <summary>The names of the preset files that can be read, sorted ignoring case.</summary>
-    public IReadOnlyList<string> PresetNames() => Names(PresetsDir, json => SceneJson.ReadPreset(json));
+    public IReadOnlyList<string> PresetNames() => PresetEntries().Select(e => e.Name).ToList();
+
+    /// <summary>The preset files that can be read, sorted by name ignoring case; each entry's <see cref="FileEntry.Tracks"/> is null.</summary>
+    public IReadOnlyList<FileEntry> PresetEntries() =>
+        Entries(
+            PresetsDir,
+            json =>
+            {
+                SceneJson.ReadPreset(json);
+                return null;
+            }
+        );
 
     /// <summary>The preset in file <paramref name="name"/>, its track named <paramref name="name"/>.</summary>
     public Preset LoadPreset(string name)
@@ -128,15 +142,15 @@ public sealed class SceneFolder
         }
     }
 
-    private List<string> Names(string dir, Action<string> read)
+    private List<FileEntry> Entries(string dir, Func<string, int?> read)
     {
-        var names = new List<string>();
+        var entries = new List<FileEntry>();
         foreach (var file in Files(dir))
         {
             try
             {
-                read(File.ReadAllText(file));
-                names.Add(Path.GetFileNameWithoutExtension(file));
+                var tracks = read(File.ReadAllText(file));
+                entries.Add(new FileEntry(Path.GetFileNameWithoutExtension(file), File.GetLastWriteTime(file), tracks));
             }
             catch (Exception e) when (IsUnreadable(e))
             {
@@ -144,7 +158,7 @@ public sealed class SceneFolder
             }
         }
 
-        names.Sort(StringComparer.OrdinalIgnoreCase);
-        return names;
+        entries.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        return entries;
     }
 }

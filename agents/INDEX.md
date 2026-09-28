@@ -66,6 +66,10 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 - `Scenes/SceneNames`: checking scene, preset and track names, and suggesting the next free name or a copy's name.
 
+### File listings
+
+- `Scenes/FileEntry` and `FileList`: a scene or preset file as the picker lists it, and filtering a listing by name.
+
 ### List edits
 
 - `Editing/ListEdit`: finding an item by a test, and a copy of a list with one item replaced or items inserted.

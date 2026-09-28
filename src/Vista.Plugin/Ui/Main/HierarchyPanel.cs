@@ -224,7 +224,7 @@ internal sealed class HierarchyPanel
             var (nameRefusal, nameReplaces) =
                 what == Naming.SavePreset
                     ? SceneNames.PresetCheck(nameText, presets)
-                    : (files.NameRefusal(nameText, what == Naming.RenameScene), false);
+                    : (files.NameRefusal(nameText, what == Naming.RenameScene ? files.CurrentName : null), false);
             checkedName = check = (nameText, nameRefusal, nameReplaces);
         }
 

@@ -46,8 +46,8 @@ internal sealed class SceneFiles
     /// <summary>The scene names in the folder, read now.</summary>
     public IReadOnlyList<string> Scenes() => library?.Scenes() ?? [];
 
-    /// <summary>Why <paramref name="name"/> can't name a new scene, or with <paramref name="renaming"/> the open one, or null.</summary>
-    public string? NameRefusal(string name, bool renaming = false) =>
+    /// <summary>Why <paramref name="name"/> can't name a scene, or with <paramref name="renaming"/> that name, or null.</summary>
+    public string? NameRefusal(string name, string? renaming = null) =>
         library?.NameRefusal(name, renaming) ?? SceneNames.Refusal(name);
 
     /// <summary>The name "New scene" suggests, read now; empty with no folder.</summary>

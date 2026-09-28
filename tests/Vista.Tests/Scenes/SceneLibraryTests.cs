@@ -228,6 +228,142 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void RenamingAnotherSceneRenamesItsFileAndLeavesTheOpenSceneAlone()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+
+        Assert.Null(library.Rename("Dusk", "Night"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("Jib", EditedTrackName);
+        Assert.Equal(["Dawn.json", "Night.json"], temp.SceneFiles());
+        Assert.Equal("Dolly", FirstTrackIn(temp, "Night"));
+    }
+
+    [Fact]
+    public void RenamingTheOpenSceneByNameMatchesTheParameterlessForm()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+
+        Assert.Null(library.Rename("Dawn", "Dusk"));
+
+        Assert.Equal("Dusk", library.CurrentName);
+        Assert.Equal(["Dusk.json"], temp.SceneFiles());
+        Assert.True(state.CanUndo);
+    }
+
+    [Fact]
+    public void RenamingAnotherSceneRefusesATakenName()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+
+        Assert.Equal("A scene with that name exists.", library.Rename("Dusk", "Dawn"));
+
+        Assert.Equal(["Dawn.json", "Dusk.json"], temp.SceneFiles());
+    }
+
+    [Fact]
+    public void RenamingAnotherSceneRefusesABadName()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+
+        Assert.Equal("That name can't be used as a file name.", library.Rename("Dusk", "a/b"));
+
+        Assert.Equal(["Dawn.json", "Dusk.json"], temp.SceneFiles());
+    }
+
+    [Fact]
+    public void DuplicatingAnotherSceneCopiesItsFileWithoutOpeningItOrTouchingTheOpenScene()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+
+        Assert.Null(library.Duplicate("Dusk", "Dusk copy"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("Jib", EditedTrackName);
+        Assert.Equal("Dolly", FirstTrackIn(temp, "Dusk copy"));
+        // The open scene's own file is untouched: it was saved with "Crane" and never re-saved.
+        Assert.Equal("Crane", FirstTrackIn(temp, "Dawn"));
+        // The open scene was never reloaded, so its undo history (the rename above) still stands.
+        Assert.True(state.CanUndo);
+    }
+
+    [Fact]
+    public void DuplicatingTheOpenSceneByNameMatchesTheParameterlessForm()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+
+        Assert.Null(library.Duplicate("Dawn", "Dawn copy"));
+
+        Assert.Equal("Dawn copy", library.CurrentName);
+        Assert.Equal("Jib", FirstTrackIn(temp, "Dawn"));
+        Assert.Equal("Jib", FirstTrackIn(temp, "Dawn copy"));
+    }
+
+    [Fact]
+    public void DuplicatingAnotherSceneRefusesATakenName()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+
+        Assert.Equal("A scene with that name exists.", library.Duplicate("Dusk", "Dawn"));
+    }
+
+    [Fact]
+    public void DeletingAnotherSceneDeletesOnlyItsFile()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+
+        Assert.Null(library.Delete("Dusk"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal(["Dawn.json"], temp.SceneFiles());
+    }
+
+    [Fact]
+    public void DeletingTheOpenSceneByNameMatchesTheParameterlessForm()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dusk");
+
+        Assert.Null(library.Delete("Dusk"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal(["Dawn.json"], temp.SceneFiles());
+    }
+
+    [Fact]
+    public void DeletingAnotherSceneIsRefusedWhenTheFolderHasGone()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+        Directory.Delete(temp.Scenes, recursive: true);
+
+        Assert.StartsWith("Could not delete Dusk:", library.Delete("Dusk"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+    }
+
+    [Fact]
     public void DuplicatingSavesACopyAndOpensIt()
     {
         Save("Dawn", "Crane");
@@ -363,9 +499,20 @@ public sealed class SceneLibraryTests : IDisposable
 
         Assert.Equal("A scene with that name exists.", library.NameRefusal(" broken "));
         Assert.Equal("A scene with that name exists.", library.NameRefusal("DAWN"));
-        Assert.Null(library.NameRefusal("DAWN", renaming: true));
-        Assert.Equal("A scene with that name exists.", library.NameRefusal("Broken", renaming: true));
+        Assert.Null(library.NameRefusal("DAWN", renaming: "Dawn"));
+        Assert.Equal("A scene with that name exists.", library.NameRefusal("Broken", renaming: "Dawn"));
         Assert.Null(library.NameRefusal("Dusk"));
+    }
+
+    [Fact]
+    public void NameRefusalAllowsTheNameBeingRenamedForAnyScene()
+    {
+        Save("Dawn", "Crane");
+        Save("Dusk", "Dolly");
+        library.Open("Dawn");
+
+        Assert.Null(library.NameRefusal("DUSK", renaming: "Dusk"));
+        Assert.Equal("A scene with that name exists.", library.NameRefusal("Dawn", renaming: "Dusk"));
     }
 
     [Fact]

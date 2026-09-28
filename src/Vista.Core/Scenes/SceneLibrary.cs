@@ -54,55 +54,85 @@ public sealed class SceneLibrary
         return NameRefusal(trimmed) ?? SaveNow() ?? Create(trimmed);
     }
 
-    /// <summary>Why <paramref name="name"/> can't name a new scene, or with <paramref name="renaming"/> the open one; every scene file counts as taken, readable or not.</summary>
-    public string? NameRefusal(string name, bool renaming = false)
+    /// <summary>Why <paramref name="name"/> can't name a scene, or with <paramref name="renaming"/> that name (case-only changes included); every scene file counts as taken, readable or not.</summary>
+    public string? NameRefusal(string name, string? renaming = null)
     {
         var trimmed = name.Trim();
-        var same = renaming && string.Equals(trimmed, CurrentName, StringComparison.OrdinalIgnoreCase);
+        var same = renaming is not null && string.Equals(trimmed, renaming, StringComparison.OrdinalIgnoreCase);
         return SceneNames.Refusal(trimmed) ?? (!same && SceneNames.Taken(trimmed, Folder.SceneFiles()) ? Exists : null);
     }
 
     /// <summary>Renames the open scene's file to <paramref name="name"/>, keeping undo history. Returns why it was refused, or null.</summary>
-    public string? Rename(string name)
+    public string? Rename(string name) => Rename(CurrentName, name);
+
+    /// <summary>Renames scene file <paramref name="from"/> to <paramref name="to"/>; when <paramref name="from"/> is the open scene, also updates its open name. Returns why it was refused, or null.</summary>
+    public string? Rename(string from, string to)
     {
-        var trimmed = name.Trim();
-        var refusal = NameRefusal(trimmed, renaming: true);
+        var trimmed = to.Trim();
+        var refusal = NameRefusal(trimmed, renaming: from);
         if (refusal is not null)
             return refusal;
-        if (trimmed == CurrentName)
+        if (trimmed == from)
             return null;
 
         try
         {
-            Folder.RenameScene(CurrentName, trimmed);
+            Folder.RenameScene(from, trimmed);
         }
         catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return $"Could not save {trimmed}: {e.Message}";
         }
 
-        CurrentName = trimmed;
+        if (from == CurrentName)
+            CurrentName = trimmed;
         return null;
     }
 
     /// <summary>Saves the open scene, saves a copy called <paramref name="name"/> and opens the copy. Returns why it was refused, or null.</summary>
-    public string? Duplicate(string name)
+    public string? Duplicate(string name) => Duplicate(CurrentName, name);
+
+    /// <summary>Copies scene file <paramref name="from"/> to <paramref name="to"/>; when <paramref name="from"/> is the open scene, saves it first and opens the copy, otherwise the open scene is untouched. Returns why it was refused, or null.</summary>
+    public string? Duplicate(string from, string to)
     {
-        var trimmed = name.Trim();
-        return NameRefusal(trimmed) ?? SaveNow() ?? Save(trimmed, scene()) ?? Adopt(trimmed, scene());
+        var trimmed = to.Trim();
+        if (from == CurrentName)
+            return NameRefusal(trimmed) ?? SaveNow() ?? Save(trimmed, scene()) ?? Adopt(trimmed, scene());
+
+        var refusal = NameRefusal(trimmed);
+        if (refusal is not null)
+            return refusal;
+
+        Scene source;
+        try
+        {
+            source = Folder.LoadScene(from);
+        }
+        catch (Exception e) when (SceneFolder.IsUnreadable(e))
+        {
+            return $"Could not open {from}: {e.Message}";
+        }
+
+        return Save(trimmed, source);
     }
 
     /// <summary>Deletes the open scene's file and opens the first remaining scene, or a new Scene N. Returns why it was refused, or null.</summary>
-    public string? Delete()
+    public string? Delete() => Delete(CurrentName);
+
+    /// <summary>Deletes scene file <paramref name="name"/>; when it's the open scene, also opens the first remaining scene, or a new Scene N. Returns why it was refused, or null.</summary>
+    public string? Delete(string name)
     {
         try
         {
-            Folder.DeleteScene(CurrentName);
+            Folder.DeleteScene(name);
         }
         catch (Exception e) when (SceneFolder.IsFileError(e))
         {
-            return $"Could not delete {CurrentName}: {e.Message}";
+            return $"Could not delete {name}: {e.Message}";
         }
+
+        if (name != CurrentName)
+            return null;
 
         CurrentName = string.Empty;
         debounce = null;
