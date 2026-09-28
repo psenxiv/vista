@@ -112,6 +112,7 @@ internal sealed class TrackEditorWindow : Window
         FollowTargetWindow followTarget,
         SceneFiles files,
         SetupWindow setup,
+        FilePickerWindow picker,
         EditorLayer layer
     )
         : base("Vista###vista-track-editor", ImGuiWindowFlags.MenuBar)
@@ -126,10 +127,10 @@ internal sealed class TrackEditorWindow : Window
         this.timing = timing;
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
-        menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup);
+        menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup, picker);
         this.guide = guide;
         scrub = new Scrubber(game);
-        hierarchy = new HierarchyPanel(game, files);
+        hierarchy = new HierarchyPanel(game, files, picker);
         playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
         SizeCondition = ImGuiCond.FirstUseEver;

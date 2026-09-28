@@ -46,6 +46,9 @@ internal sealed class SceneFiles
     /// <summary>The scene names in the folder, read now.</summary>
     public IReadOnlyList<string> Scenes() => library?.Scenes() ?? [];
 
+    /// <summary>The scene files the picker lists, with their track count, read now.</summary>
+    public IReadOnlyList<FileEntry> SceneEntries() => library?.Folder.SceneEntries() ?? [];
+
     /// <summary>Why <paramref name="name"/> can't name a scene, or with <paramref name="renaming"/> that name, or null.</summary>
     public string? NameRefusal(string name, string? renaming = null) =>
         library?.NameRefusal(name, renaming) ?? SceneNames.Refusal(name);
@@ -56,8 +59,14 @@ internal sealed class SceneFiles
     /// <summary>The name "Duplicate scene" suggests, read now; empty with no folder.</summary>
     public string CopySuggestion() => library?.CopySuggestion() ?? string.Empty;
 
+    /// <summary>The name "Duplicate scene" suggests for <paramref name="name"/>, read now; empty with no folder.</summary>
+    public string CopySuggestion(string name) => library?.CopySuggestion(name) ?? string.Empty;
+
     /// <summary>The preset names in the folder, read now.</summary>
     public IReadOnlyList<string> PresetNames() => library?.Folder.PresetNames() ?? [];
+
+    /// <summary>The preset files the picker lists, read now.</summary>
+    public IReadOnlyList<FileEntry> PresetEntries() => library?.Folder.PresetEntries() ?? [];
 
     /// <summary>Uses <paramref name="parent"/>'s vistaxiv folder, creating it, after saving the open scene where it was; a new folder opens its first scene.</summary>
     public string? Choose(string parent)
@@ -88,9 +97,18 @@ internal sealed class SceneFiles
 
     public string? Rename(string name) => Run(l => l.Rename(name));
 
+    /// <summary>Renames scene file <paramref name="from"/> to <paramref name="to"/>; when <paramref name="from"/> is the open scene, also updates its open name.</summary>
+    public string? Rename(string from, string to) => Run(l => l.Rename(from, to));
+
     public string? Duplicate(string name) => Run(l => l.Duplicate(name));
 
+    /// <summary>Copies scene file <paramref name="from"/> to <paramref name="to"/>; when <paramref name="from"/> is the open scene, saves it first and opens the copy.</summary>
+    public string? Duplicate(string from, string to) => Run(l => l.Duplicate(from, to));
+
     public string? Delete() => Run(l => l.Delete());
+
+    /// <summary>Deletes scene file <paramref name="name"/>; when it's the open scene, also opens the first remaining scene, or a new one.</summary>
+    public string? Delete(string name) => Run(l => l.Delete(name));
 
     /// <summary>Saves the open scene now if it has changed.</summary>
     public string? SaveNow() => Run(l => l.SaveNow());

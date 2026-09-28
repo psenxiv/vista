@@ -93,6 +93,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly GuideWindow guideWindow;
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
+    private readonly FilePickerWindow filePickerWindow;
 #if DEBUG
     private readonly SelfTestRunner selfTest;
 #endif
@@ -121,6 +122,7 @@ public sealed class Plugin : IDalamudPlugin
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(game.State, game.Characters);
         followTargetWindow = new FollowTargetWindow(game.State, game.Characters);
+        filePickerWindow = new FilePickerWindow(game, sceneFiles);
         trackEditor = new TrackEditorWindow(
             game,
             config,
@@ -132,6 +134,7 @@ public sealed class Plugin : IDalamudPlugin
             followTargetWindow,
             sceneFiles,
             setupWindow,
+            filePickerWindow,
             editorLayer
         );
 
@@ -142,6 +145,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(guideWindow);
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);
+        windows.AddWindow(filePickerWindow);
         windows.AddWindow(new WelcomeWindow(config, OpenTrackEditor));
         windows.AddWindow(setupWindow);
 

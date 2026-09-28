@@ -33,7 +33,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
 - `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, and Live's playlist scrub bar.
 - `Ui/Widgets`: the ImGui pieces the windows share.
-- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup and Welcome.
+- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup, Welcome and the scene and preset picker.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.
 
 ## Helper homes
@@ -110,8 +110,9 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Main/AddPointItems`: the three ways to add a point at the camera as menu items, shared by the Edit menu and the track row's add menu.
 - `Ui/Widgets/PoseGrid`: the Point and Camera windows' shared layout and fields.
 - `Ui/Widgets/BorderedField`, `PendingField`, `LiveDrag` and `TextEdit`: a bordered number field, a field drawn for a `PendingEdit`, a field previewed live as one undo step, and text edited in place; with `FieldDraw`, `PendingField` and `LiveDrag` run a field the caller draws.
-- `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name.
+- `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name, inside the item just drawn or an explicit rectangle.
 - `Ui/Widgets/CharacterPicker` and `Refusal`: the character drop-down, and telling the player why an action was refused (the log and a notification).
+- `Ui/Widgets/PromptDialog`, `NamePrompt` and `DeleteConfirm`: a modal's begin and Cancel, a name prompt (Ok or Replace, checked against a caller-given refusal and notice), and a delete confirmation; each instance keeps its own popup id.
 
 ### Colours
 

@@ -28,6 +28,9 @@ internal sealed class MainMenu
     private readonly CameraWindow camera;
     private readonly GuideWindow guide;
     private readonly SetupWindow setup;
+    private readonly FilePickerWindow picker;
+    private readonly NamePrompt namePrompt = new("scene");
+    private readonly DeleteConfirm deleteConfirm = new("scene");
 
     public MainMenu(
         GameSession game,
@@ -38,7 +41,8 @@ internal sealed class MainMenu
         TimingWindow timing,
         CameraWindow camera,
         GuideWindow guide,
-        SetupWindow setup
+        SetupWindow setup,
+        FilePickerWindow picker
     )
     {
         this.game = game;
@@ -51,20 +55,28 @@ internal sealed class MainMenu
         this.camera = camera;
         this.guide = guide;
         this.setup = setup;
+        this.picker = picker;
     }
 
     /// <summary>Draws the menu bar; View's Hierarchy and Playlist items flip <paramref name="showHierarchy"/> and <paramref name="showPlaylist"/>.</summary>
     public void Draw(ref bool showHierarchy, ref bool showPlaylist)
     {
-        using var bar = ImRaii.MenuBar();
-        if (!bar)
-            return;
-        var editing = session.Mode == CameraMode.Editing;
-        DrawScene(editing);
-        DrawEdit(editing);
-        DrawView(editing, ref showHierarchy, ref showPlaylist);
-        DrawPreview(editing);
-        DrawHelp();
+        using (var bar = ImRaii.MenuBar())
+        {
+            if (bar)
+            {
+                var editing = session.Mode == CameraMode.Editing;
+                DrawScene(editing);
+                DrawEdit(editing);
+                DrawView(editing, ref showHierarchy, ref showPlaylist);
+                DrawPreview(editing);
+                DrawHelp();
+            }
+        }
+
+        // Drawn outside the menu bar's own popup scope, so opening one of these doesn't close with it.
+        namePrompt.Draw();
+        deleteConfirm.Draw();
     }
 
     private void DrawScene(bool editing)
@@ -72,10 +84,39 @@ internal sealed class MainMenu
         using var menu = ImRaii.Menu("Scene");
         if (!menu)
             return;
+        var live = session.Mode == CameraMode.Live;
+        // Opening another scene loads it, which Live refuses.
+        if (Menu.Item("Open scene...", !live))
+            picker.Show(FilePickerKind.Scene);
+        if (Menu.Item("New scene..."))
+            namePrompt.Ask(
+                "New scene",
+                files.NewSuggestion(),
+                text => (files.NameRefusal(text), null),
+                name => Report(files.New(name))
+            );
+        if (Menu.Item("Rename scene..."))
+            namePrompt.Ask(
+                "Rename scene",
+                files.CurrentName,
+                text => (files.NameRefusal(text, renaming: files.CurrentName), null),
+                name => Report(files.Rename(name))
+            );
+        if (Menu.Item("Duplicate scene..."))
+            namePrompt.Ask(
+                "Duplicate scene",
+                files.CopySuggestion(),
+                text => (files.NameRefusal(text), null),
+                name => Report(files.Duplicate(name))
+            );
+        if (Menu.Item("Delete scene..."))
+            deleteConfirm.Ask(files.CurrentName, () => Report(files.Delete()));
+        ImGui.Separator();
         if (Menu.Item("Select scene anchor", editing && session.Scene.AnchorPlaced))
             Report(session.Selection.SelectSceneAnchor());
+        ImGui.Separator();
         // A new folder loads a scene, which Live refuses.
-        if (Menu.Item("Save folder...", session.Mode != CameraMode.Live))
+        if (Menu.Item("Save folder...", !live))
             Show(setup);
         if (Menu.Item("Open save folder", files.Ready))
             files.OpenFolder(presets: false);

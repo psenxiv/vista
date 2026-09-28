@@ -4,19 +4,21 @@ using Vista.Core.Display;
 
 namespace Vista.Plugin.Ui.Widgets;
 
-/// <summary>Text drawn inside a list row's selectable.</summary>
+/// <summary>Text drawn inside a list row's selectable, or an explicit rectangle for a row whose click area spans wider columns than the text's own.</summary>
 internal static class RowText
 {
     // The row whose name is scrolling, the frame it was last drawn hovered, and when its hover began.
-    private static Guid? hovered;
+    private static object? hovered;
     private static int hoveredFrame;
     private static double hoveredSince;
 
     /// <summary>Draws <paramref name="text"/> inside the item just drawn, row <paramref name="row"/>: centred on its height, inset by twice the frame padding, clipped to its first <paramref name="width"/> pixels, cut with an ellipsis, and scrolled while hovered.</summary>
-    public static void Draw(Guid row, string text, float width)
+    public static void Draw(object row, string text, float width) =>
+        Draw(row, text, ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), width);
+
+    /// <summary>Draws <paramref name="text"/> row <paramref name="row"/> in the rectangle from <paramref name="min"/> to <paramref name="max"/>'s height, clipped to its first <paramref name="width"/> pixels, cut with an ellipsis, and scrolled while the item just drawn is hovered.</summary>
+    public static void Draw(object row, string text, Vector2 min, Vector2 max, float width)
     {
-        var min = ImGui.GetItemRectMin();
-        var max = ImGui.GetItemRectMax();
         var padding = ImGui.GetStyle().FramePadding.X * 2f;
         var right = MathF.Min(max.X, min.X + width) - padding;
         var room = right - (min.X + padding);
@@ -27,7 +29,7 @@ internal static class RowText
         if (overflow > 0f && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             var frame = ImGui.GetFrameCount();
-            if (hovered != row || hoveredFrame < frame - 1)
+            if (!row.Equals(hovered) || hoveredFrame < frame - 1)
                 hoveredSince = ImGui.GetTime();
             hovered = row;
             hoveredFrame = frame;
