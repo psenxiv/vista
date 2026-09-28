@@ -1,6 +1,6 @@
 # The Point window
 
-The **Point** window opens when you select a point, and shows its numbers. It closes while several points are selected. Close it to clear the selection. It also opens for anchors and the Look At point.
+The **Point** window opens when you select a point, and shows its numbers. It also opens for anchors and the Look At point.
 
 ## The gizmo
 
@@ -20,9 +20,7 @@ Press {key:GizmoToggle} to switch between moving and rotating.
 - {icon:SyncAlt} **Rotation**: **Pitch**, **Yaw** and **Roll**, in degrees.
 - **FoV**: the field of view, in degrees. Smaller zooms in.
 
-Drag a field left or right to change it, or double-click it to type. {icon:History} **Reset to the camera's field of view** copies the camera's FoV to the point.
-
-With **Direction of travel** or **Look At** aim, the track decides where the camera faces, so **Pitch** and **Yaw** can't be changed.
+{icon:History} **Reset to the camera's field of view** copies the camera's FoV to the point.
 
 ## Copy and paste
 

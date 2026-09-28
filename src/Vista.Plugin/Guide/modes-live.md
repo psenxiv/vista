@@ -1,8 +1,8 @@
 # Live
 
-Live is for filming. Vista plays the [playlist](playlist.md) through the camera, one track after another. The word LIVE pulses on the top row.
+Live is for filming. Vista plays the [playlist](playlist.md) through the camera, one track after another.
 
-To go Live, the playlist needs a track with points. Choosing Live waits at the first frame until you play.
+Choosing Live waits at the first frame until you play.
 
 ## Playing
 
@@ -13,19 +13,11 @@ To go Live, the playlist needs a track with points. Choosing Live waits at the f
 
 At the end of the playlist the camera holds its last frame, unless {icon:Repeat} **Loop playlist** is on.
 
-## The scrub bar
-
-In Live the scrub bar covers the whole playlist. Drag it to move anywhere in the playlist, and scroll over it to zoom in and out around the mouse.
-
-Each entry has its own stretch, as wide as its share of the time, and the entry that is playing is lit. Hover a stretch to see its entry's number and track.
-
-An entry that repeats has a longer stretch, with a faint line where each repeat starts. An entry that plays until you stop ends the bar and shows once.
-
-The time beside the bar is how far into the playlist you are, and its length.
+The scrub bar covers the whole playlist.
 
 ## Hiding the game UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** on the top row, or in the **View** menu, to hide the game's UI while a shot plays. Press {key:RestoreGameUi} to bring the UI back. It hides again when you play. Vista remembers the setting.
+Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI while a shot plays. Press {key:RestoreGameUi} to bring it back. It hides again when you play.
 
 ## Leaving Live
 

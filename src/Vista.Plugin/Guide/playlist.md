@@ -1,6 +1,6 @@
 # Playlist
 
-The playlist is the list of tracks Live plays, top to bottom, cutting from one to the next. It is the panel on the right of the **Vista** window. {icon:ListOl} **Show playlist** on the top row, or **Playlist** in the **View** menu, shows or hides it. Drag its left edge to make it wider or narrower.
+The playlist is the list of tracks Live plays, top to bottom, cutting from one to the next. It is the panel on the right of the **Vista** window.
 
 You change the playlist in Edit. A track can be in it more than once, or not at all.
 
@@ -11,24 +11,19 @@ You change the playlist in Edit. A track can be in it more than once, or not at 
 | {icon:Plus} | **Add to playlist** | Adds a track to the end. |
 | | Drag tracks from the Hierarchy | Adds them where you drop them. |
 | | Click an entry | Edits its track. |
-| | Drag an entry | Changes the order. |
-| {icon:Times} | **Remove from playlist** | Removes the entry. Shows on hover. |
+| {icon:Times} | **Remove from playlist** | Removes the entry. |
 | {icon:Repeat} | **Loop playlist** | Starts again from the top after the last entry. |
 
 An accent bar at the left edge marks each entry that plays the track you are editing.
 
-Select several tracks to drag them in at once, or several entries to reorder or remove them together. `Ctrl` + click and `Shift` + click select entries without changing the track you are editing. See [Selecting several](tracks-selecting.md).
+To add or change several at once, see [Selecting several](tracks-selecting.md).
 
 ## Repeats
 
-The **Repeats** cell at the end of each entry sets how many times it plays before Live moves on. Drag it left or right, double-click it to type a number, or scroll over it.
+The **Repeats** cell sets how many times an entry plays before Live moves on.
 
 | Shows | Means |
 |---|---|
 | A number | Plays that many times. For **Ping-pong**, one time is there and back. |
 | — | Plays once. |
 | ∞ | The track has **Loop** on, so it plays until you stop. |
-
-Clear the number to make the entry follow its track again.
-
-In Live, the top of the playlist shows which entry is playing.

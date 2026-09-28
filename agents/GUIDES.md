@@ -24,6 +24,7 @@ Write the way a patient friend would explain it sitting next to them, briefly.
 - **Error handling and edge cases.** Don't describe what happens when a character isn't found, a button is greyed out, an action is refused, or a value is clamped. The reader finds these out by using Vista, and they rarely matter.
 - **Limits and ranges**, unless the reader has to choose a value and would otherwise guess wrong.
 - **Where a control is and what it looks like** when an icon already shows it. Show the icon.
+- **How to work a control.** Don't list the ways to change a field or use a bar (drag, double-click to type, scroll, hover, drag an edge to resize). Say what it's for; the reader works out the rest.
 - **Obvious consequences.** "**Level camera roll** levels the camera's roll" is the whole description. Don't add "so the horizon is flat" or "you don't need the window open to do this".
 - **How it works inside:** class names, file names, maths, data formats.
 - **History and plans:** what it used to do, phase numbers, versions, features that don't exist yet.

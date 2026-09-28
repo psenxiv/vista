@@ -6,23 +6,20 @@ A scene holds several tracks. You edit one at a time. The others are drawn in gr
 
 ## The Hierarchy
 
-The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} **Hide hierarchy** / **Show hierarchy** on the top row, or **Hierarchy** in the **View** menu, shows or hides it. Drag its right edge to make it wider or narrower. The scene you have open is named in the **Vista** window's title bar.
-
-Beside the Scene heading are {icon:Anchor} **Select scene anchor** and {icon:Plus} **Add track or preset**, which opens a menu with **Add track** and **Add preset**.
+The Hierarchy is the panel on the left of the **Vista** window. It lists the scene's tracks.
 
 | | Control | Does |
 |---|---|---|
+| {icon:Plus} | **Add track or preset** | Adds a new track or a preset. |
+| {icon:Anchor} | **Select scene anchor** | See [Scenes and anchors](scenes.md). |
 | | Click a name | Edits that track. |
 | | Double-click a name | Edits that track and flies the camera to its first point. |
-| | Drag a name | Changes the order. |
 | {icon:Eye} | **Hide** / **Show** | Hides or shows the track in the world. |
 | {icon:Anchor} | **Select track anchor** | See [Scenes and anchors](scenes.md). |
 
-The buttons on a row show when you hover over it. A hidden track always shows {icon:EyeSlash}.
+Right-click a name to rename, duplicate or delete the track, and more.
 
-Right-click a name to **Rename**, **Duplicate**, **Add to playlist**, **Save as preset** or **Delete** the track.
-
-`Ctrl` + click or `Shift` + click names to select several tracks. Drag points from the points table onto a track to move them there, or below the tracks to make a new one. See [Selecting several](tracks-selecting.md).
+To select or move several, see [Selecting several](tracks-selecting.md).
 
 ## The track row
 

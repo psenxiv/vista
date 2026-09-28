@@ -12,7 +12,7 @@ Click {icon:Crosshairs} **Select aim** on the track row to choose:
 | **Watch Target** | At a character. See [Watch Target](aim-watch-target.md). |
 | **Follow Target** | From beside a character, travelling with them. See [Follow Target](aim-follow-target.md). |
 
-For **Watch Target** and **Follow Target**, click {icon:PencilAlt} **Edit Watch Target** or **Edit Follow Target** beside the choice in the menu to reopen its window.
+{icon:PencilAlt} beside **Watch Target** or **Follow Target** in the menu reopens its window.
 
 With **Direction of travel**, the menu also shows **Look ahead**: how far ahead along the path the camera looks, in yalms. The camera turns into corners before it reaches them. At 0 it faces straight along the path.
 
@@ -22,4 +22,4 @@ With **Recorded aim**, change a point's aim with **Pitch** and **Yaw** in the [P
 
 ## Seeing where it turns
 
-Press {key:ColourByTurnSpeed} in Edit or View, or tick **Colour path by turn speed** in the **View** menu, to colour the path of the track you're editing by how fast the camera turns. It goes from the path's usual colour to yellow, then red where it turns hardest. Press {key:ColourByTurnSpeed} again to go back.
+Press {key:ColourByTurnSpeed} to colour the edited track's path by how fast the camera turns: yellow, then red where it turns hardest.

@@ -2,7 +2,7 @@
 
 With **Look At**, the camera always looks at one spot, wherever it is on the track. Use it to keep a building or a spot on the ground in the middle of the shot.
 
-The spot is the Look At point. It first appears 10 yalms in front of the track's first point, or of the camera if the track has no points, and shows in the world as a crosshair with a faint line to the first point.
+The spot is the Look At point, shown in the world as a crosshair.
 
 ## Moving it
 

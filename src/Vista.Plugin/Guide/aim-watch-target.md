@@ -7,10 +7,8 @@ With **Watch Target**, the camera moves along the track as usual but keeps turni
 Choosing **Watch Target** opens the **Watch Target** window.
 
 1. Click **Choose a character**.
-2. Pick a name from the characters nearby. Type in **Search** to find someone.
+2. Pick a name from the characters nearby.
 3. Click **Done**.
-
-The aim button {icon:Crosshairs} turns the accent colour when the character is found, and red when not.
 
 ## Settings
 

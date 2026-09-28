@@ -9,19 +9,19 @@ Play a track to watch its shot. In Edit, playing shows only the track you are ed
 
 Flying or changing the track stops playback, and you fly on from that frame.
 
-Drag the scrub bar beside the buttons to move through the track by hand. The time beside it is how far into the track you are, and its length. Scroll over the bar to zoom in and out around the mouse.
+The scrub bar beside the buttons moves through the track.
 
 ## Ghost camera
 
 The ghost camera lets you watch a track play from outside it, while you keep your own view. Use it to see how a move travels through the scene.
 
-Turn on **Ghost camera** in the **Preview** menu. When you play the track in Edit, an outline of a camera flies along it in the world instead of your camera, and you can keep flying while it plays. Vista's markers stay on screen, and dragging the scrub bar moves the ghost.
+Turn on **Ghost camera** in the **Preview** menu. When you play the track in Edit, a camera outline flies along it while you keep your own view.
 
 ## Playback speed
 
 Playback speed slows a track down or speeds it up while you watch it in Edit, so you can study a quick move closely or skim a long one. It doesn't change the shot, and Live always plays at normal speed.
 
-Drag **Playback speed** in the **Preview** menu, where 1.00x is normal speed, or `Ctrl` + click it to type a speed.
+Set it with **Playback speed** in the **Preview** menu.
 
 ## Direction
 
@@ -35,6 +35,6 @@ Drag **Playback speed** in the **Preview** menu, where 1.00x is normal speed, or
 
 ## Loop
 
-Click {icon:Repeat} **Loop** to play the track over and over. Click it again, now **Play once**, to play it once.
+{icon:Repeat} **Loop** plays the track over and over.
 
 In Live, a track with **Loop** on plays until you stop it. See [Playlist](playlist.md).

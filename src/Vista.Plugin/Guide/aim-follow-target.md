@@ -21,5 +21,3 @@ A Follow Target track has one point, which sets where the camera sits next to th
 | **Distance** | How far away the camera is. |
 | **Height** | How high the camera is above their feet. |
 | **Angle** | Where round them the camera sits. 0 is behind, 90 is to their right. |
-
-You can also move the point with the gizmo or the [Point window](tracks-point-window.md).

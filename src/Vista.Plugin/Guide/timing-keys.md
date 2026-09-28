@@ -1,6 +1,6 @@
 # Keys and easing
 
-Change the shape of the line in the timing graph to make the camera ease into a move, stop at a point, or reach a point at an exact moment. You can only change it in Edit.
+Change the shape of the line in the timing graph to make the camera ease into a move, stop at a point, or reach a point at an exact moment.
 
 ## Easing a leg
 
