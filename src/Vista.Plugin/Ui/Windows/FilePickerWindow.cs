@@ -39,7 +39,7 @@ internal sealed class FilePickerWindow : Window
     {
         session = game.State;
         this.files = files;
-        files.Changed += () =>
+        files.Changed += (_, _) =>
         {
             if (IsOpen)
                 Refresh();
@@ -176,11 +176,7 @@ internal sealed class FilePickerWindow : Window
             kind == FilePickerKind.Scene
                 ? "No scenes yet."
                 : "No presets yet. Right-click a track and choose Save as preset.";
-        var size = ImGui.CalcTextSize(text);
-        Layout.CentreRemaining(size.Y);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - size.X) / 2f));
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-            ImGui.TextUnformatted(text);
+        Layout.CentredText(text, UiColours.Muted());
     }
 
     private float ActionsColumnWidth() =>

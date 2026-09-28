@@ -32,7 +32,7 @@ internal sealed class SceneFiles
     public event EventHandler? SetupNeeded;
 
     /// <summary>Raised after a scene or preset is written, renamed, duplicated, deleted or added, or the save folder changes.</summary>
-    public event Action? Changed;
+    public event EventHandler? Changed;
 
     /// <summary>The folder chosen before, or null; where the folder picker starts.</summary>
     public string? Chosen => config.SaveFolder;
@@ -208,7 +208,7 @@ internal sealed class SceneFiles
 
         config.DemoAdded = true;
         config.Save();
-        Changed?.Invoke();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private string? Run(Func<SceneLibrary, string?> action)
@@ -223,7 +223,7 @@ internal sealed class SceneFiles
         }
 
         if (refusal is null)
-            Changed?.Invoke();
+            Changed?.Invoke(this, EventArgs.Empty);
         return refusal;
     }
 
@@ -235,7 +235,7 @@ internal sealed class SceneFiles
         try
         {
             action(l.Folder);
-            Changed?.Invoke();
+            Changed?.Invoke(this, EventArgs.Empty);
             return null;
         }
         catch (Exception e) when (SceneFolder.IsFileError(e))

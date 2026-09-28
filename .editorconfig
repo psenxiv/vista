@@ -32,8 +32,6 @@ dotnet_diagnostic.MA0011.severity = none
 dotnet_diagnostic.MA0015.severity = none
 # Type named after its namespace: Dalamud's Plugin class lives in Vista.Plugin
 dotnet_diagnostic.MA0049.severity = none
-# Event delegates must take (sender, args): a no-argument Action is plainer for a parameterless notification
-dotnet_diagnostic.MA0046.severity = none
 
 [tests/**.cs]
 # Comparers on string assertions
