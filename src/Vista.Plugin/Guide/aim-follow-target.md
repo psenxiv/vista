@@ -8,7 +8,7 @@ A Follow Target track has one point, which sets where the camera sits next to th
 
 1. Start a new track and choose **Follow Target** in {icon:Crosshairs} **Select aim**.
 2. In the **Follow Target** window, choose the character, as for [Watch Target](aim-watch-target.md).
-3. Fly to where the camera should sit and press `Backtick` to add the point.
+3. Fly to where the camera should sit and press {key:AddToEnd} to add the point.
 
 ## Settings
 

@@ -1,26 +1,27 @@
 # Hotkeys
 
-These work in Edit mode. `Space` and `Ctrl + Space` also work in Live, and `G` in View.
+These work in Edit mode. {key:Play} and {key:Restart} also work in Live, and {key:ColourByTurnSpeed} in View. {key:RestoreGameUi} only works in Live.
 
 | Key | Does |
 |---|---|
-| `W` `A` `S` `D` | Fly forward, left, back, right |
-| `E` / `Q` | Fly up / down |
-| `Ctrl + Q` / `Ctrl + E` | Roll left / right |
-| `Alt + R` | Level the camera's roll |
-| `Shift` | Fly faster while held |
-| `Space` | Play / pause |
-| `Ctrl + Space` | Restart from the beginning |
+| {key:FlyForward} {key:FlyLeft} {key:FlyBack} {key:FlyRight} | Fly forward, left, back, right |
+| {key:FlyUp} / {key:FlyDown} | Fly up / down |
+| {key:RollLeft} / {key:RollRight} | Roll left / right |
+| {key:LevelRoll} | Level the camera's roll |
+| {key:FlyFaster} | Fly faster while held |
+| {key:Play} | Play / pause |
+| {key:Restart} | Restart from the beginning |
+| {key:RestoreGameUi} | Bring the game's UI back, in Live |
 | Mouse wheel | Change fly speed |
 | Mouse | Look in any direction |
-| `Backtick` | Add a point at the camera, at the end of the track |
-| `Alt + Backtick` | Add a point after the selected one |
-| `Ctrl + Backtick` | Replace the selected point with the camera |
-| `R` | Switch the gizmo between move and rotate |
-| `G` | Colour the path by how fast the camera turns |
+| {key:AddToEnd} | Add a point at the camera, at the end of the track |
+| {key:AddAfterSelected} | Add a point after the selected one |
+| {key:OverwriteSelected} | Overwrite the selected point with the camera |
+| {key:GizmoToggle} | Switch the gizmo between move and rotate |
+| {key:ColourByTurnSpeed} | Colour the path by how fast the camera turns |
 | `Alt` while dragging an anchor | Move the anchor alone, leaving its points in place |
 | `Ctrl` while dragging a timing key | Move every later key with it, lengthening or shortening the track |
 | `Ctrl` + click | Add to the selection, or remove from it |
 | `Shift` + click | Add everything from the last click to this one |
-| `Delete` / `Backspace` | Delete the selected points |
-| `Ctrl + Z` / `Ctrl + Y` | Undo / redo |
+| {key:DeleteSelectedPoints} | Delete the selected points |
+| {key:Undo} / {key:Redo} | Undo / redo |

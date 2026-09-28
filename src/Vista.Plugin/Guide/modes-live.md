@@ -8,8 +8,8 @@ To go Live, the playlist needs a track with points. Choosing Live waits at the f
 
 | Key | Button | Does |
 |---|---|---|
-| `Space` | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses. |
-| `Ctrl + Space` | {icon:StepBackward} **Restart** | Plays the playlist from the start. |
+| {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses. |
+| {key:Restart} | {icon:StepBackward} **Restart** | Plays the playlist from the start. |
 
 At the end of the playlist the camera holds its last frame, unless {icon:Repeat} **Loop playlist** is on.
 
@@ -25,7 +25,7 @@ The time beside the bar is how far into the playlist you are, and its length.
 
 ## Hiding the game UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** on the top row, or in the **View** menu, to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play. Vista remembers the setting.
+Turn on {icon:EyeSlash} **Hide game UI when Live** on the top row, or in the **View** menu, to hide the game's UI while a shot plays. Press {key:RestoreGameUi} to bring the UI back. It hides again when you play. Vista remembers the setting.
 
 ## Leaving Live
 

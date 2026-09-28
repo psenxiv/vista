@@ -19,12 +19,12 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 
 | Item | Does |
 |---|---|
-| **Undo** | Undoes your last change (`Ctrl + Z`). |
-| **Redo** | Redoes it (`Ctrl + Y`). |
+| **Undo** | Undoes your last change ({key:Undo}). |
+| **Redo** | Redoes it ({key:Redo}). |
 | **Add point** | Adds a point at the camera. See [Adding points](tracks-adding-points.md). |
 | **Duplicate point** | Copies each selected point. See [Adding points](tracks-adding-points.md). |
-| **Delete selected points** | Deletes the selected points (`Delete`). |
-| **Level camera roll** | Levels the camera's roll (`Alt + R`). |
+| **Delete selected points** | Deletes the selected points ({key:DeleteSelectedPoints}). |
+| **Level camera roll** | Levels the camera's roll ({key:LevelRoll}). |
 
 ## View
 
@@ -36,15 +36,15 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Camera** | Opens or closes [the Camera window](camera-window.md). |
 | **Track names** | Shows or hides the names above track anchors. See [Scenes and anchors](scenes.md). |
 | **Track name size** | Makes those names bigger or smaller. |
-| **Colour path by turn speed** | Colours the path by how fast the camera turns (`G`). See [Aim](aim.md). |
+| **Colour path by turn speed** | Colours the path by how fast the camera turns ({key:ColourByTurnSpeed}). See [Aim](aim.md). |
 | **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |
 
 ## Preview
 
 | Item | Does |
 |---|---|
-| **Play / Pause** | Plays or pauses (`Space`). |
-| **Restart** | Plays from the beginning (`Ctrl + Space`). |
+| **Play / Pause** | Plays or pauses ({key:Play}). |
+| **Restart** | Plays from the beginning ({key:Restart}). |
 | **Ghost camera** | Plays the track on a camera outline in the world while you keep your own view. See [Playing a track](tracks-playing.md). |
 | **Playback speed** | Sets how fast the track plays in Edit. See [Playing a track](tracks-playing.md). |
 

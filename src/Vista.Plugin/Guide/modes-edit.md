@@ -6,10 +6,10 @@ Edit is where you build your shots. You fly a free camera, add points and change
 
 | Key | Does |
 |---|---|
-| `W` `A` `S` `D` | Fly forward, left, back and right |
-| `E` / `Q` | Fly up / down |
-| `Ctrl + Q` / `Ctrl + E` | Roll left / right |
-| `Shift` | Fly faster while held |
+| {key:FlyForward} {key:FlyLeft} {key:FlyBack} {key:FlyRight} | Fly forward, left, back and right |
+| {key:FlyUp} / {key:FlyDown} | Fly up / down |
+| {key:RollLeft} / {key:RollRight} | Roll left / right |
+| {key:FlyFaster} | Fly faster while held |
 | Mouse | Look in any direction |
 | Mouse wheel | Change fly speed |
 
@@ -27,8 +27,8 @@ The row under the menu bar holds the controls you use most. Everything else is i
 |---|---|---|
 | {icon:Sitemap} | **Show hierarchy** | Shows or hides the [Hierarchy](tracks.md). |
 | {icon:ListOl} | **Show playlist** | Shows or hides the [Playlist](playlist.md). |
-| {icon:Undo} | **Undo** | Undoes your last change. `Ctrl + Z` does the same. |
-| {icon:Redo} | **Redo** | Redoes it. `Ctrl + Y` does the same. |
+| {icon:Undo} | **Undo** | Undoes your last change. {key:Undo} does the same. |
+| {icon:Redo} | **Redo** | Redoes it. {key:Redo} does the same. |
 | {icon:ChartLine} | **Timing** | Opens the [timing graph](timing-graph.md). |
 | | **Fly speed** | Sets how fast you fly. |
 | {icon:EyeSlash} | **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |

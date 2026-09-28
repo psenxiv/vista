@@ -19,7 +19,7 @@ Each track anchor shows its track's name above it. Untick **Track names** in the
 
 1. Select it. For the scene anchor, click it in the world, choose **Select scene anchor** in the **Scene** menu, or click {icon:Anchor} **Select scene anchor** at the top of the Hierarchy. For a track anchor, click it in the world or click {icon:Anchor} **Select track anchor** on its row in the Hierarchy.
 2. Drag the gizmo's arrows to move it. With {icon:Cube} **Move (local)** in the **Point** window, the arrows follow the way the anchor faces.
-3. To turn it, click {icon:SyncAlt} **Rotate** in the **Point** window or press `R`, then drag the ring.
+3. To turn it, click {icon:SyncAlt} **Rotate** in the **Point** window or press {key:GizmoToggle}, then drag the ring.
 
 You can also type its **X**, **Y**, **Z** and **Yaw** in the **Point** window.
 

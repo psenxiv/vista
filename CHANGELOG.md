@@ -2,11 +2,11 @@
 
 ## X.Y.Z.N
 
-- The eye button is back on the top row, and its checkbox moved from the **Scene** menu to the **View** menu: turn it on to hide the game UI while Live plays.
-- Scenes are opened, renamed, duplicated, deleted and created from the **Scene** menu and a searchable **Open scene** list, replacing the old drop-down at the top of the Hierarchy.
-- Presets are added the same way, from **Add preset** in the Hierarchy's **+** menu.
-- The **Vista** window's title bar now shows the open scene's name.
-- **Save folder** in the **Scene** menu is now **Select save folder**.
+- The eye button is back on the top row, and its checkbox moved from the Scene menu to the View menu: turn it on to hide the game UI while Live plays.
+- Scenes are opened, renamed, duplicated, deleted and created from the Scene menu and a searchable Open scene list, replacing the old drop-down at the top of the Hierarchy.
+- Presets are added the same way, from Add preset in the Hierarchy's + menu.
+- The Vista window's title bar now shows the open scene's name.
+- Save folder in the Scene menu is now Select save folder.
 - An empty playlist, and a track with no points, now say how to add to them.
 - Buttons with a hotkey now show it in their tooltip.
 

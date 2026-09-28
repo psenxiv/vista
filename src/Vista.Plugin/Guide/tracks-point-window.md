@@ -12,7 +12,7 @@ A gizmo appears on the selected point in the world. Drag its handles to move or 
 | {icon:Cube} | **Move (local)** | Arrows along the point's own facing. |
 | {icon:SyncAlt} | **Rotate** | Rings to turn and roll the point. |
 
-Press `R` to switch between moving and rotating.
+Press {key:GizmoToggle} to switch between moving and rotating.
 
 ## The fields
 

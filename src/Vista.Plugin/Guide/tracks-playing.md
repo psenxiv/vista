@@ -4,8 +4,8 @@ Play a track to watch its shot. In Edit, playing shows only the track you are ed
 
 | Key | Button | Does |
 |---|---|---|
-| `Space` | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays from the scrub bar, or stops. |
-| `Ctrl + Space` | {icon:StepBackward} **Restart** | Plays from the beginning. |
+| {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays from the scrub bar, or stops. |
+| {key:Restart} | {icon:StepBackward} **Restart** | Plays from the beginning. |
 
 Flying or changing the track stops playback, and you fly on from that frame.
 
