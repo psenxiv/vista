@@ -48,7 +48,15 @@ internal sealed class HierarchyPanel
         var name = files.CurrentName;
         var headerStart = ImGui.GetCursorPosX();
         ImGui.Dummy(new Vector2(headerWidth, ImGui.GetFrameHeight()));
-        RowText.Draw(HeaderRow, name.Length > 0 ? name : "Scene", headerWidth);
+        // A selectable reaches half the item spacing left of the cursor, so start there to line up with the track names.
+        var reach = MathF.Floor(ImGui.GetStyle().ItemSpacing.X * 0.5f);
+        RowText.Draw(
+            HeaderRow,
+            name.Length > 0 ? name : "Scene",
+            ImGui.GetItemRectMin() - new Vector2(reach, 0f),
+            ImGui.GetItemRectMax(),
+            headerWidth
+        );
         ImGui.SameLine();
         ImGui.SetCursorPosX(headerStart + headerWidth + ImGui.GetStyle().ItemSpacing.X);
 
