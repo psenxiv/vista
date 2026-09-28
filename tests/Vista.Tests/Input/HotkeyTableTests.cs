@@ -1,3 +1,4 @@
+using System.Reflection;
 using Vista.Core.Input;
 using Xunit;
 
@@ -59,5 +60,19 @@ public class HotkeyTableTests
     {
         Assert.Equal(HotkeyTable.Restart, HotkeyTable.Find("Restart"));
         Assert.Null(HotkeyTable.Find("Nope"));
+    }
+
+    [Fact]
+    public void AllListsExactlyThePublicStaticEntriesAndEachIsFindable()
+    {
+        var fields = typeof(HotkeyTable)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.FieldType == typeof(HotkeyEntry))
+            .Select(field => (HotkeyEntry)field.GetValue(null)!)
+            .ToArray();
+
+        Assert.Equal(fields.ToHashSet(), HotkeyTable.All.ToHashSet());
+        foreach (var entry in fields)
+            Assert.Equal(entry, HotkeyTable.Find(entry.Name));
     }
 }

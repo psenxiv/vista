@@ -11,7 +11,7 @@ These work in Edit mode. {key:Play} and {key:Restart} also work in Live, and {ke
 | {key:FlyFaster} | Fly faster while held |
 | {key:Play} | Play / pause |
 | {key:Restart} | Restart from the beginning |
-| {key:RestoreGameUi} | Bring the game's UI back, in Live |
+| {key:RestoreGameUi} | Bring back the game UI Vista hid |
 | Mouse wheel | Change fly speed |
 | Mouse | Look in any direction |
 | {key:AddToEnd} | Add a point at the camera, at the end of the track |

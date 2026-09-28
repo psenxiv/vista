@@ -126,7 +126,13 @@ public static partial class GuideMarkdown
             {
                 if (k > 0)
                     plain.Append(" + ");
-                Add(keys[k], RunStyle.Key);
+                var alternates = keys[k].Split(" / ");
+                for (var a = 0; a < alternates.Length; a++)
+                {
+                    if (a > 0)
+                        plain.Append(" / ");
+                    Add(alternates[a], RunStyle.Key);
+                }
             }
         }
 
@@ -159,7 +165,7 @@ public static partial class GuideMarkdown
                 && HotkeyTable.Find(keyTag.Groups["name"].Value) is { } entry
             )
             {
-                Add(entry.Hotkey.DisplayName, RunStyle.Key);
+                AddSpan(entry.Hotkey.DisplayName);
                 i += keyTag.Length;
             }
             else if (text[i] == '{' && IconTag().Match(text, i) is { Success: true } icon && icon.Index == i)

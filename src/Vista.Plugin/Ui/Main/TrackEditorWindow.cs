@@ -1168,7 +1168,11 @@ internal sealed class TrackEditorWindow : Window
             Report(session.DuplicatePoints(points));
         }
 
-        if (Menu.Item("Delete", shortcut: HotkeyTable.DeleteSelectedPoints.Hotkey.DisplayName))
+        // The shortcut deletes Selection.Points, so it only belongs on the menu when its points are that selection.
+        var shortcut = points.SequenceEqual(session.Selection.Points)
+            ? HotkeyTable.DeleteSelectedPoints.Hotkey.DisplayName
+            : "";
+        if (Menu.Item("Delete", shortcut: shortcut))
         {
             fields.Clear();
             Report(session.DeletePoints(points));

@@ -144,8 +144,17 @@ public class GuideMarkdownTests
     public void AKeyTagBecomesAKeyRunNamedByTheTableEntrysDisplayName()
     {
         Assert.Equal(
-            [P("Press "), K("Ctrl + Space"), P(" to restart.")],
+            [P("Press "), K("Ctrl"), P(" + "), K("Space"), P(" to restart.")],
             GuideMarkdown.Inline("Press {key:Restart} to restart.")
+        );
+    }
+
+    [Fact]
+    public void AKeyTagWithAnAlternateBecomesTwoKeyRunsJoinedByAPlainSlash()
+    {
+        Assert.Equal(
+            [P("Press "), K("Delete"), P(" / "), K("Backspace"), P(" to delete.")],
+            GuideMarkdown.Inline("Press {key:DeleteSelectedPoints} to delete.")
         );
     }
 
