@@ -105,6 +105,9 @@ internal sealed class TrackEditorWindow : Window
     private float? loopX;
     private float? trashRight;
 
+    // Whether the points list scrolled last frame, so its width can leave room for the scrollbar's inset.
+    private bool pointsScroll;
+
     public TrackEditorWindow(
         GameSession game,
         Configuration config,
@@ -715,8 +718,9 @@ internal sealed class TrackEditorWindow : Window
         // The header table is drawn last, at the reserved position above, once the rows table's own width is known.
         ImGui.SetCursorPosY(top.Y + headerHeight);
         var rowsWidth = 0f;
-        if (ImGui.BeginChild("points", new Vector2(0f, height - headerHeight)))
+        if (ImGui.BeginChild("points", new Vector2(PointsWidth(), height - headerHeight)))
         {
+            pointsScroll = ImGui.GetScrollMaxY() > 0f;
             using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
             // Measured here so a scrollbar this child reserves narrows the header to match.
             rowsWidth = ImGui.GetContentRegionAvail().X;
@@ -724,7 +728,8 @@ internal sealed class TrackEditorWindow : Window
                 ImGui.BeginTable(
                     "point-table",
                     7,
-                    ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.PadOuterX
+                    ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.PadOuterX,
+                    new Vector2(rowsWidth, 0f)
                 )
             )
             {
@@ -761,6 +766,17 @@ internal sealed class TrackEditorWindow : Window
         }
 
         ImGui.SetCursorPos(bottom);
+    }
+
+    /// <summary>The points list's width, leaving the same margin on the right as on the left, scrollbar included.</summary>
+    private float PointsWidth()
+    {
+        var left = ImGui.GetWindowPos().X;
+        var start = ImGui.GetCursorScreenPos().X;
+        var right = left + ImGui.GetWindowSize().X - (start - left);
+        // ImGui insets a scrollbar's grab from its track by up to 3 pixels.
+        var inset = pointsScroll ? MathF.Min(3f, MathF.Floor((ImGui.GetStyle().ScrollbarSize - 2f) * 0.5f)) : 0f;
+        return right + inset - start;
     }
 
     /// <summary>The header table pinned above the scrolling rows: given the rows table's own width so their columns line up exactly, scrollbar included.</summary>
