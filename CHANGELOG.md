@@ -1,5 +1,9 @@
 # Changelog
 
+## X.Y.Z.N
+
+- The Camera window button is back on the top row, next to the fly speed slider.
+
 ## 0.13.0.1
 
 - The eye button is back on the top row, and its checkbox moved from the Scene menu to the View menu: turn it on to hide the game UI while Live plays.

@@ -79,6 +79,7 @@ internal sealed class TrackEditorWindow : Window
 
     private readonly GameSession game;
     private readonly SessionState session;
+    private readonly CameraWindow camera;
     private readonly SceneFiles files;
     private readonly Configuration config;
     private bool aimMenuOpen;
@@ -126,6 +127,7 @@ internal sealed class TrackEditorWindow : Window
     {
         this.game = game;
         session = game.State;
+        this.camera = camera;
         this.config = config;
         this.files = files;
         config.HierarchyWidth = PanelWidth.Clamp(config.HierarchyWidth);
@@ -336,7 +338,9 @@ internal sealed class TrackEditorWindow : Window
 
         if (editing)
         {
-            AlignTo(FlySpeedStart(), gap);
+            AlignTo(FlySpeedStart() - IconButton.Width(FontAwesomeIcon.Camera) - ImGui.GetStyle().ItemSpacing.X, gap);
+            IconButton.WindowToggle("camera", FontAwesomeIcon.Camera, "Camera", camera);
+            ImGui.SameLine();
             DrawFlySpeed();
         }
 
@@ -1130,11 +1134,12 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.Undo)
             + IconButton.Width(FontAwesomeIcon.Redo)
             + IconButton.Width(FontAwesomeIcon.ChartLine)
+            + IconButton.Width(FontAwesomeIcon.Camera)
             + IconButton.Width(FontAwesomeIcon.EyeSlash)
             + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 9f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 10f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));
