@@ -27,4 +27,4 @@ Hold `Alt` while you drag the gizmo to move the anchor alone, leaving everything
 
 To move a whole scene somewhere new, move the scene anchor.
 
-To put the selected anchor exactly where you are standing, choose **Move anchor to me** in the **Scene** menu, then **With its points** to bring everything attached along, or **Anchor only** to leave it where it is.
+To put the selected anchor exactly where you are standing, choose **Move anchor to me** in the **Scene** menu, then **With its points** to bring everything attached along, or **Anchor only** to leave everything attached where it is.
