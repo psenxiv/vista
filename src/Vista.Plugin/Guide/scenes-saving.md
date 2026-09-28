@@ -22,7 +22,7 @@ Undo starts fresh each time you open a scene.
 
 The first time you open Vista, it asks where to save. Vista makes a folder called vistaxiv inside the folder you choose. Each scene is a file named after it, in the scenes folder inside vistaxiv. To share a scene, share its file. To use a scene someone sent you, put its file in that scenes folder.
 
-**Select save folder** in the **Scene** menu changes where Vista saves.
+**Select save folder** in the **Scene** menu changes where Vista saves. If the old folder has gone, the scene you have open moves to the new one.
 
 ## The demo scene
 

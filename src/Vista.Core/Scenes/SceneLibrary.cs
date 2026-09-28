@@ -141,6 +141,37 @@ public sealed class SceneLibrary
         return Open(null);
     }
 
+    /// <summary>What choosing <paramref name="chosen"/> does, with <paramref name="current"/> chosen before (null for none), <paramref name="ready"/> when its folder is open and there, and <paramref name="sceneOpen"/> when a scene is open in it.</summary>
+    public static FolderChange Change(string? current, string chosen, bool ready, bool sceneOpen) =>
+        current is null ? FolderChange.Reopen
+        : !SceneFolder.SameParent(current, chosen) ? FolderChange.Move
+        : ready ? FolderChange.Keep
+        : sceneOpen ? FolderChange.Recreate
+        : FolderChange.Reopen;
+
+    /// <summary>Leaves this folder for <paramref name="next"/>'s: writes the open scene here, or carries it into <paramref name="next"/> when that's refused; otherwise <paramref name="next"/> opens its first scene. Not moved only when the scene can be saved in neither, and then nothing changed.</summary>
+    public (bool Moved, string? Refusal) MoveTo(SceneLibrary next)
+    {
+        // Written even when unchanged, since the file may have gone with the folder.
+        if (CurrentName.Length == 0 || Save(CurrentName, scene()) is null)
+            return (true, next.Open(null));
+        var refusal = next.Carry(CurrentName, scene());
+        return (refusal is null, refusal);
+    }
+
+    /// <summary>Writes <paramref name="carried"/>, already open in the session, as <paramref name="name"/> or its copy name if that's taken, and keeps it open without reloading, so undo survives.</summary>
+    private string? Carry(string name, Scene carried)
+    {
+        var free = SceneNames.Taken(name, Folder.SceneFiles()) ? CopySuggestion(name) : name;
+        var refusal = Save(free, carried);
+        if (refusal is not null)
+            return refusal;
+        CurrentName = free;
+        saved = carried;
+        debounce = new SaveDebounce(carried);
+        return null;
+    }
+
     /// <summary>Creates the folder again after it has gone and writes the open scene into it, keeping undo history. Returns why it was refused, or null.</summary>
     public string? Recreate()
     {

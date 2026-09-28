@@ -15,6 +15,9 @@ internal sealed class TempFolder : IDisposable
 
     internal SceneFolder Folder { get; }
 
+    /// <summary>The parent directory vistaxiv was created in.</summary>
+    internal string Parent => parent;
+
     /// <summary>The file names reported unreadable, in the order reported.</summary>
     internal List<string> Unreadable { get; } = [];
 

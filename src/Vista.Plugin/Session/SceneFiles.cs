@@ -25,7 +25,7 @@ internal sealed class SceneFiles
         this.game = game;
         session = game.State;
         if (config.SaveFolder is { } parent && Directory.Exists(SceneFolder.RootFor(parent)))
-            Logged(Use(parent, config.LastScene));
+            Logged(Use(parent, move: false, config.LastScene));
     }
 
     /// <summary>Raised when the folder is missing and Setup should be shown.</summary>
@@ -68,27 +68,28 @@ internal sealed class SceneFiles
     /// <summary>The preset files the picker lists, read now.</summary>
     public IReadOnlyList<FileEntry> PresetEntries() => library?.Folder.PresetEntries() ?? [];
 
-    /// <summary>Uses <paramref name="parent"/>'s vistaxiv folder, creating it, after saving the open scene where it was; a new folder opens its first scene.</summary>
+    /// <summary>Uses <paramref name="parent"/>'s vistaxiv folder, creating it; keeps, recreates or reopens the current one, or moves the open scene into a different one.</summary>
     public string? Choose(string parent)
     {
-        var changed =
-            config.SaveFolder is not { } old
-            || !string.Equals(Path.GetFullPath(old), Path.GetFullPath(parent), StringComparison.Ordinal);
-        if (!changed && Ready)
-            return null;
-
-        // The same folder, gone from disk: put the open scene back in it rather than start empty.
-        if (!changed && library is { } lost && lost.CurrentName.Length > 0)
+        var sceneOpen = library is { } l && l.CurrentName.Length > 0;
+        switch (SceneLibrary.Change(config.SaveFolder, parent, Ready, sceneOpen))
         {
-            var refusal = Checked(lost.Recreate());
-            if (refusal is null)
-                AddDemo(lost.Folder);
-            return refusal;
+            case FolderChange.Keep:
+                return null;
+            case FolderChange.Recreate when library is { } lost:
+            {
+                var refusal = Checked(lost.Recreate());
+                if (refusal is null)
+                    AddDemo(lost.Folder);
+                return refusal;
+            }
+            case FolderChange.Reopen:
+                return Use(parent, move: false, config.LastScene);
+            case FolderChange.Move:
+                return Use(parent, move: true, null);
+            default:
+                throw new UnreachableException();
         }
-
-        if (library is { } current && changed)
-            current.SaveNow();
-        return Use(parent, changed && config.SaveFolder is not null ? null : config.LastScene);
     }
 
     public string? Switch(string name) => Run(l => l.Switch(name));
@@ -112,6 +113,13 @@ internal sealed class SceneFiles
 
     /// <summary>Saves the open scene now if it has changed.</summary>
     public string? SaveNow() => Run(l => l.SaveNow());
+
+    /// <summary>Saves the open scene as the plugin unloads, logging a refusal, since nobody is left to show it.</summary>
+    public void SaveBeforeUnload()
+    {
+        if (library?.SaveNow() is { } refusal)
+            Plugin.Log.Warning("[scenes] {Refusal}", refusal);
+    }
 
     /// <summary>Saves the open scene once it has been still long enough. Call once a frame; a failing save retries each frame but reports once.</summary>
     public void Tick()
@@ -157,7 +165,8 @@ internal sealed class SceneFiles
             Dalamud.Utility.Util.OpenLink(presets ? l.Folder.PresetsDir : l.Folder.ScenesDir);
     }
 
-    private string? Use(string parent, string? last)
+    /// <summary>Creates <paramref name="parent"/>'s vistaxiv folder and uses it: for a move, leaves the current library for it; otherwise opens <paramref name="last"/>. A refused move leaves <see cref="library"/> and the configuration untouched.</summary>
+    private string? Use(string parent, bool move, string? last)
     {
         var folder = new SceneFolder(
             SceneFolder.RootFor(parent),
@@ -173,12 +182,25 @@ internal sealed class SceneFiles
             return Checked($"Could not create {folder.Root}: {e.Message}");
         }
 
-        library = new SceneLibrary(folder, () => session.Scene, session.LoadScene);
+        var next = new SceneLibrary(folder, () => session.Scene, session.LoadScene);
+        string? opened;
+        if (move && library is { } current)
+        {
+            (var moved, opened) = current.MoveTo(next);
+            if (!moved)
+                return Checked(opened);
+        }
+        else
+        {
+            opened = next.Open(last);
+        }
+
+        library = next;
         config.SaveFolder = parent;
         config.Save();
 
         // The demo goes in after opening, so a new folder still opens a new empty scene.
-        var refusal = Run(l => l.Open(last));
+        var refusal = Finish(opened);
         if (created || !config.DemoAdded)
             AddDemo(folder);
         return refusal;
@@ -211,12 +233,13 @@ internal sealed class SceneFiles
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private string? Run(Func<SceneLibrary, string?> action)
+    private string? Run(Func<SceneLibrary, string?> action) => library is { } l ? Finish(action(l)) : NoFolder;
+
+    /// <summary>Updates LastScene from the open library and raises Changed, after an action already ran against it. Returns the checked refusal.</summary>
+    private string? Finish(string? refusal)
     {
-        if (library is not { } l)
-            return NoFolder;
-        var refusal = Checked(action(l));
-        if (l.CurrentName.Length > 0 && config.LastScene != l.CurrentName)
+        refusal = Checked(refusal);
+        if (library is { } l && l.CurrentName.Length > 0 && config.LastScene != l.CurrentName)
         {
             config.LastScene = l.CurrentName;
             config.Save();

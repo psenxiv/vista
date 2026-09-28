@@ -20,6 +20,14 @@ public sealed class SceneFolder
     /// <summary>The vistaxiv folder inside <paramref name="parent"/>.</summary>
     public static string RootFor(string parent) => Path.Combine(parent, FolderName);
 
+    /// <summary>True when <paramref name="a"/> and <paramref name="b"/> name the same folder, ignoring case and a trailing separator as Windows does.</summary>
+    public static bool SameParent(string a, string b) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(b)),
+            StringComparison.OrdinalIgnoreCase
+        );
+
     /// <summary>True for the errors reading or writing a file can be expected to throw: missing, locked or forbidden.</summary>
     public static bool IsFileError(Exception e) => e is IOException or UnauthorizedAccessException;
 

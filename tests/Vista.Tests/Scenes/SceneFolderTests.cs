@@ -32,6 +32,21 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
+    public void TheSameParentIgnoresCaseAndATrailingSeparator()
+    {
+        var parent = Directory.CreateTempSubdirectory("vista-tests-").FullName;
+        try
+        {
+            Assert.True(SceneFolder.SameParent(parent, parent.ToUpperInvariant() + Path.DirectorySeparatorChar));
+            Assert.False(SceneFolder.SameParent(parent, Path.Combine(parent, "other")));
+        }
+        finally
+        {
+            Directory.Delete(parent);
+        }
+    }
+
+    [Fact]
     public void ExistsNeedsTheRootScenesAndPresets()
     {
         Assert.True(Folder.Exists);

@@ -9,16 +9,23 @@ namespace Vista.Tests.Scenes;
 public sealed class SceneLibraryTests : IDisposable
 {
     private readonly TempFolder temp = new();
+    private readonly TempFolder other = new();
     private readonly SessionState state = new();
     private readonly SceneLibrary library;
+    private readonly SceneLibrary next;
 
     public SceneLibraryTests()
     {
         state.Edit();
         library = new SceneLibrary(temp.Folder, () => state.Scene, state.LoadScene);
+        next = new SceneLibrary(other.Folder, () => state.Scene, state.LoadScene);
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose()
+    {
+        temp.Dispose();
+        other.Dispose();
+    }
 
     private string EditedTrackName => state.Scene.Tracks[0].Name;
 
@@ -562,5 +569,162 @@ public sealed class SceneLibraryTests : IDisposable
         Assert.Equal("Jib", FirstTrackIn(temp, "Dawn"));
         Assert.Equal("Dawn", library.CurrentName);
         Assert.True(state.CanUndo);
+    }
+
+    [Fact]
+    public void ChoosingAFolderForTheFirstTimeReopensAtTheLastScene() =>
+        Assert.Equal(FolderChange.Reopen, SceneLibrary.Change(null, temp.Parent, ready: false, sceneOpen: false));
+
+    [Fact]
+    public void ChoosingTheOpenFolderAgainKeepsIt() =>
+        Assert.Equal(
+            FolderChange.Keep,
+            SceneLibrary.Change(temp.Parent, temp.Parent.ToUpperInvariant(), ready: true, sceneOpen: true)
+        );
+
+    [Fact]
+    public void ChoosingTheLostFolderWithASceneOpenRecreatesIt() =>
+        Assert.Equal(
+            FolderChange.Recreate,
+            SceneLibrary.Change(temp.Parent, temp.Parent, ready: false, sceneOpen: true)
+        );
+
+    [Fact]
+    public void ChoosingTheLostFolderWithNoSceneOpenReopensIt() =>
+        Assert.Equal(
+            FolderChange.Reopen,
+            SceneLibrary.Change(temp.Parent, temp.Parent, ready: false, sceneOpen: false)
+        );
+
+    [Fact]
+    public void ChoosingAnotherFolderMoves() =>
+        Assert.Equal(
+            FolderChange.Move,
+            SceneLibrary.Change(temp.Parent, Path.Combine(temp.Parent, "other"), ready: true, sceneOpen: true)
+        );
+
+    [Fact]
+    public void MovingSavesTheOpenSceneHereAndOpensTheNewFoldersFirstScene()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+        other.Folder.SaveScene("Alpha", Named("Dolly"));
+
+        Assert.Equal((true, null), library.MoveTo(next));
+
+        Assert.Equal("Jib", FirstTrackIn(temp, "Dawn"));
+        Assert.Equal("Alpha", next.CurrentName);
+        Assert.Equal("Dolly", EditedTrackName);
+    }
+
+    [Fact]
+    public void MovingFromAGoneFolderCarriesTheOpenSceneAndKeepsUndo()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+        Directory.Delete(temp.Folder.Root, recursive: true);
+
+        Assert.Equal((true, null), library.MoveTo(next));
+
+        Assert.Equal("Dawn", next.CurrentName);
+        Assert.Equal(["Dawn.json"], other.SceneFiles());
+        Assert.Equal("Jib", FirstTrackIn(other, "Dawn"));
+        Assert.True(state.CanUndo);
+    }
+
+    [Fact]
+    public void MovingFromAGoneFolderCarriesASceneSavedBeforeItWent()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        Assert.Null(library.SaveNow());
+        Directory.Delete(temp.Folder.Root, recursive: true);
+
+        Assert.Equal((true, null), library.MoveTo(next));
+
+        // Nothing changed since the last save, but that file went with the folder.
+        Assert.Equal("Crane", FirstTrackIn(other, "Dawn"));
+        Assert.Equal("Dawn", next.CurrentName);
+    }
+
+    [Fact]
+    public void ACarriedSceneNeverOverwritesOneOfItsName()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        other.Folder.SaveScene("Dawn", Named("Dolly"));
+        Directory.Delete(temp.Folder.Root, recursive: true);
+
+        Assert.Equal((true, null), library.MoveTo(next));
+
+        // SceneNames.CopyOf appends " copy" to the name, then a number, the first not taken
+        // (Numbered("Dawn copy", existing)). Only "Dawn" exists in other's folder, so "Dawn copy" is free.
+        const string copy = "Dawn copy";
+        Assert.Equal(copy, next.CurrentName);
+        Assert.Equal("Dolly", FirstTrackIn(other, "Dawn"));
+        Assert.Equal("Crane", FirstTrackIn(other, copy));
+    }
+
+    [Fact]
+    public void ACarriedSceneAutosavesUnderItsNewName()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        other.Folder.SaveScene("Dawn", Named("Dolly"));
+        Directory.Delete(temp.Folder.Root, recursive: true);
+        Assert.Equal((true, null), library.MoveTo(next));
+        RenameFirstTrack("Jib");
+
+        // The change is first seen at 10 s, so it is due at 10 + SaveDebounce.DelaySeconds (1 s) = 11 s.
+        Assert.Null(next.Tick(10.0));
+        Assert.Null(next.Tick(11.0));
+
+        Assert.Equal("Jib", FirstTrackIn(other, "Dawn copy"));
+        Assert.Equal("Dolly", FirstTrackIn(other, "Dawn"));
+    }
+
+    [Fact]
+    public void ACarriedSceneCountsAsSaved()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        Directory.Delete(temp.Folder.Root, recursive: true);
+        Assert.Equal((true, null), library.MoveTo(next));
+        var file = Path.Combine(other.Scenes, "Dawn.json");
+        File.Delete(file);
+
+        // Nothing changed since the carry wrote it, so nothing writes it again.
+        Assert.Null(next.Tick(0.0));
+        Assert.Null(next.Tick(5.0));
+        Assert.Null(next.SaveNow());
+        Assert.False(File.Exists(file));
+    }
+
+    [Fact]
+    public void MovingIsRefusedWhenTheSceneCanBeSavedInNeitherFolder()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        Directory.Delete(temp.Folder.Root, recursive: true);
+        Directory.Delete(other.Folder.Root, recursive: true);
+
+        var (moved, refusal) = library.MoveTo(next);
+
+        Assert.False(moved);
+        Assert.StartsWith("Could not save Dawn:", refusal);
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("", next.CurrentName);
+    }
+
+    [Fact]
+    public void MovingWithNoSceneOpenOpensTheNewFolder()
+    {
+        other.Folder.SaveScene("Alpha", Named("Dolly"));
+
+        Assert.Equal((true, null), library.MoveTo(next));
+
+        Assert.Equal("Alpha", next.CurrentName);
     }
 }
