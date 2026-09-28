@@ -25,7 +25,7 @@ The time beside the bar is how far into the playlist you are, and its length.
 
 ## Hiding the game UI
 
-Turn on **Hide game UI when Live** in the **Scene** menu to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play. Vista remembers the setting.
+Turn on {icon:EyeSlash} **Hide game UI when Live** on the top row, or in the **Scene** menu, to hide the game's UI while a shot plays. Press `Escape` to bring the UI back. It hides again when you play. Vista remembers the setting.
 
 ## Leaving Live
 

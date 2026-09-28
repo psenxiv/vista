@@ -1,5 +1,9 @@
 # Changelog
 
+## X.Y.Z.N
+
+- The eye button is back on the top row: turn it on to hide the game UI while Live plays.
+
 ## 0.12.0.1
 
 - Reworked how the camera moves and turns along a track, so shots flow more smoothly through points and at their start and end. Existing shots may look slightly different.
