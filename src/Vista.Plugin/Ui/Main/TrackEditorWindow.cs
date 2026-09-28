@@ -192,6 +192,13 @@ internal sealed class TrackEditorWindow : Window
         }
 
         var editorWidth = showPlaylist ? -(config.PlaylistWidth + Layout.Spacing.X) : 0f;
+        // Its content is exactly as wide as it shows (BeginChild floors the width), so the points list reaching into the right padding can't make it scroll sideways.
+        ImGui.SetNextWindowContentSize(
+            new Vector2(
+                ImGui.GetContentRegionAvail().X + MathF.Floor(editorWidth) - (ImGui.GetStyle().WindowPadding.X * 2f),
+                0f
+            )
+        );
         // The same inner padding as the bordered compartments, so the rows and separators line up.
         if (
             ImGui.BeginChild(
@@ -771,8 +778,6 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>The points list's width, leaving the same margin on the right as on the left, scrollbar included.</summary>
     private float PointsWidth()
     {
-        // Reaching into the right padding would let the editor scroll sideways, which would widen the list again.
-        ImGui.SetScrollX(0f);
         var left = ImGui.GetWindowPos().X;
         var start = ImGui.GetCursorScreenPos().X;
         var right = left + ImGui.GetWindowSize().X - (start - left);
