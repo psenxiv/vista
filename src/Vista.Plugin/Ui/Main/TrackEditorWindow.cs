@@ -70,6 +70,7 @@ internal sealed class TrackEditorWindow : Window
     private readonly Configuration config;
     private bool aimMenuOpen;
     private readonly PendingEdit<float> fields;
+    private readonly EditCommands commands;
     private readonly TimingWindow timing;
     private readonly WatchTargetWindow watchTarget;
     private readonly FollowTargetWindow followTarget;
@@ -117,11 +118,25 @@ internal sealed class TrackEditorWindow : Window
         config.PlaylistWidth = PanelWidth.Clamp(config.PlaylistWidth);
         config.TrackNameScale = TrackNameSize.Clamp(config.TrackNameScale);
         this.fields = fields;
+        commands = new EditCommands(game, fields);
         this.timing = timing;
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
         var presetSave = new PresetSave(files);
-        menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup, picker, presetSave);
+        menu = new MainMenu(
+            game,
+            config,
+            fields,
+            commands,
+            files,
+            layer,
+            timing,
+            camera,
+            guide,
+            setup,
+            picker,
+            presetSave
+        );
         this.guide = guide;
         scrub = new Scrubber(game);
         hierarchy = new HierarchyPanel(game, picker, presetSave);
@@ -302,19 +317,13 @@ internal sealed class TrackEditorWindow : Window
         AlignTo(aimX, gap);
         ImGui.BeginDisabled(!session.CanUndo);
         if (IconButton.Draw("undo", FontAwesomeIcon.Undo, HotkeyTable.Undo.Hotkey.Tooltip("Undo")))
-        {
-            fields.Commit();
-            session.Undo();
-        }
+            commands.Undo();
         ImGui.EndDisabled();
 
         AlignTo(directionX, ImGui.GetStyle().ItemSpacing.X);
         ImGui.BeginDisabled(!session.CanRedo);
         if (IconButton.Draw("redo", FontAwesomeIcon.Redo, HotkeyTable.Redo.Hotkey.Tooltip("Redo")))
-        {
-            fields.Commit();
-            session.Redo();
-        }
+            commands.Redo();
         ImGui.EndDisabled();
 
         AlignTo(loopX, ImGui.GetStyle().ItemSpacing.X);
@@ -408,9 +417,7 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>Play/Pause and Restart, left of the scrub bar on the same line.</summary>
     private void DrawTransport()
     {
-#if DEBUG
-        using var selfTest = ImRaii.Disabled(game.SelfTestRunning);
-#endif
+        using var selfTest = commands.SelfTestGuard();
         var playing = session.IsPlaying;
         ImGui.BeginDisabled(!session.CanStart);
         if (
@@ -420,20 +427,14 @@ internal sealed class TrackEditorWindow : Window
                 playing ? HotkeyTable.Play.Hotkey.Tooltip("Pause") : HotkeyTable.Play.Hotkey.Tooltip("Play")
             )
         )
-        {
-            fields.Commit();
-            game.TogglePlay();
-        }
+            commands.TogglePlay();
 
         ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.BeginDisabled(!session.CanRestart);
         if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, HotkeyTable.Restart.Hotkey.Tooltip("Restart")))
-        {
-            fields.Commit();
-            game.RestartPlay();
-        }
+            commands.Restart();
         ImGui.EndDisabled();
         ImGui.SameLine();
     }
@@ -449,9 +450,7 @@ internal sealed class TrackEditorWindow : Window
             _ => 0,
         };
         ImGui.SetNextItemWidth(ModeWidth);
-#if DEBUG
-        using var selfTest = ImRaii.Disabled(game.SelfTestRunning);
-#endif
+        using var selfTest = commands.SelfTestGuard();
         if (!ImGui.BeginCombo("##mode", ModeNames[current]))
             return;
 

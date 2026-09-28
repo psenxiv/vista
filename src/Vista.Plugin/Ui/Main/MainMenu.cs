@@ -24,6 +24,7 @@ internal sealed class MainMenu
     private readonly SessionState session;
     private readonly Configuration config;
     private readonly PendingEdit<float> fields;
+    private readonly EditCommands commands;
     private readonly SceneFiles files;
     private readonly EditorLayer layer;
     private readonly TimingWindow timing;
@@ -39,6 +40,7 @@ internal sealed class MainMenu
         GameSession game,
         Configuration config,
         PendingEdit<float> fields,
+        EditCommands commands,
         SceneFiles files,
         EditorLayer layer,
         TimingWindow timing,
@@ -53,6 +55,7 @@ internal sealed class MainMenu
         session = game.State;
         this.config = config;
         this.fields = fields;
+        this.commands = commands;
         this.files = files;
         this.layer = layer;
         this.timing = timing;
@@ -98,24 +101,24 @@ internal sealed class MainMenu
                 "New scene",
                 files.NewSuggestion(),
                 text => (files.NameRefusal(text), null),
-                name => Confirm(files.New(name))
+                name => Report(files.New(name))
             );
         if (Menu.Item("Rename scene", SceneActions.Allowed(SceneAction.Rename, targetsOpenScene: true, mode)))
             namePrompt.Ask(
                 "Rename scene",
                 files.CurrentName,
                 text => (files.NameRefusal(text, renaming: files.CurrentName), null),
-                name => Confirm(files.Rename(name))
+                name => Report(files.Rename(name))
             );
         if (Menu.Item("Duplicate scene", SceneActions.Allowed(SceneAction.Duplicate, targetsOpenScene: true, mode)))
             namePrompt.Ask(
                 "Duplicate scene",
                 files.CopySuggestion(),
                 text => (files.NameRefusal(text), null),
-                name => Confirm(files.Duplicate(name))
+                name => Report(files.Duplicate(name))
             );
         if (Menu.Item("Delete scene", SceneActions.Allowed(SceneAction.Delete, targetsOpenScene: true, mode)))
-            deleteConfirm.Ask(files.CurrentName, () => Confirm(files.Delete()));
+            deleteConfirm.Ask(files.CurrentName, () => Report(files.Delete()));
         ImGui.Separator();
         if (Menu.Item("Add preset", editing))
             picker.Show(FilePickerKind.Preset);
@@ -150,24 +153,15 @@ internal sealed class MainMenu
             Report(game.MoveAnchorToPlayer(carry: false));
     }
 
-    /// <summary>Reports a refusal; a successful action relists the picker through <see cref="SceneFiles.Changed"/>.</summary>
-    private static void Confirm(string? refusal) => Report(refusal);
-
     private void DrawEdit(bool editing)
     {
         using var menu = ImRaii.Menu("Edit");
         if (!menu)
             return;
         if (Menu.Item("Undo", session.CanUndo, HotkeyTable.Undo.Hotkey.DisplayName))
-        {
-            fields.Commit();
-            session.Undo();
-        }
+            commands.Undo();
         if (Menu.Item("Redo", session.CanRedo, HotkeyTable.Redo.Hotkey.DisplayName))
-        {
-            fields.Commit();
-            session.Redo();
-        }
+            commands.Redo();
 
         ImGui.Separator();
         DrawAddPoint(editing);
@@ -271,19 +265,11 @@ internal sealed class MainMenu
     /// <summary>Play / Pause and Restart.</summary>
     private void DrawTransport()
     {
-#if DEBUG
-        using var selfTest = ImRaii.Disabled(game.SelfTestRunning);
-#endif
+        using var selfTest = commands.SelfTestGuard();
         if (Menu.Item("Play / Pause", session.CanStart, HotkeyTable.Play.Hotkey.DisplayName))
-        {
-            fields.Commit();
-            game.TogglePlay();
-        }
+            commands.TogglePlay();
         if (Menu.Item("Restart", session.CanRestart, HotkeyTable.Restart.Hotkey.DisplayName))
-        {
-            fields.Commit();
-            game.RestartPlay();
-        }
+            commands.Restart();
     }
 
     /// <summary>The Edit preview's speed: a drag moves in steps, a typed value is taken as it is.</summary>

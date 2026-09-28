@@ -12,8 +12,7 @@ internal readonly record struct EditorView(
     Matrix4x4 GizmoProjection,
     float Near,
     Vector2 Origin,
-    Vector2 Size,
-    Vector3 CameraRight
+    Vector2 Size
 )
 {
     /// <summary>Absolute screen position of <paramref name="world"/>, or null when it is behind the camera.</summary>
@@ -47,11 +46,7 @@ internal readonly record struct EditorView(
         var gizmoView = view;
         gizmoView.M44 = 1f;
 
-        var right = Matrix4x4.Invert(view, out var inverse)
-            ? Vector3.Normalize(new Vector3(inverse.M11, inverse.M12, inverse.M13))
-            : Vector3.UnitX;
-
         var viewport = ImGuiHelpers.MainViewport;
-        return new EditorView(view * projection, gizmoView, gizmoProjection, near, viewport.Pos, viewport.Size, right);
+        return new EditorView(view * projection, gizmoView, gizmoProjection, near, viewport.Pos, viewport.Size);
     }
 }

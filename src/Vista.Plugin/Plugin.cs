@@ -295,7 +295,7 @@ public sealed class Plugin : IDalamudPlugin
             game.Release("area transition");
     }
 
-    /// <summary>Someone else reset the shared counter. Stop tracking our hold so we never decrement theirs, but keep flying: dropping a shot mid-take is worse.</summary>
+    /// <summary>Stops tracking our movement hold once someone else reset the shared counter, but keeps flying.</summary>
     private void NoticeCounterCleared()
     {
         if (game.OwnsCamera && Movement.Held && Movement.Count == 0)
