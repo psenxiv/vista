@@ -100,6 +100,17 @@ internal sealed class PlaylistPanel
                 held |= PlaylistEditing.HoldsPlaylist(scene, scene.Playlist[i]);
             }
 
+            // An empty playlist's hint sits under the drop space, which starts back at its top so drops land on it too.
+            if (scene.Playlist.Count == 0)
+            {
+                var top = ImGui.GetCursorPos();
+                ImGui.PushTextWrapPos(0f);
+                using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+                    ImGui.TextUnformatted("Drag tracks here from the Hierarchy, or click + to add one.");
+                ImGui.PopTextWrapPos();
+                ImGui.SetCursorPos(top);
+            }
+
             // The space under the rows takes dropped rows at the end.
             DragRows.Space(session, editing);
             DropTarget(scene, scene.Playlist.Count, editing);

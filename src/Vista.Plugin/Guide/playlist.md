@@ -2,7 +2,7 @@
 
 The playlist is the list of tracks Live plays, top to bottom, cutting from one to the next. It is the panel on the right of the **Vista** window. {icon:ListOl} **Show playlist** on the top row, or **Playlist** in the **View** menu, shows or hides it. Drag its left edge to make it wider or narrower.
 
-You change the playlist in Edit. A track can be in it more than once, or not at all.
+You change the playlist in Edit. A track can be in it more than once, or not at all. An empty playlist says how to add tracks.
 
 ## Controls
 

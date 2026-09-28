@@ -12,7 +12,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Duplicate scene** | Copies the open scene and opens the copy. |
 | **Delete scene** | Deletes the open scene. |
 | **Select scene anchor** | Selects the scene anchor. See [Scenes and anchors](scenes.md). |
-| **Save folder** | Changes where Vista saves. See [Saving and scenes](scenes-saving.md). |
+| **Select save folder** | Changes where Vista saves. See [Saving and scenes](scenes-saving.md). |
 | **Open save folder** | Shows your scene files. |
 
 ## Edit

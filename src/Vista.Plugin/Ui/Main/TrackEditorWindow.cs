@@ -739,6 +739,19 @@ internal sealed class TrackEditorWindow : Window
                 ImGui.EndTable();
             }
 
+            // An empty track's hint sits under the point space, which starts back at its top so it still takes clicks and drops.
+            if (track.Points.Count == 0)
+            {
+                var top = ImGui.GetCursorPos();
+                ImGui.PushTextWrapPos(0f);
+                using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+                    ImGui.TextUnformatted(
+                        "Fly to a spot and press Backtick, or click + above, to add a point at the camera."
+                    );
+                ImGui.PopTextWrapPos();
+                ImGui.SetCursorPos(top);
+            }
+
             DrawPointSpace(track, editing);
             DragRows.ScrollNearEdges(DragRows.Point);
         }

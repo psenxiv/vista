@@ -116,7 +116,7 @@ internal sealed class MainMenu
             Report(session.Selection.SelectSceneAnchor());
         ImGui.Separator();
         // A new folder loads a scene, which Live refuses.
-        if (Menu.Item("Save folder", mode != CameraMode.Live))
+        if (Menu.Item("Select save folder", mode != CameraMode.Live))
             Show(setup);
         if (Menu.Item("Open save folder", files.Ready))
             files.OpenFolder(presets: false);

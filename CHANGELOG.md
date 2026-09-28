@@ -6,6 +6,8 @@
 - Scenes are opened, renamed, duplicated, deleted and created from the **Scene** menu and a searchable **Open scene** list, replacing the old drop-down at the top of the Hierarchy.
 - Presets are added the same way, from **Add preset** in the Hierarchy's **+** menu.
 - The **Vista** window's title bar now shows the open scene's name.
+- **Save folder** in the **Scene** menu is now **Select save folder**.
+- An empty playlist, and a track with no points, now say how to add to them.
 
 ## 0.12.0.1
 
