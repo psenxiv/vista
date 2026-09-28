@@ -706,9 +706,18 @@ internal sealed class TrackEditorWindow : Window
         var track = session.Track;
         var evaluator = session.World.Evaluator;
         var footer = ImGui.GetFrameHeightWithSpacing() + (ImGui.GetStyle().ItemSpacing.Y * 2f);
-        if (ImGui.BeginChild("points", new Vector2(0f, -footer)))
+        var headerHeight = HeaderRowHeight();
+        var top = ImGui.GetCursorPos();
+        var height = ImGui.GetContentRegionAvail().Y - footer;
+
+        // The header table is drawn last, at the reserved position above, once the rows table's own width is known.
+        ImGui.SetCursorPosY(top.Y + headerHeight);
+        var rowsWidth = 0f;
+        if (ImGui.BeginChild("points", new Vector2(0f, height - headerHeight)))
         {
             using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
+            // Measured here so a scrollbar this child reserves narrows the header to match.
+            rowsWidth = ImGui.GetContentRegionAvail().X;
             if (
                 ImGui.BeginTable(
                     "point-table",
@@ -717,21 +726,7 @@ internal sealed class TrackEditorWindow : Window
                 )
             )
             {
-                ImGui.TableSetupColumn(
-                    "##handle",
-                    ImGuiTableColumnFlags.WidthFixed,
-                    IconButton.GlyphWidth(FontAwesomeIcon.GripVertical)
-                );
-                ImGui.TableSetupColumn(NumberHeader);
-                foreach (var header in ValueHeaders)
-                    SetupValueColumn(header);
-                ImGui.TableSetupColumn(
-                    "##pin",
-                    ImGuiTableColumnFlags.WidthFixed,
-                    IconButton.Width(FontAwesomeIcon.Thumbtack)
-                );
-                ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
-                DrawPointHeaders();
+                SetupPointColumns();
 
                 var selected = session.Selection.Points;
                 for (var i = 0; i < track.Points.Count; i++)
@@ -742,9 +737,9 @@ internal sealed class TrackEditorWindow : Window
             // An empty track's hint sits under the point space, which starts back at its top so it still takes clicks and drops.
             if (track.Points.Count == 0)
             {
-                var top = ImGui.GetCursorPos();
+                var hintTop = ImGui.GetCursorPos();
                 Layout.CentredText("Press Backtick or + to add points.", UiColours.Dim());
-                ImGui.SetCursorPos(top);
+                ImGui.SetCursorPos(hintTop);
             }
 
             DrawPointSpace(track, editing);
@@ -752,6 +747,54 @@ internal sealed class TrackEditorWindow : Window
         }
 
         ImGui.EndChild();
+        var bottom = ImGui.GetCursorPos();
+
+        if (rowsWidth > 0f)
+        {
+            ImGui.SetCursorPos(top);
+            DrawPointHeaderTable(rowsWidth);
+        }
+
+        ImGui.SetCursorPos(bottom);
+    }
+
+    /// <summary>The header table pinned above the scrolling rows: given the rows table's own width so their columns line up exactly, scrollbar included.</summary>
+    private static void DrawPointHeaderTable(float width)
+    {
+        using var padding = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, CellPadding);
+        if (
+            ImGui.BeginTable(
+                "point-table-header",
+                7,
+                ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX,
+                new Vector2(width, 0f)
+            )
+        )
+        {
+            SetupPointColumns();
+            DrawPointHeaders();
+            ImGui.EndTable();
+        }
+    }
+
+    /// <summary>The point table's seven columns, set up identically for the header table and the rows table so their columns line up.</summary>
+    private static void SetupPointColumns()
+    {
+        ImGui.TableSetupColumn(
+            "##handle",
+            ImGuiTableColumnFlags.WidthFixed,
+            IconButton.GlyphWidth(FontAwesomeIcon.GripVertical)
+        );
+        // Fixed, rather than auto-fit, so a separate header table's # column can be given the same width.
+        ImGui.TableSetupColumn(
+            NumberHeader,
+            ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoResize,
+            MathF.Max(ImGui.CalcTextSize(NumberHeader).X, ImGui.CalcTextSize("000").X)
+        );
+        foreach (var header in ValueHeaders)
+            SetupValueColumn(header);
+        ImGui.TableSetupColumn("##pin", ImGuiTableColumnFlags.WidthFixed, IconButton.Width(FontAwesomeIcon.Thumbtack));
+        ImGui.TableSetupColumn("##delete", ImGuiTableColumnFlags.WidthStretch);
     }
 
     /// <summary>A value column, fixed at the field width or its header's, whichever is wider, so a cell-filling field can't widen it.</summary>
@@ -762,10 +805,13 @@ internal sealed class TrackEditorWindow : Window
             MathF.Max(Layout.FieldWidth, ImGui.CalcTextSize(header).X)
         );
 
+    /// <summary>A header row's height: one text line plus the padding used for every point row.</summary>
+    private static float HeaderRowHeight() => ImGui.GetTextLineHeight() + (RowPadding * 2f);
+
     /// <summary>The header row, drawn as text so it keeps its padding while the table's cells have none.</summary>
     private static void DrawPointHeaders()
     {
-        ImGui.TableNextRow(ImGuiTableRowFlags.Headers, ImGui.GetTextLineHeight() + (RowPadding * 2f));
+        ImGui.TableNextRow(ImGuiTableRowFlags.Headers, HeaderRowHeight());
         ImGui.TableSetColumnIndex(1);
         PadRow();
         ImGui.TextUnformatted(NumberHeader);
