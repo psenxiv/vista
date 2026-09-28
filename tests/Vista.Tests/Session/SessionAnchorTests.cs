@@ -434,6 +434,39 @@ public class SessionAnchorTests
     }
 
     [Fact]
+    public void MovingATurnedSceneAnchorToThePlayerKeepsItsYaw()
+    {
+        var state = EditingWithTurnedAnchors();
+        state.Selection.SelectSceneAnchor();
+        var before = state.Track.Points[2].Position;
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(60f, 3f, -5f), carry: true));
+
+        // The scene anchor was at (100, 1, 20), yaw 0.7; it keeps 0.7, so the points only shift,
+        // by (60 - 100, 3 - 1, -5 - 20) = (-40, 2, -25).
+        Assert.Equal(0.7f, state.Scene.Anchor.Yaw, 1e-6f);
+        Near(new Vector3(60f, 3f, -5f), state.Scene.Anchor.Position, 1e-4f);
+        Near(before + new Vector3(-40f, 2f, -25f), state.Track.Points[2].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void MovingATurnedTrackAnchorToThePlayerKeepsItsWorldYaw()
+    {
+        var state = EditingWithTurnedAnchors();
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
+        var before = state.Track.Points[2].Position;
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(70f, 2f, 40f), carry: true));
+
+        // The track anchor was at (80, 1, 30) in the world, yaw −1.1 (under the scene anchor's 0.7); it keeps −1.1,
+        // so the points only shift, by (70 - 80, 2 - 1, 40 - 30) = (-10, 1, 10).
+        var moved = SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[0]);
+        Assert.Equal(-1.1f, moved.Yaw, 1e-5f);
+        Near(new Vector3(70f, 2f, 40f), moved.Position, 1e-4f);
+        Near(before + new Vector3(-10f, 1f, 10f), state.Track.Points[2].Position, 1e-4f);
+    }
+
+    [Fact]
     public void MovingATrackAnchorToThePlayerCarriesItsPoints()
     {
         var state = EditingOverGround();
