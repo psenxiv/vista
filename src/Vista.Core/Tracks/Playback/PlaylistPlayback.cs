@@ -4,7 +4,7 @@ using Vista.Core.Tracks.Aiming;
 namespace Vista.Core.Tracks.Playback;
 
 /// <summary>Plays playlist entries in turn with a cut between them, carrying time over; at the end holds the last frame, or wraps to the first entry when looping.</summary>
-public sealed class PlaylistPlayback : IPlayback
+public sealed class PlaylistPlayback
 {
     private readonly IReadOnlyList<PlaylistItem> items;
     private readonly TrackEvaluator[] evaluators;

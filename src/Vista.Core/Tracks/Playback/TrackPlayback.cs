@@ -4,7 +4,7 @@ using Vista.Core.Tracks.Aiming;
 namespace Vista.Core.Tracks.Playback;
 
 /// <summary>Advances a track's playback clock frame by frame, by its direction and loop setting.</summary>
-public sealed class TrackPlayback : IPlayback
+public sealed class TrackPlayback
 {
     private readonly Track _track;
     private readonly TrackEvaluator _evaluator;

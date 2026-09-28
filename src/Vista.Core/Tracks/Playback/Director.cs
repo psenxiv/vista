@@ -30,7 +30,7 @@ public sealed class Director
     /// <summary>The playlist being played, or null before going live.</summary>
     public PlaylistPlayback? Playlist => _playback;
 
-    /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero. Unchanged if the track throws.</summary>
+    /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero. Unchanged if a track in it can't play.</summary>
     public void GoLive(PlaylistShot shot)
     {
         _playback = new PlaylistPlayback(shot.Items, shot.Loops, targets);
@@ -54,12 +54,8 @@ public sealed class Director
         IsPaused = false;
     }
 
-    /// <summary>Jumps the live track or playlist to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
-    public void Seek(double time)
-    {
-        if (IsLive)
-            _playback?.Seek(time);
-    }
+    /// <summary>Jumps the live playlist to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
+    public void Seek(double time) => _playback?.Seek(time);
 
     /// <summary>Where the camera should be this frame, or null to leave the game camera alone.</summary>
     public CameraState? Tick(float dt) => IsLive ? _playback!.Advance(IsPaused ? 0f : dt) : null;
