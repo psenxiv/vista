@@ -74,8 +74,11 @@ internal sealed class TrackEditorWindow : Window
     private static readonly PendingField.Range LookAheadRange = new(0.05f, 0f, TrackEditing.MaxLookAhead);
     private const string LookAheadId = "look-ahead";
 
+    private const string WindowId = "###vista-track-editor";
+
     private readonly GameSession game;
     private readonly SessionState session;
+    private readonly SceneFiles files;
     private readonly Configuration config;
     private bool aimMenuOpen;
     private readonly PendingEdit<float> fields;
@@ -115,11 +118,12 @@ internal sealed class TrackEditorWindow : Window
         FilePickerWindow picker,
         EditorLayer layer
     )
-        : base("Vista###vista-track-editor", ImGuiWindowFlags.MenuBar)
+        : base("Vista" + WindowId, ImGuiWindowFlags.MenuBar)
     {
         this.game = game;
         session = game.State;
         this.config = config;
+        this.files = files;
         config.HierarchyWidth = PanelWidth.Clamp(config.HierarchyWidth);
         config.PlaylistWidth = PanelWidth.Clamp(config.PlaylistWidth);
         config.TrackNameScale = TrackNameSize.Clamp(config.TrackNameScale);
@@ -137,9 +141,10 @@ internal sealed class TrackEditorWindow : Window
         SetMinimumWidth(MinWidth);
     }
 
-    /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
+    /// <summary>Titles the window with the open scene, widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
     public override void PreDraw()
     {
+        WindowName = (files.CurrentName.Length > 0 ? "Vista - " + files.CurrentName : "Vista") + WindowId;
         var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth());
         SetMinimumWidth(width);
         Size = new Vector2(width, MinHeight);
