@@ -338,7 +338,17 @@ internal sealed class TrackEditorWindow : Window
 
         if (editing)
         {
-            AlignTo(FlySpeedStart() - IconButton.Width(FontAwesomeIcon.Camera) - ImGui.GetStyle().ItemSpacing.X, gap);
+            var tools = IconButton.RowWidth(FontAwesomeIcon.RulerHorizontal, FontAwesomeIcon.Camera);
+            AlignTo(FlySpeedStart() - tools - ImGui.GetStyle().ItemSpacing.X, gap);
+            if (
+                IconButton.Draw(
+                    "level-roll",
+                    FontAwesomeIcon.RulerHorizontal,
+                    HotkeyTable.LevelRoll.Hotkey.Tooltip("Level camera roll")
+                )
+            )
+                game.LevelCameraRoll();
+            ImGui.SameLine();
             IconButton.WindowToggle("camera", FontAwesomeIcon.Camera, "Camera", camera);
             ImGui.SameLine();
             DrawFlySpeed();
@@ -1134,12 +1144,13 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.Undo)
             + IconButton.Width(FontAwesomeIcon.Redo)
             + IconButton.Width(FontAwesomeIcon.ChartLine)
+            + IconButton.Width(FontAwesomeIcon.RulerHorizontal)
             + IconButton.Width(FontAwesomeIcon.Camera)
             + IconButton.Width(FontAwesomeIcon.EyeSlash)
             + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 10f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 11f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));

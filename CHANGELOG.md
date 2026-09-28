@@ -2,7 +2,7 @@
 
 ## X.Y.Z.N
 
-- The Camera window button is back on the top row, next to the fly speed slider.
+- The Level camera roll and Camera window buttons are back on the top row, next to the fly speed slider.
 
 ## 0.13.0.1
 
