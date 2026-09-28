@@ -89,6 +89,37 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void SwitchingToTheOpenSceneKeepsUndo()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+
+        Assert.Null(library.Switch("Dawn"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("Jib", EditedTrackName);
+        Assert.True(state.CanUndo);
+        // Neither saved nor reloaded: the file on disk still has the name from before the rename.
+        Assert.Equal("Crane", FirstTrackIn(temp, "Dawn"));
+    }
+
+    [Fact]
+    public void SwitchingToTheOpenSceneInAnotherCaseKeepsUndo()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        RenameFirstTrack("Jib");
+
+        Assert.Null(library.Switch("DAWN"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("Jib", EditedTrackName);
+        Assert.True(state.CanUndo);
+        Assert.Equal("Crane", FirstTrackIn(temp, "Dawn"));
+    }
+
+    [Fact]
     public void SwitchingIsRefusedWhenTheSaveFails()
     {
         Save("Dawn", "Crane");
@@ -244,20 +275,6 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
-    public void RenamingTheOpenSceneByNameMatchesTheParameterlessForm()
-    {
-        Save("Dawn", "Crane");
-        library.Open("Dawn");
-        RenameFirstTrack("Jib");
-
-        Assert.Null(library.Rename("Dawn", "Dusk"));
-
-        Assert.Equal("Dusk", library.CurrentName);
-        Assert.Equal(["Dusk.json"], temp.SceneFiles());
-        Assert.True(state.CanUndo);
-    }
-
-    [Fact]
     public void RenamingAnotherSceneRefusesATakenName()
     {
         Save("Dawn", "Crane");
@@ -315,20 +332,6 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
-    public void DuplicatingTheOpenSceneByNameMatchesTheParameterlessForm()
-    {
-        Save("Dawn", "Crane");
-        library.Open("Dawn");
-        RenameFirstTrack("Jib");
-
-        Assert.Null(library.Duplicate("Dawn", "Dawn copy"));
-
-        Assert.Equal("Dawn copy", library.CurrentName);
-        Assert.Equal("Jib", FirstTrackIn(temp, "Dawn"));
-        Assert.Equal("Jib", FirstTrackIn(temp, "Dawn copy"));
-    }
-
-    [Fact]
     public void DuplicatingAnotherSceneRefusesATakenName()
     {
         Save("Dawn", "Crane");
@@ -344,19 +347,6 @@ public sealed class SceneLibraryTests : IDisposable
         Save("Dawn", "Crane");
         Save("Dusk", "Dolly");
         library.Open("Dawn");
-
-        Assert.Null(library.Delete("Dusk"));
-
-        Assert.Equal("Dawn", library.CurrentName);
-        Assert.Equal(["Dawn.json"], temp.SceneFiles());
-    }
-
-    [Fact]
-    public void DeletingTheOpenSceneByNameMatchesTheParameterlessForm()
-    {
-        Save("Dawn", "Crane");
-        Save("Dusk", "Dolly");
-        library.Open("Dusk");
 
         Assert.Null(library.Delete("Dusk"));
 

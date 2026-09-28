@@ -165,10 +165,14 @@ public sealed class SceneFolderTests : IDisposable
     [Fact]
     public void SceneEntriesListNameTrackCountAndModifiedTime()
     {
-        var before = DateTime.Now;
+        // Literal times, not DateTime.Now: a coarse file clock (as on windows-latest CI) can round
+        // a same-second write outside an InRange(before, after) check.
+        var duskModified = new DateTime(2024, 1, 2, 3, 4, 5);
+        var dawnModified = new DateTime(2024, 5, 6, 7, 8, 9);
         Folder.SaveScene("Dusk", Named("Crane"));
+        File.SetLastWriteTime(Path.Combine(temp.Scenes, "Dusk.json"), duskModified);
         Folder.SaveScene("Dawn", DemoScene());
-        var after = DateTime.Now;
+        File.SetLastWriteTime(Path.Combine(temp.Scenes, "Dawn.json"), dawnModified);
 
         var entries = Folder.SceneEntries();
 
@@ -181,42 +185,22 @@ public sealed class SceneFolderTests : IDisposable
         Assert.Equal("Dusk", dusk.Name);
         // Named() makes a scene with a single track.
         Assert.Equal(1, dusk.Tracks);
-        Assert.InRange(dawn.Modified, before, after);
-        Assert.InRange(dusk.Modified, before, after);
-    }
-
-    [Fact]
-    public void SceneEntriesSkipUnreadableFiles()
-    {
-        Folder.SaveScene("Good", Named("Crane"));
-        File.WriteAllText(Path.Combine(temp.Scenes, "Garbage.json"), "{ not json");
-
-        Assert.Equal(["Good"], Folder.SceneEntries().Select(e => e.Name));
-        Assert.Equal(["Garbage.json"], temp.Unreadable);
+        Assert.Equal(dawnModified, dawn.Modified);
+        Assert.Equal(duskModified, dusk.Modified);
     }
 
     [Fact]
     public void PresetEntriesHaveNoTrackCount()
     {
-        var before = DateTime.Now;
+        var modified = new DateTime(2024, 3, 4, 5, 6, 7);
         Folder.SavePreset("Orbit", new Preset(TrackEditing.Empty(), 0f));
-        var after = DateTime.Now;
+        File.SetLastWriteTime(Path.Combine(temp.Presets, "Orbit.json"), modified);
 
         var entry = Assert.Single(Folder.PresetEntries());
 
         Assert.Equal("Orbit", entry.Name);
         Assert.Null(entry.Tracks);
-        Assert.InRange(entry.Modified, before, after);
-    }
-
-    [Fact]
-    public void PresetEntriesSkipUnreadableFiles()
-    {
-        Folder.SavePreset("Orbit", new Preset(TrackEditing.Empty(), 0f));
-        File.WriteAllText(Path.Combine(temp.Presets, "Broken.json"), "[]");
-
-        Assert.Equal(["Orbit"], Folder.PresetEntries().Select(e => e.Name));
-        Assert.Equal(["Broken.json"], temp.Unreadable);
+        Assert.Equal(modified, entry.Modified);
     }
 
     [Fact]

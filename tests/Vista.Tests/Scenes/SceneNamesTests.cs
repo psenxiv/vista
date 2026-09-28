@@ -53,6 +53,13 @@ public class SceneNamesTests
     [InlineData(" CON ")]
     public void FileNameUnsafeNamesAreRefused(string name) => Assert.Equal(Unusable, SceneNames.Refusal(name));
 
+    [Theory]
+    [InlineData("##")]
+    [InlineData("Take ##2")]
+    [InlineData("a##b")]
+    public void NamesContainingADoubleHashAreRefused(string name) =>
+        Assert.Equal("That name can't contain ##.", SceneNames.Refusal(name));
+
     [Fact]
     public void TakenIgnoresCaseAndSurroundingSpace()
     {

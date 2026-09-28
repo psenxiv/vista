@@ -25,9 +25,6 @@ public sealed class SceneLibrary
     /// <summary>The open scene's name, or empty until one is open.</summary>
     public string CurrentName { get; private set; } = string.Empty;
 
-    /// <summary>The names of the readable scenes, sorted ignoring case.</summary>
-    public IReadOnlyList<string> Scenes() => Folder.SceneNames();
-
     /// <summary>The name "New scene" suggests: the first free "Scene N" among every scene file, readable or not.</summary>
     public string NewSuggestion() => SceneNames.NextFree(Stem, Folder.SceneFiles());
 
@@ -40,15 +37,16 @@ public sealed class SceneLibrary
     /// <summary>Opens <paramref name="last"/> if it exists, else the first scene by name, else a new Scene N. Returns why it was refused, or null.</summary>
     public string? Open(string? last)
     {
-        var names = Scenes();
+        var names = Folder.SceneNames();
         var name =
             names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase))
             ?? (names.Count > 0 ? names[0] : null);
         return name is null ? Create(NewSuggestion()) : Load(name);
     }
 
-    /// <summary>Saves the open scene and loads <paramref name="name"/>. Returns why it was refused, or null.</summary>
-    public string? Switch(string name) => SaveNow() ?? Load(name);
+    /// <summary>Saves the open scene and loads <paramref name="name"/>; already open (ignoring case), does neither. Returns why it was refused, or null.</summary>
+    public string? Switch(string name) =>
+        string.Equals(name, CurrentName, StringComparison.OrdinalIgnoreCase) ? null : SaveNow() ?? Load(name);
 
     /// <summary>Saves the open scene and opens a new empty one called <paramref name="name"/>. Returns why it was refused, or null.</summary>
     public string? New(string name)

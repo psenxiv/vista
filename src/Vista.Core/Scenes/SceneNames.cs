@@ -7,6 +7,7 @@ public static class SceneNames
     public const int MaxLength = 100;
 
     private const string Unusable = "That name can't be used as a file name.";
+    private const string NoDoubleHash = "That name can't contain ##.";
 
     private static readonly HashSet<char> Forbidden = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
@@ -57,7 +58,7 @@ public static class SceneNames
             return Unusable;
         if (trimmed.EndsWith('.') || Devices.Contains(trimmed))
             return Unusable;
-        return null;
+        return trimmed.Contains("##", StringComparison.Ordinal) ? NoDoubleHash : null;
     }
 
     /// <summary>Why <paramref name="name"/> can't name a preset, or null, and whether it replaces one of <paramref name="presets"/>.</summary>
