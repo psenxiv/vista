@@ -1,11 +1,18 @@
+# Build output
 bin/
 obj/
+StrykerOutput/
+
+# Editor and OS
 *.user
 .DS_Store
-analysis
-tests/in-game/cases/
+
+# Local specs, plans and working notes
 docs/
+analysis
 HANDOVER.md
 TASKS.md
 WORKFLOW.md
-StrykerOutput/
+
+# In-game checklists
+tests/in-game/cases/
