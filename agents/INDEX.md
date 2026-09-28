@@ -13,7 +13,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 ### Core
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
-- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and Live's scrub bar over the playlist.
+- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and Live's scrub bar over the playlist.
 - `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Input`: the key, modifier and hotkey types, the table naming every hotkey Vista binds, and which hotkey a press or held keys resolve to.
@@ -87,6 +87,10 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### Hit tests
 
 - `Display/MarkerHitTest`: the item nearest a click within a radius, with ties to the earlier or the later; `TrackMarkerHitTest` ranks the kinds of track marker on it.
+
+### Views
+
+- `Display/ViewZoom`: a timing graph's or scrub bar's zoom kept between frames.
 
 ### Field edits
 

@@ -91,4 +91,9 @@ public class TimingViewTests
         // −300 px is 6 s earlier, stopping at the start.
         Assert.Equal(new TimingView(0f, 2f), new TimingView(2f, 4f).Drag(-300f, 100f, 10f));
     }
+
+    [Fact]
+    public void TimeAtIsThatShareOfTheWayAcross() =>
+        // 2 s + 0.25 × (6 − 2) s = 3 s.
+        Assert.Equal(3f, new TimingView(2f, 6f).TimeAt(0.25f), 1e-6f);
 }

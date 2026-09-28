@@ -46,8 +46,7 @@ internal sealed class TimingWindow : Window
     private readonly Scrubber scrub;
     private Drag? drag;
     private int? popupKey;
-    private TimingView? view;
-    private Guid viewTrack;
+    private readonly ViewZoom<Guid> zoom = new();
     private (float StartX, TimingView Start)? pan;
 
     public TimingWindow(GameSession game)
@@ -102,7 +101,7 @@ internal sealed class TimingWindow : Window
         var distance = session.World.Evaluator.TotalDistance;
         var duration = (float)session.Duration;
         var shown = UpdateView(duration);
-        var (distanceFrom, distanceTo) = view is null ? (0f, distance) : shown.Distances(session.World.Evaluator);
+        var (distanceFrom, distanceTo) = !zoom.Zoomed ? (0f, distance) : shown.Distances(session.World.Evaluator);
         var yalmStep = Ticks.Step(distanceTo - distanceFrom, YalmTicks);
         // Sized for any label up to the whole path, so zooming never shifts the plot sideways.
         var rightInset = ImGui.CalcTextSize(Units.Yalms(distance)).X + 6f;
@@ -130,7 +129,7 @@ internal sealed class TimingWindow : Window
         DrawHandles(list);
         DrawKeys(list);
 
-        HandleMouse(graph, stripBottom);
+        HandleMouse(graph, stripBottom, shown);
         DrawHoverReadout(list, graph);
         DrawKeyPopup();
     }
@@ -150,9 +149,9 @@ internal sealed class TimingWindow : Window
 
         ImGui.SameLine();
         Layout.RightAlign(IconButton.Width(FontAwesomeIcon.Expand));
-        ImGui.BeginDisabled(view is null);
+        ImGui.BeginDisabled(!zoom.Zoomed);
         if (IconButton.Draw("fit", FontAwesomeIcon.Expand, "Show the whole track"))
-            view = null;
+            zoom.Reset();
         ImGui.EndDisabled();
     }
 
@@ -384,7 +383,7 @@ internal sealed class TimingWindow : Window
     }
 
     /// <summary>Carries on or ends a scrub, a drag or a pan, zooms on the wheel, acts on a right press over a key, then on a left press: a handle, then a key, then the curve, then empty plot space to pan, then the time axis.</summary>
-    private void HandleMouse(TimingGraph graph, float stripBottom)
+    private void HandleMouse(TimingGraph graph, float stripBottom, TimingView shown)
     {
         if (scrub.Active)
         {
@@ -405,9 +404,9 @@ internal sealed class TimingWindow : Window
             return;
         if (ClickHandle(graph, mouse) || ClickKey(graph, mouse) || ClickCurve(graph, mouse))
             return;
-        if (view is { } zoomed && graph.Contains(mouse))
+        if (zoom.Zoomed && graph.Contains(mouse))
         {
-            pan = (mouse.X, zoomed);
+            pan = (mouse.X, shown);
             return;
         }
         ClickTimeAxis(graph, mouse, stripBottom);
@@ -553,16 +552,10 @@ internal sealed class TimingWindow : Window
     /// <summary>The view for this frame: whole for a new track or one that no longer needs zooming, else kept within the shot.</summary>
     private TimingView UpdateView(float duration)
     {
-        if (session.EditedTrackId != viewTrack)
-        {
-            view = null;
+        var shown = zoom.View(session.EditedTrackId, duration);
+        if (zoom.Restarted)
             pan = null;
-            viewTrack = session.EditedTrackId;
-        }
-        if (view is { } v)
-            view = v.Clamp(duration).UnlessWhole(duration);
-
-        return view ?? TimingView.Whole(duration);
+        return shown;
     }
 
     /// <summary>The wheel zooms time around the cursor, while nothing is being dragged.</summary>
@@ -571,9 +564,7 @@ internal sealed class TimingWindow : Window
         var wheel = ImGui.GetIO().MouseWheel;
         if (wheel == 0f || !ImGui.IsItemHovered() || drag is not null || scrub.Active || pan is not null)
             return;
-        var from = view ?? TimingView.Whole(graph.Duration);
-        var next = from.Zoom(graph.TimeAt(mouse.X), MathF.Pow(TimingView.ZoomPerNotch, -wheel), graph.Duration);
-        view = next.UnlessWhole(graph.Duration);
+        zoom.Zoom(graph.TimeAt(mouse.X), wheel, graph.Duration);
     }
 
     /// <summary>Slides the view with the mouse while the pan is held, from where it was grabbed.</summary>
@@ -586,7 +577,7 @@ internal sealed class TimingWindow : Window
             pan = null;
             return;
         }
-        view = p.Start.Drag(p.StartX - mouse.X, graph.Size.X, graph.Duration);
+        zoom.Set(p.Start.Drag(p.StartX - mouse.X, graph.Size.X, graph.Duration), graph.Duration);
     }
 
     private Vector2 CurvePoint(TimingGraph graph, float time) =>

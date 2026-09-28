@@ -16,6 +16,9 @@ public readonly record struct TimingView(float From, float To)
 
     public float Span => To - From;
 
+    /// <summary>The time <paramref name="along"/> of the way across, 0 at From and 1 at To.</summary>
+    public float TimeAt(float along) => From + (along * Span);
+
     public static TimingView Whole(float duration) => new(0f, MathF.Max(duration, 0f));
 
     public bool IsWhole(float duration) => From <= 0f && To >= duration;

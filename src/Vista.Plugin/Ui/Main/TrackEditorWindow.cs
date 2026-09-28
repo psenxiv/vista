@@ -93,8 +93,7 @@ internal sealed class TrackEditorWindow : Window
     private readonly PlaylistPanel playlist;
     private CameraMode lastMode;
     private readonly Scrubber scrub;
-    private TimingView? scrubView;
-    private (CameraMode Mode, Guid Track) scrubViewFor;
+    private readonly ViewZoom<(CameraMode Mode, Guid Track)> scrubZoom = new();
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
@@ -1045,7 +1044,7 @@ internal sealed class TrackEditorWindow : Window
         var (head, total) = timeline is null
             ? (transport.ScrubHead, transport.ScrubLength)
             : (transport.PlaylistHead, timeline.Total);
-        var view = ScrubView(timeline is not null, (float)total);
+        var view = scrubZoom.View((session.Mode, timeline is null ? session.EditedTrackId : Guid.Empty), (float)total);
 
         DrawTransport();
         // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
@@ -1063,19 +1062,6 @@ internal sealed class TrackEditorWindow : Window
         ImGui.TextUnformatted(Units.ClockOf(head, total));
     }
 
-    /// <summary>The scrub bar's zoom for this frame: whole for a new bar (another track, or Edit to Live) or one no longer zoomed, else kept within <paramref name="total"/>.</summary>
-    private TimingView ScrubView(bool live, float total)
-    {
-        var bar = (session.Mode, live ? Guid.Empty : session.EditedTrackId);
-        if (bar != scrubViewFor)
-        {
-            scrubView = null;
-            scrubViewFor = bar;
-        }
-        scrubView = scrubView?.Clamp(total).UnlessWhole(total);
-        return scrubView ?? TimingView.Whole(total);
-    }
-
     /// <summary>The wheel over the scrub bar zooms it around the mouse, while it isn't being dragged.</summary>
     private void ZoomScrub(TimingView view, float total)
     {
@@ -1086,8 +1072,7 @@ internal sealed class TrackEditorWindow : Window
         if (wheel == 0f || scrub.Active)
             return;
         var along = Fraction.Between(ImGui.GetMousePos().X, ImGui.GetItemRectMin().X, ImGui.GetItemRectMax().X, 0.5f);
-        var anchor = view.From + (along * view.Span);
-        scrubView = view.Zoom(anchor, MathF.Pow(TimingView.ZoomPerNotch, -wheel), total).UnlessWhole(total);
+        scrubZoom.Zoom(view.TimeAt(along), wheel, total);
     }
 
     /// <summary>The edited track's scrub bar, <paramref name="width"/> wide over <paramref name="view"/>; the grab hides while the head is outside it.</summary>
