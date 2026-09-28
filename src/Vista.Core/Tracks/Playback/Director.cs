@@ -6,7 +6,6 @@ namespace Vista.Core.Tracks.Playback;
 /// <summary>Holds live mode and the shot on program; each tick says where the camera goes, or null to leave it be.</summary>
 public sealed class Director
 {
-    private PlaylistShot? _shot;
     private PlaylistPlayback? _playback;
     private readonly NearbyCharacters? targets;
 
@@ -14,7 +13,7 @@ public sealed class Director
     public Director(NearbyCharacters? targets = null) => this.targets = targets;
 
     /// <summary>True once <see cref="GoLive"/> has been called and <see cref="GoOffline"/> has not.</summary>
-    public bool IsLive => _shot is not null;
+    public bool IsLive => _playback is not null;
 
     /// <summary>True while live and paused; frames stop advancing.</summary>
     public bool IsPaused { get; private set; }
@@ -34,9 +33,7 @@ public sealed class Director
     /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero. Unchanged if the track throws.</summary>
     public void GoLive(PlaylistShot shot)
     {
-        var playback = new PlaylistPlayback(shot.Items, shot.Loops, targets);
-        _shot = shot;
-        _playback = playback;
+        _playback = new PlaylistPlayback(shot.Items, shot.Loops, targets);
         IsPaused = false;
     }
 
@@ -53,7 +50,6 @@ public sealed class Director
     /// <summary>Takes live mode off and clears pause. <see cref="Tick"/> returns null until the next <see cref="GoLive"/>.</summary>
     public void GoOffline()
     {
-        _shot = null;
         _playback = null;
         IsPaused = false;
     }
