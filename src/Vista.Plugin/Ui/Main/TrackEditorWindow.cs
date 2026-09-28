@@ -425,7 +425,9 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>Play/Pause and Restart, left of the scrub bar on the same line.</summary>
     private void DrawTransport()
     {
+#if DEBUG
         using var selfTest = commands.SelfTestGuard();
+#endif
         var playing = session.IsPlaying;
         ImGui.BeginDisabled(!session.CanStart);
         if (
@@ -458,7 +460,9 @@ internal sealed class TrackEditorWindow : Window
             _ => 0,
         };
         ImGui.SetNextItemWidth(ModeWidth);
+#if DEBUG
         using var selfTest = commands.SelfTestGuard();
+#endif
         if (!ImGui.BeginCombo("##mode", ModeNames[current]))
             return;
 

@@ -262,7 +262,9 @@ internal sealed class MainMenu
     /// <summary>Play / Pause and Restart.</summary>
     private void DrawTransport()
     {
+#if DEBUG
         using var selfTest = commands.SelfTestGuard();
+#endif
         if (Menu.Item("Play / Pause", session.CanStart, HotkeyTable.Play.Hotkey.DisplayName))
             commands.TogglePlay();
         if (Menu.Item("Restart", session.CanRestart, HotkeyTable.Restart.Hotkey.DisplayName))

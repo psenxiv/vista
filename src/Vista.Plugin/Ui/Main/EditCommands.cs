@@ -1,6 +1,8 @@
-using Dalamud.Interface.Utility.Raii;
 using Vista.Core.Editing;
 using Vista.Plugin.Session;
+#if DEBUG
+using Dalamud.Interface.Utility.Raii;
+#endif
 
 namespace Vista.Plugin.Ui.Main;
 
@@ -31,13 +33,8 @@ internal sealed class EditCommands(GameSession game, PendingEdit<float> fields)
         game.RestartPlay();
     }
 
-    /// <summary>Disables what's drawn inside it while a self-test runs, in debug builds only.</summary>
-    public ImRaii.DisabledDisposable SelfTestGuard()
-    {
 #if DEBUG
-        return ImRaii.Disabled(game.SelfTestRunning);
-#else
-        return ImRaii.Disabled(false);
+    /// <summary>Disables what's drawn inside it while a self-test runs.</summary>
+    public ImRaii.DisabledDisposable SelfTestGuard() => ImRaii.Disabled(game.SelfTestRunning);
 #endif
-    }
 }
