@@ -405,7 +405,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingTheSceneAnchorToThePlayerCarriesItsPoints()
+    public void MovingTheSceneAnchorToTheCameraCarriesItsPoints()
     {
         var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
@@ -420,7 +420,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingTheSceneAnchorToThePlayerAloneLeavesPointsInPlace()
+    public void MovingTheSceneAnchorToTheCameraAloneLeavesPointsInPlace()
     {
         var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();
@@ -434,7 +434,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingATurnedSceneAnchorToThePlayerKeepsItsYaw()
+    public void MovingATurnedSceneAnchorToTheCameraKeepsItsYaw()
     {
         var state = EditingWithTurnedAnchors();
         state.Selection.SelectSceneAnchor();
@@ -450,7 +450,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingATurnedTrackAnchorToThePlayerKeepsItsWorldYaw()
+    public void MovingATurnedTrackAnchorToTheCameraKeepsItsWorldYaw()
     {
         var state = EditingWithTurnedAnchors();
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
@@ -467,7 +467,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingATrackAnchorToThePlayerCarriesItsPoints()
+    public void MovingATrackAnchorToTheCameraCarriesItsPoints()
     {
         var state = EditingOverGround();
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
@@ -483,7 +483,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingATrackAnchorToThePlayerAloneLeavesItsPointsInPlace()
+    public void MovingATrackAnchorToTheCameraAloneLeavesItsPointsInPlace()
     {
         var state = EditingOverGround();
         state.Selection.SelectTrackAnchor(state.EditedTrackId);
@@ -498,7 +498,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void MovingATrackAnchorToThePlayerLeavesOtherTracksWhereTheyAre()
+    public void MovingATrackAnchorToTheCameraLeavesOtherTracksWhereTheyAre()
     {
         var state = EditingOverGround();
         state.AddTrack();
@@ -514,7 +514,7 @@ public class SessionAnchorTests
     }
 
     [Fact]
-    public void UndoingAMoveToThePlayerPutsTheAnchorAndPointsBackExactly()
+    public void UndoingAMoveToTheCameraPutsTheAnchorAndPointsBackExactly()
     {
         var state = EditingOverGround();
         state.Selection.SelectSceneAnchor();

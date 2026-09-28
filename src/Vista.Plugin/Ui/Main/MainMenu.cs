@@ -138,16 +138,16 @@ internal sealed class MainMenu
             files.OpenFolder(presets: false);
     }
 
-    /// <summary>Move anchor to me's submenu: the selected scene or track anchor to the player, with its points or on its own.</summary>
+    /// <summary>Move anchor to me's submenu: the selected scene or track anchor to the camera, with its points or on its own.</summary>
     private void DrawMoveAnchorToMe()
     {
         using var menu = ImRaii.Menu("Move anchor to me", session.CanMoveAnchor);
         if (!menu)
             return;
         if (Menu.Item("With its points"))
-            Report(game.MoveAnchorToPlayer(carry: true));
+            Report(game.MoveAnchorToCamera(carry: true));
         if (Menu.Item("Anchor only"))
-            Report(game.MoveAnchorToPlayer(carry: false));
+            Report(game.MoveAnchorToCamera(carry: false));
     }
 
     private void DrawEdit(bool editing)

@@ -4,7 +4,7 @@
 
 - The Level camera roll and Camera window buttons are back on the top row, next to the fly speed slider.
 - Choosing a new save folder after the old one has gone now keeps the scene you have open.
-- Move anchor to me in the Scene menu puts the selected anchor where your character stands, with its points or on its own.
+- Move anchor to me in the Scene menu puts the selected anchor where the camera is, with its points or on its own.
 - Give feedback, on the top row and in the Help menu, opens a short form to tell us what's working and what isn't.
 
 ## 0.13.0.1

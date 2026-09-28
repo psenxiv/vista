@@ -19,4 +19,4 @@ Anchors appear on the ground under the first point you add, so you never place t
 
 Hold `Alt` while you drag the gizmo to move the anchor alone, leaving everything attached where it is. Use it to turn a scene or track around a different spot.
 
-**Move anchor to me** in the **Scene** menu puts the selected anchor where you stand, with its points or on its own.
+**Move anchor to me** in the **Scene** menu puts the selected anchor where the camera is, with its points or on its own.

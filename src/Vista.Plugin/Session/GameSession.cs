@@ -240,11 +240,9 @@ internal sealed class GameSession
     /// <summary>Adds a preset as a new track on the ground under the camera and edits it. Returns why it was refused, or null.</summary>
     public string? AddPreset(Preset preset) => state.AddPreset(preset, CameraPosition);
 
-    /// <summary>Moves the selected anchor to the player's position, with its points or on its own. Returns why it was refused, or null.</summary>
-    public string? MoveAnchorToPlayer(bool carry) =>
-        Plugin.ObjectTable.LocalPlayer?.Position is { } position
-            ? state.MoveAnchorTo(position, carry)
-            : "Your character's position can't be read.";
+    /// <summary>Moves the selected anchor to the camera, the one points are added from, with its points or on its own. Returns why it was refused, or null.</summary>
+    public string? MoveAnchorToCamera(bool carry) =>
+        CameraPoint() is { } camera ? state.MoveAnchorTo(camera.Position, carry) : CameraUnreadable;
 
     /// <summary>Adds the current camera to the end of the track. Returns why it was refused, or null.</summary>
     public string? AddToEnd() => WithCurrentPoint(state.AddToEnd);
