@@ -6,11 +6,12 @@ A scene holds several tracks. You edit one at a time. The others are drawn in gr
 
 ## The Hierarchy
 
-The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} **Show hierarchy** on the top row, or **Hierarchy** in the **View** menu, shows or hides it. Drag its right edge to make it wider or narrower.
+The Hierarchy is the panel on the left of the **Vista** window. {icon:Sitemap} **Show hierarchy** on the top row, or **Hierarchy** in the **View** menu, shows or hides it. Drag its right edge to make it wider or narrower. The scene you have open is named in the **Vista** window's title bar.
+
+Beside the **Scene** heading are {icon:Anchor} **Select scene anchor** and {icon:Plus} **Add track or preset**, which opens a menu with **Add track** and **Add preset**.
 
 | | Control | Does |
 |---|---|---|
-| {icon:Plus} | **Add track** | Adds an empty track, or one from a [preset](presets.md). |
 | | Click a name | Edits that track. |
 | | Double-click a name | Edits that track and flies the camera to its first point. |
 | | Drag a name | Changes the order. |

@@ -20,5 +20,8 @@ Toggleable overlays for framing a recorded shot: 9:16, 16:9 and 2.39:1 masks, an
 ### Shaping the path
 Widen or tighten the curve through a point without adding points, as with tension or handles in Unreal, Blender and After Effects. Today the path is a Catmull-Rom spline, shaped only by where the points are.
 
+### Filtering the Hierarchy
+A search box over the Hierarchy's track list, for scenes with many tracks. It would filter by name as you type. No sort, since the Hierarchy's order is the user's to set by dragging.
+
 ### Save compatibility
 Keep scene files backwards and forwards compatible now that saving is live: versioned files, and a migration that upgrades older saves to the current format when the schema changes. `SceneJson` reads only its own format version today, so there's no migration path yet.

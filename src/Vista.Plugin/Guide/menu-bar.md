@@ -6,10 +6,14 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 
 | Item | Does |
 |---|---|
+| **Open scene** | Opens a searchable list of your scenes. See [Saving and scenes](scenes-saving.md). |
+| **New scene** | Makes an empty scene and opens it. |
+| **Rename scene** | Renames the open scene. |
+| **Duplicate scene** | Copies the open scene and opens the copy. |
+| **Delete scene** | Deletes the open scene. |
 | **Select scene anchor** | Selects the scene anchor. See [Scenes and anchors](scenes.md). |
-| **Save folder...** | Changes where Vista saves. See [Saving and scenes](scenes-saving.md). |
+| **Save folder** | Changes where Vista saves. See [Saving and scenes](scenes-saving.md). |
 | **Open save folder** | Shows your scene files. |
-| **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |
 
 ## Edit
 
@@ -33,6 +37,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Track names** | Shows or hides the names above track anchors. See [Scenes and anchors](scenes.md). |
 | **Track name size** | Makes those names bigger or smaller. |
 | **Colour path by turn speed** | Colours the path by how fast the camera turns (`G`). See [Aim](aim.md). |
+| **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |
 
 ## Preview
 

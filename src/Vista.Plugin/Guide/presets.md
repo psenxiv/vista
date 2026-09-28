@@ -9,13 +9,13 @@ Right-click a track in the Hierarchy and choose **Save as preset**, then name it
 ## Adding a preset
 
 1. Fly the camera to where you want the shot.
-2. Click {icon:Plus} **Add track** at the top of the Hierarchy.
-3. Choose **From preset**, then the preset.
+2. Click {icon:Plus} at the top of the Hierarchy, then choose **Add preset**.
+3. Search for the preset, then open it by double-clicking its row, selecting it and pressing **Add**, or pressing `Enter`.
 
 The preset appears as a new track on the ground under the camera, facing the way it was saved. Move or turn it with its anchor. See [Scenes and anchors](scenes.md).
 
-**Open folder**, at the bottom of the list, shows your preset files, so you can share them.
+{icon:FolderOpen}, in the list's footer, opens your preset files, so you can share them.
 
 ## Deleting a preset
 
-In the **From preset** list, right-click a preset and choose **Delete**.
+Open the preset list as above, then hover a preset for {icon:Trash} **Delete**, or right-click it and choose **Delete**.

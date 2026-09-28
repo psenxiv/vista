@@ -2,7 +2,10 @@
 
 ## X.Y.Z.N
 
-- The eye button is back on the top row: turn it on to hide the game UI while Live plays.
+- The eye button is back on the top row, and its checkbox moved from the **Scene** menu to the **View** menu: turn it on to hide the game UI while Live plays.
+- Scenes are opened, renamed, duplicated, deleted and created from the **Scene** menu and a searchable **Open scene** list, replacing the old drop-down at the top of the Hierarchy.
+- Presets are added the same way, from **Add preset** in the Hierarchy's **+** menu.
+- The **Vista** window's title bar now shows the open scene's name.
 
 ## 0.12.0.1
 
