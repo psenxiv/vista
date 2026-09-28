@@ -14,12 +14,9 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>The open scene's name and its tracks: pick one to edit, show or hide, rename, duplicate, delete, reorder, and save or add presets.</summary>
+/// <summary>The open scene's tracks: pick one to edit, show or hide, rename, duplicate, delete, reorder, and save or add presets.</summary>
 internal sealed class HierarchyPanel
 {
-    /// <summary>The row identity the header's name is drawn under, distinct from any track's id.</summary>
-    private const string HeaderRow = "header";
-
     private readonly GameSession game;
     private readonly SessionState session;
     private readonly SceneFiles files;
@@ -40,23 +37,15 @@ internal sealed class HierarchyPanel
         this.picker = picker;
     }
 
-    /// <summary>The open scene's name, the scene anchor button and the add button, then one row per track; disabled unless editing.</summary>
+    /// <summary>The Scene heading, the scene anchor button and the add button, then one row per track; disabled unless editing.</summary>
     public void Draw(bool editing)
     {
         ImGui.BeginDisabled(!editing);
         var headerWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - ButtonsWidth());
-        var name = files.CurrentName;
         var headerStart = ImGui.GetCursorPosX();
-        ImGui.Dummy(new Vector2(headerWidth, ImGui.GetFrameHeight()));
-        // A selectable reaches half the item spacing left of the cursor, so start there to line up with the track names.
-        var reach = MathF.Floor(ImGui.GetStyle().ItemSpacing.X * 0.5f);
-        RowText.Draw(
-            HeaderRow,
-            name.Length > 0 ? name : "Scene",
-            ImGui.GetItemRectMin() - new Vector2(reach, 0f),
-            ImGui.GetItemRectMax(),
-            headerWidth
-        );
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+            ImGui.TextUnformatted("Scene");
         ImGui.SameLine();
         ImGui.SetCursorPosX(headerStart + headerWidth + ImGui.GetStyle().ItemSpacing.X);
 
