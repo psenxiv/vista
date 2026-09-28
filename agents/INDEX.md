@@ -134,6 +134,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 - `Session/GameSession` (plugin): starting, pausing and restarting playback, and Play/Pause as one toggle.
 - `Session/Scrubber` (plugin): a scrub one control began, which only that control ends.
+- `Ui/Main/EditCommands` (plugin): Undo, Redo, Play/Pause and Restart from the toolbar and menus, applying the held field first, and the debug self-test guard.
 
 ### Files
 
@@ -144,7 +145,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Game/CameraAccess`: reading and writing the world camera.
 - `Game/CharacterTable` and `Ground`: the characters loaded nearby, and the ground under a point.
 - `Game/PhysicalKeys`: keys read from their physical state.
-- `Game/HotkeyKeys`: mapping a bound hotkey's Core key to Dalamud's `VirtualKey`; the only place that does.
+- `Game/HotkeyKeys`: mapping a bound hotkey's Core key to Dalamud's `VirtualKey`, the only place that does, and reading the modifiers held.
 
 ### Test fixtures
 

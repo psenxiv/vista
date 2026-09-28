@@ -149,7 +149,7 @@ public sealed class SceneLibrary
         : sceneOpen ? FolderChange.Recreate
         : FolderChange.Reopen;
 
-    /// <summary>Leaves this folder for <paramref name="next"/>'s: writes the open scene here, or carries it into <paramref name="next"/> when that's refused; otherwise <paramref name="next"/> opens its first scene. Not moved only when the scene can be saved in neither, and then nothing changed.</summary>
+    /// <summary>Leaves this folder for <paramref name="next"/>'s: saves the open scene here and opens <paramref name="next"/>'s first scene, or carries the scene into <paramref name="next"/> when saving here is refused. Not moved only when neither save works, and then nothing changed.</summary>
     public (bool Moved, string? Refusal) MoveTo(SceneLibrary next)
     {
         // Written even when unchanged, since the file may have gone with the folder.

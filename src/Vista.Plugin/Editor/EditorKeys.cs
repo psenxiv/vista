@@ -6,7 +6,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Editor;
 
-/// <summary>The key bindings for the modes Vista owns the camera in, read from physical key state and hidden from the game.</summary>
+/// <summary>Vista's once-per-press keys, read from physical key state, acted on and hidden from the game as Core resolves them.</summary>
 internal sealed class EditorKeys
 {
     private readonly record struct WatchedKey(Key Key, VirtualKey Virtual);

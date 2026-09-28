@@ -111,9 +111,6 @@ internal sealed class SceneFiles
     /// <summary>Deletes scene file <paramref name="name"/>; when it's the open scene, also opens the first remaining scene, or a new one.</summary>
     public string? Delete(string name) => Run(l => l.Delete(name));
 
-    /// <summary>Saves the open scene now if it has changed.</summary>
-    public string? SaveNow() => Run(l => l.SaveNow());
-
     /// <summary>Saves the open scene as the plugin unloads, logging a refusal, since nobody is left to show it.</summary>
     public void SaveBeforeUnload()
     {
