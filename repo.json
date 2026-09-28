@@ -4,7 +4,7 @@
     "Name": "Vista",
     "InternalName": "Vista",
     "AssemblyVersion": "0.13.0.1",
-    "TestingAssemblyVersion": "0.13.0.1",
+    "TestingAssemblyVersion": "0.14.0.1",
     "IsTestingExclusive": false,
     "Punchline": "Camera tracks for cinematic shots.",
     "Description": "Create smooth, cinematic camera tracks in GPose or out in the world, organise them into scenes, and play them back live.",
@@ -23,9 +23,9 @@
     "IconUrl": "https://raw.githubusercontent.com/psenxiv/vista/main/images/icon.png",
     "DownloadLinkInstall": "https://github.com/psenxiv/vista/releases/download/prod-v0.13.0.1/latest.zip",
     "DownloadLinkUpdate": "https://github.com/psenxiv/vista/releases/download/prod-v0.13.0.1/latest.zip",
-    "DownloadLinkTesting": "https://github.com/psenxiv/vista/releases/download/prod-v0.13.0.1/latest.zip",
-    "LastUpdate": 1790594155,
+    "DownloadLinkTesting": "https://github.com/psenxiv/vista/releases/download/test-v0.14.0.1/latest.zip",
+    "LastUpdate": 1790605418,
     "TestingDalamudApiLevel": 15,
-    "TestingChangelog": "- The eye button is back on the top row, and its checkbox moved from the Scene menu to the View menu: turn it on to hide the game UI while Live plays.\n- Scenes are opened, renamed, duplicated, deleted and created from the Scene menu and a searchable Open scene list, replacing the old drop-down at the top of the Hierarchy.\n- Presets are added the same way, from Add preset in the Hierarchy's + menu or the Scene menu, which also has Save as preset and Open presets folder.\n- The Vista window's title bar now shows the open scene's name.\n- Save folder in the Scene menu is now Select save folder.\n- An empty playlist, and a track with no points, now say how to add to them.\n- Buttons with a hotkey now show it in their tooltip.\n- The points table's headings stay in place while you scroll."
+    "TestingChangelog": "- The Level camera roll and Camera window buttons are back on the top row, next to the fly speed slider.\n- Choosing a new save folder after the old one has gone now keeps the scene you have open.\n- Move anchor to me in the Scene menu puts the selected anchor where the camera is, with its points or on its own.\n- Give feedback, on the top row and in the Help menu, opens a short form to tell us what's working and what isn't."
   }
 ]
