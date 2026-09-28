@@ -26,3 +26,5 @@ You can also type its **X**, **Y**, **Z** and **Yaw** in the **Point** window.
 Hold `Alt` while you drag the gizmo to move the anchor alone, leaving everything attached where it is. Use it to turn a scene or track around a different spot.
 
 To move a whole scene somewhere new, move the scene anchor.
+
+To put the selected anchor exactly where you are standing, choose **Move anchor to me** in the **Scene** menu, then **With its points** to bring everything attached along, or **Anchor only** to leave it where it is.

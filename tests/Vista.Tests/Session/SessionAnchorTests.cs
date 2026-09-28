@@ -2,6 +2,7 @@ using System.Numerics;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
+using Vista.Core.Tracks.Aiming;
 using Xunit;
 using static Vista.Tests.Fixtures;
 using static Vista.Tests.Session.SessionFixtures;
@@ -401,5 +402,175 @@ public class SessionAnchorTests
         Near(target.Position, state.Track.Points[0].Position, 1e-4f);
         Assert.Equal(target.Yaw, state.Track.Points[0].Yaw, 1e-4f);
         state.EndLiveEdit();
+    }
+
+    [Fact]
+    public void MovingTheSceneAnchorToThePlayerCarriesItsPoints()
+    {
+        var state = EditingOverGround();
+        state.Selection.SelectSceneAnchor();
+        var before = state.Track.Points[2].Position;
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(50f, 2f, 7f), carry: true));
+
+        // The scene anchor was (10, 1, 0), yaw 0; moving it to (50, 2, 7) keeps yaw 0
+        // and carries every point by the offset (50 - 10, 2 - 1, 7 - 0) = (40, 1, 7).
+        Assert.Equal(new Anchor(new Vector3(50f, 2f, 7f), 0f), state.Scene.Anchor);
+        Near(before + new Vector3(40f, 1f, 7f), state.Track.Points[2].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void MovingTheSceneAnchorToThePlayerAloneLeavesPointsInPlace()
+    {
+        var state = EditingOverGround();
+        state.Selection.SelectSceneAnchor();
+        var before = state.Track.Points.Select(p => p.Position).ToList();
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(50f, 2f, 7f), carry: false));
+
+        Assert.Equal(new Anchor(new Vector3(50f, 2f, 7f), 0f), state.Scene.Anchor);
+        for (var i = 0; i < before.Count; i++)
+            Near(before[i], state.Track.Points[i].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void MovingATrackAnchorToThePlayerCarriesItsPoints()
+    {
+        var state = EditingOverGround();
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
+        var before = state.Track.Points[2].Position;
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(-4f, 0f, 9f), carry: true));
+
+        // The track anchor's world position was (10, 1, 0), yaw 0; moving it to (-4, 0, 9) keeps yaw 0
+        // and carries every point by the offset (-4 - 10, 0 - 1, 9 - 0) = (-14, -1, 9).
+        var moved = SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[0]);
+        Assert.Equal(new Anchor(new Vector3(-4f, 0f, 9f), 0f), moved);
+        Near(before + new Vector3(-14f, -1f, 9f), state.Track.Points[2].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void MovingATrackAnchorToThePlayerAloneLeavesItsPointsInPlace()
+    {
+        var state = EditingOverGround();
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
+        var before = state.Track.Points.Select(p => p.Position).ToList();
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(-4f, 0f, 9f), carry: false));
+
+        var moved = SceneGeometry.WorldAnchor(state.Scene, state.Scene.Tracks[0]);
+        Assert.Equal(new Anchor(new Vector3(-4f, 0f, 9f), 0f), moved);
+        for (var i = 0; i < before.Count; i++)
+            Near(before[i], state.Track.Points[i].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void MovingATrackAnchorToThePlayerLeavesOtherTracksWhereTheyAre()
+    {
+        var state = EditingOverGround();
+        state.AddTrack();
+        state.AddToEnd(HeadHeightPoint(40f));
+        var second = state.EditedTrackId;
+        state.SwitchTrack(TrackId(state, 0));
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
+        var otherBefore = SceneGeometry.WorldAnchor(state.Scene, SceneEditing.Get(state.Scene, second));
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(-4f, 0f, 9f), carry: true));
+
+        Assert.Equal(otherBefore, SceneGeometry.WorldAnchor(state.Scene, SceneEditing.Get(state.Scene, second)));
+    }
+
+    [Fact]
+    public void UndoingAMoveToThePlayerPutsTheAnchorAndPointsBackExactly()
+    {
+        var state = EditingOverGround();
+        state.Selection.SelectSceneAnchor();
+        var anchorBefore = state.Scene.Anchor;
+        var pointsBefore = state.Track.Points.Select(p => p.Position).ToList();
+
+        Assert.Null(state.MoveAnchorTo(new Vector3(50f, 2f, 7f), carry: true));
+
+        Assert.True(state.Undo());
+
+        Assert.Equal(anchorBefore, state.Scene.Anchor);
+        for (var i = 0; i < pointsBefore.Count; i++)
+            Near(pointsBefore[i], state.Track.Points[i].Position, 1e-4f);
+    }
+
+    [Fact]
+    public void MovingTheAnchorToWhereItIsRecordsNoStep()
+    {
+        // EditingOverGround() already has one undo step per point added; undoing after a no-op move
+        // removes the last point rather than reversing the move, proving the move recorded no step of its own.
+        var state = EditingOverGround();
+        state.Selection.SelectSceneAnchor();
+
+        Assert.Null(state.MoveAnchorTo(state.Scene.Anchor.Position, carry: true));
+
+        Assert.True(state.Undo());
+        Assert.Equal(2, state.Track.Points.Count);
+    }
+
+    [Fact]
+    public void MovingTheAnchorIsRefusedWithNothingSelected()
+    {
+        var state = EditingOverGround();
+        var before = state.Scene.Anchor;
+
+        Assert.NotNull(state.MoveAnchorTo(new Vector3(1f, 1f, 1f), carry: true));
+
+        Assert.Equal(before, state.Scene.Anchor);
+    }
+
+    [Fact]
+    public void MovingTheAnchorIsRefusedWithTheLookAtPointSelected()
+    {
+        var state = EditingOverGround();
+        state.SetAim(AimMode.LookAt, new ControlPoint(new Vector3(0f, 5f, 0f), 0f, 0f, 1f));
+        state.Selection.SelectLookAt(state.EditedTrackId);
+        var before = state.Scene.Anchor;
+
+        Assert.NotNull(state.MoveAnchorTo(new Vector3(1f, 1f, 1f), carry: true));
+
+        Assert.Equal(before, state.Scene.Anchor);
+    }
+
+    [Fact]
+    public void MovingTheAnchorIsRefusedOutsideEdit()
+    {
+        var state = EditingOverGround();
+        state.Selection.SelectSceneAnchor();
+        var before = state.Scene.Anchor;
+        state.Release();
+
+        Assert.NotNull(state.MoveAnchorTo(new Vector3(1f, 1f, 1f), carry: true));
+
+        Assert.Equal(before, state.Scene.Anchor);
+    }
+
+    [Fact]
+    public void CanMoveAnchorIsTrueOnlyInEditWithTheSceneOrATrackAnchorSelected()
+    {
+        var state = EditingOverGround();
+        Assert.False(state.CanMoveAnchor);
+
+        state.Selection.SelectSceneAnchor();
+        Assert.True(state.CanMoveAnchor);
+
+        state.Release(CameraMode.View);
+        Assert.False(state.CanMoveAnchor);
+
+        state.Edit();
+        Assert.True(state.CanMoveAnchor);
+
+        state.Selection.SelectTrackAnchor(state.EditedTrackId);
+        Assert.True(state.CanMoveAnchor);
+
+        state.Selection.Select(0);
+        Assert.False(state.CanMoveAnchor);
+
+        state.SetAim(AimMode.LookAt, new ControlPoint(new Vector3(0f, 5f, 0f), 0f, 0f, 1f));
+        state.Selection.SelectLookAt(state.EditedTrackId);
+        Assert.False(state.CanMoveAnchor);
     }
 }

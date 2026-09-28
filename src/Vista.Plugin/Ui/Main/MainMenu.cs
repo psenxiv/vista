@@ -126,12 +126,28 @@ internal sealed class MainMenu
         ImGui.Separator();
         if (Menu.Item("Select scene anchor", editing && session.Scene.AnchorPlaced))
             Report(session.Selection.SelectSceneAnchor());
+        DrawMoveAnchorToMe(editing);
         ImGui.Separator();
         // A new folder loads a scene, which Live refuses.
         if (Menu.Item("Select save folder", mode != CameraMode.Live))
             Show(setup);
         if (Menu.Item("Open save folder", files.Ready))
             files.OpenFolder(presets: false);
+    }
+
+    /// <summary>Move anchor to me's submenu: the selected scene or track anchor to the player, with its points or on its own.</summary>
+    private void DrawMoveAnchorToMe(bool editing)
+    {
+        var enabled = session.CanMoveAnchor;
+        using var menu = ImRaii.Menu("Move anchor to me", enabled);
+        if (!enabled)
+            Tooltip.OnHover(editing ? "Select the scene anchor or a track anchor first." : "Works in Edit.");
+        if (!menu)
+            return;
+        if (Menu.Item("With its points"))
+            Report(game.MoveAnchorToPlayer(carry: true));
+        if (Menu.Item("Anchor only"))
+            Report(game.MoveAnchorToPlayer(carry: false));
     }
 
     /// <summary>Reports a refusal; a successful action relists the picker through <see cref="SceneFiles.Changed"/>.</summary>

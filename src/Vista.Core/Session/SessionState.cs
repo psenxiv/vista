@@ -81,6 +81,9 @@ public sealed class SessionState
     /// <summary>True while editing with a step to redo.</summary>
     public bool CanRedo => Mode == CameraMode.Editing && history.CanRedo;
 
+    /// <summary>True in Edit with the scene or a track anchor selected: whether <see cref="MoveAnchorTo"/> can run.</summary>
+    public bool CanMoveAnchor => Mode == CameraMode.Editing && Selection.Anchor is AnchorKind.Scene or AnchorKind.Track;
+
     /// <summary>True when Vista hasn't stopped and the playlist has an entry whose track has points.</summary>
     public bool CanGoLive => !Stopped && PlaylistEditing.CanPlay(Scene);
 
@@ -92,6 +95,9 @@ public sealed class SessionState
 
     /// <summary>Why an edit of the selected point is refused with none selected.</summary>
     private const string SelectAPoint = "Select a point first.";
+
+    /// <summary>Why an edit of the selected anchor is refused with none selected.</summary>
+    private const string SelectAnchorFirst = "Select an anchor first.";
 
     /// <summary>What the player is told once Vista has stopped, and why Edit and Live are refused.</summary>
     public const string StopMessage =
@@ -765,7 +771,7 @@ public sealed class SessionState
         if (liveEditStart is not { } start)
             return NoLiveEdit;
         if (Selection.Anchor is not { } kind || kind == AnchorKind.LookAt)
-            return "Select an anchor first.";
+            return SelectAnchorFirst;
         if (Selection.UnplacedRefusal(kind) is { } unplaced)
             return unplaced;
         Scene =
@@ -773,6 +779,24 @@ public sealed class SessionState
                 ? SceneGeometry.MoveSceneAnchor(start.Scene, world, carry)
                 : SceneGeometry.MoveTrackAnchor(start.Scene, EditedTrackId, world, carry);
         return null;
+    }
+
+    /// <summary>Moves the selected scene or track anchor to <paramref name="world"/>, keeping its yaw, as one undo step; none if it doesn't move. Returns why it was refused, or null.</summary>
+    public string? MoveAnchorTo(Vector3 world, bool carry)
+    {
+        if (Selection.Anchor is not { } kind || kind == AnchorKind.LookAt)
+            return SelectAnchorFirst;
+        if (Selection.UnplacedRefusal(kind) is { } unplaced)
+            return unplaced;
+        var target = new Anchor(world, Selection.AnchorInWorld!.Value.Yaw);
+        return CommitScene(scene =>
+            (
+                kind == AnchorKind.Scene
+                    ? SceneGeometry.MoveSceneAnchor(scene, target, carry)
+                    : SceneGeometry.MoveTrackAnchor(scene, EditedTrackId, target, carry),
+                EditedTrackId
+            )
+        );
     }
 
     /// <summary>During a live edit, moves the selected Look At point to <paramref name="world"/>. Returns why it was refused, or null.</summary>
