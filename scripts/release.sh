@@ -2,6 +2,7 @@
 # Tags the current version for a channel and pushes the tag, which runs the Release workflow.
 # scripts/release.sh prod   -> prod-vX.Y.Z.N, a release for everyone
 # scripts/release.sh test   -> test-vX.Y.Z.N, a build for opted-in testers
+# A release with a test build tags that build's commit, so both tags name the same source.
 source "$(dirname "$0")/env.sh"
 cd "$ROOT"
 
@@ -27,20 +28,26 @@ v="$(version)"
 if ! is_version "$v"; then
   fail "Version must be X.Y.Z.N, got $v; run make bump."
 fi
-if ! grep -qx "## $v" CHANGELOG.md; then
-  fail "CHANGELOG.md has no '## $v' section; make bump names the pending one."
-fi
 tag="$channel-v$v"
 if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
   fail "Tag $tag already exists."
 fi
 
+# The workflow's repo.json commit moves main past a test build, so a release promotes the test build's own commit.
+target="$(git rev-parse HEAD)"
+if [ "$channel" = prod ] && git rev-parse -q --verify "refs/tags/test-v$v" > /dev/null; then
+  target="$(git rev-parse "test-v$v^{commit}")"
+fi
+if ! git show "$target:CHANGELOG.md" | grep -qx "## $v"; then
+  fail "CHANGELOG.md has no '## $v' section; make bump names the pending one."
+fi
+
 "$ROOT/scripts/verify.sh" --check
 
-read -r -p "Push $tag and publish it? [y/N] " answer
+read -r -p "Push $tag on $(git log -1 --format='%h %s' "$target") and publish it? [y/N] " answer
 if [ "$answer" != y ]; then
   fail "Stopped."
 fi
-git tag "$tag"
+git tag "$tag" "$target"
 git push origin "$tag"
 echo "Pushed $tag. Watch it at https://github.com/psenxiv/vista/actions"
