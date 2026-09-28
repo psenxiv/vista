@@ -19,22 +19,18 @@ internal sealed class HierarchyPanel
 {
     private readonly GameSession game;
     private readonly SessionState session;
-    private readonly SceneFiles files;
     private readonly FilePickerWindow picker;
-    private readonly NamePrompt namePrompt = new("preset");
+    private readonly PresetSave presetSave;
     private Guid? renaming;
     private string renameText = string.Empty;
     private bool focusRename;
 
-    private IReadOnlyList<string> presets = [];
-    private Guid presetTrack;
-
-    public HierarchyPanel(GameSession game, SceneFiles files, FilePickerWindow picker)
+    public HierarchyPanel(GameSession game, FilePickerWindow picker, PresetSave presetSave)
     {
         this.game = game;
         session = game.State;
-        this.files = files;
         this.picker = picker;
+        this.presetSave = presetSave;
     }
 
     /// <summary>The Scene heading, the scene anchor button and the add button, then one row per track; disabled unless editing.</summary>
@@ -78,8 +74,6 @@ internal sealed class HierarchyPanel
 
         ImGui.EndChild();
         ImGui.EndDisabled();
-
-        namePrompt.Draw();
     }
 
     /// <summary>Add track's menu: an empty track, or the preset picker.</summary>
@@ -211,20 +205,7 @@ internal sealed class HierarchyPanel
         if (Menu.Item("Add to playlist"))
             Report(session.AddToPlaylist([track.Id]));
         if (Menu.Item("Save as preset", Presets.CanSave(track)))
-        {
-            presets = files.PresetNames();
-            presetTrack = track.Id;
-            namePrompt.Ask(
-                "Save as preset",
-                track.Name,
-                text =>
-                {
-                    var (refusal, replaces) = SceneNames.PresetCheck(text, presets);
-                    return (refusal, replaces ? $"A preset called {text.Trim()} exists." : null);
-                },
-                saved => Report(files.SavePreset(saved, presetTrack))
-            );
-        }
+            presetSave.Ask(track);
 
         if (Menu.Item("Delete", SceneEditing.CanDelete(scene, [track.Id])))
             Report(session.DeleteTracks([track.Id]));

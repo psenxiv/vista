@@ -114,6 +114,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name, inside the item just drawn or an explicit rectangle.
 - `Ui/Widgets/CharacterPicker` and `Refusal`: the character drop-down, and telling the player why an action was refused (the log and a notification).
 - `Ui/Widgets/PromptDialog`, `NamePrompt` and `DeleteConfirm`: a modal's begin and Cancel, a name prompt (Ok or Replace, checked against a caller-given refusal and notice), and a delete confirmation; each instance keeps its own popup id.
+- `Ui/Widgets/PresetSave`: saving a track as a preset, its name prompt shared by the Hierarchy row menu and the Scene menu.
 
 ### Colours
 

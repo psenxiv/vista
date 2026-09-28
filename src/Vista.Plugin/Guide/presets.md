@@ -4,17 +4,17 @@ A preset is a track saved on its own, so you can reuse a shot in any scene: an o
 
 ## Saving a preset
 
-Right-click a track in the Hierarchy and choose **Save as preset**, then name it. Saving with the name of an existing preset replaces it.
+Right-click a track in the Hierarchy and choose **Save as preset**, then name it. Saving with the name of an existing preset replaces it. The Scene menu's **Save as preset** does the same for the edited track.
 
 ## Adding a preset
 
 1. Fly the camera to where you want the shot.
-2. Click {icon:Plus} **Add track or preset** at the top of the Hierarchy, then choose **Add preset**.
+2. Click {icon:Plus} **Add track or preset** at the top of the Hierarchy, then choose **Add preset**. The Scene menu's **Add preset** opens the same list.
 3. Search for the preset, then open it by double-clicking its row, selecting it and pressing **Add**, or pressing `Enter`.
 
 The preset appears as a new track on the ground under the camera, facing the way it was saved. Move or turn it with its anchor. See [Scenes and anchors](scenes.md).
 
-{icon:FolderOpen}, in the list's footer, opens your preset files, so you can share them.
+{icon:FolderOpen}, in the list's footer, opens your preset files, so you can share them. So does **Open presets folder** in the Scene menu.
 
 ## Deleting a preset
 

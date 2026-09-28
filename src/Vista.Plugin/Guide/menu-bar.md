@@ -11,6 +11,9 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Rename scene** | Renames the open scene. |
 | **Duplicate scene** | Copies the open scene and opens the copy. |
 | **Delete scene** | Deletes the open scene. |
+| **Add preset** | Opens a searchable list of your presets. See [Presets](presets.md). |
+| **Save as preset** | Saves the edited track as a preset. See [Presets](presets.md). |
+| **Open presets folder** | Shows your preset files. |
 | **Select scene anchor** | Selects the scene anchor. See [Scenes and anchors](scenes.md). |
 | **Select save folder** | Changes where Vista saves. See [Saving and scenes](scenes-saving.md). |
 | **Open save folder** | Shows your scene files. |

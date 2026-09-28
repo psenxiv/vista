@@ -9,6 +9,7 @@
 - Save folder in the Scene menu is now Select save folder.
 - An empty playlist, and a track with no points, now say how to add to them.
 - Buttons with a hotkey now show it in their tooltip.
+- The Scene menu has Add preset, Save as preset and Open presets folder.
 
 ## 0.12.0.1
 

@@ -132,10 +132,11 @@ internal sealed class TrackEditorWindow : Window
         this.timing = timing;
         this.watchTarget = watchTarget;
         this.followTarget = followTarget;
-        menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup, picker);
+        var presetSave = new PresetSave(files);
+        menu = new MainMenu(game, config, fields, files, layer, timing, camera, guide, setup, picker, presetSave);
         this.guide = guide;
         scrub = new Scrubber(game);
-        hierarchy = new HierarchyPanel(game, files, picker);
+        hierarchy = new HierarchyPanel(game, picker, presetSave);
         playlist = new PlaylistPanel(session);
         RespectCloseHotkey = false;
         SizeCondition = ImGuiCond.FirstUseEver;

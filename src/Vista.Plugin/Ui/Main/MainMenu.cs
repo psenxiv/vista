@@ -31,6 +31,7 @@ internal sealed class MainMenu
     private readonly GuideWindow guide;
     private readonly SetupWindow setup;
     private readonly FilePickerWindow picker;
+    private readonly PresetSave presetSave;
     private readonly NamePrompt namePrompt = new("scene");
     private readonly DeleteConfirm deleteConfirm = new("scene");
 
@@ -44,7 +45,8 @@ internal sealed class MainMenu
         CameraWindow camera,
         GuideWindow guide,
         SetupWindow setup,
-        FilePickerWindow picker
+        FilePickerWindow picker,
+        PresetSave presetSave
     )
     {
         this.game = game;
@@ -58,6 +60,7 @@ internal sealed class MainMenu
         this.guide = guide;
         this.setup = setup;
         this.picker = picker;
+        this.presetSave = presetSave;
     }
 
     /// <summary>Draws the menu bar; View's Hierarchy and Playlist items flip <paramref name="showHierarchy"/> and <paramref name="showPlaylist"/>.</summary>
@@ -79,6 +82,7 @@ internal sealed class MainMenu
         // Drawn outside the menu bar's own popup scope, so opening one of these doesn't close with it.
         namePrompt.Draw();
         deleteConfirm.Draw();
+        presetSave.Draw();
     }
 
     private void DrawScene(bool editing)
@@ -112,6 +116,13 @@ internal sealed class MainMenu
             );
         if (Menu.Item("Delete scene", SceneActions.Allowed(SceneAction.Delete, targetsOpenScene: true, mode)))
             deleteConfirm.Ask(files.CurrentName, () => Confirm(files.Delete()));
+        ImGui.Separator();
+        if (Menu.Item("Add preset", editing))
+            picker.Show(FilePickerKind.Preset);
+        if (Menu.Item("Save as preset", editing && Presets.CanSave(session.Track)))
+            presetSave.Ask(session.Track);
+        if (Menu.Item("Open presets folder", files.Ready))
+            files.OpenFolder(presets: true);
         ImGui.Separator();
         if (Menu.Item("Select scene anchor", editing && session.Scene.AnchorPlaced))
             Report(session.Selection.SelectSceneAnchor());
