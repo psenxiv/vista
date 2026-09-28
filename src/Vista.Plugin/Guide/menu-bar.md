@@ -35,7 +35,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 |---|---|
 | **Hierarchy** | Shows or hides the Hierarchy. |
 | **Playlist** | Shows or hides the Playlist. |
-| **Timing** | Opens or closes the [timing graph](timing-graph.md). |
+| **Timing** | Opens or closes the **Timing** window, with the [timing graph](timing-graph.md). |
 | **Camera** | Opens or closes [the Camera window](camera-window.md). |
 | **Track names** | Shows or hides the names above track anchors. See [Scenes and anchors](scenes.md). |
 | **Track name size** | Makes those names bigger or smaller. |

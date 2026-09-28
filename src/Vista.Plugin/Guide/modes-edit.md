@@ -13,8 +13,6 @@ Edit is where you build your shots. You fly a free camera, add points and change
 | Mouse | Look in any direction |
 | Mouse wheel | Change fly speed |
 
-**Fly speed**, the slider on the top row, also sets the speed.
-
 ## Selecting
 
 Click a point, an anchor or a Look At point in the world to select it. Clicking a point on another track switches to that track. Click empty space to clear the selection. `Ctrl` + click or `Shift` + click the points of the track you are editing to select several. See [Selecting several](tracks-selecting.md).
@@ -29,7 +27,7 @@ The row under the menu bar holds the controls you use most. Everything else is i
 | {icon:ListOl} | **Show playlist** | Shows or hides the [Playlist](playlist.md). |
 | {icon:Undo} | **Undo** | Undoes your last change. {key:Undo} does the same. |
 | {icon:Redo} | **Redo** | Redoes it. {key:Redo} does the same. |
-| {icon:ChartLine} | **Timing** | Opens the [timing graph](timing-graph.md). |
+| {icon:ChartLine} | **Timing** | Opens the **Timing** window, with the [timing graph](timing-graph.md). |
 | | **Fly speed** | Sets how fast you fly. |
 | {icon:EyeSlash} | **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |
 | {icon:Question} | **User Guide** | Opens this guide. |

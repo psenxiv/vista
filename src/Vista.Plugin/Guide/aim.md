@@ -10,9 +10,9 @@ Click {icon:Crosshairs} **Select aim** on the track row to choose:
 | **Direction of travel** | Ahead along the path, like a camera on a rail. |
 | **Look At** | At one fixed spot. See [Look At](aim-look-at.md). |
 | **Watch Target** | At a character. See [Watch Target](aim-watch-target.md). |
-| **Follow Target** | Travels with a character. See [Follow Target](aim-follow-target.md). |
+| **Follow Target** | From beside a character, travelling with them. See [Follow Target](aim-follow-target.md). |
 
-For **Watch Target** and **Follow Target**, click {icon:PencilAlt} beside the choice in the menu to reopen its window.
+For **Watch Target** and **Follow Target**, click {icon:PencilAlt} **Edit Watch Target** or **Edit Follow Target** beside the choice in the menu to reopen its window.
 
 With **Direction of travel**, the menu also shows **Look ahead**: how far ahead along the path the camera looks, in yalms. The camera turns into corners before it reaches them. At 0 it faces straight along the path.
 

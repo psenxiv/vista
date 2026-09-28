@@ -27,14 +27,14 @@ Drag **Playback speed** in the **Preview** menu, where 1.00x is normal speed, or
 
 {icon:ArrowRight} **Select direction** on the track row chooses how the track plays:
 
-| Direction | Plays |
-|---|---|
-| **Forward** | First point to last. |
-| **Reverse** | Last point to first. |
-| **Ping-pong** | First to last, then back again. |
+| | Direction | Plays |
+|---|---|---|
+| {icon:ArrowRight} | **Forward** | First point to last. |
+| {icon:ArrowLeft} | **Reverse** | Last point to first. |
+| {icon:ArrowsAltH} | **Ping-pong** | First to last, then back again. |
 
 ## Loop
 
-Turn on {icon:Repeat} **Loop** to play the track over and over. Turn it off to play it once.
+Click {icon:Repeat} **Loop** to play the track over and over. Click it again, now **Play once**, to play it once.
 
-In Live, the playlist plays instead. See [Live](modes-live.md).
+In Live, a track with **Loop** on plays until you stop it. See [Playlist](playlist.md).

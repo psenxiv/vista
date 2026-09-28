@@ -15,7 +15,7 @@ A Follow Target track has one point, which sets where the camera sits next to th
 | Setting | Does |
 |---|---|
 | **Turn with character** | The camera swings round as they turn, so a camera behind them stays behind. |
-| **Look at character** | The camera aims at them. Off, it keeps the point's own aim. |
+| **Look at character** | The camera aims at them. When it's off, the camera keeps the point's own aim. |
 | **Aim height** | Where on the character the camera aims, in yalms above their feet. |
 | **Smoothing** | How gently the camera catches up. 0 stays locked to them. |
 | **Distance** | How far away the camera is. |

@@ -28,7 +28,7 @@ Click a key to select it, then choose how the line passes through it:
 ## Dragging
 
 - Drag a key left or right to change when the camera reaches it. The legs on either side adjust.
-- Hold `Ctrl` as you drag to move every later key with it, making the track longer or shorter.
+- Hold `Ctrl` as you start dragging to move every later key with it, making the track longer or shorter.
 - Drag a hold's end dot to change the hold's length.
 - Drag a selected key's handles to make the line steeper or flatter there.
 

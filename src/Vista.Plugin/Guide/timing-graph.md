@@ -1,6 +1,6 @@
 # The timing graph
 
-The timing graph shows how the camera moves along the track over time. Click {icon:ChartLine} **Timing** on the top row to open it.
+The timing graph shows how the camera moves along the track over time. Click {icon:ChartLine} **Timing** on the top row to open the **Timing** window.
 
 ## Reading it
 
@@ -10,7 +10,7 @@ Time runs left to right, in seconds. Distance along the track runs bottom to top
 - A hold is a flat stretch ending in a small dot.
 - The vertical line is the current moment in the track.
 
-Hover the line to see the time, distance and speed there.
+Hover the graph to see the time, distance and speed at that moment.
 
 ## Moving through time
 
