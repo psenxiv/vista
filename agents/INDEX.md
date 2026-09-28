@@ -104,7 +104,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### UI widgets
 
 - `Ui/Widgets/IconButton`: frameless icon buttons with tooltips, toggles, window toggles, row actions, row hover, icons drawn as text, the not-found warning, and icon and row widths.
-- `Ui/Widgets/Layout`: the spacing and field and dialog widths the windows share, right-aligning, centring a window as it appears, and minimum window sizes.
+- `Ui/Widgets/Layout`: the spacing and field and dialog widths the windows share, right-aligning, `CentreRemaining` to centre content in the space left in a window, centring a window as it appears, `PadLikeWindowTop` to match the window's top padding, and minimum window sizes.
 - `Ui/Widgets/WindowStyle`: a window's spacing, popup style and selected-row colours, or the popup style alone.
 - `Ui/Widgets/Tooltip` and `Menu`: a tooltip on the item just drawn, shown even while disabled, and a menu's items: plain, ticked, and a labelled slider.
 - `Ui/Main/AddPointItems`: the three ways to add a point at the camera as menu items, shared by the Edit menu and the track row's add menu.

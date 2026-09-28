@@ -16,7 +16,7 @@ Hover a row for these buttons, or right-click it for the same choices. **New sce
 
 The **Scene** menu also has **Rename scene**, **Duplicate scene** and **Delete scene**, which act on the scene you have open.
 
-You can switch scenes in Edit. Undo starts fresh each time you open a scene.
+You can switch scenes in any mode but Live. Undo starts fresh each time you open a scene.
 
 ## Where scenes are saved
 
