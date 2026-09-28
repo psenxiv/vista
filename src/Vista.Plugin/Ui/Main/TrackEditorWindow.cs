@@ -771,6 +771,8 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>The points list's width, leaving the same margin on the right as on the left, scrollbar included.</summary>
     private float PointsWidth()
     {
+        // Reaching into the right padding would let the editor scroll sideways, which would widen the list again.
+        ImGui.SetScrollX(0f);
         var left = ImGui.GetWindowPos().X;
         var start = ImGui.GetCursorScreenPos().X;
         var right = left + ImGui.GetWindowSize().X - (start - left);
