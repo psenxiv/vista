@@ -2,7 +2,7 @@
 
 FFXIV Dalamud plugin: camera tracks, organised into scenes and played back live.
 
-Read `WORKFLOW.md` in its entirety.
+Read `agents/WORKFLOW.md` in its entirety.
 
 ## Requirements
 
@@ -56,11 +56,11 @@ Everything targets .NET 10, as Dalamud does.
 
 **One owner per constant.** Declare a limit, default or list once and reference it everywhere else, making it public if another project needs it.
 
-**Reuse a helper before writing one.** Before adding helper or utility logic, check `INDEX.md`'s helper homes, and grep for the logic itself; use what exists. If the logic is general, put it in the home for its kind, or move it there when a second caller appears, rather than keeping it private to one class. Reviewers check both. Keep `INDEX.md` current when a package or helper home is added, moved or removed.
+**Reuse a helper before writing one.** Before adding helper or utility logic, check `agents/INDEX.md`'s helper homes, and grep for the logic itself; use what exists. If the logic is general, put it in the home for its kind, or move it there when a second caller appears, rather than keeping it private to one class. Reviewers check both. Keep `agents/INDEX.md` current when a package or helper home is added, moved or removed.
 
 **No interface without two implementations, a test double, or a crossing of the Core/Dalamud boundary.** The boundary is where game types appear, not where the `interface` keyword does. Judge each member the same way.
 
-**Code with no production caller doesn't outlive the phase that added it.** Tests don't count. Core may land ahead of its UI if the commit names the phase that will use it; whatever is still uncalled when that phase closes is deleted, with a `FEATURES.md` entry if the idea is still wanted. Framework entry points (window overrides, command handlers, `Dispose`) only look dead.
+**Code with no production caller doesn't outlive the phase that added it.** Tests don't count. Core may land ahead of its UI if the commit names the phase that will use it; whatever is still uncalled when that phase closes is deleted, with a `agents/FEATURES.md` entry if the idea is still wanted. Framework entry points (window overrides, command handlers, `Dispose`) only look dead.
 
 **Replacing a design deletes the old one in the same change.** Grep the old name across `src/`; if only its declaration and tests remain, it goes.
 
@@ -89,7 +89,7 @@ Pushing a tag runs the release workflow. Only the user pushes tags and runs the 
 
 Versions are SemVer's `X.Y.Z` plus `N`, which goes up by one for every shipped build of that `X.Y.Z`. A test build that holds up is promoted by releasing the same version.
 
-`CHANGELOG.md` has a section per version, newest first: a few short bullets for players, in `GUIDES.md`'s voice. When a change a player would notice lands on `main`, add a bullet to the pending section, headed literally `## X.Y.Z.N`, in the same commit. Never add to a section with a real version. Show the section to the user before shipping.
+`CHANGELOG.md` has a section per version, newest first: a few short bullets for players, in `agents/GUIDES.md`'s voice. When a change a player would notice lands on `main`, add a bullet to the pending section, headed literally `## X.Y.Z.N`, in the same commit. Never add to a section with a real version. Show the section to the user before shipping.
 
 ## In-game checks
 
@@ -101,11 +101,11 @@ Game logs: `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
 ## User Guide
 
-The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `GUIDES.md` before writing or changing any page.**
+The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `agents/GUIDES.md` before writing or changing any page.**
 
 When a change affects what a user can see or do, update the guide in the same change. If a key changes, update `hotkeys.md` and the README's keys table together.
 
 ## Docs
 
 - Specs and plans: `docs/superpowers/specs/` and `docs/superpowers/plans/`. `docs/` is gitignored; never commit it.
-- Feature ideas: `FEATURES.md`, a heading and two or three sentences each.
+- Feature ideas: `agents/FEATURES.md`, a heading and two or three sentences each.
