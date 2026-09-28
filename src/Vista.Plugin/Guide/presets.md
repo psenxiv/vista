@@ -9,7 +9,7 @@ Right-click a track in the Hierarchy and choose **Save as preset**, then name it
 ## Adding a preset
 
 1. Fly the camera to where you want the shot.
-2. Click {icon:Plus} at the top of the Hierarchy, then choose **Add preset**.
+2. Click {icon:Plus} **Add track or preset** at the top of the Hierarchy, then choose **Add preset**.
 3. Search for the preset, then open it by double-clicking its row, selecting it and pressing **Add**, or pressing `Enter`.
 
 The preset appears as a new track on the ground under the camera, facing the way it was saved. Move or turn it with its anchor. See [Scenes and anchors](scenes.md).
