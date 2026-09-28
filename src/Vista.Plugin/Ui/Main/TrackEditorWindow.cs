@@ -743,12 +743,7 @@ internal sealed class TrackEditorWindow : Window
             if (track.Points.Count == 0)
             {
                 var top = ImGui.GetCursorPos();
-                ImGui.PushTextWrapPos(0f);
-                using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-                    ImGui.TextUnformatted(
-                        "Fly to a spot and press Backtick, or click + above, to add a point at the camera."
-                    );
-                ImGui.PopTextWrapPos();
+                Layout.CentredText("Press Backtick or + to add points.", UiColours.Dim());
                 ImGui.SetCursorPos(top);
             }
 

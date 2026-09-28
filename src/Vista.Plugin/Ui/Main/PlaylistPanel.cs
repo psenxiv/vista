@@ -104,10 +104,7 @@ internal sealed class PlaylistPanel
             if (scene.Playlist.Count == 0)
             {
                 var top = ImGui.GetCursorPos();
-                ImGui.PushTextWrapPos(0f);
-                using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-                    ImGui.TextUnformatted("Drag tracks here from the Hierarchy, or click + to add one.");
-                ImGui.PopTextWrapPos();
+                Layout.CentredText("Drag tracks here, or click +.", UiColours.Dim());
                 ImGui.SetCursorPos(top);
             }
 

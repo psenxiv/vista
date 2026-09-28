@@ -1,5 +1,6 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 namespace Vista.Plugin.Ui.Widgets;
@@ -26,6 +27,16 @@ internal static class Layout
         var slack = ImGui.GetContentRegionAvail().Y - height;
         if (slack > 0f)
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (slack / 2f));
+    }
+
+    /// <summary>Draws <paramref name="text"/> in <paramref name="colour"/>, centred across and down the space left in the window or child.</summary>
+    public static void CentredText(string text, uint colour)
+    {
+        var size = ImGui.CalcTextSize(text);
+        CentreRemaining(size.Y);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - size.X) / 2f));
+        using (ImRaii.PushColor(ImGuiCol.Text, colour))
+            ImGui.TextUnformatted(text);
     }
 
     /// <summary>Pads below the item just drawn to match the window's top padding.</summary>
