@@ -1,7 +1,5 @@
 # Hotkeys
 
-These work in Edit mode. {key:Play} and {key:Restart} also work in Live, and {key:ColourByTurnSpeed} in View. {key:RestoreGameUi} only works in Live.
-
 | Key | Does |
 |---|---|
 | {key:FlyForward} {key:FlyLeft} {key:FlyBack} {key:FlyRight} | Fly forward, left, back, right |

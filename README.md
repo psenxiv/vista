@@ -31,8 +31,6 @@ https://raw.githubusercontent.com/psenxiv/vista/main/repo.json
 
 ## Keys
 
-These work in Edit mode. Space and Ctrl + Space also work in Live, and G in View. Escape only works in Live.
-
 | Key                              | Does                                                              |
 | -------------------------------- | ----------------------------------------------------------------- |
 | W A S D                          | Fly forward, left, back, right                                    |
