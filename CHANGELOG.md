@@ -1,6 +1,6 @@
 # Changelog
 
-## X.Y.Z.N
+## 0.13.0.1
 
 - The eye button is back on the top row, and its checkbox moved from the Scene menu to the View menu: turn it on to hide the game UI while Live plays.
 - Scenes are opened, renamed, duplicated, deleted and created from the Scene menu and a searchable Open scene list, replacing the old drop-down at the top of the Hierarchy.
