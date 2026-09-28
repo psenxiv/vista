@@ -122,13 +122,8 @@ internal sealed class MainMenu
             files.OpenFolder(presets: false);
     }
 
-    /// <summary>Reports a refusal, then relists the picker if it's open, since a scene menu action can add, rename or remove a file it's showing.</summary>
-    private void Confirm(string? refusal)
-    {
-        Report(refusal);
-        if (picker.IsOpen)
-            picker.Refresh();
-    }
+    /// <summary>Reports a refusal; a successful action relists the picker through <see cref="SceneFiles.Changed"/>.</summary>
+    private static void Confirm(string? refusal) => Report(refusal);
 
     private void DrawEdit(bool editing)
     {

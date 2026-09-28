@@ -8,7 +8,7 @@ namespace Vista.Plugin.Ui.Widgets;
 /// <summary>A name prompt: Ok stays disabled while the name can't be used and says why; a check returning a notice turns Ok into Replace.</summary>
 internal sealed class NamePrompt(string id)
 {
-    /// <summary>The name field's buffer, a little past the longest name so a longer one can be typed and refused; also used for any other field that holds a scene, preset or track name.</summary>
+    /// <summary>The buffer size for a scene, preset or track name field.</summary>
     public const int NameBuffer = SceneNames.MaxLength + 8;
 
     private readonly string popup = $"Name###vista-name-{id}";
@@ -24,7 +24,7 @@ internal sealed class NamePrompt(string id)
     /// <summary>True while the prompt is open and asking; check before acting on a key the prompt itself might be reading.</summary>
     public bool Asking => asking;
 
-    /// <summary>Opens the prompt titled <paramref name="heading"/> with <paramref name="suggestion"/> entered; <paramref name="check"/> says why the current text is refused, or gives a notice (turning Ok into Replace) when it isn't; <paramref name="confirm"/> runs with the trimmed name when accepted.</summary>
+    /// <summary>Opens the prompt titled <paramref name="heading"/> with <paramref name="suggestion"/> entered, checked by <paramref name="check"/> and confirmed by <paramref name="confirm"/>.</summary>
     public void Ask(
         string heading,
         string suggestion,

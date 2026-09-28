@@ -28,7 +28,7 @@ internal static class Layout
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (slack / 2f));
     }
 
-    /// <summary>Extra space below the item just drawn so its gap to what follows matches the window's own top padding, which the automatic item spacing alone would leave smaller.</summary>
+    /// <summary>Pads below the item just drawn to match the window's top padding.</summary>
     public static void PadLikeWindowTop() =>
         ImGui.Dummy(new Vector2(0f, MathF.Max(0f, ImGui.GetStyle().WindowPadding.Y - ImGui.GetStyle().ItemSpacing.Y)));
 

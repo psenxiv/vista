@@ -31,6 +31,9 @@ internal sealed class SceneFiles
     /// <summary>Raised when the folder is missing and Setup should be shown.</summary>
     public event EventHandler? SetupNeeded;
 
+    /// <summary>Raised after a scene or preset is written, renamed, duplicated, deleted or added, or the save folder changes.</summary>
+    public event Action? Changed;
+
     /// <summary>The folder chosen before, or null; where the folder picker starts.</summary>
     public string? Chosen => config.SaveFolder;
 
@@ -205,6 +208,7 @@ internal sealed class SceneFiles
 
         config.DemoAdded = true;
         config.Save();
+        Changed?.Invoke();
     }
 
     private string? Run(Func<SceneLibrary, string?> action)
@@ -218,6 +222,8 @@ internal sealed class SceneFiles
             config.Save();
         }
 
+        if (refusal is null)
+            Changed?.Invoke();
         return refusal;
     }
 
@@ -229,6 +235,7 @@ internal sealed class SceneFiles
         try
         {
             action(l.Folder);
+            Changed?.Invoke();
             return null;
         }
         catch (Exception e) when (SceneFolder.IsFileError(e))

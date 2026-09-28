@@ -12,7 +12,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Windows;
 
-/// <summary>Opens a scene or preset from a searchable list: double-click, Enter or the primary button opens or adds it; Rename, Duplicate and Delete act on a row; New scene and the folder sit in the footer.</summary>
+/// <summary>Opens a scene or preset from a searchable list.</summary>
 internal sealed class FilePickerWindow : Window
 {
     private const string TitleId = "###vista-file-picker";
@@ -39,6 +39,11 @@ internal sealed class FilePickerWindow : Window
     {
         session = game.State;
         this.files = files;
+        files.Changed += () =>
+        {
+            if (IsOpen)
+                Refresh();
+        };
         RespectCloseHotkey = false;
         SizeCondition = ImGuiCond.FirstUseEver;
         Size = new Vector2(MinWidth, MinHeight);
@@ -68,22 +73,23 @@ internal sealed class FilePickerWindow : Window
         DrawSearch();
         Layout.PadLikeWindowTop();
         var listed = FileList.Filter(entries, search);
+        // The selection only counts while its row is still visible under the current search.
+        var visible = selected is { } current && listed.Any(e => e.Name == current) ? current : null;
         DrawTable(listed, mode);
         ImGui.Separator();
-        DrawFooter(mode);
+        DrawFooter(mode, visible);
         namePrompt.Draw();
         deleteConfirm.Draw();
 
         if (
-            selected is { } current
+            visible is { } toOpen
             && ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
             && !namePrompt.Asking
             && !deleteConfirm.Asking
-            && listed.Any(e => e.Name == current)
             && PrimaryAllowed(mode)
             && ImGui.IsKeyPressed(ImGuiKey.Enter)
         )
-            Primary(current);
+            Primary(toOpen);
     }
 
     private void Reset()
@@ -93,7 +99,7 @@ internal sealed class FilePickerWindow : Window
         focusSearch = true;
     }
 
-    /// <summary>Relists the folder, dropping the selection; called on open, after this window's own actions, and by the Scene menu when one of its actions changes a file this window is showing.</summary>
+    /// <summary>Relists the folder, dropping the selection.</summary>
     public void Refresh()
     {
         entries = kind == FilePickerKind.Scene ? files.SceneEntries() : files.PresetEntries();
@@ -155,8 +161,8 @@ internal sealed class FilePickerWindow : Window
             );
             ImGui.TableHeadersRow();
 
-            foreach (var entry in listed)
-                DrawRow(entry, mode);
+            for (var i = 0; i < listed.Count; i++)
+                DrawRow(listed[i], i, mode);
             ImGui.EndTable();
         }
 
@@ -182,9 +188,9 @@ internal sealed class FilePickerWindow : Window
             ? IconButton.RowWidth(FontAwesomeIcon.PencilAlt, FontAwesomeIcon.Copy, FontAwesomeIcon.Trash)
             : IconButton.RowWidth(FontAwesomeIcon.Trash);
 
-    private void DrawRow(FileEntry entry, CameraMode mode)
+    private void DrawRow(FileEntry entry, int index, CameraMode mode)
     {
-        using var id = ImRaii.PushId(entry.Name);
+        using var id = ImRaii.PushId(index);
         ImGui.TableNextRow();
         ImGui.TableNextColumn();
 
@@ -262,7 +268,7 @@ internal sealed class FilePickerWindow : Window
             StartDelete(name);
     }
 
-    private void DrawFooter(CameraMode mode)
+    private void DrawFooter(CameraMode mode, string? visible)
     {
         Layout.CentreRemaining(ImGui.GetFrameHeight());
 
@@ -282,10 +288,10 @@ internal sealed class FilePickerWindow : Window
             files.OpenFolder(presets: kind == FilePickerKind.Preset);
         ImGui.SameLine();
 
-        ImGui.BeginDisabled(!PrimaryAllowed(mode) || selected is null);
+        ImGui.BeginDisabled(!PrimaryAllowed(mode) || visible is null);
         if (
             ImGui.Button(kind == FilePickerKind.Scene ? "Open" : "Add", new Vector2(FooterButtonWidth, 0f))
-            && selected is { } toOpen
+            && visible is { } toOpen
         )
             Primary(toOpen);
         ImGui.EndDisabled();
@@ -330,10 +336,6 @@ internal sealed class FilePickerWindow : Window
             newName => Confirm(files.New(newName))
         );
 
-    /// <summary>Reports a refusal, then relists the folder, since the action may have added, renamed or removed a file.</summary>
-    private void Confirm(string? refusal)
-    {
-        Report(refusal);
-        Refresh();
-    }
+    /// <summary>Reports a refusal; a successful action relists through <see cref="SceneFiles.Changed"/>.</summary>
+    private static void Confirm(string? refusal) => Report(refusal);
 }
