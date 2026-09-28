@@ -15,9 +15,6 @@ public sealed class ArcLengthTable
     /// <summary>Number of curve segments the table covers.</summary>
     public int SegmentCount { get; }
 
-    /// <summary>Sum of every segment's arc length.</summary>
-    public float TotalLength { get; }
-
     /// <summary>Samples the Catmull-Rom curve through <paramref name="points"/> once: the cumulative table and the path's speed at each sample.</summary>
     public ArcLengthTable(IReadOnlyList<Vector3> points)
     {
@@ -25,7 +22,6 @@ public sealed class ArcLengthTable
         _cumulative = new float[SegmentCount][];
         _rates = new float[SegmentCount][];
 
-        var total = 0f;
         for (var segment = 0; segment < SegmentCount; segment++)
         {
             var samples = new float[SamplesPerSegment + 1];
@@ -43,10 +39,7 @@ public sealed class ArcLengthTable
 
             _cumulative[segment] = samples;
             _rates[segment] = rates;
-            total += samples[^1];
         }
-
-        TotalLength = total;
     }
 
     /// <summary>Each segment's arc length, floored at <paramref name="minimum"/>.</summary>

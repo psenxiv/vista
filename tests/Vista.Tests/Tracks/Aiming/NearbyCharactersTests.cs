@@ -62,7 +62,6 @@ public class NearbyCharactersTests
         loaded.Clear();
 
         Assert.Equal(new Vector3(3f, 0f, 4f), characters.FindCharacter("Guard", null, Vector3.Zero)?.Position);
-        Assert.Single(characters.All);
     }
 
     [Fact]

@@ -21,9 +21,7 @@ public class TimingGraphTests
     public void ScreenPositionsMapBackAndClamp()
     {
         Assert.Equal(5f, Graph.TimeAt(300f), 4);
-        Assert.Equal(10f, Graph.DistanceAt(150f), 4);
         Assert.Equal(0f, Graph.TimeAt(0f));
-        Assert.Equal(20f, Graph.DistanceAt(0f));
     }
 
     [Fact]
@@ -67,13 +65,11 @@ public class TimingGraphTests
     }
 
     [Fact]
-    public void AZoomedGraphReadsTimeAndDistanceWithinTheView()
+    public void AZoomedGraphReadsTimeWithinTheView()
     {
         Assert.Equal(5f, Zoomed.TimeAt(75f), 1e-4f);
         Assert.Equal(2f, Zoomed.TimeAt(-10f), 1e-4f);
         Assert.Equal(6f, Zoomed.TimeAt(500f), 1e-4f);
-        Assert.Equal(4f, Zoomed.DistanceAt(50f), 1e-4f);
-        Assert.Equal(12f, Zoomed.DistanceAt(0f), 1e-4f);
     }
 
     [Fact]

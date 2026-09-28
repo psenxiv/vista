@@ -73,10 +73,6 @@ public readonly record struct TimingGraph(Vector2 Origin, Vector2 Size, float Du
     /// <summary>The time under pixel column <paramref name="x"/>, clamped at the view's start but not its end, so a key dragged past the plot can lengthen the shot.</summary>
     public float TimeAtOpenEnded(float x) => TimeFrom + (MathF.Max((x - Origin.X) / Size.X, 0f) * (TimeTo - TimeFrom));
 
-    /// <summary>The distance under pixel row <paramref name="y"/>, clamped to the view.</summary>
-    public float DistanceAt(float y) =>
-        DistanceFrom + (Fraction.Clamp((Origin.Y + Size.Y - y) / Size.Y) * (DistanceTo - DistanceFrom));
-
     /// <summary>The end of a handle <paramref name="length"/> pixels long leaving <paramref name="key"/> at <paramref name="slope"/> distance per second.</summary>
     public Vector2 HandleEnd(Vector2 key, KeySide side, float slope, float length)
     {

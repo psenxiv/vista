@@ -117,17 +117,6 @@ public class ArcLengthTableTests
     }
 
     [Fact]
-    public void SegmentLengthAndTotalLengthAreConsistent()
-    {
-        var table = new ArcLengthTable(BunchedThenSpread);
-        var sum = 0f;
-        for (var i = 0; i < table.SegmentCount; i++)
-            sum += table.SegmentLength(i);
-
-        Assert.Equal(sum, table.TotalLength, 3);
-    }
-
-    [Fact]
     public void ParameterAtZeroAndOneReturnTheSegmentEndpoints()
     {
         var table = new ArcLengthTable(BunchedThenSpread);
@@ -143,7 +132,6 @@ public class ArcLengthTableTests
         var points = new Vector3[pointCount];
         var table = new ArcLengthTable(points);
         Assert.Equal(0, table.SegmentCount);
-        Assert.Equal(0f, table.TotalLength);
     }
 
     [Fact]

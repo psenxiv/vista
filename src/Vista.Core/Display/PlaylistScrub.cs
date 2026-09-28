@@ -10,9 +10,6 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Timing
 {
     private readonly TimingView shown = view ?? TimingView.Whole((float)timeline.Total);
 
-    /// <summary>The playlist laid end to end, one segment per entry.</summary>
-    public PlaylistTimeline Timeline => timeline;
-
     /// <summary>How far along the bar <paramref name="time"/> falls, from 0 to 1, held at the ends outside the view; 0 when the view has no length.</summary>
     public float FractionOf(double time) =>
         shown.Span > 0f ? (float)Math.Clamp((time - shown.From) / shown.Span, 0.0, 1.0) : 0f;

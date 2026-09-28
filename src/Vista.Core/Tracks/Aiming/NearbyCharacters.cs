@@ -7,9 +7,6 @@ public sealed class NearbyCharacters
 {
     private IReadOnlyList<LoadedCharacter> characters = [];
 
-    /// <summary>Every character as last read.</summary>
-    public IReadOnlyList<LoadedCharacter> All => characters;
-
     /// <summary>A character's name and home world as a list shows it, or NPC with no world.</summary>
     public static string Label(string name, string? world) => $"{name} · {world ?? "NPC"}";
 

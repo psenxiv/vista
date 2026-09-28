@@ -165,24 +165,12 @@ public sealed class TrackEvaluator
         return _distances[segment] + ((clamped - segment) * _lengths[segment]);
     }
 
-    /// <summary>The place in control-point units at <paramref name="distance"/> along the path.</summary>
-    public float PositionOf(float distance)
-    {
-        if (_lengths.Length == 0)
-            return 0f;
-        var (segment, fraction) = LocateDistance(distance);
-        return segment + fraction;
-    }
-
     /// <summary>A slope on one side of key <paramref name="key"/>, from distance per second to a ratio of that span's average speed.</summary>
     public float ToStoredSlope(int key, KeySide side, float distancePerSecond)
     {
         var secant = Secant(key, side);
         return secant == 0f ? 0f : distancePerSecond / secant;
     }
-
-    /// <summary>A slope on one side of key <paramref name="key"/>, from a ratio of that span's average speed to distance per second.</summary>
-    public float FromStoredSlope(int key, KeySide side, float stored) => stored * Secant(key, side);
 
     /// <summary>The average speed, in distance per second, of the span on one side of key <paramref name="key"/>; 0 with no span.</summary>
     private float Secant(int key, KeySide side)

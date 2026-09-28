@@ -6,8 +6,8 @@ namespace Vista.Core.Tracks.Playback;
 /// <summary>Holds live mode and the shot on program; each tick says where the camera goes, or null to leave it be.</summary>
 public sealed class Director
 {
-    private Shot? _shot;
-    private IPlayback? _playback;
+    private PlaylistShot? _shot;
+    private PlaylistPlayback? _playback;
     private readonly NearbyCharacters? targets;
 
     /// <summary>A Director whose playbacks find watched or followed characters with <paramref name="targets"/>.</summary>
@@ -19,27 +19,22 @@ public sealed class Director
     /// <summary>True while live and paused; frames stop advancing.</summary>
     public bool IsPaused { get; private set; }
 
-    /// <summary>True once the current track or playlist's playback has finished; false otherwise.</summary>
+    /// <summary>True once the current shot's playback has finished; false otherwise.</summary>
     public bool IsFinished => _playback?.IsFinished ?? false;
 
-    /// <summary>Where the current track or playlist's camera is in the shot; 0 for other shots or before going live.</summary>
+    /// <summary>Where the current shot's camera is in the playing entry; 0 before going live.</summary>
     public double ShotTime => _playback?.ShotTime ?? 0.0;
 
-    /// <summary>The current shot's length in seconds; 0 for the game camera or before going live.</summary>
+    /// <summary>The playing entry's length in seconds; 0 before going live.</summary>
     public double ShotLength => _playback?.ShotLength ?? 0.0;
 
-    /// <summary>The playlist being played, or null for other shots.</summary>
-    public PlaylistPlayback? Playlist => _playback as PlaylistPlayback;
+    /// <summary>The playlist being played, or null before going live.</summary>
+    public PlaylistPlayback? Playlist => _playback;
 
     /// <summary>Puts <paramref name="shot"/> on program: live on, unpaused, restarted from zero. Unchanged if the track throws.</summary>
-    public void GoLive(Shot shot)
+    public void GoLive(PlaylistShot shot)
     {
-        var playback = shot switch
-        {
-            TrackShot t => (IPlayback)new TrackPlayback(t.Track, targets),
-            PlaylistShot p => new PlaylistPlayback(p.Items, p.Loops, targets),
-            _ => null,
-        };
+        var playback = new PlaylistPlayback(shot.Items, shot.Loops, targets);
         _shot = shot;
         _playback = playback;
         IsPaused = false;
@@ -52,12 +47,8 @@ public sealed class Director
             IsPaused = true;
     }
 
-    /// <summary>Continues from the paused frame. No effect unless live.</summary>
-    public void Resume()
-    {
-        if (IsLive)
-            IsPaused = false;
-    }
+    /// <summary>Continues from the paused frame.</summary>
+    public void Resume() => IsPaused = false;
 
     /// <summary>Takes live mode off and clears pause. <see cref="Tick"/> returns null until the next <see cref="GoLive"/>.</summary>
     public void GoOffline()
@@ -75,15 +66,5 @@ public sealed class Director
     }
 
     /// <summary>Where the camera should be this frame, or null to leave the game camera alone.</summary>
-    public CameraState? Tick(float dt)
-    {
-        if (!IsLive)
-            return null;
-
-        return _shot switch
-        {
-            TrackShot or PlaylistShot => _playback!.Advance(IsPaused ? 0f : dt),
-            _ => null,
-        };
-    }
+    public CameraState? Tick(float dt) => IsLive ? _playback!.Advance(IsPaused ? 0f : dt) : null;
 }

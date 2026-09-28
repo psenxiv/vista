@@ -24,7 +24,7 @@ public class DirectorTests
     public void TickIsNullAfterGoingOffline()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
         director.GoOffline();
 
         Assert.Null(director.Tick(1f / 60f));
@@ -34,7 +34,7 @@ public class DirectorTests
     public void GoLiveTurnsLiveModeOnAndClearsPause()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
 
         Assert.True(director.IsLive);
         Assert.False(director.IsPaused);
@@ -44,7 +44,7 @@ public class DirectorTests
     public void GoOfflineTurnsLiveModeOffAndClearsPause()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
         director.Pause();
 
         director.GoOffline();
@@ -63,10 +63,10 @@ public class DirectorTests
     }
 
     [Fact]
-    public void PauseHoldsTheCurrentFrameOfATrackShot()
+    public void PauseHoldsTheCurrentFrame()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
 
         director.Tick(5f);
         director.Pause();
@@ -80,7 +80,7 @@ public class DirectorTests
     public void ResumeContinuesFromThePausedFrame()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
 
         director.Tick(3f);
         director.Pause();
@@ -93,24 +93,10 @@ public class DirectorTests
     }
 
     [Fact]
-    public void ResumeOnlyTakesEffectWhileLive()
+    public void GoLiveRestartsFromZero()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
-        director.Pause();
-        director.GoOffline();
-
-        director.Resume();
-
-        Assert.False(director.IsLive);
-        Assert.False(director.IsPaused);
-    }
-
-    [Fact]
-    public void GoLiveRestartsATrackShotFromZero()
-    {
-        var director = new Director();
-        var shot = new TrackShot(StraightTrack());
+        var shot = new PlaylistShot([Item(StraightTrack())]);
         director.GoLive(shot);
         director.Tick(5f);
 
@@ -122,10 +108,10 @@ public class DirectorTests
     }
 
     [Fact]
-    public void TickOnATrackShotAdvancesThePlayback()
+    public void TickAdvancesThePlayback()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
 
         var frame = director.Tick(5f)!.Value;
 
@@ -144,21 +130,11 @@ public class DirectorTests
     }
 
     [Fact]
-    public void TickOnAGameCameraShotIsAlwaysNull()
-    {
-        var director = new Director();
-        director.GoLive(new GameCameraShot());
-
-        Assert.Null(director.Tick(1f / 60f));
-        Assert.Null(director.Tick(1f));
-    }
-
-    [Fact]
     public void TickOnATrackWithNoPointsIsNull()
     {
         var empty = TrackEditing.Empty();
         var director = new Director();
-        director.GoLive(new TrackShot(empty));
+        director.GoLive(new PlaylistShot([Item(empty)]));
 
         Assert.Null(director.Tick(1f / 60f));
     }
@@ -167,7 +143,7 @@ public class DirectorTests
     public void IsFinishedIsFalseUntilATrackThatDoesNotLoopReachesItsEnd()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
 
         Assert.False(director.IsFinished);
         director.Tick(5f);
@@ -183,10 +159,10 @@ public class DirectorTests
     }
 
     [Fact]
-    public void ShotTimeFollowsATrackShotsPlayback()
+    public void ShotTimeFollowsThePlayback()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
 
         director.Tick(2f);
         director.Tick(1.5f);
@@ -198,7 +174,7 @@ public class DirectorTests
     public void ShotTimeStopsWhilePaused()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
         director.Tick(2f);
 
         director.Pause();
@@ -211,20 +187,21 @@ public class DirectorTests
     public void GoLiveWithATrackThatCannotPlayLeavesTheCurrentShotOnProgram()
     {
         var director = new Director();
-        director.GoLive(new GameCameraShot());
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
         var broken = StraightTrack() with { Timing = [] };
 
-        Assert.Throws<ArgumentException>(() => director.GoLive(new TrackShot(broken)));
+        Assert.Throws<ArgumentException>(() => director.GoLive(new PlaylistShot([Item(broken)])));
 
         Assert.True(director.IsLive);
-        Assert.Null(director.Tick(1f));
+        // Unchanged, so still the original track at shot time 0.
+        StraightTrackFrame(0f, director.Tick(0f)!.Value);
     }
 
     [Fact]
     public void SeekMovesALiveTrackAndKeepsItsPause()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
         director.Pause();
 
         director.Seek(6.0);
@@ -263,36 +240,10 @@ public class DirectorTests
     }
 
     [Fact]
-    public void ATrackShotHasNoPlaylist()
-    {
-        var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
-        Assert.Null(director.Playlist);
-        Assert.Equal(10.0, director.ShotLength, 4);
-    }
-
-    [Fact]
-    public void GoLiveWithTheGameCameraClearsAFinishedTracksState()
-    {
-        var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack()));
-        director.Tick(20f);
-        Assert.True(director.IsFinished);
-
-        director.GoLive(new GameCameraShot());
-
-        Assert.False(director.IsFinished);
-        Assert.Equal(0.0, director.ShotTime);
-        Assert.Equal(0.0, director.ShotLength);
-        Assert.Null(director.Playlist);
-        Assert.Null(director.Tick(1f));
-    }
-
-    [Fact]
     public void LiveWatchesACharacterTheDirectorWasGiven()
     {
         var director = new Director(GuardAt(0f));
-        director.GoLive(new TrackShot(WatchingGuard()));
+        director.GoLive(new PlaylistShot([Item(WatchingGuard())]));
 
         AimsAt(new Vector3(0f, 0f, -10f), director.Tick(1f / 60f)!.Value, 4);
     }
@@ -302,7 +253,7 @@ public class DirectorTests
     {
         var characters = GuardAt(0f);
         var director = new Director(characters);
-        director.GoLive(new TrackShot(WatchingGuard(smoothing: 1f)));
+        director.GoLive(new PlaylistShot([Item(WatchingGuard(smoothing: 1f))]));
         director.Tick(1f / 60f);
         GuardAt(characters, 10f);
         var eased = director.Tick(0.5f)!.Value;
@@ -314,18 +265,13 @@ public class DirectorTests
         Near(eased.Forward, held.Forward, 5e-5f);
     }
 
-    // StraightTrack's control points sit at x = 0, 5 and 10 with two legs of 5 s, so the shot runs
-    // 10 s. The points are collinear and evenly spaced, so the spline is the straight line through
-    // them and arc length along it is x. Both timing secants are 5 yalms / 5 s = 1, so PCHIP gives
-    // every key a tangent of 1 and the distance curve is d(t) = t. Position at shot time t is
-    // therefore exactly x = t, and every value below reads straight off PlaybackClock.ShotTime.
     private static float XAfter(Director director, float dt) => director.Tick(dt)!.Value.Position.X;
 
     [Fact]
     public void ReverseStartsAtTheEndAndRunsBackToTheStart()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.Reverse)));
+        director.GoLive(new PlaylistShot([Item(StraightTrack(direction: PlaybackDirection.Reverse))]));
         Assert.Equal(10.0, director.ShotLength, 5);
 
         // Shot time is length - clock, so clocks 0, 2.5 and 5 give 10, 7.5 and 5.
@@ -342,7 +288,7 @@ public class DirectorTests
     public void PingPongRunsOutAndBackOverTwiceTheLength()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.PingPong)));
+        director.GoLive(new PlaylistShot([Item(StraightTrack(direction: PlaybackDirection.PingPong))]));
 
         // Shot time is the clock up to the length, then 2 * length - clock. The cycle is 20 s.
         Assert.Equal(0f, XAfter(director, 0f), 3);
@@ -356,7 +302,7 @@ public class DirectorTests
     public void PingPongIsNotFinishedAtTheTurnaround()
     {
         var director = new Director();
-        director.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.PingPong)));
+        director.GoLive(new PlaylistShot([Item(StraightTrack(direction: PlaybackDirection.PingPong))]));
 
         director.Tick(10f);
         Assert.Equal(10.0, director.ShotTime, 5);
@@ -371,11 +317,11 @@ public class DirectorTests
     public void SeekTakesAShotTimeWhicheverWayTheTrackRuns()
     {
         var forward = new Director();
-        forward.GoLive(new TrackShot(StraightTrack()));
+        forward.GoLive(new PlaylistShot([Item(StraightTrack())]));
         forward.Seek(2.5);
 
         var reverse = new Director();
-        reverse.GoLive(new TrackShot(StraightTrack(direction: PlaybackDirection.Reverse)));
+        reverse.GoLive(new PlaylistShot([Item(StraightTrack(direction: PlaybackDirection.Reverse))]));
         reverse.Seek(2.5);
 
         // Both land on shot time 2.5 and so on x = 2.5, though Reverse's clock behind it is 7.5.

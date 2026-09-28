@@ -351,7 +351,6 @@ public class TrackEvaluatorTests
         Assert.Equal(5f, evaluator.DistanceAt(2.5), 1);
         Assert.Equal(2f, evaluator.SlopeAt(2.5), 1);
         Assert.Equal(15f, evaluator.DistanceOf(1.5f), 1);
-        Assert.Equal(1.5f, evaluator.PositionOf(15f), 2);
     }
 
     [Fact]
@@ -367,7 +366,6 @@ public class TrackEvaluatorTests
     {
         var evaluator = StraightLinear();
         Assert.Equal(1f, evaluator.ToStoredSlope(1, KeySide.Out, 2f), 3);
-        Assert.Equal(1f, evaluator.FromStoredSlope(1, KeySide.In, 0.5f), 3);
     }
 
     [Fact]
@@ -375,7 +373,6 @@ public class TrackEvaluatorTests
     {
         var evaluator = StraightLinear();
         Assert.Equal(0f, evaluator.ToStoredSlope(0, KeySide.In, 2f));
-        Assert.Equal(0f, evaluator.FromStoredSlope(2, KeySide.Out, 0.5f));
     }
 
     [Fact]
@@ -385,7 +382,6 @@ public class TrackEvaluatorTests
         var evaluator = new TrackEvaluator(TrackThrough(new[] { point }, speed: 2f));
         Assert.Equal(0f, evaluator.TotalDistance);
         Assert.Equal(0f, evaluator.DistanceAt(1.0));
-        Assert.Equal(0f, evaluator.PositionOf(3f));
     }
 
     [Theory]

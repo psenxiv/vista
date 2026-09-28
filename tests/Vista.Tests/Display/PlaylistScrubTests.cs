@@ -15,7 +15,7 @@ public class PlaylistScrubTests
 
     // Entries: 1 Opening (5 s), 2 Empty (no points, so not played), 3 Hairpin (2 s three times), 4 Orbit (4 s looping forever).
     // Live plays three segments: Opening 0 to 5, Hairpin 5 to 11, Orbit 11 to 15.
-    private static (PlaylistScrub Scrub, Scene Scene) Example()
+    private static (PlaylistScrub Scrub, PlaylistTimeline Timeline, Scene Scene) Example()
     {
         Track[] tracks =
         [
@@ -38,22 +38,24 @@ public class PlaylistScrubTests
         ];
         var scene = PlaylistEditing.Add(new Scene(tracks, new HashSet<Guid>(), []), tracks.Select(t => t.Id).ToArray());
         scene = PlaylistEditing.SetLoops(scene, scene.Playlist[2].Id, 3);
-        return (Scrub(scene), scene);
+        var (scrub, timeline) = Scrub(scene);
+        return (scrub, timeline, scene);
     }
 
-    /// <summary>The bar for <paramref name="scene"/>'s playlist as Live plays it.</summary>
-    private static PlaylistScrub Scrub(Scene scene)
+    /// <summary>The bar for <paramref name="scene"/>'s playlist as Live plays it, and the timeline it lays out.</summary>
+    private static (PlaylistScrub Scrub, PlaylistTimeline Timeline) Scrub(Scene scene)
     {
         var state = new SessionState();
         state.LoadScene(scene);
-        return new PlaylistScrub(new PlaylistPlayback(state.PlaylistItems()).Timeline, state.Scene);
+        var timeline = new PlaylistPlayback(state.PlaylistItems()).Timeline;
+        return (new PlaylistScrub(timeline, state.Scene), timeline);
     }
 
     /// <summary>The example's bar zoomed to <paramref name="from"/> to <paramref name="to"/> seconds.</summary>
-    private static PlaylistScrub Zoomed(float from, float to)
+    private static (PlaylistScrub Scrub, PlaylistTimeline Timeline) Zoomed(float from, float to)
     {
-        var (scrub, scene) = Example();
-        return new PlaylistScrub(scrub.Timeline, scene, new TimingView(from, to));
+        var (_, timeline, scene) = Example();
+        return (new PlaylistScrub(timeline, scene, new TimingView(from, to)), timeline);
     }
 
     [Theory]
@@ -63,14 +65,14 @@ public class PlaylistScrubTests
     [InlineData(12.0, 1f)]
     public void ZoomedATimeIsItsShareOfTheView(double time, float fraction)
     {
-        Assert.Equal(fraction, Zoomed(5f, 11f).FractionOf(time), Tolerance);
+        Assert.Equal(fraction, Zoomed(5f, 11f).Scrub.FractionOf(time), Tolerance);
     }
 
     [Fact]
     public void ZoomedAPlaceAlongTheBarIsInTheView()
     {
         // Halfway along 5 to 11 s is 8 s, in Hairpin, the second segment.
-        var bar = Zoomed(5f, 11f);
+        var bar = Zoomed(5f, 11f).Scrub;
 
         Assert.Equal(8.0, bar.TimeAt(0.5f), Tolerance);
         Assert.Equal(1, bar.SegmentAt(0.5f).Index);
@@ -82,8 +84,12 @@ public class PlaylistScrubTests
         // Hairpin's repeats start at 7 and 9 s: over 5 to 11 s they're 2/6 and 4/6 along; over 8 to 11 s only 9 s shows, 1/3 along.
         var hairpin = Zoomed(5f, 11f).Timeline.Segments[1];
 
-        Assert.Equal([1f / 3f, 2f / 3f], Zoomed(5f, 11f).PassTicks(hairpin), (x, y) => Math.Abs(x - y) <= Tolerance);
-        Assert.Equal([1f / 3f], Zoomed(8f, 11f).PassTicks(hairpin), (x, y) => Math.Abs(x - y) <= Tolerance);
+        Assert.Equal(
+            [1f / 3f, 2f / 3f],
+            Zoomed(5f, 11f).Scrub.PassTicks(hairpin),
+            (x, y) => Math.Abs(x - y) <= Tolerance
+        );
+        Assert.Equal([1f / 3f], Zoomed(8f, 11f).Scrub.PassTicks(hairpin), (x, y) => Math.Abs(x - y) <= Tolerance);
     }
 
     [Fact]
@@ -96,9 +102,9 @@ public class PlaylistScrubTests
         var exact = Zoomed(5f, 11f);
         var segments = inside.Timeline.Segments;
 
-        Assert.Equal([false, true, false], segments.Select(inside.Visible));
-        Assert.Equal([true, true, true], segments.Select(across.Visible));
-        Assert.Equal([false, true, false], segments.Select(exact.Visible));
+        Assert.Equal([false, true, false], segments.Select(inside.Scrub.Visible));
+        Assert.Equal([true, true, true], segments.Select(across.Scrub.Visible));
+        Assert.Equal([false, true, false], segments.Select(exact.Scrub.Visible));
     }
 
     [Theory]
@@ -110,7 +116,7 @@ public class PlaylistScrubTests
     [InlineData(12.0, false)]
     public void ZoomedTheHeadShowsOnlyInTheView(double head, bool shows)
     {
-        Assert.Equal(shows, Zoomed(5f, 11f).Shows(head));
+        Assert.Equal(shows, Zoomed(5f, 11f).Scrub.Shows(head));
     }
 
     [Theory]
@@ -132,7 +138,7 @@ public class PlaylistScrubTests
         var zero = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
         var scene = PlaylistEditing.Add(new Scene([zero], new HashSet<Guid>(), []), [zero.Id]);
 
-        Assert.Equal(0f, Scrub(scene).FractionOf(3.0), Tolerance);
+        Assert.Equal(0f, Scrub(scene).Scrub.FractionOf(3.0), Tolerance);
     }
 
     [Theory]
@@ -161,36 +167,36 @@ public class PlaylistScrubTests
     [Fact]
     public void RepeatsHaveATickWhereEachPassAfterTheFirstStarts()
     {
-        var scrub = Example().Scrub;
+        var (scrub, timeline, _) = Example();
 
         // Hairpin starts at 5 s with 2 s passes: its second and third start at 7 and 9 s, 7/15 and 9/15 of the way.
         Assert.Equal(
             [7f / 15f, 9f / 15f],
-            scrub.PassTicks(scrub.Timeline.Segments[1]),
+            scrub.PassTicks(timeline.Segments[1]),
             (a, b) => Math.Abs(a - b) <= Tolerance
         );
         // One pass, and a forever entry's single pass, have none.
-        Assert.Empty(scrub.PassTicks(scrub.Timeline.Segments[0]));
-        Assert.Empty(scrub.PassTicks(scrub.Timeline.Segments[2]));
+        Assert.Empty(scrub.PassTicks(timeline.Segments[0]));
+        Assert.Empty(scrub.PassTicks(timeline.Segments[2]));
     }
 
     [Fact]
     public void ASegmentIsLabelledWithItsEntrysNumberInThePlaylistAndItsTrack()
     {
-        var scrub = Example().Scrub;
+        var (scrub, timeline, _) = Example();
 
         // Hairpin is the second segment but the third entry, after the unplayed Empty.
-        Assert.Equal("1 · Opening", scrub.Label(scrub.Timeline.Segments[0]));
-        Assert.Equal("3 · Hairpin", scrub.Label(scrub.Timeline.Segments[1]));
-        Assert.Equal("4 · Orbit", scrub.Label(scrub.Timeline.Segments[2]));
+        Assert.Equal("1 · Opening", scrub.Label(timeline.Segments[0]));
+        Assert.Equal("3 · Hairpin", scrub.Label(timeline.Segments[1]));
+        Assert.Equal("4 · Orbit", scrub.Label(timeline.Segments[2]));
     }
 
     [Fact]
     public void AnEntryTheSceneNoLongerHasHasNoLabel()
     {
-        var (scrub, scene) = Example();
+        var (_, timeline, scene) = Example();
         var removed = PlaylistEditing.Remove(scene, [scene.Playlist[2].Id]);
 
-        Assert.Null(new PlaylistScrub(scrub.Timeline, removed).Label(scrub.Timeline.Segments[1]));
+        Assert.Null(new PlaylistScrub(timeline, removed).Label(timeline.Segments[1]));
     }
 }
