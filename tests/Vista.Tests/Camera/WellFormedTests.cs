@@ -8,6 +8,8 @@ namespace Vista.Tests.Camera;
 
 public class WellFormedTests
 {
+    // WellFormedFrame's up (0, 1, 0) is unit length and square to its view direction -Z; its 1 rad field of
+    // view is 57.3°, within the 5°-120° range.
     [Fact]
     public void AWellFormedFrameBreaksNoRule() => Assert.Null(WellFormed.FirstBroken(WellFormedFrame));
 

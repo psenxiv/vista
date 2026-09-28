@@ -729,6 +729,17 @@ public class TrackEditingTests
         Assert.Equal(0f, TrackEditing.HoldSeconds(result, 2));
         Assert.Equal(3f, TrackEditing.LegSpeed(result, 1));
         Assert.Equal(7f, TrackEditing.LegSpeed(result, 2));
+
+        // Point 0's key sits at time 0, then its 1 s hold departs at time 1. Leg 1 (point 0 to point
+        // 1) takes its length over its pinned 3 yalms/s, leg 2 (point 1 to point 2) its length over
+        // its pinned 7 yalms/s; each length is the reordered points' spline distance, not derivable
+        // by hand since the points no longer run in a straight line. Key positions are point indices,
+        // unaffected by the reorder's lengths or speeds: 0 twice (arrival and hold departure), then 1, 2.
+        var evaluator = new TrackEvaluator(result);
+        var l1 = evaluator.LegLength(1);
+        var l2 = evaluator.LegLength(2);
+        AssertTimes([0f, 1f, 1f + (l1 / 3f), 1f + (l1 / 3f) + (l2 / 7f)], result);
+        Assert.Equal(new[] { 0f, 0f, 1f, 2f }, evaluator.Keys.Select(k => k.Position));
     }
 
     [Fact]

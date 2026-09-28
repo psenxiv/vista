@@ -91,7 +91,7 @@ public class TimingEditingTests
         var track = MoveKey(TrackEditing.SetHold(Build3PointTrack(), 1, 3f), 1, 6f);
         Assert.Equal(new TrackEvaluator(track).LegLength(1) / 6f, TrackEditing.LegSpeed(track, 1), 0.01f);
         Assert.Equal(2f, TrackEditing.HoldSeconds(track, 1), 0.01f);
-        Assert.Equal(new[] { 0f, 6f, 8f, 13f }, Times(track));
+        AssertTimes([0f, 6f, 8f, 13f], track);
     }
 
     [Fact]

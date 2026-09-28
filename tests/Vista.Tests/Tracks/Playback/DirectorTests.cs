@@ -265,6 +265,11 @@ public class DirectorTests
         Near(eased.Forward, held.Forward, 5e-5f);
     }
 
+    // StraightTrack's control points sit at x = 0, 5 and 10 with two legs of 5 s, so the shot runs
+    // 10 s. The points are collinear and evenly spaced, so the spline is the straight line through
+    // them and arc length along it is x. Both timing secants are 5 yalms / 5 s = 1, so PCHIP gives
+    // every key a tangent of 1 and the distance curve is d(t) = t. Position at shot time t is
+    // therefore exactly x = t, and every value below reads straight off PlaybackClock.ShotTime.
     private static float XAfter(Director director, float dt) => director.Tick(dt)!.Value.Position.X;
 
     [Fact]

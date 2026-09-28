@@ -1111,9 +1111,9 @@ public class TrackEvaluatorTests
     [Fact]
     public void LookAtKeepsItsUpExactlyToTheEndOfAHold()
     {
-        // Found by AHoldIsStill, when look ahead was a time, as a last-bit change in up at the end of point 0's hold,
-        // where the camera travels on: settling for no time at all still squared the up again. The up is now level
-        // there, from the same facing.
+        // Found by AHoldIsStill as a last-bit change in up at the end of point 0's hold, where the camera travels
+        // on: settling for no time at all still squared the up again. The up is now level there, from the same
+        // facing.
         var track = TrackEditing.Empty(AimMode.LookAt) with
         {
             Speed = 12.873444f,
