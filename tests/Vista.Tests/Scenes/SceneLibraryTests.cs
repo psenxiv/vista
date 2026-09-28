@@ -301,6 +301,20 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void DuplicatingAnUnreadableSceneIsRefusedAndWritesNoCopy()
+    {
+        Save("Dawn", "Crane");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Broken.json"), "{");
+        library.Open("Dawn");
+
+        var refusal = library.Duplicate("Broken", "Broken copy");
+
+        Assert.StartsWith("Could not open Broken: ", refusal, StringComparison.Ordinal);
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal(["Broken.json", "Dawn.json"], temp.SceneFiles());
+    }
+
+    [Fact]
     public void DuplicatingTheOpenSceneByNameMatchesTheParameterlessForm()
     {
         Save("Dawn", "Crane");
