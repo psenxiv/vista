@@ -192,14 +192,15 @@ internal sealed class TrackEditorWindow : Window
             ImGui.SameLine(0f, 0f);
         }
 
-        var editorWidth = showPlaylist ? -(config.PlaylistWidth + Layout.Spacing.X) : 0f;
-        // Its content is exactly as wide as it shows (BeginChild floors the width), so the points list reaching into the right padding can't make it scroll sideways.
-        ImGui.SetNextWindowContentSize(
-            new Vector2(
-                ImGui.GetContentRegionAvail().X + MathF.Floor(editorWidth) - (ImGui.GetStyle().WindowPadding.X * 2f),
-                0f
-            )
+        // On a side with no compartment the editor reaches into the window's padding, so its rows line up with the top row.
+        var padding = ImGui.GetStyle().WindowPadding.X;
+        if (!showHierarchy)
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() - padding);
+        var editorWidth = MathF.Floor(
+            ImGui.GetContentRegionAvail().X + (showPlaylist ? -(config.PlaylistWidth + Layout.Spacing.X) : padding)
         );
+        // Its content is exactly as wide as it shows, so the points list reaching into the right padding can't make it scroll sideways.
+        ImGui.SetNextWindowContentSize(new Vector2(editorWidth - (padding * 2f), 0f));
         // The same inner padding as the bordered compartments, so the rows and separators line up.
         if (
             ImGui.BeginChild(
