@@ -1,6 +1,5 @@
 using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Input;
-using Vista.Core.Session;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
 using static Vista.Plugin.Ui.Widgets.Refusal;
@@ -10,137 +9,77 @@ namespace Vista.Plugin.Editor;
 /// <summary>The key bindings for the modes Vista owns the camera in, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys
 {
-    private static readonly VirtualKey SpaceKey = HotkeyKeys.Virtual(HotkeyTable.Play.Hotkey.Key);
-    private static readonly VirtualKey BacktickKey = HotkeyKeys.Virtual(HotkeyTable.AddToEnd.Hotkey.Key);
-    private static readonly VirtualKey UndoKey = HotkeyKeys.Virtual(HotkeyTable.Undo.Hotkey.Key);
-    private static readonly VirtualKey RedoKey = HotkeyKeys.Virtual(HotkeyTable.Redo.Hotkey.Key);
+    private readonly record struct WatchedKey(Key Key, VirtualKey Virtual);
 
-    // Also LevelRoll's key (Alt + R); GizmoToggle names it since both share VirtualKey R.
-    private static readonly VirtualKey RKey = HotkeyKeys.Virtual(HotkeyTable.GizmoToggle.Hotkey.Key);
-    private static readonly VirtualKey DeleteKey = HotkeyKeys.Virtual(HotkeyTable.DeleteSelectedPoints.Hotkey.Key);
-    private static readonly VirtualKey BackspaceKey = HotkeyKeys.Virtual(
-        HotkeyTable.DeleteSelectedPoints.Hotkey.Alternate!.Value
-    );
-    private static readonly VirtualKey HeatKey = HotkeyKeys.Virtual(HotkeyTable.ColourByTurnSpeed.Hotkey.Key);
-
-    private static readonly VirtualKey[] Watched =
-    [
-        SpaceKey,
-        BacktickKey,
-        UndoKey,
-        RedoKey,
-        RKey,
-        DeleteKey,
-        BackspaceKey,
-    ];
+    private static readonly WatchedKey[] Watched = HotkeyResolver
+        .Presses.Where(entry => entry != HotkeyTable.RestoreGameUi)
+        .SelectMany(entry =>
+            entry.Hotkey.Alternate is { } alternate ? new[] { entry.Hotkey.Key, alternate } : new[] { entry.Hotkey.Key }
+        )
+        .Distinct()
+        .Select(key => new WatchedKey(key, HotkeyKeys.Virtual(key)))
+        .ToArray();
 
     private readonly bool[] held = new bool[Watched.Length];
-    private bool heatHeld;
 
     /// <summary>Reads the keys, acts on new presses and hides ours from the game. Call from Framework.Update.</summary>
     public void Update(GameSession game, PointGizmo gizmo, EditorLayer layer)
     {
-        var session = game.State;
-        ToggleHeat(session, layer);
-        if (session.Released || PhysicalKeys.IsTyping())
+        if (PhysicalKeys.IsTyping())
         {
             Array.Clear(held);
             return;
         }
 
-        var editing = session.Mode == CameraMode.Editing;
-
-        var ctrl = PhysicalKeys.IsDown(HotkeyKeys.Ctrl);
-        var alt = PhysicalKeys.IsDown(HotkeyKeys.Alt);
+        var modifiers = HotkeyKeys.HeldModifiers();
+        var context = HotkeyContext.Of(game.State);
 
         for (var i = 0; i < Watched.Length; i++)
         {
-            var key = Watched[i];
-            var down = PhysicalKeys.IsDown(key);
+            var watched = Watched[i];
+            var down = PhysicalKeys.IsDown(watched.Virtual);
             var pressed = down && !held[i];
             held[i] = down;
             if (!down)
                 continue;
 
-            var deletes = (key == DeleteKey || key == BackspaceKey) && session.Selection.Points.Count > 0;
-            var ours = key == SpaceKey || (editing && (key == BacktickKey || key == RKey || ctrl || deletes));
-            if (ours)
-                PhysicalKeys.Hide(key);
-            if (pressed && ours)
-                Act(game, gizmo, key, ctrl, alt);
+            if (HotkeyResolver.Resolve(watched.Key, modifiers, context) is not { } press)
+                continue;
+
+            if (press.Hidden)
+                PhysicalKeys.Hide(watched.Virtual);
+            if (pressed && press.Acts)
+                Act(game, gizmo, layer, press.Entry);
         }
     }
 
-    /// <summary>G alone toggles turn heat in Edit, not while previewing, and in View; View leaves the key to the game too, since the game has the camera there.</summary>
-    private void ToggleHeat(SessionState session, EditorLayer layer)
-    {
-        var mode = session.Mode;
-        var modified =
-            PhysicalKeys.IsDown(HotkeyKeys.Ctrl)
-            || PhysicalKeys.IsDown(HotkeyKeys.Shift)
-            || PhysicalKeys.IsDown(HotkeyKeys.Alt);
-        var shown = session.OverlayShown;
-        var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(HeatKey);
-        if (down && !heatHeld)
-            layer.Heat = !layer.Heat;
-        heatHeld = down;
-        if (down && mode == CameraMode.Editing)
-            PhysicalKeys.Hide(HeatKey);
-    }
-
-    private static void Act(GameSession game, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
+    private static void Act(GameSession game, PointGizmo gizmo, EditorLayer layer, HotkeyEntry entry)
     {
         var session = game.State;
-        // Nothing to undo or redo does nothing, as in any editor.
-        if (key == UndoKey || key == RedoKey)
+        if (entry == HotkeyTable.Undo || entry == HotkeyTable.Redo)
         {
-            _ = key == UndoKey ? session.Undo() : session.Redo();
+            // Nothing to undo or redo does nothing, as in any editor.
+            _ = entry == HotkeyTable.Undo ? session.Undo() : session.Redo();
             return;
         }
 
-        var refusal = key switch
-        {
-            _ when key == SpaceKey && ctrl => Restart(game),
-            _ when key == SpaceKey => Transport(game),
-            _ when key == BacktickKey && ctrl && alt => null,
-            _ when key == BacktickKey && ctrl => game.OverwriteSelected(),
-            _ when key == BacktickKey && alt => game.AddAfterSelected(),
-            _ when key == BacktickKey => game.AddToEnd(),
-            _ when key == RKey && alt && !ctrl => Level(game),
-            _ when key == RKey
-                    && (
-                        session.Selection.Point is not null
-                        || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track
-                    ) => Toggle(gizmo),
-            _ when key == DeleteKey || key == BackspaceKey => session.DeleteSelected(),
-            _ => null,
-        };
-
-        Report(refusal);
-    }
-
-    /// <summary>Space does what the Play button would: pauses a running shot, starts one otherwise.</summary>
-    private static string? Transport(GameSession game)
-    {
-        game.TogglePlay();
-        return null;
-    }
-
-    private static string? Restart(GameSession game)
-    {
-        game.RestartPlay();
-        return null;
-    }
-
-    private static string? Level(GameSession game)
-    {
-        game.LevelCameraRoll();
-        return null;
-    }
-
-    private static string? Toggle(PointGizmo gizmo)
-    {
-        gizmo.Toggle();
-        return null;
+        if (entry == HotkeyTable.Play)
+            game.TogglePlay();
+        else if (entry == HotkeyTable.Restart)
+            game.RestartPlay();
+        else if (entry == HotkeyTable.AddToEnd)
+            Report(game.AddToEnd());
+        else if (entry == HotkeyTable.AddAfterSelected)
+            Report(game.AddAfterSelected());
+        else if (entry == HotkeyTable.OverwriteSelected)
+            Report(game.OverwriteSelected());
+        else if (entry == HotkeyTable.LevelRoll)
+            game.LevelCameraRoll();
+        else if (entry == HotkeyTable.GizmoToggle)
+            gizmo.Toggle();
+        else if (entry == HotkeyTable.ColourByTurnSpeed)
+            layer.Heat = !layer.Heat;
+        else if (entry == HotkeyTable.DeleteSelectedPoints)
+            Report(session.DeleteSelected());
     }
 }

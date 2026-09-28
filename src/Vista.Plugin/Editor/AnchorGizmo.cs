@@ -1,6 +1,5 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGuizmo;
-using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Editing;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -33,7 +32,11 @@ internal sealed class AnchorGizmo
     public void Cancel(SessionState session)
     {
         if (dragStart is not null)
+        {
             session.EndLiveEdit();
+            Gizmo.Drop(ref waitForRelease);
+        }
+
         dragStart = null;
         Hot = false;
     }
@@ -97,7 +100,7 @@ internal sealed class AnchorGizmo
             var refusal =
                 kind == AnchorKind.LookAt
                     ? session.PreviewLookAt(edited.Position)
-                    : session.PreviewAnchor(edited, carry: !PhysicalKeys.IsDown(VirtualKey.MENU));
+                    : session.PreviewAnchor(edited, carry: !PhysicalKeys.IsDown(HotkeyKeys.Alt));
             if (refusal is not null)
             {
                 Report(refusal);

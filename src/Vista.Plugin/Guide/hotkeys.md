@@ -2,6 +2,8 @@
 
 These work in Edit mode. {key:Play} and {key:Restart} also work in Live, and {key:ColourByTurnSpeed} in View. {key:RestoreGameUi} only works in Live.
 
+A key only works with the `Ctrl` or `Alt` its row shows. Holding {key:FlyFaster} to fly faster doesn't stop any of them.
+
 | Key | Does |
 |---|---|
 | {key:FlyForward} {key:FlyLeft} {key:FlyBack} {key:FlyRight} | Fly forward, left, back, right |

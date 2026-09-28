@@ -314,7 +314,15 @@ public sealed class Plugin : IDalamudPlugin
         // The game's own Escape handling is held off while we hide its UI, and until that
         // Escape is released, so it does not also open the system menu.
         var escape = KeyState[EscapeKey];
-        if (escape && !escapeWasDown && game.State.Mode == CameraMode.Live)
+        var restore =
+            HotkeyResolver.Resolve(
+                HotkeyTable.RestoreGameUi.Hotkey.Key,
+                HotkeyKeys.HeldModifiers(),
+                HotkeyContext.Of(game.State)
+            )
+                is { Entry: var entry, Acts: true }
+            && entry == HotkeyTable.RestoreGameUi;
+        if (escape && !escapeWasDown && restore)
             GameUi.Restore();
         escapeWasDown = escape;
         blockEscape = GameUi.HiddenByUs || (blockEscape && escape);

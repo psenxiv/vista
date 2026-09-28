@@ -3,6 +3,7 @@
 ## X.Y.Z.N
 
 - The Level camera roll and Camera window buttons are back on the top row, next to the fly speed slider.
+- Hotkeys no longer fire when Ctrl or Alt is held with them, unless their row in Hotkeys shows it. Holding Shift still works.
 
 ## 0.13.0.1
 

@@ -15,6 +15,12 @@ internal static class HotkeyKeys
     /// <summary>Shift's VirtualKey, for reading Shift as a modifier from physical key state.</summary>
     public const VirtualKey Shift = VirtualKey.SHIFT;
 
+    /// <summary>The modifiers physically held now.</summary>
+    public static Modifiers HeldModifiers() =>
+        (PhysicalKeys.IsDown(Ctrl) ? Modifiers.Ctrl : Modifiers.None)
+        | (PhysicalKeys.IsDown(Alt) ? Modifiers.Alt : Modifiers.None)
+        | (PhysicalKeys.IsDown(Shift) ? Modifiers.Shift : Modifiers.None);
+
     /// <summary>The VirtualKey for a Core key Vista binds.</summary>
     public static VirtualKey Virtual(Key key) =>
         key switch
