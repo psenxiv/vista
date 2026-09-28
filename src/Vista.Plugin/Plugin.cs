@@ -8,6 +8,7 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Vista.Core.Editing;
+using Vista.Core.Input;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Game;
@@ -97,6 +98,8 @@ public sealed class Plugin : IDalamudPlugin
 #if DEBUG
     private readonly SelfTestRunner selfTest;
 #endif
+
+    private static readonly VirtualKey EscapeKey = HotkeyKeys.Virtual(HotkeyTable.RestoreGameUi.Hotkey.Key);
 
     private readonly WheelSteps wheel = new();
     private bool escapeWasDown;
@@ -310,7 +313,7 @@ public sealed class Plugin : IDalamudPlugin
         // Escape while live brings back a UI we hid, so nobody needs a Toggle UI key bound.
         // The game's own Escape handling is held off while we hide its UI, and until that
         // Escape is released, so it does not also open the system menu.
-        var escape = KeyState[VirtualKey.ESCAPE];
+        var escape = KeyState[EscapeKey];
         if (escape && !escapeWasDown && game.State.Mode == CameraMode.Live)
             GameUi.Restore();
         escapeWasDown = escape;

@@ -1,4 +1,5 @@
 using Dalamud.Game.ClientState.Keys;
+using Vista.Core.Input;
 using Vista.Core.Session;
 using Vista.Plugin.Game;
 using Vista.Plugin.Session;
@@ -9,15 +10,29 @@ namespace Vista.Plugin.Editor;
 /// <summary>The key bindings for the modes Vista owns the camera in, read from physical key state and hidden from the game.</summary>
 internal sealed class EditorKeys
 {
+    private static readonly VirtualKey SpaceKey = HotkeyKeys.Virtual(HotkeyTable.Play.Hotkey.Key);
+    private static readonly VirtualKey BacktickKey = HotkeyKeys.Virtual(HotkeyTable.AddToEnd.Hotkey.Key);
+    private static readonly VirtualKey UndoKey = HotkeyKeys.Virtual(HotkeyTable.Undo.Hotkey.Key);
+    private static readonly VirtualKey RedoKey = HotkeyKeys.Virtual(HotkeyTable.Redo.Hotkey.Key);
+
+    // Also LevelRoll's key (Alt + R); GizmoToggle names it since both share VirtualKey R.
+    private static readonly VirtualKey RKey = HotkeyKeys.Virtual(HotkeyTable.GizmoToggle.Hotkey.Key);
+    private static readonly VirtualKey DeleteKey = HotkeyKeys.Virtual(HotkeyTable.DeleteSelectedPoints.Hotkey.Key);
+    private static readonly VirtualKey BackspaceKey = HotkeyKeys.Virtual(
+        HotkeyTable.DeleteSelectedPoints.Hotkey.Alternate!.Value
+    );
+    private static readonly VirtualKey HeatKey = HotkeyKeys.Virtual(HotkeyTable.ColourByTurnSpeed.Hotkey.Key);
+    private static readonly VirtualKey ShiftKey = HotkeyKeys.Virtual(HotkeyTable.FlyFaster.Hotkey.Key);
+
     private static readonly VirtualKey[] Watched =
     [
-        VirtualKey.SPACE,
-        VirtualKey.OEM_3,
-        VirtualKey.Z,
-        VirtualKey.Y,
-        VirtualKey.R,
-        VirtualKey.DELETE,
-        VirtualKey.BACK,
+        SpaceKey,
+        BacktickKey,
+        UndoKey,
+        RedoKey,
+        RKey,
+        DeleteKey,
+        BackspaceKey,
     ];
 
     private readonly bool[] held = new bool[Watched.Length];
@@ -36,8 +51,8 @@ internal sealed class EditorKeys
 
         var editing = session.Mode == CameraMode.Editing;
 
-        var ctrl = PhysicalKeys.IsDown(VirtualKey.CONTROL);
-        var alt = PhysicalKeys.IsDown(VirtualKey.MENU);
+        var ctrl = PhysicalKeys.IsDown(HotkeyKeys.Ctrl);
+        var alt = PhysicalKeys.IsDown(HotkeyKeys.Alt);
 
         for (var i = 0; i < Watched.Length; i++)
         {
@@ -48,9 +63,8 @@ internal sealed class EditorKeys
             if (!down)
                 continue;
 
-            var deletes = key is VirtualKey.DELETE or VirtualKey.BACK && session.Selection.Points.Count > 0;
-            var ours =
-                key == VirtualKey.SPACE || (editing && (key is VirtualKey.OEM_3 or VirtualKey.R || ctrl || deletes));
+            var deletes = (key == DeleteKey || key == BackspaceKey) && session.Selection.Points.Count > 0;
+            var ours = key == SpaceKey || (editing && (key == BacktickKey || key == RKey || ctrl || deletes));
             if (ours)
                 PhysicalKeys.Hide(key);
             if (pressed && ours)
@@ -63,41 +77,43 @@ internal sealed class EditorKeys
     {
         var mode = session.Mode;
         var modified =
-            PhysicalKeys.IsDown(VirtualKey.CONTROL)
-            || PhysicalKeys.IsDown(VirtualKey.SHIFT)
-            || PhysicalKeys.IsDown(VirtualKey.MENU);
+            PhysicalKeys.IsDown(HotkeyKeys.Ctrl)
+            || PhysicalKeys.IsDown(ShiftKey)
+            || PhysicalKeys.IsDown(HotkeyKeys.Alt);
         var shown = session.OverlayShown;
-        var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(VirtualKey.G);
+        var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(HeatKey);
         if (down && !heatHeld)
             layer.Heat = !layer.Heat;
         heatHeld = down;
         if (down && mode == CameraMode.Editing)
-            PhysicalKeys.Hide(VirtualKey.G);
+            PhysicalKeys.Hide(HeatKey);
     }
 
     private static void Act(GameSession game, PointGizmo gizmo, VirtualKey key, bool ctrl, bool alt)
     {
         var session = game.State;
         // Nothing to undo or redo does nothing, as in any editor.
-        if (key is VirtualKey.Z or VirtualKey.Y)
+        if (key == UndoKey || key == RedoKey)
         {
-            _ = key == VirtualKey.Z ? session.Undo() : session.Redo();
+            _ = key == UndoKey ? session.Undo() : session.Redo();
             return;
         }
 
         var refusal = key switch
         {
-            VirtualKey.SPACE when ctrl => Restart(game),
-            VirtualKey.SPACE => Transport(game),
-            VirtualKey.OEM_3 when ctrl && alt => null,
-            VirtualKey.OEM_3 when ctrl => game.OverwriteSelected(),
-            VirtualKey.OEM_3 when alt => game.AddAfterSelected(),
-            VirtualKey.OEM_3 => game.AddToEnd(),
-            VirtualKey.R when alt && !ctrl => Level(game),
-            VirtualKey.R
-                when session.Selection.Point is not null
-                    || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track => Toggle(gizmo),
-            VirtualKey.DELETE or VirtualKey.BACK => session.DeleteSelected(),
+            _ when key == SpaceKey && ctrl => Restart(game),
+            _ when key == SpaceKey => Transport(game),
+            _ when key == BacktickKey && ctrl && alt => null,
+            _ when key == BacktickKey && ctrl => game.OverwriteSelected(),
+            _ when key == BacktickKey && alt => game.AddAfterSelected(),
+            _ when key == BacktickKey => game.AddToEnd(),
+            _ when key == RKey && alt && !ctrl => Level(game),
+            _ when key == RKey
+                    && (
+                        session.Selection.Point is not null
+                        || session.Selection.Anchor is AnchorKind.Scene or AnchorKind.Track
+                    ) => Toggle(gizmo),
+            _ when key == DeleteKey || key == BackspaceKey => session.DeleteSelected(),
             _ => null,
         };
 

@@ -120,7 +120,8 @@ internal sealed class PointWindow : Window
             gridWidth,
             canCopy: point is not null,
             canPaste: point is not null && copied is not null,
-            canDelete: point is not null
+            canDelete: point is not null,
+            rotates ? gizmo.ToggleTarget : null
         );
         switch (clip)
         {

@@ -7,6 +7,7 @@ using Dalamud.Interface.Windowing;
 using Vista.Core.Camera;
 using Vista.Core.Display;
 using Vista.Core.Editing;
+using Vista.Core.Input;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -303,7 +304,7 @@ internal sealed class TrackEditorWindow : Window
         var gap = ImGui.GetStyle().ItemSpacing.X * 3f;
         AlignTo(aimX, gap);
         ImGui.BeginDisabled(!session.CanUndo);
-        if (IconButton.Draw("undo", FontAwesomeIcon.Undo, "Undo"))
+        if (IconButton.Draw("undo", FontAwesomeIcon.Undo, HotkeyTable.Undo.Hotkey.Tooltip("Undo")))
         {
             fields.Commit();
             session.Undo();
@@ -312,7 +313,7 @@ internal sealed class TrackEditorWindow : Window
 
         AlignTo(directionX, ImGui.GetStyle().ItemSpacing.X);
         ImGui.BeginDisabled(!session.CanRedo);
-        if (IconButton.Draw("redo", FontAwesomeIcon.Redo, "Redo"))
+        if (IconButton.Draw("redo", FontAwesomeIcon.Redo, HotkeyTable.Redo.Hotkey.Tooltip("Redo")))
         {
             fields.Commit();
             session.Redo();
@@ -407,7 +408,7 @@ internal sealed class TrackEditorWindow : Window
             IconButton.Draw(
                 "play-pause",
                 playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play,
-                playing ? "Pause" : "Play"
+                playing ? HotkeyTable.Play.Hotkey.Tooltip("Pause") : HotkeyTable.Play.Hotkey.Tooltip("Play")
             )
         )
         {
@@ -419,7 +420,7 @@ internal sealed class TrackEditorWindow : Window
 
         ImGui.SameLine();
         ImGui.BeginDisabled(!session.CanRestart);
-        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, "Restart"))
+        if (IconButton.Draw("restart", FontAwesomeIcon.StepBackward, HotkeyTable.Restart.Hotkey.Tooltip("Restart")))
         {
             fields.Commit();
             game.RestartPlay();
@@ -689,7 +690,7 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>A plus icon that appends a point, and a caret opening the insert menu.</summary>
     private void DrawAddButton()
     {
-        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, "Add point"))
+        if (IconButton.Draw("add-point", FontAwesomeIcon.Plus, HotkeyTable.AddToEnd.Hotkey.Tooltip("Add point")))
             Report(game.AddToEnd());
         ImGui.SameLine(0f, 0f);
         if (IconButton.Draw("add-menu", FontAwesomeIcon.CaretDown, "More ways to add"))
@@ -738,7 +739,10 @@ internal sealed class TrackEditorWindow : Window
             if (track.Points.Count == 0)
             {
                 var hintTop = ImGui.GetCursorPos();
-                Layout.CentredText("Press Backtick or + to add points.", UiColours.Dim());
+                Layout.CentredText(
+                    $"Press {HotkeyTable.AddToEnd.Hotkey.DisplayName} or + to add points.",
+                    UiColours.Dim()
+                );
                 ImGui.SetCursorPos(hintTop);
             }
 
@@ -921,15 +925,29 @@ internal sealed class TrackEditorWindow : Window
             DrawPin(track, index, rowHovered);
 
         ImGui.TableNextColumn();
+        DrawDeleteCell(index, rowHovered);
+
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>The row's trash icon, right-aligned, which deletes only this point.</summary>
+    private void DrawDeleteCell(int index, bool rowHovered)
+    {
         PadRow();
         Layout.RightAlign(IconButton.Width(FontAwesomeIcon.Trash));
-        if (IconButton.RowAction($"delete{index}", FontAwesomeIcon.Trash, "Delete point", rowHovered, danger: true))
+        if (
+            IconButton.RowAction(
+                $"delete{index}",
+                FontAwesomeIcon.Trash,
+                HotkeyTable.DeleteSelectedPoints.Hotkey.Tooltip("Delete point"),
+                rowHovered,
+                danger: true
+            )
+        )
         {
             fields.Clear();
             Report(session.DeletePoints([index]));
         }
-
-        ImGui.EndDisabled();
     }
 
     /// <summary>Point <paramref name="index"/>'s value field filling its whole cell, square and flat: faint while its row is hovered, lit when it is hovered or held. A click selects the row as a click beside it does, and with Ctrl or Shift doesn't start typing.</summary>

@@ -2,6 +2,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
+using Vista.Core.Input;
 using Vista.Plugin.Editor;
 
 namespace Vista.Plugin.Ui.Widgets;
@@ -36,7 +37,7 @@ internal static class PoseGrid
             .PushStyle(ImGuiStyleVar.ItemSpacing, Layout.Spacing)
             .Push(ImGuiStyleVar.CellPadding, new Vector2(4f, 3f));
 
-    /// <summary>The move and rotate buttons for <paramref name="mode"/>, then copy, paste and delete right-aligned over the grid; the clipboard buttons that cannot act are disabled.</summary>
+    /// <summary>The move and rotate buttons for <paramref name="mode"/>, then copy, paste and delete right-aligned over the grid; the clipboard buttons that cannot act are disabled. <paramref name="toggleTarget"/>, when given, is the mode a hotkey would switch to, shown on the button it reaches.</summary>
     public static Clip Header(
         GizmoMode mode,
         Action<GizmoMode> setMode,
@@ -44,21 +45,39 @@ internal static class PoseGrid
         float gridWidth,
         bool canCopy,
         bool canPaste,
-        bool canDelete
+        bool canDelete,
+        GizmoMode? toggleTarget = null
     )
     {
         // A move button lights when rotate is not the mode, or cannot be: an anchor falls back to world.
         var moving = !rotates || mode != GizmoMode.Rotate;
         var local = moving && mode == GizmoMode.MoveLocal;
 
-        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, "Move (world)"))
+        var worldTip = "Move (world)";
+        var localTip = "Move (local)";
+        var rotateTip = "Rotate";
+        var toggle = HotkeyTable.GizmoToggle.Hotkey;
+        switch (toggleTarget)
+        {
+            case GizmoMode.Move:
+                worldTip = toggle.Tooltip(worldTip);
+                break;
+            case GizmoMode.MoveLocal:
+                localTip = toggle.Tooltip(localTip);
+                break;
+            case GizmoMode.Rotate:
+                rotateTip = toggle.Tooltip(rotateTip);
+                break;
+        }
+
+        if (IconButton.Toggle("gizmo-world", FontAwesomeIcon.Globe, moving && !local, worldTip))
             setMode(GizmoMode.Move);
         ImGui.SameLine();
-        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, "Move (local)"))
+        if (IconButton.Toggle("gizmo-local", FontAwesomeIcon.Cube, local, localTip))
             setMode(GizmoMode.MoveLocal);
         ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X * 3f);
         ImGui.BeginDisabled(!rotates);
-        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && mode == GizmoMode.Rotate, "Rotate"))
+        if (IconButton.Toggle("gizmo-rotate", FontAwesomeIcon.SyncAlt, rotates && mode == GizmoMode.Rotate, rotateTip))
             setMode(GizmoMode.Rotate);
         ImGui.EndDisabled();
 
@@ -79,7 +98,14 @@ internal static class PoseGrid
         ImGui.EndDisabled();
         ImGui.SameLine();
         ImGui.BeginDisabled(!canDelete);
-        if (IconButton.Draw("delete-pose", FontAwesomeIcon.Trash, "Delete point", danger: true))
+        if (
+            IconButton.Draw(
+                "delete-pose",
+                FontAwesomeIcon.Trash,
+                HotkeyTable.DeleteSelectedPoints.Hotkey.Tooltip("Delete point"),
+                danger: true
+            )
+        )
             clip = Clip.Delete;
         ImGui.EndDisabled();
         return clip;

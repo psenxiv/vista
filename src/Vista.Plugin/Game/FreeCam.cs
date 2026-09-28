@@ -2,6 +2,7 @@ using System.Numerics;
 using Dalamud.Game.ClientState.Keys;
 using Vista.Core.Camera;
 using Vista.Core.Editing;
+using Vista.Core.Input;
 
 namespace Vista.Plugin.Game;
 
@@ -11,6 +12,16 @@ internal sealed class FreeCam
     private const float BaseSpeed = 8f;
     private const float SprintMultiplier = 4f;
     private const float RollRate = MathF.PI / 3f;
+
+    private static readonly VirtualKey ForwardKey = HotkeyKeys.Virtual(HotkeyTable.FlyForward.Hotkey.Key);
+    private static readonly VirtualKey BackKey = HotkeyKeys.Virtual(HotkeyTable.FlyBack.Hotkey.Key);
+    private static readonly VirtualKey LeftKey = HotkeyKeys.Virtual(HotkeyTable.FlyLeft.Hotkey.Key);
+    private static readonly VirtualKey RightKey = HotkeyKeys.Virtual(HotkeyTable.FlyRight.Hotkey.Key);
+
+    // Also RollRight's key (Ctrl + E); RollLeft's key below is also FlyDown's (Ctrl + Q).
+    private static readonly VirtualKey UpKey = HotkeyKeys.Virtual(HotkeyTable.FlyUp.Hotkey.Key);
+    private static readonly VirtualKey DownKey = HotkeyKeys.Virtual(HotkeyTable.FlyDown.Hotkey.Key);
+    private static readonly VirtualKey SprintKey = HotkeyKeys.Virtual(HotkeyTable.FlyFaster.Hotkey.Key);
 
     private Vector3 position;
     private Quaternion rotation = Quaternion.Identity;
@@ -68,7 +79,7 @@ internal sealed class FreeCam
             rotation = FreeCamMotion.Roll(rotation, ReadRoll() * RollRate * deltaSeconds);
         Look();
         var input = typing ? Vector3.Zero : ReadInput();
-        var speed = BaseSpeed * Speed.Multiplier * (Plugin.KeyState[VirtualKey.SHIFT] ? SprintMultiplier : 1f);
+        var speed = BaseSpeed * Speed.Multiplier * (Plugin.KeyState[SprintKey] ? SprintMultiplier : 1f);
         position = FreeCamMotion.Step(position, input, rotation, speed, deltaSeconds);
 
         return new CameraState(
@@ -101,19 +112,19 @@ internal sealed class FreeCam
         var up = 0f;
         var right = 0f;
 
-        if (Plugin.KeyState[VirtualKey.W])
+        if (Plugin.KeyState[ForwardKey])
             forward += 1f;
-        if (Plugin.KeyState[VirtualKey.S])
+        if (Plugin.KeyState[BackKey])
             forward -= 1f;
-        if (Plugin.KeyState[VirtualKey.D])
+        if (Plugin.KeyState[RightKey])
             right += 1f;
-        if (Plugin.KeyState[VirtualKey.A])
+        if (Plugin.KeyState[LeftKey])
             right -= 1f;
-        if (!PhysicalKeys.IsDown(VirtualKey.CONTROL))
+        if (!PhysicalKeys.IsDown(HotkeyKeys.Ctrl))
         {
-            if (Plugin.KeyState[VirtualKey.E])
+            if (Plugin.KeyState[UpKey])
                 up += 1f;
-            if (Plugin.KeyState[VirtualKey.Q])
+            if (Plugin.KeyState[DownKey])
                 up -= 1f;
         }
 
@@ -122,7 +133,7 @@ internal sealed class FreeCam
 
     /// <summary>Ctrl + Q rolls left, Ctrl + E rolls right; without Ctrl, Q and E fly down and up the picture.</summary>
     private static float ReadRoll() =>
-        PhysicalKeys.IsDown(VirtualKey.CONTROL)
-            ? (Plugin.KeyState[VirtualKey.E] ? 1f : 0f) - (Plugin.KeyState[VirtualKey.Q] ? 1f : 0f)
+        PhysicalKeys.IsDown(HotkeyKeys.Ctrl)
+            ? (Plugin.KeyState[UpKey] ? 1f : 0f) - (Plugin.KeyState[DownKey] ? 1f : 0f)
             : 0f;
 }

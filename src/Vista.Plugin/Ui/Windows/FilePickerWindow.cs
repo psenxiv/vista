@@ -172,10 +172,7 @@ internal sealed class FilePickerWindow : Window
     /// <summary>The empty-list line, centred in the space between the search box and the footer.</summary>
     private void DrawEmptyState()
     {
-        var text =
-            kind == FilePickerKind.Scene
-                ? "No scenes yet."
-                : "No presets yet. Right-click a track and choose Save as preset.";
+        var text = kind == FilePickerKind.Scene ? "No scenes yet." : "No presets yet. Right-click a track to save one.";
         Layout.CentredText(text, UiColours.Muted());
     }
 

@@ -1,3 +1,4 @@
+using Vista.Core.Input;
 using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Widgets;
 using static Vista.Plugin.Ui.Widgets.Refusal;
@@ -11,11 +12,11 @@ internal static class AddPointItems
     public static void Draw(GameSession game)
     {
         var selected = game.State.Selection.Point is not null;
-        if (Menu.Item("Add to end", shortcut: "Backtick"))
+        if (Menu.Item("Add to end", shortcut: HotkeyTable.AddToEnd.Hotkey.DisplayName))
             Report(game.AddToEnd());
-        if (Menu.Item("Add after selected", selected, "Alt + Backtick"))
+        if (Menu.Item("Add after selected", selected, HotkeyTable.AddAfterSelected.Hotkey.DisplayName))
             Report(game.AddAfterSelected());
-        if (Menu.Item("Overwrite selected", selected, "Ctrl + Backtick"))
+        if (Menu.Item("Overwrite selected", selected, HotkeyTable.OverwriteSelected.Hotkey.DisplayName))
             Report(game.OverwriteSelected());
     }
 }

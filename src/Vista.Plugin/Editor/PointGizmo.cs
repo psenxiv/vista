@@ -39,7 +39,10 @@ internal sealed class PointGizmo
     private GizmoMode lastMove = GizmoMode.Move;
 
     /// <summary>Switches operation, keeping whichever move space was last used.</summary>
-    public void Toggle() => SetMode(Mode == GizmoMode.Rotate ? lastMove : GizmoMode.Rotate);
+    public void Toggle() => SetMode(ToggleTarget);
+
+    /// <summary>The mode a toggle switches to: Rotate, or back to the last move mode from Rotate.</summary>
+    public GizmoMode ToggleTarget => Mode == GizmoMode.Rotate ? lastMove : GizmoMode.Rotate;
 
     /// <summary>Sets the gizmo mode, except while the mouse is still held from a drag.</summary>
     public void SetMode(GizmoMode mode)

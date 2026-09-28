@@ -139,6 +139,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Game/CameraAccess`: reading and writing the world camera.
 - `Game/CharacterTable` and `Ground`: the characters loaded nearby, and the ground under a point.
 - `Game/PhysicalKeys`: keys read from their physical state.
+- `Game/HotkeyKeys`: mapping a bound hotkey's Core key to Dalamud's `VirtualKey`; the only place that does.
 
 ### Test fixtures
 

@@ -3,6 +3,7 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Vista.Core.Display;
 using Vista.Core.Editing;
+using Vista.Core.Input;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
@@ -130,12 +131,12 @@ internal sealed class MainMenu
         using var menu = ImRaii.Menu("Edit");
         if (!menu)
             return;
-        if (Menu.Item("Undo", session.CanUndo, "Ctrl + Z"))
+        if (Menu.Item("Undo", session.CanUndo, HotkeyTable.Undo.Hotkey.DisplayName))
         {
             fields.Commit();
             session.Undo();
         }
-        if (Menu.Item("Redo", session.CanRedo, "Ctrl + Y"))
+        if (Menu.Item("Redo", session.CanRedo, HotkeyTable.Redo.Hotkey.DisplayName))
         {
             fields.Commit();
             session.Redo();
@@ -149,14 +150,20 @@ internal sealed class MainMenu
             fields.Commit();
             Report(session.DuplicatePoints(points));
         }
-        if (Menu.Item("Delete selected points", editing && points.Count > 0, "Delete"))
+        if (
+            Menu.Item(
+                "Delete selected points",
+                editing && points.Count > 0,
+                HotkeyTable.DeleteSelectedPoints.Hotkey.DisplayName
+            )
+        )
         {
             fields.Clear();
             Report(session.DeleteSelected());
         }
 
         ImGui.Separator();
-        if (Menu.Item("Level camera roll", editing, "Alt + R"))
+        if (Menu.Item("Level camera roll", editing, HotkeyTable.LevelRoll.Hotkey.DisplayName))
             game.LevelCameraRoll();
     }
 
@@ -204,7 +211,14 @@ internal sealed class MainMenu
 
         ImGui.Separator();
         var heat = layer.Heat;
-        if (Menu.Check("Colour path by turn speed", ref heat, session.OverlayShown, "G"))
+        if (
+            Menu.Check(
+                "Colour path by turn speed",
+                ref heat,
+                session.OverlayShown,
+                HotkeyTable.ColourByTurnSpeed.Hotkey.DisplayName
+            )
+        )
             layer.Heat = heat;
 
         ImGui.Separator();
@@ -233,12 +247,12 @@ internal sealed class MainMenu
 #if DEBUG
         using var selfTest = ImRaii.Disabled(game.SelfTestRunning);
 #endif
-        if (Menu.Item("Play / Pause", session.CanStart, "Space"))
+        if (Menu.Item("Play / Pause", session.CanStart, HotkeyTable.Play.Hotkey.DisplayName))
         {
             fields.Commit();
             game.TogglePlay();
         }
-        if (Menu.Item("Restart", session.CanRestart, "Ctrl + Space"))
+        if (Menu.Item("Restart", session.CanRestart, HotkeyTable.Restart.Hotkey.DisplayName))
         {
             fields.Commit();
             game.RestartPlay();
