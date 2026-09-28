@@ -20,9 +20,6 @@ internal sealed class HierarchyPanel
     /// <summary>The row identity the header's name is drawn under, distinct from any track's id.</summary>
     private const string HeaderRow = "header";
 
-    /// <summary>The name fields' buffer, a little past the longest name so a longer one can be typed and refused.</summary>
-    private const int NameBuffer = SceneNames.MaxLength + 8;
-
     private readonly GameSession game;
     private readonly SessionState session;
     private readonly SceneFiles files;
@@ -43,14 +40,23 @@ internal sealed class HierarchyPanel
         this.picker = picker;
     }
 
-    /// <summary>The open scene's name with its add button, then one row per track; disabled unless editing.</summary>
+    /// <summary>The open scene's name, the scene anchor button and the add button, then one row per track; disabled unless editing.</summary>
     public void Draw(bool editing)
     {
         ImGui.BeginDisabled(!editing);
-        var headerWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - LastSlot() - ImGui.GetStyle().ItemSpacing.X);
+        var headerWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - ButtonsWidth());
         var name = files.CurrentName;
+        var headerStart = ImGui.GetCursorPosX();
         ImGui.Dummy(new Vector2(headerWidth, ImGui.GetFrameHeight()));
         RowText.Draw(HeaderRow, name.Length > 0 ? name : "Scene", headerWidth);
+        ImGui.SameLine();
+        ImGui.SetCursorPosX(headerStart + headerWidth + ImGui.GetStyle().ItemSpacing.X);
+
+        ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
+        if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor"))
+            Report(session.Selection.SelectSceneAnchor());
+        ImGui.EndDisabled();
+
         CentreInLastSlot(FontAwesomeIcon.Plus);
         if (IconButton.Draw("add-track", FontAwesomeIcon.Plus, "Add track or preset"))
             ImGui.OpenPopup("add-track-menu");
@@ -87,7 +93,7 @@ internal sealed class HierarchyPanel
 
         if (Menu.Item("Add track"))
             Report(session.AddTrack());
-        if (Menu.Item("Add preset..."))
+        if (Menu.Item("Add preset"))
             picker.Show(FilePickerKind.Preset);
         ImGui.EndPopup();
     }
@@ -98,10 +104,7 @@ internal sealed class HierarchyPanel
         using var id = ImRaii.PushId(track.Id.ToString());
         var isEdited = track.Id == edited;
         var hidden = scene.Hidden.Contains(track.Id);
-        // The name's gap before the buttons, then the buttons.
-        var buttons =
-            ImGui.GetStyle().ItemSpacing.X + IconButton.RowWidth(IconButton.Width(FontAwesomeIcon.Anchor), LastSlot());
-        var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - buttons);
+        var nameWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - ButtonsWidth());
         var rowMin = ImGui.GetCursorScreenPos();
         var rowHovered = editing && IconButton.RowHovered(rowMin, rowMin.Y + ImGui.GetFrameHeight());
 
@@ -138,6 +141,10 @@ internal sealed class HierarchyPanel
             IconButton.Width(FontAwesomeIcon.Plus),
             MathF.Max(IconButton.Width(FontAwesomeIcon.Eye), IconButton.Width(FontAwesomeIcon.EyeSlash))
         );
+
+    /// <summary>The name's gap before the buttons, then the anchor button and the last slot, reserved from both the header and every row so their names line up.</summary>
+    private static float ButtonsWidth() =>
+        ImGui.GetStyle().ItemSpacing.X + IconButton.RowWidth(IconButton.Width(FontAwesomeIcon.Anchor), LastSlot());
 
     /// <summary>Continues the line so <paramref name="icon"/>'s button sits centred in the last slot.</summary>
     private static void CentreInLastSlot(FontAwesomeIcon icon) =>
@@ -206,7 +213,7 @@ internal sealed class HierarchyPanel
             Report(session.DuplicateTrack(track.Id));
         if (Menu.Item("Add to playlist"))
             Report(session.AddToPlaylist([track.Id]));
-        if (Menu.Item("Save as preset...", Presets.CanSave(track)))
+        if (Menu.Item("Save as preset", Presets.CanSave(track)))
         {
             presets = files.PresetNames();
             presetTrack = track.Id;
@@ -279,7 +286,7 @@ internal sealed class HierarchyPanel
     /// <summary>The name as a text field; Enter or clicking away renames, Escape cancels.</summary>
     private void DrawRename(Track track, float width)
     {
-        var result = TextEdit.Draw("##rename", ref renameText, NameBuffer, width, focusRename);
+        var result = TextEdit.Draw("##rename", ref renameText, NamePrompt.NameBuffer, width, focusRename);
         focusRename = false;
         if (result == TextEdit.Result.Editing)
             return;

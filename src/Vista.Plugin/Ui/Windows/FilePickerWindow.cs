@@ -50,7 +50,9 @@ internal sealed class FilePickerWindow : Window
     {
         this.kind = kind;
         WindowName = (kind == FilePickerKind.Scene ? "Open scene" : "Add preset") + TitleId;
-        Reset();
+        // Already open: OnOpen won't fire (no closed-to-open transition), so list here instead, once.
+        if (IsOpen)
+            Reset();
         IsOpen = true;
         BringToFront();
     }
@@ -62,21 +64,23 @@ internal sealed class FilePickerWindow : Window
 
     public override void Draw()
     {
-        var live = kind == FilePickerKind.Scene && session.Mode == CameraMode.Live;
+        var mode = session.Mode;
         DrawSearch();
+        Layout.PadLikeWindowTop();
         var listed = FileList.Filter(entries, search);
-        DrawTable(listed, live);
+        DrawTable(listed, mode);
         ImGui.Separator();
-        DrawFooter(live);
+        DrawFooter(mode);
         namePrompt.Draw();
         deleteConfirm.Draw();
 
         if (
             selected is { } current
-            && !live
+            && ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
             && !namePrompt.Asking
             && !deleteConfirm.Asking
             && listed.Any(e => e.Name == current)
+            && PrimaryAllowed(mode)
             && ImGui.IsKeyPressed(ImGuiKey.Enter)
         )
             Primary(current);
@@ -89,11 +93,18 @@ internal sealed class FilePickerWindow : Window
         focusSearch = true;
     }
 
-    private void Refresh()
+    /// <summary>Relists the folder, dropping the selection; called on open, after this window's own actions, and by the Scene menu when one of its actions changes a file this window is showing.</summary>
+    public void Refresh()
     {
         entries = kind == FilePickerKind.Scene ? files.SceneEntries() : files.PresetEntries();
         selected = null;
     }
+
+    /// <summary>True unless <paramref name="mode"/> refuses the primary action: Live refuses opening a scene; adding a preset needs Edit, same as adding a track.</summary>
+    private bool PrimaryAllowed(CameraMode mode) =>
+        kind == FilePickerKind.Scene
+            ? SceneActions.Allowed(SceneAction.Open, targetsOpenScene: false, mode)
+            : mode == CameraMode.Editing;
 
     private void DrawSearch()
     {
@@ -106,7 +117,7 @@ internal sealed class FilePickerWindow : Window
         ImGui.InputTextWithHint("##search", "Search", ref search, SceneNames.MaxLength);
     }
 
-    private void DrawTable(IReadOnlyList<FileEntry> listed, bool live)
+    private void DrawTable(IReadOnlyList<FileEntry> listed, CameraMode mode)
     {
         var footer = ImGui.GetFrameHeightWithSpacing() + (ImGui.GetStyle().ItemSpacing.Y * 2f);
         if (!ImGui.BeginChild("rows", new Vector2(0f, -footer)))
@@ -117,12 +128,7 @@ internal sealed class FilePickerWindow : Window
 
         if (listed.Count == 0)
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-                ImGui.TextUnformatted(
-                    kind == FilePickerKind.Scene
-                        ? "No scenes yet."
-                        : "No presets yet. Right-click a track and choose Save as preset."
-                );
+            DrawEmptyState();
             ImGui.EndChild();
             return;
         }
@@ -150,11 +156,25 @@ internal sealed class FilePickerWindow : Window
             ImGui.TableHeadersRow();
 
             foreach (var entry in listed)
-                DrawRow(entry, live);
+                DrawRow(entry, mode);
             ImGui.EndTable();
         }
 
         ImGui.EndChild();
+    }
+
+    /// <summary>The empty-list line, centred in the space between the search box and the footer.</summary>
+    private void DrawEmptyState()
+    {
+        var text =
+            kind == FilePickerKind.Scene
+                ? "No scenes yet."
+                : "No presets yet. Right-click a track and choose Save as preset.";
+        var size = ImGui.CalcTextSize(text);
+        Layout.CentreRemaining(size.Y);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - size.X) / 2f));
+        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+            ImGui.TextUnformatted(text);
     }
 
     private float ActionsColumnWidth() =>
@@ -162,7 +182,7 @@ internal sealed class FilePickerWindow : Window
             ? IconButton.RowWidth(FontAwesomeIcon.PencilAlt, FontAwesomeIcon.Copy, FontAwesomeIcon.Trash)
             : IconButton.RowWidth(FontAwesomeIcon.Trash);
 
-    private void DrawRow(FileEntry entry, bool live)
+    private void DrawRow(FileEntry entry, CameraMode mode)
     {
         using var id = ImRaii.PushId(entry.Name);
         ImGui.TableNextRow();
@@ -176,7 +196,8 @@ internal sealed class FilePickerWindow : Window
             ImGui.Selectable(
                 "##row",
                 picked,
-                ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap
+                ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap,
+                new Vector2(0f, ImGui.GetFrameHeight())
             )
         )
             selected = entry.Name;
@@ -184,11 +205,11 @@ internal sealed class FilePickerWindow : Window
         var nameMax = nameMin + new Vector2(nameWidth, ImGui.GetFrameHeight());
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Accent, isOpenScene))
             RowText.Draw(entry.Name, entry.Name, nameMin, nameMax, nameWidth);
-        if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && !live)
+        if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && PrimaryAllowed(mode))
             Primary(entry.Name);
         if (ImGui.BeginPopupContextItem("row-menu"))
         {
-            DrawRowMenu(entry.Name, live);
+            DrawRowMenu(entry.Name, isOpenScene, mode);
             ImGui.EndPopup();
         }
 
@@ -204,47 +225,51 @@ internal sealed class FilePickerWindow : Window
         ImGui.TextUnformatted(entry.Modified.ToString("g", CultureInfo.CurrentCulture));
 
         ImGui.TableNextColumn();
-        DrawRowActions(entry.Name, rowHovered, live);
+        DrawRowActions(entry.Name, isOpenScene, rowHovered, mode);
     }
 
-    private void DrawRowActions(string name, bool rowHovered, bool live)
+    private void DrawRowActions(string name, bool isOpenScene, bool rowHovered, CameraMode mode)
     {
         if (kind == FilePickerKind.Scene)
         {
-            if (IconButton.RowAction("rename", FontAwesomeIcon.PencilAlt, "Rename...", rowHovered))
+            if (IconButton.RowAction("rename", FontAwesomeIcon.PencilAlt, "Rename", rowHovered))
                 StartRename(name);
             ImGui.SameLine();
-            ImGui.BeginDisabled(live);
-            if (IconButton.RowAction("duplicate", FontAwesomeIcon.Copy, "Duplicate...", rowHovered))
+            ImGui.BeginDisabled(!SceneActions.Allowed(SceneAction.Duplicate, isOpenScene, mode));
+            if (IconButton.RowAction("duplicate", FontAwesomeIcon.Copy, "Duplicate", rowHovered))
                 StartDuplicate(name);
             ImGui.EndDisabled();
             ImGui.SameLine();
         }
 
-        if (IconButton.RowAction("delete", FontAwesomeIcon.Trash, "Delete...", rowHovered, danger: true))
+        ImGui.BeginDisabled(!SceneActions.Allowed(SceneAction.Delete, isOpenScene, mode));
+        if (IconButton.RowAction("delete", FontAwesomeIcon.Trash, "Delete", rowHovered, danger: true))
             StartDelete(name);
+        ImGui.EndDisabled();
     }
 
-    private void DrawRowMenu(string name, bool live)
+    private void DrawRowMenu(string name, bool isOpenScene, CameraMode mode)
     {
         if (kind == FilePickerKind.Scene)
         {
-            if (Menu.Item("Rename..."))
+            if (Menu.Item("Rename"))
                 StartRename(name);
-            if (Menu.Item("Duplicate...", !live))
+            if (Menu.Item("Duplicate", SceneActions.Allowed(SceneAction.Duplicate, isOpenScene, mode)))
                 StartDuplicate(name);
         }
 
-        if (Menu.Item("Delete..."))
+        if (Menu.Item("Delete", SceneActions.Allowed(SceneAction.Delete, isOpenScene, mode)))
             StartDelete(name);
     }
 
-    private void DrawFooter(bool live)
+    private void DrawFooter(CameraMode mode)
     {
+        Layout.CentreRemaining(ImGui.GetFrameHeight());
+
         if (kind == FilePickerKind.Scene)
         {
-            ImGui.BeginDisabled(live);
-            if (ImGui.Button("New scene...", new Vector2(NewSceneButtonWidth, 0f)))
+            ImGui.BeginDisabled(!SceneActions.Allowed(SceneAction.New, targetsOpenScene: true, mode));
+            if (ImGui.Button("New scene", new Vector2(NewSceneButtonWidth, 0f)))
                 StartNew();
             ImGui.EndDisabled();
             ImGui.SameLine();
@@ -257,7 +282,7 @@ internal sealed class FilePickerWindow : Window
             files.OpenFolder(presets: kind == FilePickerKind.Preset);
         ImGui.SameLine();
 
-        ImGui.BeginDisabled((kind == FilePickerKind.Scene && live) || selected is null);
+        ImGui.BeginDisabled(!PrimaryAllowed(mode) || selected is null);
         if (
             ImGui.Button(kind == FilePickerKind.Scene ? "Open" : "Add", new Vector2(FooterButtonWidth, 0f))
             && selected is { } toOpen
@@ -305,7 +330,7 @@ internal sealed class FilePickerWindow : Window
             newName => Confirm(files.New(newName))
         );
 
-    /// <summary>Reports a refusal, then relists the folder and drops the selection, since the action may have added, renamed or removed a file.</summary>
+    /// <summary>Reports a refusal, then relists the folder, since the action may have added, renamed or removed a file.</summary>
     private void Confirm(string? refusal)
     {
         Report(refusal);

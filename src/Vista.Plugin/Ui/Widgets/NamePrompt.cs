@@ -8,8 +8,8 @@ namespace Vista.Plugin.Ui.Widgets;
 /// <summary>A name prompt: Ok stays disabled while the name can't be used and says why; a check returning a notice turns Ok into Replace.</summary>
 internal sealed class NamePrompt(string id)
 {
-    /// <summary>The name field's buffer, a little past the longest name so a longer one can be typed and refused.</summary>
-    private const int NameBuffer = SceneNames.MaxLength + 8;
+    /// <summary>The name field's buffer, a little past the longest name so a longer one can be typed and refused; also used for any other field that holds a scene, preset or track name.</summary>
+    public const int NameBuffer = SceneNames.MaxLength + 8;
 
     private readonly string popup = $"Name###vista-name-{id}";
     private bool asking;

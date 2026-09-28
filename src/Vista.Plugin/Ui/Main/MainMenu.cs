@@ -3,6 +3,7 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Vista.Core.Display;
 using Vista.Core.Editing;
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Plugin.Editor;
@@ -84,46 +85,49 @@ internal sealed class MainMenu
         using var menu = ImRaii.Menu("Scene");
         if (!menu)
             return;
-        var live = session.Mode == CameraMode.Live;
-        // Opening another scene loads it, which Live refuses.
-        if (Menu.Item("Open scene...", !live))
+        var mode = session.Mode;
+        if (Menu.Item("Open scene", SceneActions.Allowed(SceneAction.Open, targetsOpenScene: true, mode)))
             picker.Show(FilePickerKind.Scene);
-        if (Menu.Item("New scene..."))
+        if (Menu.Item("New scene", SceneActions.Allowed(SceneAction.New, targetsOpenScene: true, mode)))
             namePrompt.Ask(
                 "New scene",
                 files.NewSuggestion(),
                 text => (files.NameRefusal(text), null),
-                name => Report(files.New(name))
+                name => Confirm(files.New(name))
             );
-        if (Menu.Item("Rename scene..."))
+        if (Menu.Item("Rename scene", SceneActions.Allowed(SceneAction.Rename, targetsOpenScene: true, mode)))
             namePrompt.Ask(
                 "Rename scene",
                 files.CurrentName,
                 text => (files.NameRefusal(text, renaming: files.CurrentName), null),
-                name => Report(files.Rename(name))
+                name => Confirm(files.Rename(name))
             );
-        if (Menu.Item("Duplicate scene..."))
+        if (Menu.Item("Duplicate scene", SceneActions.Allowed(SceneAction.Duplicate, targetsOpenScene: true, mode)))
             namePrompt.Ask(
                 "Duplicate scene",
                 files.CopySuggestion(),
                 text => (files.NameRefusal(text), null),
-                name => Report(files.Duplicate(name))
+                name => Confirm(files.Duplicate(name))
             );
-        if (Menu.Item("Delete scene..."))
-            deleteConfirm.Ask(files.CurrentName, () => Report(files.Delete()));
+        if (Menu.Item("Delete scene", SceneActions.Allowed(SceneAction.Delete, targetsOpenScene: true, mode)))
+            deleteConfirm.Ask(files.CurrentName, () => Confirm(files.Delete()));
         ImGui.Separator();
         if (Menu.Item("Select scene anchor", editing && session.Scene.AnchorPlaced))
             Report(session.Selection.SelectSceneAnchor());
         ImGui.Separator();
         // A new folder loads a scene, which Live refuses.
-        if (Menu.Item("Save folder...", !live))
+        if (Menu.Item("Save folder", mode != CameraMode.Live))
             Show(setup);
         if (Menu.Item("Open save folder", files.Ready))
             files.OpenFolder(presets: false);
-        ImGui.Separator();
-        var hideUi = game.HideUiInLive;
-        if (Menu.Check("Hide game UI when Live", ref hideUi))
-            game.HideUiInLive = hideUi;
+    }
+
+    /// <summary>Reports a refusal, then relists the picker if it's open, since a scene menu action can add, rename or remove a file it's showing.</summary>
+    private void Confirm(string? refusal)
+    {
+        Report(refusal);
+        if (picker.IsOpen)
+            picker.Refresh();
     }
 
     private void DrawEdit(bool editing)
@@ -207,6 +211,11 @@ internal sealed class MainMenu
         var heat = layer.Heat;
         if (Menu.Check("Colour path by turn speed", ref heat, session.OverlayShown, "G"))
             layer.Heat = heat;
+
+        ImGui.Separator();
+        var hideUi = game.HideUiInLive;
+        if (Menu.Check("Hide game UI when Live", ref hideUi))
+            game.HideUiInLive = hideUi;
     }
 
     private void DrawPreview(bool editing)

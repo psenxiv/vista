@@ -20,6 +20,18 @@ internal static class Layout
     public static void RightAlign(float width) =>
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, ImGui.GetContentRegionAvail().X - width));
 
+    /// <summary>Moves the cursor down so content <paramref name="height"/> tall sits centred in the space left in the window or child.</summary>
+    public static void CentreRemaining(float height)
+    {
+        var slack = ImGui.GetContentRegionAvail().Y - height;
+        if (slack > 0f)
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (slack / 2f));
+    }
+
+    /// <summary>Extra space below the item just drawn so its gap to what follows matches the window's own top padding, which the automatic item spacing alone would leave smaller.</summary>
+    public static void PadLikeWindowTop() =>
+        ImGui.Dummy(new Vector2(0f, MathF.Max(0f, ImGui.GetStyle().WindowPadding.Y - ImGui.GetStyle().ItemSpacing.Y)));
+
     /// <summary>Centres the next window on the screen as it appears; call from its PreDraw.</summary>
     public static void CentreOnAppearing() =>
         ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));

@@ -43,9 +43,6 @@ internal sealed class SceneFiles
     /// <summary>The open scene's name, or empty before one is open.</summary>
     public string CurrentName => library?.CurrentName ?? string.Empty;
 
-    /// <summary>The scene names in the folder, read now.</summary>
-    public IReadOnlyList<string> Scenes() => library?.Scenes() ?? [];
-
     /// <summary>The scene files the picker lists, with their track count, read now.</summary>
     public IReadOnlyList<FileEntry> SceneEntries() => library?.Folder.SceneEntries() ?? [];
 
