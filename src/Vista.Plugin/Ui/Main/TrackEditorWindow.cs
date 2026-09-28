@@ -1168,7 +1168,7 @@ internal sealed class TrackEditorWindow : Window
             Report(session.DuplicatePoints(points));
         }
 
-        if (Menu.Item("Delete"))
+        if (Menu.Item("Delete", shortcut: HotkeyTable.DeleteSelectedPoints.Hotkey.DisplayName))
         {
             fields.Clear();
             Report(session.DeletePoints(points));

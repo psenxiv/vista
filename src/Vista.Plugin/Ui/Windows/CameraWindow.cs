@@ -5,6 +5,7 @@ using Dalamud.Interface.Windowing;
 using Vista.Core.Camera;
 using Vista.Core.Display;
 using Vista.Core.Editing;
+using Vista.Core.Input;
 using Vista.Core.Session;
 using Vista.Plugin.Editor;
 using Vista.Plugin.Session;
@@ -53,7 +54,14 @@ internal sealed class CameraWindow : Window
             DrawWorld(position);
 
         ImGui.TableNextRow();
-        if (PoseGrid.Button("level-roll", FontAwesomeIcon.SyncAlt, "Level roll", enabled: true))
+        if (
+            PoseGrid.Button(
+                "level-roll",
+                FontAwesomeIcon.SyncAlt,
+                HotkeyTable.LevelRoll.Hotkey.Tooltip("Level roll"),
+                enabled: true
+            )
+        )
             game.LevelCameraRoll();
         Field(
             "cam-pitch",

@@ -22,7 +22,6 @@ internal sealed class EditorKeys
         HotkeyTable.DeleteSelectedPoints.Hotkey.Alternate!.Value
     );
     private static readonly VirtualKey HeatKey = HotkeyKeys.Virtual(HotkeyTable.ColourByTurnSpeed.Hotkey.Key);
-    private static readonly VirtualKey ShiftKey = HotkeyKeys.Virtual(HotkeyTable.FlyFaster.Hotkey.Key);
 
     private static readonly VirtualKey[] Watched =
     [
@@ -78,7 +77,7 @@ internal sealed class EditorKeys
         var mode = session.Mode;
         var modified =
             PhysicalKeys.IsDown(HotkeyKeys.Ctrl)
-            || PhysicalKeys.IsDown(ShiftKey)
+            || PhysicalKeys.IsDown(HotkeyKeys.Shift)
             || PhysicalKeys.IsDown(HotkeyKeys.Alt);
         var shown = session.OverlayShown;
         var down = shown && !modified && !PhysicalKeys.IsTyping() && PhysicalKeys.IsDown(HeatKey);

@@ -12,6 +12,9 @@ internal static class HotkeyKeys
     /// <summary>Alt's VirtualKey, for reading a hotkey's Alt modifier from physical key state.</summary>
     public const VirtualKey Alt = VirtualKey.MENU;
 
+    /// <summary>Shift's VirtualKey, for reading Shift as a modifier from physical key state.</summary>
+    public const VirtualKey Shift = VirtualKey.SHIFT;
+
     /// <summary>The VirtualKey for a Core key Vista binds.</summary>
     public static VirtualKey Virtual(Key key) =>
         key switch
