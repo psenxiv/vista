@@ -173,12 +173,14 @@ internal sealed class SceneFiles
     /// <summary>Creates <paramref name="parent"/>'s vistaxiv folder, upgrades its older scenes when the settings record of the scene format is behind, and uses it: for a move, leaves the current library for it; otherwise opens <paramref name="last"/>. A refused move leaves <see cref="library"/> and the chosen folder untouched.</summary>
     private string? Use(string parent, bool move, string? last)
     {
-        var folder = new SceneFolder(
+        SceneFolder? folder = null;
+        folder = new SceneFolder(
             SceneFolder.RootFor(parent),
             (path, e) =>
             {
                 Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message);
-                unreadable.Enqueue(path);
+                if (folder?.SceneNameOf(path) is { } scene)
+                    unreadable.Enqueue(scene);
             },
             (path, e) => Plugin.Log.Warning("[scenes] opened {Path} without upgrading it: {Error}", path, e.Message)
         );
@@ -274,9 +276,9 @@ internal sealed class SceneFiles
     /// <summary>Tells the player once about each scene file a listing since the last call left out for being unreadable; a folder's own errors stay in the log.</summary>
     private void Announce()
     {
-        while (unreadable.TryDequeue(out var path))
+        while (unreadable.TryDequeue(out var name))
         {
-            if (library?.Folder.SceneNameOf(path) is { } name && unreadableNotices.Unlisted(name) is { } notice)
+            if (unreadableNotices.Unlisted(name) is { } notice)
                 Warn(notice);
         }
     }

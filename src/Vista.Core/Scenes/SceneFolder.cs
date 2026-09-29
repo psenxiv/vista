@@ -73,7 +73,8 @@ public sealed class SceneFolder
 
     /// <summary>The scene name of <paramref name="path"/> when it is a scene file in the scenes folder, else null.</summary>
     public string? SceneNameOf(string path) =>
-        string.Equals(Path.GetDirectoryName(path), ScenesDir, StringComparison.OrdinalIgnoreCase)
+        Path.GetDirectoryName(path) is { Length: > 0 } dir
+        && SameParent(dir, ScenesDir)
         && string.Equals(Path.GetExtension(path), Extension, StringComparison.OrdinalIgnoreCase)
             ? Path.GetFileNameWithoutExtension(path)
             : null;

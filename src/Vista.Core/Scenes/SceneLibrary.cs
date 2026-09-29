@@ -49,7 +49,7 @@ public sealed class SceneLibrary
     {
         Notice = null;
         var entries = Folder.SceneEntries();
-        var names = entries.Where(e => e.Tracks is not null).Select(e => e.Name).ToList();
+        var names = FileEntry.OpenableNames(entries);
         var name =
             names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase))
             ?? (names.Count > 0 ? names[0] : null);

@@ -149,7 +149,7 @@ public sealed class SceneFolderTests : IDisposable
         Folder.SaveScene("gamma", Named("G"));
 
         // Ordinal order would put "Beta" first, since 'B' (66) sorts before 'a' (97).
-        Assert.Equal(["alpha", "Beta", "gamma"], ReadableNames(Folder));
+        Assert.Equal(["alpha", "Beta", "gamma"], FileEntry.OpenableNames(Folder.SceneEntries()));
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public sealed class SceneFolderTests : IDisposable
         File.WriteAllText(Path.Combine(temp.Scenes, "notes.txt"), "not a scene");
         File.WriteAllText(Path.Combine(temp.Scenes, "Half.json.tmp"), "{");
 
-        Assert.Equal(["Good"], ReadableNames(Folder));
+        Assert.Equal(["Good"], FileEntry.OpenableNames(Folder.SceneEntries()));
         Assert.Equal(["Garbage.json", "Hollow.json"], temp.Unreadable.Order(StringComparer.Ordinal));
     }
 
@@ -352,7 +352,7 @@ public sealed class SceneFolderTests : IDisposable
 
         var future = Assert.Single(Folder.SceneEntries(), e => e.Name == "Future");
         Assert.Null(future.Tracks);
-        Assert.Equal(["Dusk"], ReadableNames(Folder));
+        Assert.Equal(["Dusk"], FileEntry.OpenableNames(Folder.SceneEntries()));
         Assert.Throws<NewerFormatException>(() => Folder.LoadScene("Future"));
         Assert.Empty(Folder.UpgradeAll());
         Assert.Equal("{ \"format\": 3 }", File.ReadAllText(temp.ScenePath("Future")));
@@ -381,6 +381,16 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
+    public void ASceneFilesPathNamesTheSceneWhateverWayTheFolderIsSpelled()
+    {
+        // The parent is saved with doubled separators, which name the same folder as the plain spelling.
+        var odd = new SceneFolder(SceneFolder.RootFor(temp.Parent + "//"));
+
+        Assert.Equal("Dusk", odd.SceneNameOf(temp.ScenePath("Dusk")));
+        Assert.Equal("Dusk", Folder.SceneNameOf(Path.Combine(odd.ScenesDir, "Dusk.json")));
+    }
+
+    [Fact]
     public void AnythingElsesPathNamesNoScene()
     {
         // A preset file, a scenes folder itself (a folder error reports its own path), and a non-json file.
@@ -403,7 +413,7 @@ public sealed class SceneFolderTests : IDisposable
     public void AMissingScenesFolderListsNoScenes()
     {
         Directory.Delete(temp.Scenes);
-        Assert.Empty(ReadableNames(Folder));
+        Assert.Empty(FileEntry.OpenableNames(Folder.SceneEntries()));
         Assert.Empty(temp.Unreadable);
     }
 
