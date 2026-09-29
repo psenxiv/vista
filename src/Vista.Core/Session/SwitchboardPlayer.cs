@@ -18,7 +18,7 @@ public sealed class SwitchboardPlayer
     private (int Slot, Guid Target)? playing;
     private bool resumeAfterScrub;
 
-    /// <summary>A player for <paramref name="session"/>'s scene on <paramref name="director"/>, keeping its place through <paramref name="readAir"/> and <paramref name="writeAir"/>; <paramref name="remembers"/> lets Keep rolling record and use resume points, and <paramref name="onCut"/> runs as each cut starts.</summary>
+    /// <summary>A player for <paramref name="session"/>'s scene on <paramref name="director"/>, keeping its place through <paramref name="readAir"/> and <paramref name="writeAir"/>; <paramref name="remembers"/> records resume points on each cut for Keep rolling to use, and <paramref name="onCut"/> runs as each cut starts.</summary>
     internal SwitchboardPlayer(
         SessionState session,
         Director director,
@@ -215,19 +215,18 @@ public sealed class SwitchboardPlayer
         Scrubbing = false;
     }
 
-    /// <summary>Cuts to slot <paramref name="slot"/>, which can play: records the outgoing shot's resume point and starts the incoming one from its own, with Keep rolling.</summary>
+    /// <summary>Cuts to slot <paramref name="slot"/>, which can play: records the outgoing shot's resume point and, with Keep rolling, starts the incoming one from its own.</summary>
     private void CutTo(int slot, bool emptyNext)
     {
         var found = ShotOf(slot)!.Value;
         var air = readAir();
         var resume = air.Resume.ToArray();
-        var keep = remembers && session.Scene.Switchboard.KeepRolling;
-        if (keep && playing is { } outgoing)
+        if (remembers && playing is { } outgoing)
             resume[outgoing.Slot] = director.IsFinished ? null : director.Playlist!.PlaylistTime;
 
         onCut?.Invoke();
         Play(slot, found);
-        if (keep && resume[slot] is { } from)
+        if (remembers && session.Scene.Switchboard.KeepRolling && resume[slot] is { } from)
         {
             director.Seek(from);
             if (director.IsFinished)

@@ -169,7 +169,31 @@ public class SwitchboardPlayerTests
         CutTo(board, 0);
 
         Assert.Equal(0.0, board.Head, Time);
-        Assert.Equal(Resume(), Air(state).Resume);
+        // The cuts still record where each shot was left: Track 1 at 4 s, Track 2 at its start.
+        Assert.Equal(Resume((0, 4.0), (1, 0.0)), Air(state).Resume);
+    }
+
+    [Fact]
+    public void KeepRollingResumesFromTheLastCutAwayEvenOneMadeWithItOff()
+    {
+        var state = EditingSwitchboard();
+        state.SetSwitchboardToggle(SwitchboardToggle.KeepRolling, true);
+        var board = Live(state);
+        CutTo(board, 0);
+        state.LiveFrame(4f);
+        CutTo(board, 1);
+        state.SetSwitchboardToggle(SwitchboardToggle.KeepRolling, false);
+        CutTo(board, 0);
+        state.LiveFrame(8f);
+        CutTo(board, 1);
+        state.SetSwitchboardToggle(SwitchboardToggle.KeepRolling, true);
+
+        CutTo(board, 0);
+
+        // Track 1 was last left at 8 s, having started again from 0 with Keep rolling off.
+        Assert.Equal(8.0, board.Head, Time);
+        // 1 s on from 8 s is 9 s: x = 18.
+        Assert.Equal(18f, XAfter(state, 1f), Along);
     }
 
     [Fact]
