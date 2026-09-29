@@ -118,7 +118,7 @@ internal sealed class MainMenu
                 name => Report(files.Duplicate(name))
             );
         if (Menu.Item("Delete scene", SceneActions.Allowed(SceneAction.Delete, targetsOpenScene: true, mode)))
-            deleteConfirm.Ask(files.CurrentName, () => Report(files.Delete()));
+            deleteConfirm.Ask(files.CurrentName, undoable: false, () => Report(files.Delete()));
         ImGui.Separator();
         if (Menu.Item("Add preset", editing))
             picker.Show(FilePickerKind.Preset);

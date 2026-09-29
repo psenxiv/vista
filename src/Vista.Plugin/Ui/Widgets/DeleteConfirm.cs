@@ -3,7 +3,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Vista.Plugin.Ui.Widgets;
 
-/// <summary>"Delete name? This can't be undone."</summary>
+/// <summary>"Delete name?", followed by "This can't be undone." unless it can be.</summary>
 internal sealed class DeleteConfirm(string id)
 {
     private readonly string popup = $"Delete###vista-delete-{id}";
@@ -15,10 +15,10 @@ internal sealed class DeleteConfirm(string id)
     /// <summary>True while the confirmation is open and asking; check before acting on a key it might be reading.</summary>
     public bool Asking => asking;
 
-    /// <summary>Opens the confirmation for <paramref name="name"/>; <paramref name="confirm"/> runs when Delete is pressed.</summary>
-    public void Ask(string name, Action confirm)
+    /// <summary>Opens the confirmation for <paramref name="name"/>, warning unless <paramref name="undoable"/>; <paramref name="confirm"/> runs when Delete is pressed.</summary>
+    public void Ask(string name, bool undoable, Action confirm)
     {
-        message = $"Delete {name}? This can't be undone.";
+        message = undoable ? $"Delete {name}?" : $"Delete {name}? This can't be undone.";
         this.confirm = confirm;
         asking = true;
         open = true;

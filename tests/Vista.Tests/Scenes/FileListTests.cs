@@ -14,7 +14,7 @@ public sealed class FileListTests
     {
         var entries = new[] { Entry("gamma"), Entry("Alpha"), Entry("beta") };
 
-        var filtered = FileList.Filter(entries, string.Empty);
+        var filtered = FileList.Filter(entries, string.Empty, e => e.Name);
 
         Assert.Equal(["Alpha", "beta", "gamma"], filtered.Select(e => e.Name));
     }
@@ -24,7 +24,7 @@ public sealed class FileListTests
     {
         var entries = new[] { Entry("Dawn Patrol"), Entry("Dusk"), Entry("Midday") };
 
-        var filtered = FileList.Filter(entries, "  aWn  ");
+        var filtered = FileList.Filter(entries, "  aWn  ", e => e.Name);
 
         Assert.Equal(["Dawn Patrol"], filtered.Select(e => e.Name));
     }
@@ -34,7 +34,7 @@ public sealed class FileListTests
     {
         var entries = new[] { Entry("Dawn"), Entry("Dusk") };
 
-        Assert.Empty(FileList.Filter(entries, "midday"));
+        Assert.Empty(FileList.Filter(entries, "midday", e => e.Name));
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class FileListTests
     {
         var entries = new[] { Entry("gamma take"), Entry("Alpha take"), Entry("beta take") };
 
-        var filtered = FileList.Filter(entries, "take");
+        var filtered = FileList.Filter(entries, "take", e => e.Name);
 
         Assert.Equal(["Alpha take", "beta take", "gamma take"], filtered.Select(e => e.Name));
     }

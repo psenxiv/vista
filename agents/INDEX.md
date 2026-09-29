@@ -34,7 +34,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
 - `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, its point list, and Live's playlist scrub bar.
 - `Ui/Widgets`: the ImGui pieces the windows share.
-- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup, Welcome and the scene and preset picker.
+- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup, Welcome and the scene and preset picker, with one source per kind it lists.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.
 
 ## Helper homes
