@@ -20,7 +20,7 @@ internal sealed class SwitchboardWindow : Window
     private const int SlotsPerRow = SwitchboardEditing.SlotCount / 2;
     private const float MinSlotWidth = 90f;
     private const float OutlineThickness = 2f;
-    private const float DashLength = 4f;
+    private const string EmptyLabel = "-";
     private const string SlotMenu = "slot-menu";
 
     private static readonly FontAwesomeIcon[] ToggleIcons =
@@ -139,7 +139,7 @@ internal sealed class SwitchboardWindow : Window
     /// <summary>What slot <paramref name="slot"/> holds, or null when it's empty or none is given.</summary>
     private static Slot? Held(Scene scene, int? slot) => slot is { } i ? scene.Switchboard.Slots[i] : null;
 
-    /// <summary>A card's frame, heading, and the slot's number and name or "Empty"; returns where its third line starts.</summary>
+    /// <summary>A card's frame, heading, and the slot's number and name or a dash; returns where its third line starts.</summary>
     private static Vector2 DrawCard(
         string id,
         string heading,
@@ -165,7 +165,7 @@ internal sealed class SwitchboardWindow : Window
         if (Held(scene, slot) is { } held)
             DrawNumberedName(("card", id), slot!.Value, held.Name, min with { Y = nameTop }, max.X);
         else
-            list.AddText(new Vector2(min.X + inset.X, nameTop), ImGui.GetColorU32(UiColours.Muted()), "Empty");
+            list.AddText(new Vector2(min.X + inset.X, nameTop), ImGui.GetColorU32(UiColours.Muted()), EmptyLabel);
         return new Vector2(min.X + inset.X, nameTop + line);
     }
 
@@ -239,7 +239,7 @@ internal sealed class SwitchboardWindow : Window
         DrawSlotMenu(scene);
     }
 
-    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, dashed when empty and dimmed when it can't play.</summary>
+    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, and dimmed when it can't play.</summary>
     private void DrawSlot(
         SwitchboardPlayer? board,
         Scene scene,
@@ -270,7 +270,7 @@ internal sealed class SwitchboardWindow : Window
         if (held is not null || fill != ImGuiCol.FrameBg)
             list.AddRectFilled(min, max, ImGui.GetColorU32(fill), style.FrameRounding);
         if (held is null)
-            DashedRect(list, min, max, ImGui.GetColorU32(UiColours.Dim()), style.FrameRounding);
+            list.AddRect(min, max, ImGui.GetColorU32(UiColours.Dim()), style.FrameRounding);
 
         var inset = style.FramePadding * 2f;
         var nameTop = min.Y + inset.Y + ImGui.GetTextLineHeight() + (style.ItemSpacing.Y / 2f);
@@ -295,7 +295,7 @@ internal sealed class SwitchboardWindow : Window
             }
             else
             {
-                list.AddText(new Vector2(min.X + inset.X, nameTop), ImGui.GetColorU32(UiColours.Muted()), "Empty");
+                list.AddText(new Vector2(min.X + inset.X, nameTop), ImGui.GetColorU32(UiColours.Muted()), EmptyLabel);
             }
         }
 
@@ -321,40 +321,6 @@ internal sealed class SwitchboardWindow : Window
                 OutlineThickness
             );
         }
-    }
-
-    /// <summary>A dashed outline around an empty slot, its corners solid arcs rounded like a frame's.</summary>
-    private static void DashedRect(ImDrawListPtr list, Vector2 min, Vector2 max, uint colour, float rounding)
-    {
-        void Dashes(Vector2 from, Vector2 to)
-        {
-            var length = Vector2.Distance(from, to);
-            if (length <= 0f)
-                return;
-            var step = (to - from) / length;
-            for (var at = 0f; at < length; at += DashLength * 2f)
-                list.AddLine(from + (step * at), from + (step * MathF.Min(at + DashLength, length)), colour);
-        }
-
-        // Rounding is clamped to half the shorter side, as ImGui clamps a frame's.
-        var r = MathF.Min(rounding, MathF.Min(max.X - min.X, max.Y - min.Y) / 2f);
-        Dashes(min with { X = min.X + r }, new Vector2(max.X - r, min.Y));
-        Dashes(new Vector2(max.X, min.Y + r), max with { Y = max.Y - r });
-        Dashes(max with { X = max.X - r }, new Vector2(min.X + r, max.Y));
-        Dashes(new Vector2(min.X, max.Y - r), min with { Y = min.Y + r });
-        if (r <= 0f)
-            return;
-        void Corner(Vector2 centre, float from)
-        {
-            list.PathArcTo(centre, r, from, from + (MathF.PI / 2f));
-            list.PathStroke(colour, ImDrawFlags.None, 1f);
-        }
-
-        // Angles run clockwise on screen from the +x axis, since y points down.
-        Corner(max - new Vector2(r), 0f);
-        Corner(new Vector2(min.X + r, max.Y - r), MathF.PI / 2f);
-        Corner(min + new Vector2(r), MathF.PI);
-        Corner(new Vector2(max.X - r, min.Y + r), MathF.PI * 1.5f);
     }
 
     /// <summary>Direct cut, Keep rolling and Auto Next, centred in the sixth column's top cell and lit while on.</summary>
