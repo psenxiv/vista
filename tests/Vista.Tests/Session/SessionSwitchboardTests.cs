@@ -361,12 +361,13 @@ public class SessionSwitchboardTests
     {
         var state = EditingSwitchboard();
         state.Transport.SetGhost(ghost);
-        CutTo(state.Board!, 1);
+        var board = state.Board!;
+        CutTo(board, 1);
         Assert.False(state.OverlayEditable);
 
         // Track 2 is 2 s long, so 3 s holds its last frame.
         state.Transport.EditingFrame(3f, flying: false);
-        Assert.True(state.Board.IsFinished);
+        Assert.True(board.IsFinished);
         Assert.False(state.OverlayEditable);
         Assert.False(state.OverlayShown);
 
