@@ -17,8 +17,8 @@ public sealed class SceneLibraryTests : IDisposable
     public SceneLibraryTests()
     {
         state.Edit();
-        library = new SceneLibrary(temp.Folder, () => state.Scene, state.LoadScene);
-        next = new SceneLibrary(other.Folder, () => state.Scene, state.LoadScene);
+        library = new SceneLibrary(temp.Folder, () => state.Scene, state.LoadScene, new UnreadableNotices());
+        next = new SceneLibrary(other.Folder, () => state.Scene, state.LoadScene, new UnreadableNotices());
     }
 
     public void Dispose()

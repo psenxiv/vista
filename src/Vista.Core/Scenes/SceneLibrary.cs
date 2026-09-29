@@ -13,17 +13,12 @@ public sealed class SceneLibrary
     private Scene? saved;
 
     /// <summary>Keeps <paramref name="folder"/>'s scenes, reading the session's scene from <paramref name="scene"/> and loading through <paramref name="load"/>; <paramref name="notices"/> is shared by libraries that tell the same player.</summary>
-    public SceneLibrary(
-        SceneFolder folder,
-        Func<Scene> scene,
-        Func<Scene, string?> load,
-        UnreadableNotices? notices = null
-    )
+    public SceneLibrary(SceneFolder folder, Func<Scene> scene, Func<Scene, string?> load, UnreadableNotices notices)
     {
         Folder = folder;
         this.scene = scene;
         this.load = load;
-        this.notices = notices ?? new UnreadableNotices();
+        this.notices = notices;
     }
 
     /// <summary>The folder the scenes are in.</summary>
