@@ -481,6 +481,68 @@ public class SwitchboardPlayerTests
     }
 
     [Fact]
+    public void BeginningAScrubWithNothingOnProgramDoesntStartOne()
+    {
+        var state = EditingSwitchboard();
+        var board = Live(state);
+
+        board.BeginScrub();
+
+        Assert.False(board.Scrubbing);
+        // A shot cut to afterwards plays as normal.
+        CutTo(board, 0);
+        Assert.True(board.IsPlaying);
+    }
+
+    [Fact]
+    public void EndingAScrubThatNeverBeganLeavesAPausedShotPaused()
+    {
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 0);
+        // A scrub of a playing shot, ended, leaves the shot playing; paused again, a second end has no scrub to end.
+        board.BeginScrub();
+        board.EndScrub();
+        Assert.True(board.IsPlaying);
+        board.Pause();
+
+        board.EndScrub();
+
+        Assert.True(board.IsPaused);
+    }
+
+    [Fact]
+    public void ClearingTheProgramSlotLiveLeavesNoTimelineHeadOrProgramBeforeTheNextTick()
+    {
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 0);
+        state.LiveFrame(2f);
+
+        Assert.Null(state.ClearSlot(0));
+
+        Assert.Null(board.Timeline);
+        Assert.Equal(0.0, board.Head, Time);
+        Assert.False(board.HasProgram);
+    }
+
+    [Fact]
+    public void ClearingTheProgramSlotWhileScrubbingEndsTheScrubAtTheNextTick()
+    {
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 0);
+        board.BeginScrub();
+        Assert.True(board.Scrubbing);
+        Assert.Null(state.ClearSlot(0));
+
+        // Nothing reads the board's place until Live's next tick, which is where a shot that has left Program is stopped.
+        state.LiveFrame(1f);
+
+        Assert.False(board.Scrubbing);
+    }
+
+    [Fact]
     public void TheFirstLiveHoldsTheFrameItBeganAt()
     {
         var state = EditingSwitchboard();

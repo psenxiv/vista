@@ -186,6 +186,15 @@ public class SceneJsonTests
         SameAir(new OnAir(4, 0, 2.5, Resume((0, 1.25))), SceneJson.Read(json).Switchboard.Live);
     }
 
+    [Fact]
+    public void AResumeOfZeroOnAFilledSlotReadsAsZero()
+    {
+        // Cutting away from a shot at its very start records 0 s, which is a valid resume point and not none.
+        var json = Edited(FullScene(), n => n["switchboard"]!["live"]!["resume"]![0] = 0.0);
+
+        SameAir(new OnAir(4, 0, 2.5, Resume((0, 0.0))), SceneJson.Read(json).Switchboard.Live);
+    }
+
     public static TheoryData<string, Action<JsonNode>> MalformedSwitchboards =>
         new()
         {
