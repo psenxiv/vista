@@ -245,6 +245,8 @@ public class PlaylistEditingTests
 
     private static Guid IdOf(Scene scene, string name) => scene.Playlists.Single(p => p.Name == name).Id;
 
+    private static Playlist Get(Scene scene, Guid id) => PlaylistEditing.Get(scene, id);
+
     // A new scene holds "Playlist 1", so the next free name is "Playlist 2".
     [Fact]
     public void ANewSuggestionSkipsTheNamesInUse() =>
@@ -272,11 +274,10 @@ public class PlaylistEditingTests
         var scene = SceneEditing.New();
 
         Assert.Equal(
-            PlaylistEditing.NameTaken,
+            "A playlist with that name exists.",
             Assert.Throws<ArgumentException>(() => PlaylistEditing.New(scene, "playlist 1")).Message
         );
         Assert.Equal("Enter a name.", Assert.Throws<ArgumentException>(() => PlaylistEditing.New(scene, "")).Message);
-        Assert.Equal("A playlist with that name exists.", PlaylistEditing.NameTaken);
     }
 
     [Fact]
@@ -318,6 +319,7 @@ public class PlaylistEditingTests
         var scene = SceneEditing.New();
 
         Assert.Equal("Playlist 1 copy", PlaylistEditing.CopySuggestion(scene, scene.SelectedPlaylistId));
+        Assert.Throws<ArgumentException>(() => PlaylistEditing.CopySuggestion(scene, Guid.NewGuid()));
     }
 
     // Two entries on Track 1 and Track 2 (repeating 3 times), in a looping playlist.
@@ -395,8 +397,6 @@ public class PlaylistEditingTests
         Assert.Single(Get(removed, PlaylistEditing.Selected(result).Id).Entries);
     }
 
-    private static Playlist Get(Scene scene, Guid id) => PlaylistEditing.Get(scene, id);
-
     [Fact]
     public void TheLastPlaylistCantBeDeleted()
     {
@@ -404,10 +404,9 @@ public class PlaylistEditingTests
 
         Assert.False(PlaylistEditing.CanDelete(scene));
         Assert.Equal(
-            PlaylistEditing.LastPlaylist,
+            "The last playlist can't be deleted.",
             Assert.Throws<ArgumentException>(() => PlaylistEditing.Delete(scene, scene.SelectedPlaylistId)).Message
         );
-        Assert.Equal("The last playlist can't be deleted.", PlaylistEditing.LastPlaylist);
         Assert.True(PlaylistEditing.CanDelete(PlaylistEditing.New(scene, "Two")));
     }
 
