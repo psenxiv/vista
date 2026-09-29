@@ -83,7 +83,11 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         // Measured with the spacing Draw pushes, so the height fits what it draws.
         using var spacing = WindowStyle.Push();
         var style = ImGui.GetStyle();
-        var slot = MathF.Max(MinSlotWidth * ImGuiHelpers.GlobalScale, IconButton.RowWidth(ToggleIcons));
+        // Each column fits the toggles, and the sixth also the time under Cut.
+        var slot = MathF.Max(
+            MathF.Max(MinSlotWidth * ImGuiHelpers.GlobalScale, IconButton.RowWidth(ToggleIcons)),
+            ImGui.CalcTextSize(LongestTime()).X
+        );
         var width = (slot * (SlotsPerRow + 1)) + (style.ItemSpacing.X * SlotsPerRow) + (style.WindowPadding.X * 2f);
         var height =
             ImGui.GetFrameHeight()
@@ -121,6 +125,17 @@ internal sealed class SwitchboardWindow : Window, IDisposable
 
             namePrompt.Draw();
         }
+    }
+
+    /// <summary>The width of each of the grid's six columns across <paramref name="width"/>.</summary>
+    private static float ColumnWidth(float width) =>
+        (width - (ImGui.GetStyle().ItemSpacing.X * SlotsPerRow)) / (SlotsPerRow + 1);
+
+    /// <summary>The Program shot's time as the bottom row reads it at its longest, which the sixth column must fit.</summary>
+    private string LongestTime()
+    {
+        var total = session.Board?.Timeline?.Total ?? 0.0;
+        return Units.ClockOf(total, total);
     }
 
     /// <summary>A slot's height: its number and icon over its name in the slot font, with padding.</summary>
@@ -194,7 +209,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
     private void DrawGrid(SwitchboardPlayer? board, Scene scene, int? program, int? next, float width)
     {
         var spacing = ImGui.GetStyle().ItemSpacing;
-        var cell = new Vector2((width - (spacing.X * SlotsPerRow)) / (SlotsPerRow + 1), SlotHeight());
+        var cell = new Vector2(ColumnWidth(width), SlotHeight());
         var origin = ImGui.GetCursorScreenPos();
         for (var slot = 0; slot < SwitchboardEditing.SlotCount; slot++)
         {
@@ -434,11 +449,15 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var head = timeline is null ? 0.0 : board!.Head;
         var key = (session.Mode, board?.Program ?? -1, SwitchboardEditing.Target(board?.ProgramSlot) ?? Guid.Empty);
         var view = zoom.View(key, (float)total);
+        var rowLeft = ImGui.GetCursorScreenPos().X;
+        var rowWidth = ImGui.GetContentRegionAvail().X;
         DrawTransport();
 
-        // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
-        var timeWidth = ImGui.CalcTextSize(Units.ClockOf(total, total)).X;
-        var width = ImGui.GetContentRegionAvail().X - timeWidth - ImGui.GetStyle().ItemSpacing.X;
+        // The bar ends under the last slot, and the time sits in the sixth column under Cut.
+        var column = ColumnWidth(rowWidth);
+        var barRight =
+            rowLeft + (SlotsPerRow * (column + ImGui.GetStyle().ItemSpacing.X)) - ImGui.GetStyle().ItemSpacing.X;
+        var width = barRight - ImGui.GetCursorScreenPos().X;
         using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubBar.GrabScale))
         {
             if (board is not null && PlaylistBar.Draw(board, scene, fields.Commit, width, view))
@@ -447,9 +466,11 @@ internal sealed class SwitchboardWindow : Window, IDisposable
                 DrawEmptyBar(width);
         }
 
+        var time = Units.ClockOf(head, total);
         ImGui.SameLine();
+        Layout.RightAlign(ImGui.CalcTextSize(time).X);
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(Units.ClockOf(head, total));
+        ImGui.TextUnformatted(time);
     }
 
     /// <summary>A disabled bar with nothing in it, the size of the scrub bar.</summary>
