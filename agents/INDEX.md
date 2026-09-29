@@ -139,7 +139,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Files
 
-- `Scenes/SceneFolder`: scene and preset files, and which exceptions are the file errors callers expect.
+- `Scenes/SceneFolder`: scene and preset files, backing up and upgrading older scene files, and which exceptions are the file errors callers expect.
 
 ### Game access
 

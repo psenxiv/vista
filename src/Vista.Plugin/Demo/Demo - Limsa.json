@@ -1,5 +1,5 @@
 {
-  "format": 1,
+  "format": 2,
   "anchor": {
     "position": {
       "x": -94.725105,
@@ -9,38 +9,45 @@
     "yaw": 0
   },
   "anchorPlaced": true,
-  "playlistLoops": true,
+  "selectedPlaylist": "d7c33528-0a06-40ad-bb4f-7bac0d28c579",
   "hidden": [],
-  "playlist": [
+  "playlists": [
     {
-      "id": "3b7fa88d-8888-4124-b207-29893e56e637",
-      "trackId": "f8688d0d-14c7-47af-8df5-edb2bb6d0553",
-      "loops": null,
-      "transition": "Cut"
-    },
-    {
-      "id": "207bbd93-54f1-4772-84bf-970f541ef70c",
-      "trackId": "643e8e6b-e089-4664-bed2-04826979c289",
-      "loops": 2,
-      "transition": "Cut"
-    },
-    {
-      "id": "af961abd-b459-43b8-b68b-46d05926a199",
-      "trackId": "e30aece0-efd0-4c9b-8f01-65017a4b66c0",
-      "loops": null,
-      "transition": "Cut"
-    },
-    {
-      "id": "e0a09bda-658a-4a57-ad61-4ee0982f5913",
-      "trackId": "c4fd65bd-4eca-49d5-aa11-f67d1cbb7594",
-      "loops": null,
-      "transition": "Cut"
-    },
-    {
-      "id": "7855e698-f816-43ca-8265-14f7e8194582",
-      "trackId": "d776513b-f0dd-4367-b1ac-ae58cc1dc132",
-      "loops": null,
-      "transition": "Cut"
+      "id": "d7c33528-0a06-40ad-bb4f-7bac0d28c579",
+      "name": "Playlist 1",
+      "loops": true,
+      "entries": [
+        {
+          "id": "3b7fa88d-8888-4124-b207-29893e56e637",
+          "trackId": "f8688d0d-14c7-47af-8df5-edb2bb6d0553",
+          "loops": null,
+          "transition": "Cut"
+        },
+        {
+          "id": "207bbd93-54f1-4772-84bf-970f541ef70c",
+          "trackId": "643e8e6b-e089-4664-bed2-04826979c289",
+          "loops": 2,
+          "transition": "Cut"
+        },
+        {
+          "id": "af961abd-b459-43b8-b68b-46d05926a199",
+          "trackId": "e30aece0-efd0-4c9b-8f01-65017a4b66c0",
+          "loops": null,
+          "transition": "Cut"
+        },
+        {
+          "id": "e0a09bda-658a-4a57-ad61-4ee0982f5913",
+          "trackId": "c4fd65bd-4eca-49d5-aa11-f67d1cbb7594",
+          "loops": null,
+          "transition": "Cut"
+        },
+        {
+          "id": "7855e698-f816-43ca-8265-14f7e8194582",
+          "trackId": "d776513b-f0dd-4367-b1ac-ae58cc1dc132",
+          "loops": null,
+          "transition": "Cut"
+        }
+      ]
     }
   ],
   "tracks": [

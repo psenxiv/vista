@@ -7,9 +7,15 @@ internal sealed class TempFolder : IDisposable
 {
     private readonly string parent = Directory.CreateTempSubdirectory("vista-tests-").FullName;
 
-    internal TempFolder()
+    /// <summary>A folder whose backups are named for <paramref name="clock"/>, the local time by default.</summary>
+    internal TempFolder(Func<DateTime>? clock = null)
     {
-        Folder = new SceneFolder(SceneFolder.RootFor(parent), (path, e) => Unreadable.Add(Path.GetFileName(path)));
+        Folder = new SceneFolder(
+            SceneFolder.RootFor(parent),
+            (path, e) => Unreadable.Add(Path.GetFileName(path)),
+            (path, e) => NotUpgraded.Add(Path.GetFileName(path)),
+            clock
+        );
         Folder.Create();
     }
 
@@ -20,6 +26,9 @@ internal sealed class TempFolder : IDisposable
 
     /// <summary>The file names reported unreadable, in the order reported.</summary>
     internal List<string> Unreadable { get; } = [];
+
+    /// <summary>The file names of older scenes opened without being backed up and rewritten, in the order reported.</summary>
+    internal List<string> NotUpgraded { get; } = [];
 
     internal string Scenes => Folder.ScenesDir;
 

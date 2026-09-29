@@ -162,12 +162,13 @@ internal sealed class SceneFiles
             Dalamud.Utility.Util.OpenLink(presets ? l.Folder.PresetsDir : l.Folder.ScenesDir);
     }
 
-    /// <summary>Creates <paramref name="parent"/>'s vistaxiv folder and uses it: for a move, leaves the current library for it; otherwise opens <paramref name="last"/>. A refused move leaves <see cref="library"/> and the configuration untouched.</summary>
+    /// <summary>Creates <paramref name="parent"/>'s vistaxiv folder, upgrades its older scenes the first time, and uses it: for a move, leaves the current library for it; otherwise opens <paramref name="last"/>. A refused move leaves <see cref="library"/> and the chosen folder untouched.</summary>
     private string? Use(string parent, bool move, string? last)
     {
         var folder = new SceneFolder(
             SceneFolder.RootFor(parent),
-            (path, e) => Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message)
+            (path, e) => Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message),
+            (path, e) => Plugin.Log.Warning("[scenes] opened {Path} without upgrading it: {Error}", path, e.Message)
         );
         var created = !Directory.Exists(folder.Root);
         try
@@ -177,6 +178,14 @@ internal sealed class SceneFiles
         catch (Exception e) when (SceneFolder.IsFileError(e))
         {
             return Checked($"Could not create {folder.Root}: {e.Message}");
+        }
+
+        if (!config.UpgradedFolders.Any(done => SceneFolder.SameParent(done, parent)))
+        {
+            foreach (var failed in folder.UpgradeAll())
+                Plugin.Log.Warning("[scenes] {Refusal}", failed);
+            config.UpgradedFolders.Add(parent);
+            config.Save();
         }
 
         var next = new SceneLibrary(folder, () => session.Scene, session.LoadScene);

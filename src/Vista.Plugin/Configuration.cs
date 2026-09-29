@@ -21,6 +21,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>True once the demo scene has been added to a save folder; after that only folders Vista creates get it.</summary>
     public bool DemoAdded { get; set; }
 
+    /// <summary>The save folders whose older scene files have been backed up and upgraded, so it happens once for each.</summary>
+    public ICollection<string> UpgradedFolders { get; set; } = [];
+
     /// <summary>The Hierarchy panel's width, in pixels.</summary>
     public float HierarchyWidth { get; set; } = PanelWidth.Default;
 

@@ -81,6 +81,54 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void OpeningByItselfSkipsScenesFromANewerVista()
+    {
+        // Aurora is the last scene and first by name, but a newer Vista saved it.
+        File.WriteAllText(Path.Combine(temp.Scenes, "Aurora.json"), "{ \"format\": 3 }");
+        Save("Dawn", "Crane");
+
+        Assert.Null(library.Open("Aurora"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("Crane", EditedTrackName);
+    }
+
+    [Fact]
+    public void OpeningASceneFromANewerVistaAsksForANewerVista()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        File.WriteAllText(Path.Combine(temp.Scenes, "Future.json"), "{ \"format\": 3 }");
+
+        Assert.Equal(
+            "Could not open Future: This scene needs a newer version of Vista. Update Vista to open it.",
+            library.Switch("Future")
+        );
+        Assert.Equal("Dawn", library.CurrentName);
+    }
+
+    [Fact]
+    public void AnOlderSceneOpenedWithoutABackupIsOnlySavedOnceItsBackupIsWritten()
+    {
+        var path = Path.Combine(temp.Scenes, "Harbour.json");
+        File.WriteAllText(path, FormatOneSceneJson());
+        // A file where the backups folder should be, so no backup can be written.
+        var blocker = Path.Combine(temp.Folder.Root, "backups");
+        File.WriteAllText(blocker, "");
+        Assert.Null(library.Open("Harbour"));
+        RenameFirstTrack("Jib");
+
+        Assert.StartsWith("Could not save Harbour:", library.SaveNow());
+        Assert.Equal(FormatOneSceneJson(), File.ReadAllText(path));
+
+        File.Delete(blocker);
+        Assert.Null(library.SaveNow());
+        Assert.Equal("Jib", FirstTrackIn(temp, "Harbour"));
+        var backup = Assert.Single(Directory.GetFiles(temp.Folder.BackupsDir, "*", SearchOption.AllDirectories));
+        Assert.Equal(FormatOneSceneJson(), File.ReadAllText(backup));
+    }
+
+    [Fact]
     public void SwitchingSavesTheOpenSceneThenLoads()
     {
         Save("Dawn", "Crane");

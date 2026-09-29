@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Vista.Core.Scenes;
 
 /// <summary>Scene and preset files in a vistaxiv folder.</summary>
@@ -9,12 +11,21 @@ public sealed class SceneFolder
     private const string Extension = ".json";
 
     private readonly Action<string, Exception>? unreadable;
+    private readonly Action<string, Exception>? notUpgraded;
+    private readonly Func<DateTime> clock;
 
-    /// <summary>The folder at <paramref name="root"/>, which is &lt;parent&gt;/vistaxiv, reporting files it can't read to <paramref name="unreadable"/>.</summary>
-    public SceneFolder(string root, Action<string, Exception>? unreadable = null)
+    /// <summary>The folder at <paramref name="root"/>, which is &lt;parent&gt;/vistaxiv, reporting files it can't read to <paramref name="unreadable"/> and older scenes it opened but couldn't back up and rewrite to <paramref name="notUpgraded"/>; <paramref name="clock"/> names backup folders, the local time by default.</summary>
+    public SceneFolder(
+        string root,
+        Action<string, Exception>? unreadable = null,
+        Action<string, Exception>? notUpgraded = null,
+        Func<DateTime>? clock = null
+    )
     {
         Root = root;
         this.unreadable = unreadable;
+        this.notUpgraded = notUpgraded;
+        this.clock = clock ?? (() => DateTime.Now);
     }
 
     /// <summary>The vistaxiv folder inside <paramref name="parent"/>.</summary>
@@ -43,6 +54,9 @@ public sealed class SceneFolder
     /// <summary>The folder preset files are kept in.</summary>
     public string PresetsDir => Path.Combine(Root, "presets");
 
+    /// <summary>The folder older scene files are copied into before they are rewritten in the current format.</summary>
+    public string BackupsDir => Path.Combine(Root, "backups");
+
     /// <summary>True when the folder and its scenes and presets folders all exist.</summary>
     public bool Exists => Directory.Exists(Root) && Directory.Exists(ScenesDir) && Directory.Exists(PresetsDir);
 
@@ -53,17 +67,72 @@ public sealed class SceneFolder
         Directory.CreateDirectory(PresetsDir);
     }
 
-    /// <summary>The names of the scene files that can be read, sorted ignoring case.</summary>
-    public IReadOnlyList<string> SceneNames() => SceneEntries().Select(e => e.Name).ToList();
+    /// <summary>The names of the scene files this version can open, sorted ignoring case.</summary>
+    public IReadOnlyList<string> SceneNames() =>
+        SceneEntries().Where(e => e.Tracks is not null).Select(e => e.Name).ToList();
 
-    /// <summary>The scene files that can be read, with their track count, sorted by name ignoring case.</summary>
-    public IReadOnlyList<FileEntry> SceneEntries() => Entries(ScenesDir, json => SceneJson.Read(json).Tracks.Count);
+    /// <summary>The scene files that can be read, with their track count, and those saved by a newer Vista, with none; sorted by name ignoring case.</summary>
+    public IReadOnlyList<FileEntry> SceneEntries() =>
+        Entries(
+            ScenesDir,
+            json =>
+            {
+                try
+                {
+                    return SceneJson.Read(json).Tracks.Count;
+                }
+                catch (NewerFormatException)
+                {
+                    return null;
+                }
+            }
+        );
 
-    /// <summary>The scene in file <paramref name="name"/>.</summary>
-    public Scene LoadScene(string name) => SceneJson.Read(File.ReadAllText(PathOf(ScenesDir, name)));
+    /// <summary>The scene in file <paramref name="name"/>; a file in an earlier format is backed up and rewritten in the current one first, or only read, and reported, when that fails.</summary>
+    public Scene LoadScene(string name)
+    {
+        var path = PathOf(ScenesDir, name);
+        var json = File.ReadAllText(path);
+        var scene = SceneJson.Read(json);
+        if (SceneJson.FormatOf(json) < SceneJson.SceneFormat)
+        {
+            try
+            {
+                WriteScene(path, scene, clock());
+            }
+            catch (Exception e) when (IsFileError(e))
+            {
+                notUpgraded?.Invoke(path, e);
+            }
+        }
 
-    /// <summary>Writes <paramref name="scene"/> to file <paramref name="name"/>, replacing any there.</summary>
-    public void SaveScene(string name, Scene scene) => Write(PathOf(ScenesDir, name), SceneJson.Write(scene));
+        return scene;
+    }
+
+    /// <summary>Writes <paramref name="scene"/> to file <paramref name="name"/>, replacing any there; a file there in an earlier format is backed up first, and left as it is when that fails.</summary>
+    public void SaveScene(string name, Scene scene) => WriteScene(PathOf(ScenesDir, name), scene, clock());
+
+    /// <summary>Backs up and rewrites every scene file in an earlier format, all into one backup folder; files that can't be read are left as they are. Returns why any other file couldn't be upgraded.</summary>
+    public IReadOnlyList<string> UpgradeAll()
+    {
+        var now = clock();
+        var refusals = new List<string>();
+        foreach (var path in Files(ScenesDir))
+        {
+            try
+            {
+                var json = File.ReadAllText(path);
+                if (FormatIn(json) < SceneJson.SceneFormat && TryRead(json) is { } scene)
+                    WriteScene(path, scene, now);
+            }
+            catch (Exception e) when (IsFileError(e))
+            {
+                refusals.Add($"Could not upgrade {Path.GetFileName(path)}: {e.Message}");
+            }
+        }
+
+        return refusals;
+    }
 
     /// <summary>Writes <paramref name="json"/> as scene file <paramref name="name"/> unless a scene file has that name, ignoring case; true when written.</summary>
     public bool AddScene(string name, string json)
@@ -128,6 +197,50 @@ public sealed class SceneFolder
         Files(ScenesDir).Select(f => Path.GetFileNameWithoutExtension(f)).ToList();
 
     private static string PathOf(string dir, string name) => Path.Combine(dir, name + Extension);
+
+    private static Scene? TryRead(string json)
+    {
+        try
+        {
+            return SceneJson.Read(json);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Writes <paramref name="scene"/> to <paramref name="path"/>, first copying a file there in an earlier format into a backup folder named for its format and <paramref name="now"/>; throws, writing nothing, when the copy fails.</summary>
+    private void WriteScene(string path, Scene scene, DateTime now)
+    {
+        if (FormatOnDisk(path) is { } format && format < SceneJson.SceneFormat)
+        {
+            var backups = Path.Combine(
+                BackupsDir,
+                $"v{format}-{now.ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture)}"
+            );
+            Directory.CreateDirectory(backups);
+            File.Copy(path, Path.Combine(backups, Path.GetFileName(path)));
+        }
+
+        Write(path, SceneJson.Write(scene));
+    }
+
+    /// <summary>The format of the file at <paramref name="path"/>, or null when there is none or it has no format number.</summary>
+    private static int? FormatOnDisk(string path) => File.Exists(path) ? FormatIn(File.ReadAllText(path)) : null;
+
+    /// <summary>The format number in <paramref name="json"/>, or null when it has none.</summary>
+    private static int? FormatIn(string json)
+    {
+        try
+        {
+            return SceneJson.FormatOf(json);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+    }
 
     private static void Write(string path, string json)
     {
