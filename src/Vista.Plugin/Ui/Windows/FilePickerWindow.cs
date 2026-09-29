@@ -87,14 +87,15 @@ internal sealed class FilePickerWindow : Window
         DrawTable(source, listed, mode);
         ImGui.Separator();
         DrawFooter(source, mode, visible);
+        // Read before drawing: a prompt that Enter confirms closes and hands focus back this frame.
+        var prompting = namePrompt.Asking || deleteConfirm.Asking;
         namePrompt.Draw();
         deleteConfirm.Draw();
 
         if (
             visible is { } toOpen
             && ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
-            && !namePrompt.Asking
-            && !deleteConfirm.Asking
+            && !prompting
             && source.PrimaryAllowed(mode)
             && ImGui.IsKeyPressed(ImGuiKey.Enter)
         )
