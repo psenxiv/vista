@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
+using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Session;
 
@@ -16,6 +17,8 @@ internal sealed class SceneFiles
     private readonly GameSession game;
     private readonly SessionState session;
     private readonly Stopwatch clock = Stopwatch.StartNew();
+    private readonly UnreadableNotices unreadableNotices = new();
+    private readonly Queue<string> unreadable = new();
     private SceneLibrary? library;
     private string? tickRefusal;
 
@@ -47,7 +50,12 @@ internal sealed class SceneFiles
     public string CurrentName => library?.CurrentName ?? string.Empty;
 
     /// <summary>The scene files the picker lists, with their track count, read now.</summary>
-    public IReadOnlyList<FileEntry> SceneEntries() => library?.Folder.SceneEntries() ?? [];
+    public IReadOnlyList<FileEntry> SceneEntries()
+    {
+        var entries = library?.Folder.SceneEntries() ?? [];
+        Announce();
+        return entries;
+    }
 
     /// <summary>Why <paramref name="name"/> can't name a scene, or with <paramref name="renaming"/> that name, or null.</summary>
     public string? NameRefusal(string name, string? renaming = null) =>
@@ -167,7 +175,11 @@ internal sealed class SceneFiles
     {
         var folder = new SceneFolder(
             SceneFolder.RootFor(parent),
-            (path, e) => Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message),
+            (path, e) =>
+            {
+                Plugin.Log.Warning("[scenes] skipped {Path}: {Error}", path, e.Message);
+                unreadable.Enqueue(path);
+            },
             (path, e) => Plugin.Log.Warning("[scenes] opened {Path} without upgrading it: {Error}", path, e.Message)
         );
         var created = !Directory.Exists(folder.Root);
@@ -188,7 +200,7 @@ internal sealed class SceneFiles
             config.Save();
         }
 
-        var next = new SceneLibrary(folder, () => session.Scene, session.LoadScene);
+        var next = new SceneLibrary(folder, () => session.Scene, session.LoadScene, unreadableNotices);
         string? opened;
         if (move && library is { } current)
         {
@@ -204,6 +216,8 @@ internal sealed class SceneFiles
         library = next;
         config.SaveFolder = parent;
         config.Save();
+        if (next.Notice is { } startup)
+            Warn(startup);
 
         // The demo goes in after opening, so a new folder still opens a new empty scene.
         var refusal = Finish(opened);
@@ -251,9 +265,26 @@ internal sealed class SceneFiles
             config.Save();
         }
 
+        Announce();
         if (refusal is null)
             Changed?.Invoke(this, EventArgs.Empty);
         return refusal;
+    }
+
+    /// <summary>Tells the player once about each scene file a listing since the last call left out for being unreadable; a folder's own errors stay in the log.</summary>
+    private void Announce()
+    {
+        while (unreadable.TryDequeue(out var path))
+        {
+            if (library?.Folder.SceneNameOf(path) is { } name && unreadableNotices.Unlisted(name) is { } notice)
+                Warn(notice);
+        }
+    }
+
+    private static void Warn(string notice)
+    {
+        Plugin.Log.Warning("[scenes] {Notice}", notice);
+        Notice.Warn(notice);
     }
 
     /// <summary>Runs a preset file action, saying "Could not <paramref name="doing"/>" if it fails.</summary>

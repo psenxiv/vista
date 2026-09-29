@@ -94,6 +94,109 @@ public sealed class SceneLibraryTests : IDisposable
     }
 
     [Fact]
+    public void OpeningWhenTheLastSceneCantBeReadSaysWhichSceneOpenedInstead()
+    {
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+        Save("Dawn", "Crane");
+
+        Assert.Null(library.Open("Broken"));
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Equal("Could not read Broken, so Dawn is open instead. The file may be damaged.", library.Notice);
+    }
+
+    [Fact]
+    public void TheNoticeNamesTheFileAsItIsSpelledOnDisk()
+    {
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+        Save("Dawn", "Crane");
+
+        library.Open("broken");
+
+        Assert.Equal("Could not read Broken, so Dawn is open instead. The file may be damaged.", library.Notice);
+    }
+
+    [Fact]
+    public void TheNoticeNamesTheNewSceneWhenNothingElseCanBeRead()
+    {
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+
+        Assert.Null(library.Open("Broken"));
+
+        // No scene is readable, so Open makes the first free "Scene N", which is Scene 1.
+        Assert.Equal("Could not read Broken, so Scene 1 is open instead. The file may be damaged.", library.Notice);
+    }
+
+    [Fact]
+    public void OpeningTheLastSceneGivesNoNotice()
+    {
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+        Save("Dawn", "Crane");
+
+        library.Open("Dawn");
+
+        Assert.Null(library.Notice);
+    }
+
+    [Fact]
+    public void OpeningWithNoLastSceneGivesNoNoticeEvenWithAnUnreadableFile()
+    {
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+        Save("Dawn", "Crane");
+
+        library.Open(null);
+
+        Assert.Null(library.Notice);
+    }
+
+    [Fact]
+    public void OpeningWhenTheLastSceneIsGoneGivesNoNotice()
+    {
+        Save("Dawn", "Crane");
+
+        library.Open("Gone");
+
+        Assert.Null(library.Notice);
+    }
+
+    [Fact]
+    public void OpeningWhenTheLastSceneIsFromANewerVistaGivesNoNotice()
+    {
+        File.WriteAllText(temp.ScenePath("Future"), "{ \"format\": 3 }");
+        Save("Dawn", "Crane");
+
+        library.Open("Future");
+
+        Assert.Equal("Dawn", library.CurrentName);
+        Assert.Null(library.Notice);
+    }
+
+    [Fact]
+    public void TheNoticeGoesWithTheNextOpen()
+    {
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+        Save("Dawn", "Crane");
+        library.Open("Broken");
+
+        library.Open("Dawn");
+
+        Assert.Null(library.Notice);
+    }
+
+    [Fact]
+    public void TheStartupNoticeCountsAsTellingThePlayerAboutThatFile()
+    {
+        var notices = new UnreadableNotices();
+        var told = new SceneLibrary(temp.Folder, () => state.Scene, state.LoadScene, notices);
+        File.WriteAllText(temp.ScenePath("Broken"), "{");
+        Save("Dawn", "Crane");
+
+        told.Open("Broken");
+
+        Assert.Null(notices.Unlisted("Broken"));
+    }
+
+    [Fact]
     public void OpeningASceneFromANewerVistaAsksForANewerVista()
     {
         Save("Dawn", "Crane");

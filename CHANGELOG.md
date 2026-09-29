@@ -6,6 +6,7 @@
 - The open scene's name moves from the window title to a strip under the Scene heading, and the selected playlist's name shows under the Playlist heading.
 - Vista updates older scene files to a new format, and keeps a copy of each in the backups folder inside vistaxiv.
 - Pressing Enter to confirm a name in Open scene no longer also opens the highlighted scene.
+- Vista now tells you when a scene file can't be read, instead of leaving it out of the list without a word. If it was the scene you last had open, it says which scene opened instead.
 
 ## 0.14.0.1
 

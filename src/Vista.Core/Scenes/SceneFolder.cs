@@ -71,9 +71,12 @@ public sealed class SceneFolder
         Directory.CreateDirectory(PresetsDir);
     }
 
-    /// <summary>The names of the scene files this version can open, sorted ignoring case.</summary>
-    public IReadOnlyList<string> SceneNames() =>
-        SceneEntries().Where(e => e.Tracks is not null).Select(e => e.Name).ToList();
+    /// <summary>The scene name of <paramref name="path"/> when it is a scene file in the scenes folder, else null.</summary>
+    public string? SceneNameOf(string path) =>
+        string.Equals(Path.GetDirectoryName(path), ScenesDir, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(Path.GetExtension(path), Extension, StringComparison.OrdinalIgnoreCase)
+            ? Path.GetFileNameWithoutExtension(path)
+            : null;
 
     /// <summary>The scene files that can be read, with their track count, and those saved by a newer Vista, with none; sorted by name ignoring case.</summary>
     public IReadOnlyList<FileEntry> SceneEntries() =>

@@ -20,6 +20,10 @@ internal static class SceneFixtures
     internal static string FormatOnePresetJson() =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Scenes", "Fixtures", "format-1-preset.json"));
 
+    /// <summary>The names of the scene files in <paramref name="folder"/> that can be opened, as the listing gives them.</summary>
+    internal static IReadOnlyList<string> ReadableNames(SceneFolder folder) =>
+        folder.SceneEntries().Where(e => e.Tracks is not null).Select(e => e.Name).ToList();
+
     /// <summary>The name of the first track in the scene file <paramref name="name"/>.</summary>
     internal static string FirstTrackIn(TempFolder temp, string name) => temp.Folder.LoadScene(name).Tracks[0].Name;
 }

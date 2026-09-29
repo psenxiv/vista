@@ -70,6 +70,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### File listings
 
 - `Scenes/FileEntry` and `FileList`: a scene or preset file as the picker lists it, and filtering a listing by name.
+- `Scenes/UnreadableNotices`: the notice for a scene file that can't be read, given once per file; `SceneLibrary.Notice` says when opening skipped the last scene for it.
 
 ### List edits
 
@@ -120,6 +121,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Widgets/NameStrip`: the band under a side panel's heading that names its open scene or selected playlist.
 - `Ui/Widgets/DragRows` and `RowText`: dragging list rows, their drag source, the space under a list and reading a row's click, and a row's fitted name, inside the item just drawn or an explicit rectangle.
 - `Ui/Widgets/CharacterPicker` and `Refusal`: the character drop-down, and telling the player why an action was refused (the log and a notification).
+- `Ui/Widgets/Notice`: a warning notification that fades, which `Refusal` and the scene files' unreadable-file notices show.
 - `Ui/Widgets/PromptDialog`, `NamePrompt` and `DeleteConfirm`: a modal's begin and Cancel, a name prompt (Ok or Replace, checked against a caller-given refusal and notice), and a delete confirmation; each instance keeps its own popup id.
 - `Ui/Widgets/PresetSave`: saving a track as a preset, its name prompt shared by the Hierarchy row menu and the Scene menu.
 

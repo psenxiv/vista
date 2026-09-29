@@ -149,7 +149,7 @@ public sealed class SceneFolderTests : IDisposable
         Folder.SaveScene("gamma", Named("G"));
 
         // Ordinal order would put "Beta" first, since 'B' (66) sorts before 'a' (97).
-        Assert.Equal(["alpha", "Beta", "gamma"], Folder.SceneNames());
+        Assert.Equal(["alpha", "Beta", "gamma"], ReadableNames(Folder));
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public sealed class SceneFolderTests : IDisposable
         File.WriteAllText(Path.Combine(temp.Scenes, "notes.txt"), "not a scene");
         File.WriteAllText(Path.Combine(temp.Scenes, "Half.json.tmp"), "{");
 
-        Assert.Equal(["Good"], Folder.SceneNames());
+        Assert.Equal(["Good"], ReadableNames(Folder));
         Assert.Equal(["Garbage.json", "Hollow.json"], temp.Unreadable.Order(StringComparer.Ordinal));
     }
 
@@ -352,7 +352,7 @@ public sealed class SceneFolderTests : IDisposable
 
         var future = Assert.Single(Folder.SceneEntries(), e => e.Name == "Future");
         Assert.Null(future.Tracks);
-        Assert.Equal(["Dusk"], Folder.SceneNames());
+        Assert.Equal(["Dusk"], ReadableNames(Folder));
         Assert.Throws<NewerFormatException>(() => Folder.LoadScene("Future"));
         Assert.Empty(Folder.UpgradeAll());
         Assert.Equal("{ \"format\": 3 }", File.ReadAllText(temp.ScenePath("Future")));
@@ -375,6 +375,21 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
+    public void ASceneFilesPathNamesTheScene()
+    {
+        Assert.Equal("Dusk", Folder.SceneNameOf(temp.ScenePath("Dusk")));
+    }
+
+    [Fact]
+    public void AnythingElsesPathNamesNoScene()
+    {
+        // A preset file, a scenes folder itself (a folder error reports its own path), and a non-json file.
+        Assert.Null(Folder.SceneNameOf(Path.Combine(temp.Presets, "Dusk.json")));
+        Assert.Null(Folder.SceneNameOf(temp.Scenes));
+        Assert.Null(Folder.SceneNameOf(Path.Combine(temp.Scenes, "Dusk.txt")));
+    }
+
+    [Fact]
     public void BackupsNeverAppearInTheSceneList()
     {
         WriteFormatOne("Harbour");
@@ -388,7 +403,7 @@ public sealed class SceneFolderTests : IDisposable
     public void AMissingScenesFolderListsNoScenes()
     {
         Directory.Delete(temp.Scenes);
-        Assert.Empty(Folder.SceneNames());
+        Assert.Empty(ReadableNames(Folder));
         Assert.Empty(temp.Unreadable);
     }
 

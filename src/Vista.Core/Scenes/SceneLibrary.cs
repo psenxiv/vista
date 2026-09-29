@@ -8,15 +8,22 @@ public sealed class SceneLibrary
 
     private readonly Func<Scene> scene;
     private readonly Func<Scene, string?> load;
+    private readonly UnreadableNotices notices;
     private SaveDebounce? debounce;
     private Scene? saved;
 
-    /// <summary>Keeps <paramref name="folder"/>'s scenes, reading the session's scene from <paramref name="scene"/> and loading through <paramref name="load"/>.</summary>
-    public SceneLibrary(SceneFolder folder, Func<Scene> scene, Func<Scene, string?> load)
+    /// <summary>Keeps <paramref name="folder"/>'s scenes, reading the session's scene from <paramref name="scene"/> and loading through <paramref name="load"/>; <paramref name="notices"/> is shared by libraries that tell the same player.</summary>
+    public SceneLibrary(
+        SceneFolder folder,
+        Func<Scene> scene,
+        Func<Scene, string?> load,
+        UnreadableNotices? notices = null
+    )
     {
         Folder = folder;
         this.scene = scene;
         this.load = load;
+        this.notices = notices ?? new UnreadableNotices();
     }
 
     /// <summary>The folder the scenes are in.</summary>
@@ -24,6 +31,9 @@ public sealed class SceneLibrary
 
     /// <summary>The open scene's name, or empty until one is open.</summary>
     public string CurrentName { get; private set; } = string.Empty;
+
+    /// <summary>What the last <see cref="Open"/> has to tell the player: its last scene's file can't be read, so another scene opened; else null.</summary>
+    public string? Notice { get; private set; }
 
     /// <summary>The name "New scene" suggests: the first free "Scene N" among every scene file, readable or not.</summary>
     public string NewSuggestion() => SceneNames.NextFree(Stem, Folder.SceneFiles());
@@ -34,14 +44,26 @@ public sealed class SceneLibrary
     /// <summary>The name "Duplicate scene" suggests: the open scene's first free copy name among every scene file, readable or not.</summary>
     public string CopySuggestion() => CopySuggestion(CurrentName);
 
-    /// <summary>Opens <paramref name="last"/> if it exists, else the first scene by name, else a new Scene N. Returns why it was refused, or null.</summary>
+    /// <summary>Opens <paramref name="last"/> if it exists, else the first scene by name, else a new Scene N; sets <see cref="Notice"/> when <paramref name="last"/> is a file that can't be read. Returns why it was refused, or null.</summary>
     public string? Open(string? last)
     {
-        var names = Folder.SceneNames();
+        Notice = null;
+        var entries = Folder.SceneEntries();
+        var names = entries.Where(e => e.Tracks is not null).Select(e => e.Name).ToList();
         var name =
             names.FirstOrDefault(n => string.Equals(n, last, StringComparison.OrdinalIgnoreCase))
             ?? (names.Count > 0 ? names[0] : null);
-        return name is null ? Create(NewSuggestion()) : Load(name);
+        var refusal = name is null ? Create(NewSuggestion()) : Load(name);
+        // A file in the folder that isn't listed at all, not even as one from a newer Vista, can't be read.
+        if (
+            refusal is null
+            && last is not null
+            && !entries.Any(e => string.Equals(e.Name, last, StringComparison.OrdinalIgnoreCase))
+            && Folder.SceneFiles().FirstOrDefault(f => string.Equals(f, last, StringComparison.OrdinalIgnoreCase))
+                is { } unreadable
+        )
+            Notice = notices.Replaced(unreadable, CurrentName);
+        return refusal;
     }
 
     /// <summary>Saves the open scene and loads <paramref name="name"/>; already open (ignoring case), does neither. Returns why it was refused, or null.</summary>
