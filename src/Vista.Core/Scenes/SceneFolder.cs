@@ -13,6 +13,7 @@ public sealed class SceneFolder
     private readonly Action<string, Exception>? unreadable;
     private readonly Action<string, Exception>? notUpgraded;
     private readonly Func<DateTime> clock;
+    private readonly HashSet<string> backedUp = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The folder at <paramref name="root"/>, which is &lt;parent&gt;/vistaxiv, reporting files it can't read to <paramref name="unreadable"/> and older scenes it opened but couldn't back up and rewrite to <paramref name="notUpgraded"/>; <paramref name="clock"/> names backup folders, the local time by default.</summary>
     public SceneFolder(
@@ -210,20 +211,37 @@ public sealed class SceneFolder
         }
     }
 
-    /// <summary>Writes <paramref name="scene"/> to <paramref name="path"/>, first copying a file there in an earlier format into a backup folder named for its format and <paramref name="now"/>; throws, writing nothing, when the copy fails.</summary>
+    /// <summary>Writes <paramref name="scene"/> to <paramref name="path"/>, first copying a file there in an earlier format into a backup folder named for its format and <paramref name="now"/>, once until the rewrite succeeds; throws, writing nothing, when the copy fails.</summary>
     private void WriteScene(string path, Scene scene, DateTime now)
     {
-        if (FormatOnDisk(path) is { } format && format < SceneJson.SceneFormat)
+        if (!backedUp.Contains(path) && FormatOnDisk(path) is { } format && format < SceneJson.SceneFormat)
         {
-            var backups = Path.Combine(
-                BackupsDir,
-                $"v{format}-{now.ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture)}"
-            );
-            Directory.CreateDirectory(backups);
-            File.Copy(path, Path.Combine(backups, Path.GetFileName(path)));
+            BackUp(path, format, now);
+            backedUp.Add(path);
         }
 
         Write(path, SceneJson.Write(scene));
+        backedUp.Remove(path);
+    }
+
+    /// <summary>Copies the file at <paramref name="path"/>, in format <paramref name="format"/>, into the backup folder for that format and <paramref name="now"/>, removing the folder again if it made it and the copy fails.</summary>
+    private void BackUp(string path, int format, DateTime now)
+    {
+        var backups = Path.Combine(
+            BackupsDir,
+            $"v{format}-{now.ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture)}"
+        );
+        var made = !Directory.Exists(backups);
+        Directory.CreateDirectory(backups);
+        try
+        {
+            File.Copy(path, Path.Combine(backups, Path.GetFileName(path)));
+        }
+        catch (Exception e) when (made && IsFileError(e))
+        {
+            Directory.Delete(backups);
+            throw;
+        }
     }
 
     /// <summary>The format of the file at <paramref name="path"/>, or null when there is none or it has no format number.</summary>

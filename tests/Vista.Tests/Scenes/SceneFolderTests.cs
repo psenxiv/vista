@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Xunit;
@@ -16,12 +17,15 @@ public sealed class SceneFolderTests : IDisposable
     // The backup folder for format 1 files at the fixed time: v{format}-{yyyy-MM-dd_HH-mm-ss}.
     private string Backups => Path.Combine(Folder.Root, "backups", "v1-2026-09-29_12-08-49");
 
-    private string ScenePath(string name) => Path.Combine(temp.Scenes, name + ".json");
+    private string ScenePath(string name) => temp.ScenePath(name);
 
     private void WriteFormatOne(string name) => File.WriteAllText(ScenePath(name), FormatOneSceneJson());
 
-    // A file where the backups folder should be, so no backup can be written.
-    private void BlockBackups() => File.WriteAllText(Path.Combine(Folder.Root, "backups"), "");
+    private void BlockBackups() => temp.BlockBackups();
+
+    // A scene file in the current format but not as Vista lays it out, so a rewrite would change its bytes.
+    private void WriteCompact(string name) =>
+        File.WriteAllText(ScenePath(name), JsonNode.Parse(SceneJson.Write(Named("Crane")))!.ToJsonString());
 
     public void Dispose() => temp.Dispose();
 
@@ -167,13 +171,59 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
-    public void LoadingASceneInTheCurrentFormatMakesNoBackup()
+    public void LoadingASceneInTheCurrentFormatLeavesItAndMakesNoBackup()
     {
-        Folder.SaveScene("Dusk", Named("Crane"));
+        WriteCompact("Dusk");
+        var original = File.ReadAllBytes(ScenePath("Dusk"));
 
         Folder.LoadScene("Dusk");
 
+        Assert.Equal(original, File.ReadAllBytes(ScenePath("Dusk")));
         Assert.False(Directory.Exists(Folder.BackupsDir));
+    }
+
+    [Fact]
+    public void AnOlderSceneIsBackedUpOnceWhileItsRewriteKeepsFailing()
+    {
+        var now = new DateTime(2026, 9, 29, 12, 8, 49);
+        using var ticking = new TempFolder(() => now);
+        File.WriteAllText(ticking.ScenePath("Harbour"), FormatOneSceneJson());
+        // A folder where the rewrite's temporary file goes, so the rewrite fails after the backup is made.
+        Directory.CreateDirectory(ticking.ScenePath("Harbour") + ".tmp");
+
+        ticking.Folder.LoadScene("Harbour");
+        now = now.AddSeconds(1);
+        var refused = Record.Exception(() => ticking.Folder.SaveScene("Harbour", Named("Crane")));
+
+        Assert.True(SceneFolder.IsFileError(refused));
+        Assert.Equal(["Harbour.json"], ticking.NotUpgraded);
+        // Only the first attempt's folder, v1 at 12:08:49; the save a second later made none.
+        Assert.Equal(
+            ["v1-2026-09-29_12-08-49"],
+            Directory.GetDirectories(ticking.Folder.BackupsDir).Select(d => Path.GetFileName(d))
+        );
+    }
+
+    [Fact]
+    public void AnOlderFilePutBackUnderTheSameNameIsBackedUpAgain()
+    {
+        var now = new DateTime(2026, 9, 29, 12, 8, 49);
+        using var ticking = new TempFolder(() => now);
+        File.WriteAllText(ticking.ScenePath("Harbour"), FormatOneSceneJson());
+        ticking.Folder.LoadScene("Harbour");
+        now = now.AddSeconds(1);
+        File.WriteAllText(ticking.ScenePath("Harbour"), FormatOneSceneJson());
+
+        ticking.Folder.LoadScene("Harbour");
+
+        // One backup folder per load: 12:08:49, then 12:08:50.
+        Assert.Equal(
+            ["v1-2026-09-29_12-08-49", "v1-2026-09-29_12-08-50"],
+            Directory
+                .GetDirectories(ticking.Folder.BackupsDir)
+                .Select(d => Path.GetFileName(d))
+                .Order(StringComparer.Ordinal)
+        );
     }
 
     [Fact]
@@ -181,7 +231,7 @@ public sealed class SceneFolderTests : IDisposable
     {
         WriteFormatOne("Harbour");
         WriteFormatOne("Quay");
-        Folder.SaveScene("Dusk", Named("Crane"));
+        WriteCompact("Dusk");
         var current = File.ReadAllBytes(ScenePath("Dusk"));
 
         Assert.Empty(Folder.UpgradeAll());
@@ -266,16 +316,18 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
-    public void UpgradingAllLeavesAnOlderFileThatCantBeReadAsItIs()
+    public void UpgradingAllLeavesFilesThatCantBeReadAsTheyAre()
     {
         File.WriteAllText(ScenePath("Broken"), "{ \"format\": 1 }");
+        File.WriteAllText(ScenePath("Garbage"), "{ not json");
 
         Assert.Empty(Folder.UpgradeAll());
 
         Assert.Equal("{ \"format\": 1 }", File.ReadAllText(ScenePath("Broken")));
+        Assert.Equal("{ not json", File.ReadAllText(ScenePath("Garbage")));
         Assert.False(Directory.Exists(Folder.BackupsDir));
         Assert.Empty(Folder.SceneEntries());
-        Assert.Equal(["Broken.json"], temp.Unreadable);
+        Assert.Equal(["Broken.json", "Garbage.json"], temp.Unreadable.Order(StringComparer.Ordinal));
     }
 
     [Fact]

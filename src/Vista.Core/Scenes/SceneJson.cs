@@ -91,8 +91,8 @@ public static class SceneJson
 
     private static Scene FromFile(SceneFile file)
     {
-        var tracks = Tracks(file.Tracks);
-        var playlists = Each(file.Playlists, p => new Playlist(p.Id, p.Name, Entries(p.Entries, tracks), p.Loops));
+        var tracks = ReadTracks(file.Tracks);
+        var playlists = Each(file.Playlists, p => new Playlist(p.Id, p.Name, ReadEntries(p.Entries, tracks), p.Loops));
         if (playlists.Count == 0)
             throw new InvalidDataException("A scene needs a playlist.");
         if (playlists.Select(p => p.Id).Distinct().Count() != playlists.Count)
@@ -110,11 +110,11 @@ public static class SceneJson
 
     private static Scene FromV1(SceneFileV1 file)
     {
-        var tracks = Tracks(file.Tracks);
+        var tracks = ReadTracks(file.Tracks);
         var playlist = new Playlist(
             Guid.NewGuid(),
             PlaylistEditing.FirstName,
-            Entries(file.Playlist, tracks),
+            ReadEntries(file.Playlist, tracks),
             file.PlaylistLoops
         );
         return new Scene(
@@ -127,7 +127,7 @@ public static class SceneJson
         );
     }
 
-    private static List<Track> Tracks(IReadOnlyList<TrackDto?> items)
+    private static List<Track> ReadTracks(IReadOnlyList<TrackDto?> items)
     {
         var tracks = Each(items, t => Checked(ToTrack(t, identity: true)));
         if (tracks.Count == 0)
@@ -137,7 +137,7 @@ public static class SceneJson
         return tracks;
     }
 
-    private static List<PlaylistEntry> Entries(IReadOnlyList<EntryDto?> items, IReadOnlyList<Track> tracks)
+    private static List<PlaylistEntry> ReadEntries(IReadOnlyList<EntryDto?> items, IReadOnlyList<Track> tracks)
     {
         if (items.Any(e => e is not null && !tracks.Any(t => t.Id == e.TrackId)))
             throw new InvalidDataException("A playlist entry names a missing track.");

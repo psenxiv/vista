@@ -315,13 +315,13 @@ internal sealed class PlaylistPanel
         if (!editing || !ImGui.BeginDragDropTarget())
             return;
 
-        var playlist = PlaylistEditing.Selected(scene).Entries;
-        if (DragRows.Accept(DragRows.Entry) is { } entries && entries.Grabbed < playlist.Count)
+        var rows = PlaylistEditing.Selected(scene).Entries;
+        if (DragRows.Accept(DragRows.Entry) is { } entries && entries.Grabbed < rows.Count)
             Report(
                 session.MoveEntries(
                     DragRows.Entries(session, scene, entries),
-                    playlist[entries.Grabbed].Id,
-                    index < playlist.Count ? playlist[index].Id : null
+                    rows[entries.Grabbed].Id,
+                    index < rows.Count ? rows[index].Id : null
                 )
             );
 

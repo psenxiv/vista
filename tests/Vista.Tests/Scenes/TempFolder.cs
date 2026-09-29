@@ -34,6 +34,12 @@ internal sealed class TempFolder : IDisposable
 
     internal string Presets => Folder.PresetsDir;
 
+    /// <summary>The path of scene file <paramref name="name"/>.</summary>
+    internal string ScenePath(string name) => Path.Combine(Scenes, name + ".json");
+
+    /// <summary>Puts a file where the backups folder should be, so no backup can be written.</summary>
+    internal void BlockBackups() => File.WriteAllText(Folder.BackupsDir, "");
+
     /// <summary>The file names in scenes/, sorted ordinally.</summary>
     internal string[] SceneFiles() =>
         Directory.GetFiles(Scenes).Select(f => Path.GetFileName(f)).Order(StringComparer.Ordinal).ToArray();

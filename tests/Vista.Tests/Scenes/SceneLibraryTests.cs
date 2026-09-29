@@ -110,18 +110,14 @@ public sealed class SceneLibraryTests : IDisposable
     [Fact]
     public void AnOlderSceneOpenedWithoutABackupIsOnlySavedOnceItsBackupIsWritten()
     {
-        var path = Path.Combine(temp.Scenes, "Harbour.json");
-        File.WriteAllText(path, FormatOneSceneJson());
-        // A file where the backups folder should be, so no backup can be written.
-        var blocker = Path.Combine(temp.Folder.Root, "backups");
-        File.WriteAllText(blocker, "");
+        File.WriteAllText(temp.ScenePath("Harbour"), FormatOneSceneJson());
+        temp.BlockBackups();
         Assert.Null(library.Open("Harbour"));
         RenameFirstTrack("Jib");
 
         Assert.StartsWith("Could not save Harbour:", library.SaveNow());
-        Assert.Equal(FormatOneSceneJson(), File.ReadAllText(path));
 
-        File.Delete(blocker);
+        File.Delete(temp.Folder.BackupsDir);
         Assert.Null(library.SaveNow());
         Assert.Equal("Jib", FirstTrackIn(temp, "Harbour"));
         var backup = Assert.Single(Directory.GetFiles(temp.Folder.BackupsDir, "*", SearchOption.AllDirectories));

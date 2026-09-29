@@ -205,12 +205,15 @@ public class SceneJsonTests
     }
 
     [Fact]
-    public void APresetIsStillWrittenAndReadAsFormatOne()
+    public void APresetFileInFormatOneStillReadsAndIsWrittenAsFormatOne()
     {
-        var json = SceneJson.WritePreset(new Preset(Plain(), 0.5f));
+        // The fixture: yaw 0.5, and a track at 5 yalms per second through points at x = 0 and x = 10.
+        var preset = SceneJson.ReadPreset(FormatOnePresetJson());
 
-        Assert.Equal(1, SceneJson.FormatOf(json));
-        Assert.Equal(0.5f, SceneJson.ReadPreset(json).Yaw);
+        Assert.Equal(0.5f, preset.Yaw);
+        Assert.Equal(5f, preset.Track.Speed);
+        Assert.Equal(new[] { 0f, 10f }, preset.Track.Points.Select(p => p.Position.X));
+        Assert.Equal(1, SceneJson.FormatOf(SceneJson.WritePreset(preset)));
     }
 
     [Fact]

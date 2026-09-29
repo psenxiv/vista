@@ -156,4 +156,4 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Session/SessionFixtures`: the sessions the session tests start from, track and entry ids by index, and a control point at head height.
 - `Tracks/Timing/TimingFixtures`: key times, key drags, and asserting a track's key times within tolerance.
 - `Tracks/Playback/PlaybackFixtures`: the tracks and playlist items the playback tests play, and generated played tracks and playlist scenes.
-- `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, a format 1 scene file, and a scene folder in a temporary directory.
+- `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, format 1 scene and preset files, and a scene folder in a temporary directory, which can block its backups.

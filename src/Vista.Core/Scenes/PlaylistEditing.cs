@@ -52,14 +52,7 @@ public static class PlaylistEditing
         return scene with
         {
             Playlists = scene
-                .Playlists.Select(p =>
-                    p.Entries.Any(e => entryIds.Contains(e.Id))
-                        ? p with
-                        {
-                            Entries = p.Entries.Where(e => !entryIds.Contains(e.Id)).ToArray(),
-                        }
-                        : p
-                )
+                .Playlists.Select(p => p with { Entries = p.Entries.Where(e => !entryIds.Contains(e.Id)).ToArray() })
                 .ToArray(),
         };
     }
