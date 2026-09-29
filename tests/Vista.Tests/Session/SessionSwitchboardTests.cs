@@ -95,9 +95,9 @@ public class SessionSwitchboardTests
         state.LoadScene(OnAirScene());
         var scene = state.Scene;
 
-        Assert.Equal("The scene can only change while editing.", command(state));
+        Assert.Equal("The switchboard can only change in Edit or Live.", command(state));
         state.Release(CameraMode.View);
-        Assert.Equal("The scene can only change while editing.", command(state));
+        Assert.Equal("The switchboard can only change in Edit or Live.", command(state));
         Assert.Same(scene, state.Scene);
     }
 

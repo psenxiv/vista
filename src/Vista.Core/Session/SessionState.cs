@@ -122,6 +122,9 @@ public sealed class SessionState
     /// <summary>Why a track edit is refused outside Edit.</summary>
     private const string TrackOnlyWhileEditing = "The track can only change while editing.";
 
+    /// <summary>Why a switchboard change is refused in Off and View.</summary>
+    private const string SwitchboardOnlyInEditOrLive = "The switchboard can only change in Edit or Live.";
+
     /// <summary>Why an edit of the selected point is refused with none selected.</summary>
     private const string SelectAPoint = "Select a point first.";
 
@@ -518,6 +521,8 @@ public sealed class SessionState
     {
         if (Mode == CameraMode.Live)
             return Refusal(() => Scene = change(Scene));
+        if (Mode != CameraMode.Editing)
+            return SwitchboardOnlyInEditOrLive;
         Transport.StopPreview();
         return RecordScene(scene => (change(scene), EditedTrackId));
     }
