@@ -521,7 +521,6 @@ public sealed class SessionState
     {
         if (Mode is not (CameraMode.Editing or CameraMode.Live))
             return SwitchboardOnlyInEditOrLive;
-        Transport.StopPreview();
         return RecordScene(scene => (change(scene), EditedTrackId));
     }
 

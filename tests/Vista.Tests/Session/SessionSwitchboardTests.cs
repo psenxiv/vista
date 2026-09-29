@@ -295,6 +295,26 @@ public class SessionSwitchboardTests
         Assert.Equal(4f, state.Transport.EditingFrame(1f, flying: false).Shown!.Value.Position.X, 1e-3f);
     }
 
+    public static TheoryData<string, Func<SessionState, string?>> TrackPreviewKeepers =>
+        new()
+        {
+            { "assign", s => s.AssignSlot(5, TrackId(s, 1)) },
+            { "toggle", s => s.SetSwitchboardToggle(SwitchboardToggle.KeepRolling, true) },
+        };
+
+    [Theory]
+    [MemberData(nameof(TrackPreviewKeepers))]
+    public void SwitchboardCommandsLeaveTheEditedTracksPreviewPlaying(string _, Func<SessionState, string?> command)
+    {
+        var state = EditingSwitchboard();
+        Assert.Equal(PlayOutcome.Previewed, state.Play());
+        Assert.True(state.Transport.Previewing);
+
+        Assert.Null(command(state));
+
+        Assert.True(state.Transport.Previewing);
+    }
+
     [Fact]
     public void ALiveEditStopsEditsSwitchboardPreviewOnlyOnceItCommits()
     {
