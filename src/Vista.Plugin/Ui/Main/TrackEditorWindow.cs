@@ -335,16 +335,11 @@ internal sealed class TrackEditorWindow : Window
         AlignTo(loopX, ImGui.GetStyle().ItemSpacing.X);
         IconButton.WindowToggle("timing", FontAwesomeIcon.ChartLine, "Timing", timing);
 
-        // Outside Edit, Switchboard stands where Camera would.
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        if (editing)
+        // Level camera roll, Camera and fly speed are Edit's, so they show disabled in the other modes.
+        var tools = IconButton.RowWidth(FontAwesomeIcon.RulerHorizontal, FontAwesomeIcon.Camera, FontAwesomeIcon.Video);
+        AlignTo(FlySpeedStart() - tools - ImGui.GetStyle().ItemSpacing.X, gap);
+        using (ImRaii.Disabled(!editing))
         {
-            var tools = IconButton.RowWidth(
-                FontAwesomeIcon.RulerHorizontal,
-                FontAwesomeIcon.Camera,
-                FontAwesomeIcon.Video
-            );
-            AlignTo(FlySpeedStart() - tools - spacing, gap);
             if (
                 IconButton.Draw(
                     "level-roll",
@@ -355,29 +350,20 @@ internal sealed class TrackEditorWindow : Window
                 game.LevelCameraRoll();
             ImGui.SameLine();
             IconButton.WindowToggle("camera", FontAwesomeIcon.Camera, "Camera", camera);
-            ImGui.SameLine();
-        }
-        else
-        {
-            AlignTo(
-                FlySpeedStart() - IconButton.RowWidth(FontAwesomeIcon.Camera, FontAwesomeIcon.Video) - spacing,
-                gap
-            );
         }
 
+        ImGui.SameLine();
         IconButton.WindowToggle("switchboard", FontAwesomeIcon.Video, "Switchboard", switchboard);
-        if (editing)
-        {
-            ImGui.SameLine();
+        ImGui.SameLine();
+        using (ImRaii.Disabled(!editing))
             DrawFlySpeed();
-        }
 
         // Hide game UI and User Guide at the right end, with LIVE just before them in Live.
         var rightEnd = RightEndWidth();
         ImGui.SameLine();
         if (session.Mode == CameraMode.Live)
         {
-            Layout.RightAlign(ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X + rightEnd);
+            Layout.RightAlign(LiveWidth() + rightEnd);
             DrawLive();
             ImGui.SameLine();
         }
@@ -391,11 +377,14 @@ internal sealed class TrackEditorWindow : Window
         IconButton.WindowToggle("guide", FontAwesomeIcon.Question, "User Guide", guide);
     }
 
+    /// <summary>LIVE and the gap after it.</summary>
+    private static float LiveWidth() => ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X;
+
     /// <summary>Hide game UI, Give feedback and User Guide, at the top row's right end.</summary>
     private static float RightEndWidth() =>
         IconButton.RowWidth(FontAwesomeIcon.EyeSlash, FontAwesomeIcon.Comment, FontAwesomeIcon.Question);
 
-    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before the Hide game UI button if that's nearer; null before the first frame.</summary>
+    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before LIVE and the Hide game UI button if that's nearer; null before the first frame.</summary>
     private float? FlySpeedStart()
     {
         if (trashRight is not { } right)
@@ -404,7 +393,8 @@ internal sealed class TrackEditorWindow : Window
             ImGui.GetWindowPos().X
             + ImGui.GetWindowContentRegionMax().X
             - RightEndWidth()
-            - ImGui.GetStyle().ItemSpacing.X;
+            - ImGui.GetStyle().ItemSpacing.X
+            - (session.Mode == CameraMode.Live ? LiveWidth() : 0f);
         return MathF.Min(right, edge) - SpeedWidth;
     }
 
@@ -808,7 +798,7 @@ internal sealed class TrackEditorWindow : Window
         return items + (Layout.Spacing.X * 8f) + (style.WindowPadding.X * 4f);
     }
 
-    /// <summary>The top bar's full width: its items, the larger of LIVE and fly speed, the gaps between them, and the window padding.</summary>
+    /// <summary>The top bar's full width: its items, LIVE and fly speed, the gaps between them, and the window padding.</summary>
     private static float TopRowWidth()
     {
         var style = ImGui.GetStyle();
@@ -827,7 +817,7 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 13f) + (style.WindowPadding.X * 2f);
+        return items + live + flySpeed + (Layout.Spacing.X * 13f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));
