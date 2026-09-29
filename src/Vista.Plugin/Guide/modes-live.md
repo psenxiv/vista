@@ -11,13 +11,13 @@ When nothing is on Program, as the first time you choose Live in a new scene, th
 | {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses the Program shot. |
 | {key:Restart} | {icon:StepBackward} **Restart** | Plays the Program shot from the start. |
 
-They're on the **Vista** window. The Program shot's scrub bar is along the bottom of the **Switchboard** window.
+Play and Restart are on the **Vista** window. The Program shot's scrub bar is along the bottom of the **Switchboard** window.
 
 ## Hiding the game UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI when you press Play. Cutting doesn't hide it. Press {key:RestoreGameUi} to bring it back.
+Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI when you play or restart. Cutting doesn't hide it. Press {key:RestoreGameUi} to bring it back.
 
-The **Switchboard** window hides with the game UI, as all of Vista's windows do. Bring the UI back to cut.
+The **Switchboard** window hides with the game UI, so bring the UI back to cut.
 
 ## Leaving Live
 

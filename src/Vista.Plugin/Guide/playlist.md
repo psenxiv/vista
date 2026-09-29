@@ -29,4 +29,4 @@ The **Repeats** cell sets how many times an entry plays before the playlist move
 |---|---|
 | A number | Plays that many times. For **Ping-pong**, one time is there and back. |
 | — | Plays once. |
-| ∞ | The track has **Loop** on, so it plays until you stop. |
+| ∞ | The track has **Loop** on, so it plays until you stop it or cut away. |

@@ -14,18 +14,18 @@ Each slot shows its number, its name, and {icon:Route} for a track or {icon:List
 | **Rename** | Renames the slot. |
 | **Clear** | Empties the slot. |
 
-Renaming a track or playlist later doesn't change the slot's name. You can change slots in Live as well as in Edit.
+You can change slots in Live as well as in Edit.
 
 ## Cutting
 
 Click a slot to make it Next, then click **Cut** to put it on Program. It plays straight away. The slot on Program is outlined red, and Next green.
 
-The **Program** card shows the shot on Program and how far through it you are. The **Next** card shows what goes live on Cut. The scrub bar along the bottom moves through the Program shot, the whole playlist if a playlist is on Program.
+The **Program** card shows the shot on Program and how far through it you are. The **Next** card shows what goes live on Cut. The scrub bar along the bottom moves through the Program shot. For a playlist, it covers the whole playlist.
 
 | | Toggle | Does |
 |---|---|---|
 | {icon:Bolt} | **Direct cut** | Clicking a slot cuts to it straight away. |
-| {icon:History} | **Keep rolling** | A shot picks up where it was when you last cut away from it, instead of starting from the beginning. |
+| {icon:History} | **Keep rolling** | A shot picks up where it was when you last cut away from it. |
 | {icon:StepForward} | **Auto Next** | Cuts to Next when the Program shot ends. |
 
 Without **Auto Next**, the camera holds the Program shot's last frame when it ends. A track with **Loop** on, or a playlist with **Loop playlist** on, keeps looping instead.
@@ -34,4 +34,4 @@ Without **Auto Next**, the camera holds the Program shot's last frame when it en
 
 In Edit, the switchboard plays your cuts on your own camera, so you can try them out. Program and Next start empty each time you choose Edit, and nothing you do there changes where Live had got to. Every shot plays from its beginning.
 
-Flying, playing the edited track, or changing a track or playlist stops it, and you fly on from that frame.
+Flying, playing the edited track, or changing a track or playlist stops the switchboard's shot, and you fly on from that frame.
