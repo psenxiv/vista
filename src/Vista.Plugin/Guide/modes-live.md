@@ -1,23 +1,23 @@
 # Live
 
-Live is for filming. Vista plays the selected [playlist](playlist.md) through the camera, one track after another.
+Live is for filming. Vista plays the shot on Program in the [switchboard](switchboard.md) through the camera, and you cut from shot to shot as you go. Choosing Live opens the **Switchboard** window.
 
-Choosing Live waits at the first frame until you play.
+When nothing is on Program, as the first time you choose Live in a new scene, the camera holds still where it was until your first cut. After that, choosing Live brings back the Program shot where you left it, paused, with Next as it was.
 
 ## Playing
 
 | Key | Button | Does |
 |---|---|---|
-| {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses. |
-| {key:Restart} | {icon:StepBackward} **Restart** | Plays the playlist from the start. |
+| {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses the Program shot. |
+| {key:Restart} | {icon:StepBackward} **Restart** | Plays the Program shot from the start. |
 
-At the end of the playlist the camera holds its last frame, unless {icon:Repeat} **Loop playlist** is on.
-
-The scrub bar covers the whole playlist.
+These buttons stay on the **Vista** window. The scrub bar for the Program shot is along the bottom of the **Switchboard** window.
 
 ## Hiding the game UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI while a shot plays. Press {key:RestoreGameUi} to bring it back. It hides again when you play.
+Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI when you press Play. Cutting doesn't hide it. Press {key:RestoreGameUi} to bring it back.
+
+The **Switchboard** window hides with the game UI, as all of Vista's windows do. Bring the UI back to cut.
 
 ## Leaving Live
 

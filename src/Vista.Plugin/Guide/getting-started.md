@@ -11,8 +11,9 @@ Type `/vista` in chat to open the **Vista** window. The first time, Vista asks w
 3. Press {key:AddToEnd} to add a point.
 4. Fly on and add a few more points along the path you want.
 5. Press {key:Play} to play the track. Press it again, or start flying, to stop.
-6. In the Playlist on the right, click {icon:Plus} **Add to playlist** and choose Track 1.
-7. Choose Live in the mode menu, then press {key:Play} to play the shot.
+6. Choose Live in the mode menu. The **Switchboard** window opens.
+7. Right-click slot 1, choose **Assign** and then Track 1.
+8. Click slot 1, then click **Cut** to play the shot.
 
 Choose Off to give the camera back to the game.
 
@@ -20,5 +21,6 @@ Choose Off to give the camera back to the game.
 
 - [Modes](modes.md) explains Off, View, Edit and Live.
 - [Tracks and points](tracks.md) covers building shots.
+- [Switchboard](switchboard.md) covers cutting between shots in Live.
 - [Hotkeys](hotkeys.md) lists every key.
 - [Saving and scenes](scenes-saving.md) covers the demo scene, a finished scene set in Limsa Lominsa.

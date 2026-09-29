@@ -1,6 +1,6 @@
 # Playlist
 
-A playlist is a list of tracks that Live plays, top to bottom, cutting from one to the next. A scene has one or more playlists, and Live plays the selected one.
+A playlist is a list of tracks that play top to bottom, cutting from one to the next. Put a playlist in a [switchboard](switchboard.md) slot to play it in Live. A scene has one or more playlists.
 
 The Playlist is the panel on the right of the **Vista** window. It shows the selected playlist, and the strip under its heading shows that playlist's name.
 
@@ -23,7 +23,7 @@ To add or change several at once, see [Selecting several](tracks-selecting.md).
 
 ## Repeats
 
-The **Repeats** cell sets how many times an entry plays before Live moves on.
+The **Repeats** cell sets how many times an entry plays before the playlist moves on.
 
 | Shows | Means |
 |---|---|

@@ -26,7 +26,7 @@ https://raw.githubusercontent.com/psenxiv/vista/main/repo.json
 - **Tracks.** Fly a free camera and drop points to lay out a path, then set each leg's timing, holds and easing. Play it forwards, in reverse or ping-pong, once or on a loop.
 - **Aim.** Look along your recorded aim, along the path, at a fixed point, or keep a character in frame. A one-point track can ride along with a character.
 - **Scenes and presets.** Tracks live in scenes that save as you work and open from a searchable list. Move a whole setup by its anchor, and save any track as a preset to reuse in other scenes.
-- **Playlist and Live.** Line tracks up with repeat counts and play them live, with the game UI hidden if you want.
+- **Playlists and the switchboard.** Line tracks up in playlists with repeat counts, then cut between tracks and playlists live from a switchboard of ten slots, with the game UI hidden if you want.
 - **Modes.** Off leaves the game alone, View shows your scene over the normal camera, Edit is where you build, and Live plays. Your scene stays put when you change zone.
 
 ## Keys

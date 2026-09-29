@@ -52,7 +52,7 @@ The guide should read as if a person wrote it. Leave out:
 ## Words
 
 - Name every control exactly as it appears on screen or in its tooltip, in bold: "click **Fit**", "open the **Camera** window".
-- Use the same word for the same thing every time. Vista's words are: scene, track, point, anchor, scene anchor, track anchor, leg, hold, key (in the timing graph), playlist, gizmo, and the modes Off, View, Edit and Live. The windows are the **Vista** window, the **Point** window, the **Camera** window, the **Timing** window and the **User Guide**. The main window's side panels are the Hierarchy and the Playlist.
+- Use the same word for the same thing every time. Vista's words are: scene, track, point, anchor, scene anchor, track anchor, leg, hold, key (in the timing graph), playlist, gizmo, switchboard, slot, Program, Next, cut (its button is **Cut**), and the modes Off, View, Edit and Live. The windows are the **Vista** window, the **Point** window, the **Camera** window, the **Timing** window, the **Switchboard** window and the **User Guide**. The main window's side panels are the Hierarchy and the Playlist.
 - Each page starts with a `#` heading that matches its title in `index.md`. Use `##` for sections and `###` rarely.
 
 ## Formatting you can use

@@ -38,6 +38,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Playlist** | Shows or hides the Playlist. |
 | **Timing** | Opens or closes the **Timing** window, with the [timing graph](timing-graph.md). |
 | **Camera** | Opens or closes [the Camera window](camera-window.md). |
+| **Switchboard** | Opens or closes the **Switchboard** window. See [Switchboard](switchboard.md). |
 | **Track names** | Shows or hides the names above track anchors. See [Scenes and anchors](scenes.md). |
 | **Track name size** | Makes those names bigger or smaller. |
 | **Colour path by turn speed** | Colours the path by how fast the camera turns ({key:ColourByTurnSpeed}). See [Aim](aim.md). |
@@ -47,8 +48,8 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 
 | Item | Does |
 |---|---|
-| **Play / Pause** | Plays or pauses ({key:Play}). |
-| **Restart** | Plays from the beginning ({key:Restart}). |
+| **Play / Pause** | Plays or pauses the edited track, or in Live the Program shot ({key:Play}). |
+| **Restart** | Plays it from the beginning ({key:Restart}). |
 | **Ghost camera** | Plays the track on a camera outline in the world while you keep your own view. See [Playing a track](tracks-playing.md). |
 | **Playback speed** | Sets how fast the track plays in Edit. See [Playing a track](tracks-playing.md). |
 

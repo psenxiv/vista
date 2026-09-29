@@ -17,6 +17,10 @@ Edit is where you build your shots. You fly a free camera, add points and change
 
 Click a point, an anchor or a Look At point in the world to select it. Clicking a point on another track switches to that track. See [Selecting several](tracks-selecting.md).
 
+## The switchboard
+
+In Edit, the switchboard plays your cuts on your own camera, so you can try them before Live. See [Switchboard](switchboard.md).
+
 ## The top row
 
 The row under the menu bar holds the controls you use most. Everything else is in the menus. See [The menu bar](menu-bar.md).
@@ -30,6 +34,7 @@ The row under the menu bar holds the controls you use most. Everything else is i
 | {icon:ChartLine} | **Timing** | Opens the **Timing** window, with the [timing graph](timing-graph.md). |
 | {icon:RulerHorizontal} | **Level camera roll** | Levels the camera's roll ({key:LevelRoll}). |
 | {icon:Camera} | **Camera** | Opens the **Camera** window. See [The Camera window](camera-window.md). |
+| {icon:Video} | **Switchboard** | Opens the **Switchboard** window. See [Switchboard](switchboard.md). |
 | | **Fly speed** | Sets how fast you fly. |
 | {icon:EyeSlash} | **Hide game UI when Live** | Hides the game's UI while a shot plays. See [Live](modes-live.md). |
 | {icon:Comment} | **Give feedback** | Opens a short feedback form in your browser. |

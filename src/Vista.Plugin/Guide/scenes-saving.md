@@ -24,4 +24,4 @@ The first time you open Vista, it asks where to save. Vista makes a folder calle
 
 ## The demo scene
 
-Vista adds a scene called Demo - Limsa to your save folder, to show what a finished scene looks like. It is set in Limsa Lominsa, so open it there and play its playlist in Live. It is yours to change or delete, and Vista won't add it to that folder again.
+Vista adds a scene called Demo - Limsa to your save folder, to show what a finished scene looks like. It is set in Limsa Lominsa, so open it there, choose Live and press {key:Play}. It is yours to change or delete, and Vista won't add it to that folder again.

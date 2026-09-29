@@ -2,6 +2,7 @@
 - [Modes](modes.md)
   - [Edit](modes-edit.md)
   - [Live](modes-live.md)
+- [Switchboard](switchboard.md)
 - [The menu bar](menu-bar.md)
 - [Tracks and points](tracks.md)
   - [Adding points](tracks-adding-points.md)
