@@ -50,6 +50,12 @@ public sealed class SessionState
             _ => null,
         };
 
+    /// <summary>The Program and Next slots the switchboard shows: the mode's player's, or the scene's saved Live ones in Off and View.</summary>
+    public (int? Program, int? Next) ShownAir =>
+        Board is { } board
+            ? (board.Program, board.Next)
+            : (Scene.Switchboard.Live.Program, Scene.Switchboard.Live.Next);
+
     /// <summary>What's selected while editing.</summary>
     public SelectionState Selection { get; }
 

@@ -11,8 +11,14 @@ internal static class UiColours
     /// <summary>Loop counts.</summary>
     public const uint Amber = 0xFF40C0FF;
 
-    /// <summary>LIVE and destructive hover.</summary>
+    /// <summary>LIVE, destructive hover and the switchboard's Program.</summary>
     public const uint Red = 0xFF4050E8;
+
+    /// <summary>The switchboard's Next.</summary>
+    public const uint Green = 0xFF60D060;
+
+    /// <summary>The share of full opacity that off, greyed-out and unplayable things are drawn at.</summary>
+    public const float DimAlpha = 0.4f;
 
     /// <summary>A selected row: the accent at 45%.</summary>
     public static uint Selected() => AccentAt(0.45f);
@@ -24,7 +30,7 @@ internal static class UiColours
     public static uint SelectedActive() => AccentAt(0.55f);
 
     /// <summary>Off and greyed-out icons: the text colour at 40%.</summary>
-    public static uint Dim() => Text(0.4f);
+    public static uint Dim() => Text(DimAlpha);
 
     /// <summary>Section headers: the text colour at 60%.</summary>
     public static uint Muted() => Text(0.6f);

@@ -29,6 +29,7 @@ internal sealed class MainMenu
     private readonly EditorLayer layer;
     private readonly TimingWindow timing;
     private readonly CameraWindow camera;
+    private readonly SwitchboardWindow switchboard;
     private readonly GuideWindow guide;
     private readonly SetupWindow setup;
     private readonly FilePickerWindow picker;
@@ -45,6 +46,7 @@ internal sealed class MainMenu
         EditorLayer layer,
         TimingWindow timing,
         CameraWindow camera,
+        SwitchboardWindow switchboard,
         GuideWindow guide,
         SetupWindow setup,
         FilePickerWindow picker,
@@ -60,6 +62,7 @@ internal sealed class MainMenu
         this.layer = layer;
         this.timing = timing;
         this.camera = camera;
+        this.switchboard = switchboard;
         this.guide = guide;
         this.setup = setup;
         this.picker = picker;
@@ -204,6 +207,7 @@ internal sealed class MainMenu
         ImGui.Separator();
         WindowCheck("Timing", timing, enabled: true);
         WindowCheck("Camera", camera, editing);
+        WindowCheck("Switchboard", switchboard, enabled: true);
 
         ImGui.Separator();
         var names = config.ShowTrackNames;

@@ -7,7 +7,7 @@ using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
 using Vista.Plugin.Ui.Widgets;
 
-namespace Vista.Plugin.Ui.Main;
+namespace Vista.Plugin.Ui.Windows;
 
 /// <summary>The scrub bar over the whole Program shot, drawn like a slider: a segment per entry, pass ticks, the playing entry lit, and each entry's name above it on hover.</summary>
 internal static class PlaylistBar

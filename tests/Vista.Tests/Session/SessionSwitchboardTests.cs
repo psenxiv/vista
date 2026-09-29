@@ -304,6 +304,25 @@ public class SessionSwitchboardTests
     }
 
     [Fact]
+    public void TheSwitchboardShowsTheSavedLiveProgramAndNextOnlyInOffAndView()
+    {
+        var state = new SessionState();
+        state.LoadScene(OnAirScene());
+
+        // OnAirScene saves slot 0 on Program and slot 1 Next.
+        Assert.Equal<(int?, int?)>((0, 1), state.ShownAir);
+        state.Edit();
+        // Edit's own board starts empty.
+        Assert.Equal<(int?, int?)>((null, null), state.ShownAir);
+        state.Release(CameraMode.View);
+        // Edit left the saved state alone.
+        Assert.Equal<(int?, int?)>((0, 1), state.ShownAir);
+        state.Cue();
+        // Slot 0's Track 1 has no points, so Live empties Program on entry and keeps Next.
+        Assert.Equal<(int?, int?)>((null, 1), state.ShownAir);
+    }
+
+    [Fact]
     public void LoadingASceneEmptiesEditsBoard()
     {
         var (state, _) = EditPreviewing();

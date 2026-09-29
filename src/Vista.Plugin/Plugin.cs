@@ -91,6 +91,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PointWindow pointWindow;
     private readonly TimingWindow timingWindow;
     private readonly CameraWindow cameraWindow;
+    private readonly SwitchboardWindow switchboardWindow;
     private readonly GuideWindow guideWindow;
     private readonly WatchTargetWindow watchTargetWindow;
     private readonly FollowTargetWindow followTargetWindow;
@@ -122,6 +123,7 @@ public sealed class Plugin : IDalamudPlugin
         pointWindow = new PointWindow(game, pointGizmo);
         timingWindow = new TimingWindow(game);
         cameraWindow = new CameraWindow(game);
+        switchboardWindow = new SwitchboardWindow(game.State, fields);
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(game.State, game.Characters);
         followTargetWindow = new FollowTargetWindow(game.State, game.Characters);
@@ -132,6 +134,7 @@ public sealed class Plugin : IDalamudPlugin
             fields,
             timingWindow,
             cameraWindow,
+            switchboardWindow,
             guideWindow,
             watchTargetWindow,
             followTargetWindow,
@@ -145,6 +148,7 @@ public sealed class Plugin : IDalamudPlugin
         windows.AddWindow(pointWindow);
         windows.AddWindow(timingWindow);
         windows.AddWindow(cameraWindow);
+        windows.AddWindow(switchboardWindow);
         windows.AddWindow(guideWindow);
         windows.AddWindow(watchTargetWindow);
         windows.AddWindow(followTargetWindow);

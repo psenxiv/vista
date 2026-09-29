@@ -19,7 +19,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>The main Vista window: the menu bar, modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
+/// <summary>The main Vista window: the menu bar, modes, the Hierarchy, track settings, the point list, the edited track's scrub bar and the Playlist.</summary>
 internal sealed class TrackEditorWindow : Window
 {
     private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
@@ -66,6 +66,7 @@ internal sealed class TrackEditorWindow : Window
     private readonly GameSession game;
     private readonly SessionState session;
     private readonly CameraWindow camera;
+    private readonly SwitchboardWindow switchboard;
     private readonly Configuration config;
     private bool aimMenuOpen;
     private readonly PendingEdit<float> fields;
@@ -98,6 +99,7 @@ internal sealed class TrackEditorWindow : Window
         PendingEdit<float> fields,
         TimingWindow timing,
         CameraWindow camera,
+        SwitchboardWindow switchboard,
         GuideWindow guide,
         WatchTargetWindow watchTarget,
         FollowTargetWindow followTarget,
@@ -111,6 +113,7 @@ internal sealed class TrackEditorWindow : Window
         this.game = game;
         session = game.State;
         this.camera = camera;
+        this.switchboard = switchboard;
         this.config = config;
         config.HierarchyWidth = PanelWidth.Clamp(config.HierarchyWidth);
         config.PlaylistWidth = PanelWidth.Clamp(config.PlaylistWidth);
@@ -130,6 +133,7 @@ internal sealed class TrackEditorWindow : Window
             layer,
             timing,
             camera,
+            switchboard,
             guide,
             setup,
             picker,
@@ -327,10 +331,16 @@ internal sealed class TrackEditorWindow : Window
         AlignTo(loopX, ImGui.GetStyle().ItemSpacing.X);
         IconButton.WindowToggle("timing", FontAwesomeIcon.ChartLine, "Timing", timing);
 
+        // Outside Edit, Switchboard stands where Camera would.
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
         if (editing)
         {
-            var tools = IconButton.RowWidth(FontAwesomeIcon.RulerHorizontal, FontAwesomeIcon.Camera);
-            AlignTo(FlySpeedStart() - tools - ImGui.GetStyle().ItemSpacing.X, gap);
+            var tools = IconButton.RowWidth(
+                FontAwesomeIcon.RulerHorizontal,
+                FontAwesomeIcon.Camera,
+                FontAwesomeIcon.Video
+            );
+            AlignTo(FlySpeedStart() - tools - spacing, gap);
             if (
                 IconButton.Draw(
                     "level-roll",
@@ -341,6 +351,19 @@ internal sealed class TrackEditorWindow : Window
                 game.LevelCameraRoll();
             ImGui.SameLine();
             IconButton.WindowToggle("camera", FontAwesomeIcon.Camera, "Camera", camera);
+            ImGui.SameLine();
+        }
+        else
+        {
+            AlignTo(
+                FlySpeedStart() - IconButton.RowWidth(FontAwesomeIcon.Camera, FontAwesomeIcon.Video) - spacing,
+                gap
+            );
+        }
+
+        IconButton.WindowToggle("switchboard", FontAwesomeIcon.Video, "Switchboard", switchboard);
+        if (editing)
+        {
             ImGui.SameLine();
             DrawFlySpeed();
         }
@@ -719,47 +742,23 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndPopup();
     }
 
-    /// <summary>The scrub bars' grab, as a share of the style's usual slider grab.</summary>
-    private const float ScrubGrabScale = 0.5f;
-
-    /// <summary>Play/Pause and Restart, the scrub bar (the Program shot in Live, otherwise the edited track), then how far through it the head is.</summary>
+    /// <summary>Play/Pause and Restart, the edited track's scrub bar, then how far through it the head is.</summary>
     private void DrawScrubRow()
     {
-        var live = session.Mode == CameraMode.Live ? session.Board : null;
-        var timeline = live?.Timeline;
-        var (head, total) =
-            live is not null && timeline is not null
-                ? (live.Head, timeline.Total)
-                : (session.Transport.ScrubHead, session.Duration);
-        var view = scrubZoom.View((session.Mode, timeline is null ? session.EditedTrackId : Guid.Empty), (float)total);
+        var (head, total) = (session.Transport.ScrubHead, session.Duration);
+        var view = scrubZoom.View((session.Mode, session.EditedTrackId), (float)total);
 
         DrawTransport();
         // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var timeWidth = ImGui.CalcTextSize(Units.ClockOf(total, total)).X;
         var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
-        using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubGrabScale))
-        {
-            if (live is null || !PlaylistBar.Draw(live, session.Scene, fields.Commit, width, view))
-                DrawTrackBar(width, view);
-        }
-        ZoomScrub(view, (float)total);
+        using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubBar.GrabScale))
+            DrawTrackBar(width, view);
+        ScrubBar.Zoom(scrubZoom, view, (float)total, scrub.Active);
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(Units.ClockOf(head, total));
-    }
-
-    /// <summary>The wheel over the scrub bar zooms it around the mouse, while it isn't being dragged.</summary>
-    private void ZoomScrub(TimingView view, float total)
-    {
-        if (!ImGui.IsItemHovered())
-            return;
-        ImGuiP.SetItemUsingMouseWheel();
-        var wheel = ImGui.GetIO().MouseWheel;
-        if (wheel == 0f || scrub.Active || session.Board?.Scrubbing == true)
-            return;
-        var along = Fraction.Between(ImGui.GetMousePos().X, ImGui.GetItemRectMin().X, ImGui.GetItemRectMax().X, 0.5f);
-        scrubZoom.Zoom(view.TimeAt(along), wheel, total);
     }
 
     /// <summary>The edited track's scrub bar, <paramref name="width"/> wide over <paramref name="view"/>, disabled outside Edit; the grab hides while the head is outside it.</summary>
@@ -818,12 +817,13 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.ChartLine)
             + IconButton.Width(FontAwesomeIcon.RulerHorizontal)
             + IconButton.Width(FontAwesomeIcon.Camera)
+            + IconButton.Width(FontAwesomeIcon.Video)
             + IconButton.Width(FontAwesomeIcon.EyeSlash)
             + IconButton.Width(FontAwesomeIcon.Comment)
             + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;
         var flySpeed = (Layout.Spacing.X * 3f) + SpeedWidth;
-        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 12f) + (style.WindowPadding.X * 2f);
+        return items + MathF.Max(live, flySpeed) + (Layout.Spacing.X * 13f) + (style.WindowPadding.X * 2f);
     }
 
     private void SetMinimumWidth(float width) => SizeConstraints = Layout.AtLeast(new Vector2(width, MinHeight));
