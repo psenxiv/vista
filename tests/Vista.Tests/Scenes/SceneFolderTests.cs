@@ -17,15 +17,11 @@ public sealed class SceneFolderTests : IDisposable
     // The backup folder for format 1 files at the fixed time: v{format}-{yyyy-MM-dd_HH-mm-ss}.
     private string Backups => Path.Combine(Folder.Root, "backups", "v1-2026-09-29_12-08-49");
 
-    private string ScenePath(string name) => temp.ScenePath(name);
-
-    private void WriteFormatOne(string name) => File.WriteAllText(ScenePath(name), FormatOneSceneJson());
-
-    private void BlockBackups() => temp.BlockBackups();
+    private void WriteFormatOne(string name) => File.WriteAllText(temp.ScenePath(name), FormatOneSceneJson());
 
     // A scene file in the current format but not as Vista lays it out, so a rewrite would change its bytes.
     private void WriteCompact(string name) =>
-        File.WriteAllText(ScenePath(name), JsonNode.Parse(SceneJson.Write(Named("Crane")))!.ToJsonString());
+        File.WriteAllText(temp.ScenePath(name), JsonNode.Parse(SceneJson.Write(Named("Crane")))!.ToJsonString());
 
     public void Dispose() => temp.Dispose();
 
@@ -159,13 +155,13 @@ public sealed class SceneFolderTests : IDisposable
     public void LoadingAnOlderSceneBacksItUpThenRewritesIt()
     {
         WriteFormatOne("Harbour");
-        var original = File.ReadAllBytes(ScenePath("Harbour"));
+        var original = File.ReadAllBytes(temp.ScenePath("Harbour"));
 
         var scene = Folder.LoadScene("Harbour");
 
         // The fixture holds five tracks.
         Assert.Equal(5, scene.Tracks.Count);
-        Assert.Equal(2, SceneJson.FormatOf(File.ReadAllText(ScenePath("Harbour"))));
+        Assert.Equal(2, SceneJson.FormatOf(File.ReadAllText(temp.ScenePath("Harbour"))));
         Assert.Equal(original, File.ReadAllBytes(Path.Combine(Backups, "Harbour.json")));
         Assert.Empty(temp.NotUpgraded);
     }
@@ -174,11 +170,11 @@ public sealed class SceneFolderTests : IDisposable
     public void LoadingASceneInTheCurrentFormatLeavesItAndMakesNoBackup()
     {
         WriteCompact("Dusk");
-        var original = File.ReadAllBytes(ScenePath("Dusk"));
+        var original = File.ReadAllBytes(temp.ScenePath("Dusk"));
 
         Folder.LoadScene("Dusk");
 
-        Assert.Equal(original, File.ReadAllBytes(ScenePath("Dusk")));
+        Assert.Equal(original, File.ReadAllBytes(temp.ScenePath("Dusk")));
         Assert.False(Directory.Exists(Folder.BackupsDir));
     }
 
@@ -232,13 +228,13 @@ public sealed class SceneFolderTests : IDisposable
         WriteFormatOne("Harbour");
         WriteFormatOne("Quay");
         WriteCompact("Dusk");
-        var current = File.ReadAllBytes(ScenePath("Dusk"));
+        var current = File.ReadAllBytes(temp.ScenePath("Dusk"));
 
         Assert.Empty(Folder.UpgradeAll());
 
-        Assert.Equal(2, SceneJson.FormatOf(File.ReadAllText(ScenePath("Harbour"))));
-        Assert.Equal(2, SceneJson.FormatOf(File.ReadAllText(ScenePath("Quay"))));
-        Assert.Equal(current, File.ReadAllBytes(ScenePath("Dusk")));
+        Assert.Equal(2, SceneJson.FormatOf(File.ReadAllText(temp.ScenePath("Harbour"))));
+        Assert.Equal(2, SceneJson.FormatOf(File.ReadAllText(temp.ScenePath("Quay"))));
+        Assert.Equal(current, File.ReadAllBytes(temp.ScenePath("Dusk")));
         Assert.Equal([Backups], Directory.GetDirectories(Folder.BackupsDir));
         Assert.Equal(
             ["Harbour.json", "Quay.json"],
@@ -266,12 +262,12 @@ public sealed class SceneFolderTests : IDisposable
     public void AnOlderSceneWhoseBackupFailsStillLoadsAndIsLeftAsItIs()
     {
         WriteFormatOne("Harbour");
-        var original = File.ReadAllBytes(ScenePath("Harbour"));
-        BlockBackups();
+        var original = File.ReadAllBytes(temp.ScenePath("Harbour"));
+        temp.BlockBackups();
 
         Assert.Equal(5, Folder.LoadScene("Harbour").Tracks.Count);
 
-        Assert.Equal(original, File.ReadAllBytes(ScenePath("Harbour")));
+        Assert.Equal(original, File.ReadAllBytes(temp.ScenePath("Harbour")));
         Assert.Equal(["Harbour.json"], temp.NotUpgraded);
     }
 
@@ -279,52 +275,52 @@ public sealed class SceneFolderTests : IDisposable
     public void SavingOverAnOlderSceneWhoseBackupFailsIsRefusedAndLeavesIt()
     {
         WriteFormatOne("Harbour");
-        var original = File.ReadAllBytes(ScenePath("Harbour"));
-        BlockBackups();
+        var original = File.ReadAllBytes(temp.ScenePath("Harbour"));
+        temp.BlockBackups();
 
         Assert.ThrowsAny<IOException>(() => Folder.SaveScene("Harbour", Named("Crane")));
 
-        Assert.Equal(original, File.ReadAllBytes(ScenePath("Harbour")));
+        Assert.Equal(original, File.ReadAllBytes(temp.ScenePath("Harbour")));
     }
 
     [Fact]
     public void UpgradingAllReportsASceneWhoseBackupFailsAndLeavesIt()
     {
         WriteFormatOne("Harbour");
-        var original = File.ReadAllBytes(ScenePath("Harbour"));
-        BlockBackups();
+        var original = File.ReadAllBytes(temp.ScenePath("Harbour"));
+        temp.BlockBackups();
 
         var refusal = Assert.Single(Folder.UpgradeAll());
 
         Assert.StartsWith("Could not upgrade Harbour.json:", refusal);
-        Assert.Equal(original, File.ReadAllBytes(ScenePath("Harbour")));
+        Assert.Equal(original, File.ReadAllBytes(temp.ScenePath("Harbour")));
     }
 
     [Fact]
     public void ANewerSceneIsListedWithNoTrackCountButNotOpenedOrUpgraded()
     {
         Folder.SaveScene("Dusk", Named("Crane"));
-        File.WriteAllText(ScenePath("Future"), "{ \"format\": 3 }");
+        File.WriteAllText(temp.ScenePath("Future"), "{ \"format\": 3 }");
 
         var future = Assert.Single(Folder.SceneEntries(), e => e.Name == "Future");
         Assert.Null(future.Tracks);
         Assert.Equal(["Dusk"], Folder.SceneNames());
         Assert.Throws<NewerFormatException>(() => Folder.LoadScene("Future"));
         Assert.Empty(Folder.UpgradeAll());
-        Assert.Equal("{ \"format\": 3 }", File.ReadAllText(ScenePath("Future")));
+        Assert.Equal("{ \"format\": 3 }", File.ReadAllText(temp.ScenePath("Future")));
         Assert.Empty(temp.Unreadable);
     }
 
     [Fact]
     public void UpgradingAllLeavesFilesThatCantBeReadAsTheyAre()
     {
-        File.WriteAllText(ScenePath("Broken"), "{ \"format\": 1 }");
-        File.WriteAllText(ScenePath("Garbage"), "{ not json");
+        File.WriteAllText(temp.ScenePath("Broken"), "{ \"format\": 1 }");
+        File.WriteAllText(temp.ScenePath("Garbage"), "{ not json");
 
         Assert.Empty(Folder.UpgradeAll());
 
-        Assert.Equal("{ \"format\": 1 }", File.ReadAllText(ScenePath("Broken")));
-        Assert.Equal("{ not json", File.ReadAllText(ScenePath("Garbage")));
+        Assert.Equal("{ \"format\": 1 }", File.ReadAllText(temp.ScenePath("Broken")));
+        Assert.Equal("{ not json", File.ReadAllText(temp.ScenePath("Garbage")));
         Assert.False(Directory.Exists(Folder.BackupsDir));
         Assert.Empty(Folder.SceneEntries());
         Assert.Equal(["Broken.json", "Garbage.json"], temp.Unreadable.Order(StringComparer.Ordinal));
