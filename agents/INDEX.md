@@ -19,7 +19,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Input`: the key, modifier and hotkey types, the table naming every hotkey Vista binds, and which hotkey a press or held keys resolve to.
 - `Scenes`: scenes, playlists, switchboards and presets as data, their edits and names, their place in the world, and their files.
 - `SelfTest`: the rules that decide whether each `/vista selftest` check passed, and its report lines.
-- `Session`: the mode, selection, undo history, Edit preview and scrub head, the switchboard player that cuts Live between slots, and the scene's tracks in the world.
+- `Session`: the mode, selection, undo history, the Edit previews (the edited track's and Edit's throwaway switchboard's) and scrub head, the switchboard player that cuts Live or Edit between slots, and the scene's tracks in the world.
 - `Tracks`: the track and its control points and anchor, editing its points and timing, and evaluating it at a moment.
 - `Tracks/Aiming`: where the camera looks and which way is up: recorded aim (with roll and field of view, blended by distance along the path), direction of travel, Look At, watched and followed characters, and smoothing.
 - `Tracks/Playback`: the Director, playing a track or a playlist frame by frame, and the playlist laid end to end as Live's timeline.

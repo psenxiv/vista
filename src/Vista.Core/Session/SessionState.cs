@@ -19,6 +19,7 @@ public sealed class SessionState
     private readonly SwitchboardPlayer live;
     private EditSnapshot? liveEditStart;
     private CameraState? heldFrame;
+    private Scene openScene = SceneEditing.New();
 
     /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds watched or followed characters.</summary>
     public SessionState(Func<Vector3, float?>? groundBelow = null, NearbyCharacters? aimTargets = null)
@@ -34,14 +35,20 @@ public sealed class SessionState
         );
         Selection = new SelectionState(this);
         World = new WorldView(this, aimTargets);
-        Transport = new Transport(this);
+        Transport = new Transport(this, aimTargets);
         EditedTrackId = Scene.Tracks[0].Id;
     }
 
     public CameraMode Mode { get; private set; }
 
-    /// <summary>The switchboard player for the mode: Live's in Live, otherwise null.</summary>
-    public SwitchboardPlayer? Board => Mode == CameraMode.Live ? live : null;
+    /// <summary>The switchboard player for the mode: Live's in Live, Edit's throwaway one in Edit, otherwise null.</summary>
+    public SwitchboardPlayer? Board =>
+        Mode switch
+        {
+            CameraMode.Live => live,
+            CameraMode.Editing => Transport.Board,
+            _ => null,
+        };
 
     /// <summary>What's selected while editing.</summary>
     public SelectionState Selection { get; }
@@ -53,7 +60,15 @@ public sealed class SessionState
     public Transport Transport { get; }
 
     /// <summary>The tracks being edited, their order and which are hidden.</summary>
-    public Scene Scene { get; private set; } = SceneEditing.New();
+    public Scene Scene
+    {
+        get => openScene;
+        private set
+        {
+            Transport.FollowSlots(openScene.Switchboard.Slots, value.Switchboard.Slots);
+            openScene = value;
+        }
+    }
 
     /// <summary>The Id of the track the editor works on.</summary>
     public Guid EditedTrackId { get; private set; }
@@ -148,10 +163,11 @@ public sealed class SessionState
     /// <summary>True when Restart has something to play, which Off and View never do.</summary>
     public bool CanRestart => !Released && CanStart;
 
-    /// <summary>True in Edit while no preview plays, or while one plays on the ghost: the overlay takes clicks and shows the gizmo.</summary>
-    public bool OverlayEditable => Mode == CameraMode.Editing && (Transport.Ghost || !Transport.Previewing);
+    /// <summary>True in Edit while no preview is on the game camera: none plays, or the edited track's plays on the ghost. The overlay takes clicks and shows the gizmo.</summary>
+    public bool OverlayEditable =>
+        Mode == CameraMode.Editing && !Transport.BoardPreviewing && (Transport.Ghost || !Transport.Previewing);
 
-    /// <summary>True when the tracks are drawn over the game: in View, and in Edit while no preview plays or it plays as the ghost.</summary>
+    /// <summary>True when the tracks are drawn over the game: in View, and in Edit while no preview is on the game camera.</summary>
     public bool OverlayShown => Mode == CameraMode.View || OverlayEditable;
 
     /// <summary>Why a point can't be taken from the camera now, or null.</summary>
@@ -179,12 +195,14 @@ public sealed class SessionState
             case CameraMode.Live:
                 Transport.DropScrub();
                 Transport.DropHandOff();
+                Transport.OpenBoard();
                 live.Store();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
             default:
                 Transport.DropScrub();
                 Transport.DropHandOff();
+                Transport.OpenBoard();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromGame;
         }
@@ -258,6 +276,7 @@ public sealed class SessionState
         if (to is not (CameraMode.Off or CameraMode.View))
             throw new ArgumentOutOfRangeException(nameof(to), to, "Release goes to Off or View.");
         Transport.StopPreview();
+        Transport.CloseBoard();
         var owned = !Released;
         if (owned)
         {
@@ -286,6 +305,7 @@ public sealed class SessionState
     private void EnterLive(CameraState? start)
     {
         Transport.StopPreview();
+        Transport.CloseBoard();
         Transport.DropScrub();
         EndLiveEdit();
         Selection.DropGroup();
@@ -313,7 +333,7 @@ public sealed class SessionState
         return PlayOutcome.Previewed;
     }
 
-    /// <summary>Opens <paramref name="scene"/> editing its first track, shown if hidden, clearing the selection, scrub head and undo history; the mode stays. Returns why it was refused, or null.</summary>
+    /// <summary>Opens <paramref name="scene"/> editing its first track, shown if hidden, clearing the selection, scrub head, undo history and Edit's switchboard; the mode stays. Returns why it was refused, or null.</summary>
     public string? LoadScene(Scene scene)
     {
         if (Mode == CameraMode.Live)
@@ -326,6 +346,8 @@ public sealed class SessionState
         ClearForSwitch();
         World.Clear();
         history.Clear();
+        if (Mode == CameraMode.Editing)
+            Transport.OpenBoard();
         return null;
     }
 
@@ -485,11 +507,14 @@ public sealed class SessionState
     public string? SetSwitchboardToggle(SwitchboardToggle toggle, bool on) =>
         ChangeSwitchboard(scene => SwitchboardEditing.SetToggle(scene, toggle, on));
 
-    /// <summary>Applies a switchboard change: in Edit as one undo step, Live at once with no undo step. Returns why it was refused, or null.</summary>
-    private string? ChangeSwitchboard(Func<Scene, Scene> change) =>
-        Mode == CameraMode.Live
-            ? Refusal(() => Scene = change(Scene))
-            : CommitScene(scene => (change(scene), EditedTrackId));
+    /// <summary>Applies a switchboard change: in Edit as one undo step that leaves the switchboard preview playing, Live at once with no undo step. Returns why it was refused, or null.</summary>
+    private string? ChangeSwitchboard(Func<Scene, Scene> change)
+    {
+        if (Mode == CameraMode.Live)
+            return Refusal(() => Scene = change(Scene));
+        Transport.StopPreview();
+        return RecordScene(scene => (change(scene), EditedTrackId));
+    }
 
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change) =>
@@ -898,9 +923,13 @@ public sealed class SessionState
 
         // Previews rebuild the lists, so compare values: a drag back to the start is no step.
         if (SameValues(start.Scene, Scene))
+        {
             Scene = start.Scene;
-        else
-            history.Record(start);
+            return;
+        }
+
+        history.Record(start);
+        Transport.StopPreviews();
     }
 
     /// <summary>Replaces the track with <paramref name="change"/> of the live edit's starting track. Returns why it was refused, or null.</summary>
@@ -921,7 +950,7 @@ public sealed class SessionState
     /// <summary>Restores the scene, the edited track and the selection before the last change. Returns false if nothing was undone.</summary>
     public bool Undo()
     {
-        Transport.StopPreview();
+        Transport.StopPreviews();
         EndLiveEdit();
         return Restore(Mode == CameraMode.Editing ? history.Undo(Current) : null);
     }
@@ -929,7 +958,7 @@ public sealed class SessionState
     /// <summary>Re-applies the last undone change. Returns false if nothing was redone.</summary>
     public bool Redo()
     {
-        Transport.StopPreview();
+        Transport.StopPreviews();
         EndLiveEdit();
         return Restore(Mode == CameraMode.Editing ? history.Redo(Current) : null);
     }
@@ -978,7 +1007,7 @@ public sealed class SessionState
     /// <summary>Applies a change to the scene as one undo step if the edited track can still be played. Returns why it was refused, or null.</summary>
     private string? CommitEdit(Func<Scene, Scene> change, Func<Track, IReadOnlyList<int>> selectAfter)
     {
-        Transport.StopPreview();
+        Transport.StopPreviews();
         if (Mode != CameraMode.Editing)
             return TrackOnlyWhileEditing;
         EndLiveEdit();
@@ -998,10 +1027,16 @@ public sealed class SessionState
         });
     }
 
-    /// <summary>Applies a scene change and the edited track it leaves, as one undo step. Returns why it was refused, or null.</summary>
+    /// <summary>Applies a scene change and the edited track it leaves, as one undo step, stopping both previews. Returns why it was refused, or null.</summary>
     private string? CommitScene(Func<Scene, (Scene Scene, Guid Edited)> change)
     {
-        Transport.StopPreview();
+        Transport.StopPreviews();
+        return RecordScene(change);
+    }
+
+    /// <summary>Records a scene change and the edited track it leaves as one undo step, in Edit only. Returns why it was refused, or null.</summary>
+    private string? RecordScene(Func<Scene, (Scene Scene, Guid Edited)> change)
+    {
         if (Mode != CameraMode.Editing)
             return "The scene can only change while editing.";
         EndLiveEdit();

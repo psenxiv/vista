@@ -12,18 +12,20 @@ public sealed class SwitchboardPlayer
     private readonly bool remembers;
     private readonly Func<OnAir> readAir;
     private readonly Action<OnAir> writeAir;
+    private readonly Action? onCut;
 
     // The slot the Director plays and the track or playlist it held then; null while it plays nothing.
     private (int Slot, Guid Target)? playing;
     private bool resumeAfterScrub;
 
-    /// <summary>A player for <paramref name="session"/>'s scene on <paramref name="director"/>, keeping its place through <paramref name="readAir"/> and <paramref name="writeAir"/>; <paramref name="remembers"/> lets Keep rolling record and use resume points.</summary>
+    /// <summary>A player for <paramref name="session"/>'s scene on <paramref name="director"/>, keeping its place through <paramref name="readAir"/> and <paramref name="writeAir"/>; <paramref name="remembers"/> lets Keep rolling record and use resume points, and <paramref name="onCut"/> runs as each cut starts.</summary>
     internal SwitchboardPlayer(
         SessionState session,
         Director director,
         bool remembers,
         Func<OnAir> readAir,
-        Action<OnAir> writeAir
+        Action<OnAir> writeAir,
+        Action? onCut = null
     )
     {
         this.session = session;
@@ -31,6 +33,7 @@ public sealed class SwitchboardPlayer
         this.remembers = remembers;
         this.readAir = readAir;
         this.writeAir = writeAir;
+        this.onCut = onCut;
     }
 
     /// <summary>The slot on Program, or null.</summary>
@@ -222,6 +225,7 @@ public sealed class SwitchboardPlayer
         if (keep && playing is { } outgoing)
             resume[outgoing.Slot] = director.IsFinished ? null : director.Playlist!.PlaylistTime;
 
+        onCut?.Invoke();
         Play(slot, found);
         if (keep && resume[slot] is { } from)
         {

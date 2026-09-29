@@ -40,7 +40,7 @@ public class SessionStateTests
         var state = LiveTwoPoints();
         Assert.Equal(EditOutcome.FromLive, state.Edit());
         Assert.Equal(CameraMode.Editing, state.Mode);
-        Assert.Null(state.Board);
+        Assert.False(state.Board!.HasProgram);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class SessionStateTests
         editing.Edit();
         Assert.Equal(PlayOutcome.Refused, editing.Play());
         Assert.Equal(CameraMode.Editing, editing.Mode);
-        Assert.Null(editing.Board);
+        Assert.False(editing.Board!.HasProgram);
     }
 
     [Fact]

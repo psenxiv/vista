@@ -43,6 +43,25 @@ internal static class SessionFixtures
         return state;
     }
 
+    /// <summary>Editing with no undo history. Track 1: x = 0, 10, 20 at 2 yalms per second, a 10 s shot with x = 2t. Track 2: x = 0 and 4, a 2 s shot with x = 2t. Track 3: no points. Playlist 1: Track 2 then Track 1, 12 s. Slots: 0 Track 1, 1 Track 2, 2 Track 3 (can't play), 3 Playlist 1.</summary>
+    internal static SessionState EditingSwitchboard()
+    {
+        var state = EditingThreePoints();
+        state.AddTrack();
+        state.SetTrackSpeed(2f);
+        state.AddToEnd(Fixtures.Point(0f));
+        state.AddToEnd(Fixtures.Point(4f));
+        state.AddTrack();
+        state.AddToPlaylist([TrackId(state, 1)]);
+        state.AddToPlaylist([TrackId(state, 0)]);
+        state.AssignSlot(0, TrackId(state, 0));
+        state.AssignSlot(1, TrackId(state, 1));
+        state.AssignSlot(2, TrackId(state, 2));
+        state.AssignSlot(3, state.Scene.Playlists[0].Id);
+        state.LoadScene(state.Scene);
+        return state;
+    }
+
     /// <summary>Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 at head height, y = 5, all aimed along −z.</summary>
     internal static SessionState EditingOverGround()
     {
