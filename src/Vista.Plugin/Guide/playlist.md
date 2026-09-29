@@ -2,7 +2,7 @@
 
 A playlist is a list of tracks that Live plays, top to bottom, cutting from one to the next. A scene has one or more playlists, and Live plays the selected one.
 
-The Playlist is the panel on the right of the **Vista** window. It shows the selected playlist, and the strip under its heading names it.
+The Playlist is the panel on the right of the **Vista** window. It shows the selected playlist, and the strip under its heading shows that playlist's name.
 
 You change playlists in Edit. A track can be in a playlist more than once, or not at all.
 
