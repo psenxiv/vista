@@ -8,9 +8,6 @@ namespace Vista.Tests.Session;
 
 public class SessionSwitchboardTests
 {
-    // Live as OnAirScene leaves it: slot 0 on Program at 3 s, slot 1 Next, slots 1 and 2 resuming at 2 s and 4 s.
-    private static readonly OnAir OnAirLive = new(0, 1, 3.0, Resume((1, 2.0), (2, 4.0)));
-
     public static TheoryData<string, Func<SessionState, string?>> Commands =>
         new()
         {
@@ -104,13 +101,21 @@ public class SessionSwitchboardTests
     [Fact]
     public void UndoKeepsLivesPosition()
     {
-        var state = Editing();
-        state.AssignSlot(3, state.Scene.Tracks[1].Id);
+        // The Assign's snapshot has nothing on Program or Next; Live then puts slot 0's Track 1 on Program, leaves it 3 s in, and makes slot 1 Next.
+        var state = EditingSwitchboard();
+        state.AssignSlot(3, TrackId(state, 1));
+        state.Cue();
+        CutTo(state.Board!, 0);
+        state.LiveFrame(3f);
+        state.Board!.Click(1);
+        state.Edit();
 
-        state.Undo();
+        Assert.True(state.Undo());
 
-        Assert.Null(state.Scene.Switchboard.Slots[3]);
-        SameAir(OnAirLive, state.Scene.Switchboard.Live);
+        var live = state.Scene.Switchboard.Live;
+        Assert.Equal(0, live.Program);
+        Assert.Equal(3.0, live.ProgramTime, 1e-9);
+        Assert.Equal(1, live.Next);
     }
 
     [Fact]
