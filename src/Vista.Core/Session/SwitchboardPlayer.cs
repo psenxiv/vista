@@ -67,7 +67,7 @@ public sealed class SwitchboardPlayer
     public int EntryIndex => Playback?.Index ?? 0;
 
     /// <summary>True when slot <paramref name="slot"/> holds a track with points, or a playlist with an entry whose track has points.</summary>
-    public bool CanPlay(int slot) => ShotOf(slot) is not null;
+    public bool CanPlay(int slot) => SwitchboardEditing.CanPlay(session.Scene, slot);
 
     /// <summary>Makes slot <paramref name="slot"/> Next, or with Direct cut cuts to it; an empty slot or one that can't play does nothing.</summary>
     public void Click(int slot)
@@ -89,16 +89,17 @@ public sealed class SwitchboardPlayer
             CutTo(next, emptyNext: true);
     }
 
-    /// <summary>Advances the Program shot by <paramref name="dt"/>, cutting to Next at its end with Auto Next; returns its frame, or null with nothing on Program.</summary>
+    /// <summary>Advances the Program shot by <paramref name="dt"/>, cutting to Next with Auto Next as this tick plays it to its end; returns its frame, or null with nothing on Program.</summary>
     public CameraState? Tick(float dt)
     {
         Sync();
         if (playing is null)
             return null;
+        var wasFinished = director.IsFinished;
         var frame = director.Tick(dt);
         if (
-            director.IsFinished
-            && !director.IsPaused
+            !wasFinished
+            && director.IsFinished
             && session.Scene.Switchboard.AutoNext
             && readAir().Next is { } next
             && CanPlay(next)
@@ -240,22 +241,20 @@ public sealed class SwitchboardPlayer
         Scrubbing = false;
     }
 
-    /// <summary>Slot <paramref name="slot"/>'s shot in the world and the track or playlist it plays, or null when it's empty or nothing in it has points.</summary>
+    /// <summary>Slot <paramref name="slot"/>'s shot in the world and the track or playlist it plays, or null when it can't play.</summary>
     private (PlaylistShot Shot, Guid Target)? ShotOf(int slot)
     {
         var scene = session.Scene;
-        if (slot is < 0 or >= SwitchboardEditing.SlotCount || scene.Switchboard.Slots[slot] is not { } held)
+        if (!SwitchboardEditing.CanPlay(scene, slot))
             return null;
+        var held = scene.Switchboard.Slots[slot]!;
         if (held.TrackId is { } trackId)
         {
             var track = SceneEditing.Get(scene, trackId);
-            return track.Points.Count == 0
-                ? null
-                : (new PlaylistShot([new PlaylistItem(trackId, session.World.WorldOf(track), null)]), trackId);
+            return (new PlaylistShot([new PlaylistItem(trackId, session.World.WorldOf(track), null)]), trackId);
         }
 
         var playlist = PlaylistEditing.Get(scene, held.PlaylistId!.Value);
-        var items = session.PlaylistItems(playlist);
-        return items.Count == 0 ? null : (new PlaylistShot(items, playlist.Loops), playlist.Id);
+        return (new PlaylistShot(session.PlaylistItems(playlist), playlist.Loops), playlist.Id);
     }
 }

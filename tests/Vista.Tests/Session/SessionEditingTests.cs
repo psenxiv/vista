@@ -473,7 +473,7 @@ public class SessionEditingTests
         var state = EditingThreePoints();
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
-        GoLive(state);
+        state.Cue();
         state.Edit();
         Assert.True(state.Undo());
         Assert.Equal(10f, state.Track.Points[1].Position.X);

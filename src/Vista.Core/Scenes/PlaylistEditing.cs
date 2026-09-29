@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Vista.Core.Editing;
+using Vista.Core.Tracks;
 
 namespace Vista.Core.Scenes;
 
@@ -34,7 +36,18 @@ public static class PlaylistEditing
 
     /// <summary>The playlist <paramref name="id"/>, refusing an unknown one.</summary>
     public static Playlist Get(Scene scene, Guid id) =>
-        scene.Playlists.FirstOrDefault(p => p.Id == id) ?? throw new ArgumentException(NoSuchPlaylist);
+        TryGet(scene, id, out var playlist) ? playlist : throw new ArgumentException(NoSuchPlaylist);
+
+    /// <summary>Finds playlist <paramref name="id"/>; false when the scene has none with it.</summary>
+    public static bool TryGet(Scene scene, Guid id, [NotNullWhen(true)] out Playlist? playlist)
+    {
+        playlist = scene.Playlists.FirstOrDefault(p => p.Id == id);
+        return playlist is not null;
+    }
+
+    /// <summary>True when an entry of <paramref name="playlist"/> has a track with points.</summary>
+    public static bool CanPlay(Scene scene, Playlist playlist) =>
+        playlist.Entries.Any(e => TrackEditing.CanPlay(SceneEditing.Get(scene, e.TrackId)));
 
     /// <summary>Why <paramref name="name"/> can't name a playlist, or null; playlist <paramref name="renaming"/> may take any case of its own name, as a scene may.</summary>
     public static string? NameRefusal(Scene scene, string name, Guid? renaming = null)
@@ -215,7 +228,9 @@ public static class PlaylistEditing
 
     /// <summary>True when an entry holds the playlist for good: no loop count and a looping track with points.</summary>
     public static bool HoldsPlaylist(Scene scene, PlaylistEntry entry) =>
-        entry.Loops is null && SceneEditing.Get(scene, entry.TrackId) is { Loop: true, Points.Count: > 0 };
+        entry.Loops is null
+        && SceneEditing.Get(scene, entry.TrackId) is { Loop: true } track
+        && TrackEditing.CanPlay(track);
 
     /// <summary>The index of entry <paramref name="entryId"/> in the selected playlist, refusing an unknown one.</summary>
     public static int Require(Scene scene, Guid entryId) =>

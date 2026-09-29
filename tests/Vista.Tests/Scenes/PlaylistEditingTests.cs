@@ -156,6 +156,29 @@ public class PlaylistEditingTests
     }
 
     [Fact]
+    public void APlaylistCanPlayOnlyWithAnEntryWhoseTrackHasPoints()
+    {
+        var scene = TwoTracks();
+        var withEmpty = PlaylistEditing.Add(scene, [scene.Tracks[1].Id]);
+        var withPoints = PlaylistEditing.Add(scene, [scene.Tracks[0].Id]);
+
+        Assert.False(PlaylistEditing.CanPlay(scene, PlaylistEditing.Selected(scene)));
+        Assert.False(PlaylistEditing.CanPlay(withEmpty, PlaylistEditing.Selected(withEmpty)));
+        Assert.True(PlaylistEditing.CanPlay(withPoints, PlaylistEditing.Selected(withPoints)));
+    }
+
+    [Fact]
+    public void TryGetFindsAPlaylistByIdAndNotAnUnknownOne()
+    {
+        var scene = TwoTracks();
+
+        Assert.True(PlaylistEditing.TryGet(scene, scene.SelectedPlaylistId, out var found));
+        Assert.Same(scene.Playlists[0], found);
+        Assert.False(PlaylistEditing.TryGet(scene, Guid.NewGuid(), out var missing));
+        Assert.Null(missing);
+    }
+
+    [Fact]
     public void DeletingATrackRemovesItsEntries()
     {
         var scene = TwoTracks();

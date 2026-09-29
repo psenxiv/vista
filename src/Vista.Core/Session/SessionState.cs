@@ -140,7 +140,7 @@ public sealed class SessionState
     public bool CanStart =>
         Mode switch
         {
-            CameraMode.Editing => Local.Points.Count > 0,
+            CameraMode.Editing => TrackEditing.CanPlay(Local),
             CameraMode.Live => live.HasProgram,
             _ => CanGoLive,
         };
@@ -298,7 +298,7 @@ public sealed class SessionState
     public IReadOnlyList<PlaylistItem> PlaylistItems(Playlist playlist) =>
         playlist
             .Entries.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
-            .Where(x => x.Track.Points.Count > 0)
+            .Where(x => TrackEditing.CanPlay(x.Track))
             .Select(x => new PlaylistItem(x.Entry.Id, World.WorldOf(x.Track), x.Entry.Loops))
             .ToList();
 

@@ -267,6 +267,7 @@ internal static class Fixtures
         state.AssignSlot(0, state.Scene.SelectedPlaylistId);
         state.Board!.Click(0);
         state.Board.Cut();
+        Assert.True(state.Board.HasProgram);
     }
 
     /// <summary>Editing a new session whose track has points at x = 0 and 10: one 2 s leg at the default speed.</summary>

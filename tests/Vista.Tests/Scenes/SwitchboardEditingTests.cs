@@ -20,6 +20,25 @@ public class SwitchboardEditingTests
     }
 
     [Fact]
+    public void ASlotCanPlayATrackWithPointsOrAPlaylistWithAnEntryThatCan()
+    {
+        // Track 1 has points and Track 2 none; Playlist 1 holds only Track 2, Playlist 2 holds Track 1.
+        var scene = TwoTracksTwoPlaylists();
+        scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
+        scene = PlaylistEditing.Add(scene, [scene.Tracks[1].Id]);
+        scene = PlaylistEditing.Add(PlaylistEditing.Select(scene, scene.Playlists[1].Id), [scene.Tracks[0].Id]);
+        scene = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 1, scene.Tracks[1].Id);
+        scene = SwitchboardEditing.Assign(scene, 2, scene.Playlists[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 3, scene.Playlists[1].Id);
+
+        Assert.Equal(
+            [false, true, false, false, true, false, false],
+            new[] { -1, 0, 1, 2, 3, 4, 10 }.Select(slot => SwitchboardEditing.CanPlay(scene, slot))
+        );
+    }
+
+    [Fact]
     public void ANewSceneHasAnEmptySwitchboard() =>
         SameBoard(SwitchboardEditing.Empty(), SceneEditing.New().Switchboard);
 

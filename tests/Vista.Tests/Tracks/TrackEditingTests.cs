@@ -658,6 +658,13 @@ public class TrackEditingTests
     }
 
     [Fact]
+    public void ATrackCanPlayOnceItHasAPoint()
+    {
+        Assert.False(TrackEditing.CanPlay(TrackEditing.Empty()));
+        Assert.True(TrackEditing.CanPlay(TrackEditing.Append(TrackEditing.Empty(), Point(0f))));
+    }
+
+    [Fact]
     public void DeletingAMiddlePointMergesItsLegsAndDropsItsHold()
     {
         var track = TrackEditing.SetHold(Build3PointTrack(), 1, 2f);

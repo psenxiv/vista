@@ -182,6 +182,9 @@ public static class TrackEditing
         };
     }
 
+    /// <summary>Whether <paramref name="track"/> has a point to play.</summary>
+    public static bool CanPlay(Track track) => track.Points.Count > 0;
+
     /// <summary>Whether <paramref name="track"/>'s points can be duplicated: not on a Follow Target track, which has one point.</summary>
     public static bool CanDuplicate(Track track) => track.Aim != AimMode.FollowTarget;
 

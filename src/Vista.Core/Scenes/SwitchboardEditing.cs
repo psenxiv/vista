@@ -1,4 +1,5 @@
 using Vista.Core.Editing;
+using Vista.Core.Tracks;
 
 namespace Vista.Core.Scenes;
 
@@ -29,7 +30,7 @@ public static class SwitchboardEditing
         RequireSlot(slot);
         var assigned =
             SceneEditing.TryGet(scene, id, out var track) ? new Slot(track.Name, id, null)
-            : scene.Playlists.FirstOrDefault(p => p.Id == id) is { } playlist ? new Slot(playlist.Name, null, id)
+            : PlaylistEditing.TryGet(scene, id, out var playlist) ? new Slot(playlist.Name, null, id)
             : throw new ArgumentException(NoSuchTarget);
         return WithSlot(scene, slot, assigned);
     }
@@ -89,6 +90,16 @@ public static class SwitchboardEditing
             ? new OnAir(program, next, time, resume)
             : onAir;
     }
+
+    /// <summary>True when slot <paramref name="slot"/> holds a track with points, or a playlist with an entry whose track has points.</summary>
+    public static bool CanPlay(Scene scene, int slot) =>
+        slot is >= 0 and < SlotCount
+        && scene.Switchboard.Slots[slot] is { } held
+        && (
+            held.TrackId is { } trackId
+                ? TrackEditing.CanPlay(SceneEditing.Get(scene, trackId))
+                : PlaylistEditing.CanPlay(scene, PlaylistEditing.Get(scene, held.PlaylistId!.Value))
+        );
 
     /// <summary>The track or playlist a slot points at, or null for an empty one.</summary>
     public static Guid? Target(Slot? slot) => slot?.TrackId ?? slot?.PlaylistId;

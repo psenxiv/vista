@@ -320,9 +320,68 @@ public class SwitchboardPlayerTests
         Assert.True(board.IsFinished);
         Assert.Equal(1, board.Program);
 
+        // Let go at 1.5 s: 1 s of playing reaches the end, and Auto Next cuts.
+        board.ScrubTo(1.5);
         board.EndScrub();
         state.LiveFrame(1f);
         Assert.Equal(0, board.Program);
+    }
+
+    [Fact]
+    public void AutoNextDoesntCutAShotLetGoAtItsEnd()
+    {
+        // A scrub that lets go at the very end leaves the shot there; it never plays into its end.
+        var state = Editing();
+        state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
+        var board = Live(state);
+        CutTo(board, 1);
+        board.Click(0);
+
+        board.BeginScrub();
+        board.ScrubTo(2.0);
+        board.EndScrub();
+        state.LiveFrame(1f);
+        state.LiveFrame(1f);
+
+        Assert.Equal(1, board.Program);
+        Assert.Equal(0, board.Next);
+    }
+
+    [Fact]
+    public void ClickingNextWhileAShotHoldsAtItsEndDoesntCut()
+    {
+        var state = Editing();
+        state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
+        var board = Live(state);
+        CutTo(board, 1);
+        // Track 2 ends at 2 s with Next empty, and holds.
+        state.LiveFrame(3f);
+
+        board.Click(0);
+        state.LiveFrame(1f);
+        state.LiveFrame(1f);
+
+        Assert.Equal(1, board.Program);
+        Assert.Equal(0, board.Next);
+        Assert.True(board.IsFinished);
+    }
+
+    [Fact]
+    public void TurningAutoNextOnWhileAShotHoldsAtItsEndDoesntCut()
+    {
+        var state = Editing();
+        var board = Live(state);
+        CutTo(board, 1);
+        board.Click(0);
+        // Track 2 ends at 2 s with Auto Next off, and holds.
+        state.LiveFrame(3f);
+
+        state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
+        state.LiveFrame(1f);
+        state.LiveFrame(1f);
+
+        Assert.Equal(1, board.Program);
+        Assert.Equal(0, board.Next);
     }
 
     [Fact]

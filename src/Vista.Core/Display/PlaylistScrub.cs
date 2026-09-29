@@ -40,7 +40,10 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Slot p
     {
         if (program.TrackId is { } trackId)
             return SceneEditing.TryGet(scene, trackId, out var played) ? played.Name : null;
-        var entries = scene.Playlists.FirstOrDefault(p => p.Id == program.PlaylistId)?.Entries ?? [];
+        var entries =
+            program.PlaylistId is { } playlistId && PlaylistEditing.TryGet(scene, playlistId, out var playlist)
+                ? playlist.Entries
+                : [];
         var index = ListEdit.IndexOf(entries, e => e.Id == segment.EntryId);
         return index >= 0 && SceneEditing.TryGet(scene, entries[index].TrackId, out var track)
             ? Invariant($"{index + 1} · {track.Name}")
