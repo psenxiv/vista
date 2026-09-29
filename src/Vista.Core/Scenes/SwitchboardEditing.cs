@@ -101,6 +101,16 @@ public static class SwitchboardEditing
                 : PlaylistEditing.CanPlay(scene, PlaylistEditing.Get(scene, held.PlaylistId!.Value))
         );
 
+    /// <summary>True when slot <paramref name="slot"/> holds a track with Loop on, or a playlist with Loop playlist on.</summary>
+    public static bool Loops(Scene scene, int slot) =>
+        slot is >= 0 and < SlotCount
+        && scene.Switchboard.Slots[slot] is { } held
+        && (
+            held.TrackId is { } trackId
+                ? SceneEditing.Get(scene, trackId).Loop
+                : PlaylistEditing.Get(scene, held.PlaylistId!.Value).Loops
+        );
+
     /// <summary>The track or playlist a slot points at, or null for an empty one.</summary>
     public static Guid? Target(Slot? slot) => slot?.TrackId ?? slot?.PlaylistId;
 

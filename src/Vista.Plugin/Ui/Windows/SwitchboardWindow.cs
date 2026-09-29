@@ -239,7 +239,7 @@ internal sealed class SwitchboardWindow : Window
         DrawSlotMenu(scene);
     }
 
-    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, and dimmed when it can't play.</summary>
+    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, marked when it loops, and dimmed when it can't play.</summary>
     private void DrawSlot(
         SwitchboardPlayer? board,
         Scene scene,
@@ -289,7 +289,16 @@ internal sealed class SwitchboardWindow : Window
                 var icon = held.TrackId is not null ? FontAwesomeIcon.Route : FontAwesomeIcon.ListOl;
                 var iconAt = min + inset + new Vector2(ImGui.CalcTextSize(number).X + style.ItemSpacing.X, 0f);
                 using (ImRaii.PushFont(UiBuilder.IconFont))
+                {
                     list.AddText(iconAt, ImGui.GetColorU32(ImGuiCol.Text), icon.ToIconString());
+                    if (SwitchboardEditing.Loops(scene, slot))
+                    {
+                        var loop = FontAwesomeIcon.Repeat.ToIconString();
+                        var loopAt = new Vector2(max.X - inset.X - ImGui.CalcTextSize(loop).X, min.Y + inset.Y);
+                        list.AddText(loopAt, ImGui.GetColorU32(UiColours.Muted()), loop);
+                    }
+                }
+
                 var nameMax = max with { Y = nameTop + ImGui.GetTextLineHeight() };
                 RowText.Draw(("slot", slot), held.Name, min with { Y = nameTop }, nameMax, size.X);
             }

@@ -1,4 +1,5 @@
 using Vista.Core.Scenes;
+using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;
 
@@ -35,6 +36,24 @@ public class SwitchboardEditingTests
         Assert.Equal(
             [false, true, false, false, true, false, false],
             new[] { -1, 0, 1, 2, 3, 4, 10 }.Select(slot => SwitchboardEditing.CanPlay(scene, slot))
+        );
+    }
+
+    [Fact]
+    public void ASlotLoopsWhenItsTrackHasLoopOnOrItsPlaylistHasLoopPlaylistOn()
+    {
+        // Track 1 has Loop on and Track 2 off; Playlist 1 has Loop playlist on and Playlist 2 off. Slot 4 is empty.
+        var scene = TwoTracksTwoPlaylists();
+        scene = SceneEditing.Replace(scene, TrackEditing.SetLoop(scene.Tracks[0], true));
+        scene = PlaylistEditing.SetPlaylistLoops(PlaylistEditing.Select(scene, scene.Playlists[0].Id), true);
+        scene = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 1, scene.Tracks[1].Id);
+        scene = SwitchboardEditing.Assign(scene, 2, scene.Playlists[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 3, scene.Playlists[1].Id);
+
+        Assert.Equal(
+            [false, true, false, true, false, false, false],
+            new[] { -1, 0, 1, 2, 3, 4, 10 }.Select(slot => SwitchboardEditing.Loops(scene, slot))
         );
     }
 

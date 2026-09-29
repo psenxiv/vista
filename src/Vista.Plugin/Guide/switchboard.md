@@ -6,7 +6,7 @@ The switchboard is how you run a live show. It has ten slots, each holding a tra
 
 ## Slots
 
-Each slot shows its number, its name, and {icon:Route} for a track or {icon:ListOl} for a playlist. Right-click a slot for its menu:
+Each slot shows its number, its name, and {icon:Route} for a track or {icon:ListOl} for a playlist. {icon:Repeat} in the corner means it loops. Right-click a slot for its menu:
 
 | Item | Does |
 |---|---|
