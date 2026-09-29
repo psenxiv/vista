@@ -97,7 +97,7 @@ internal sealed class FilePickerWindow : Window
             && ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
             && !prompting
             && source.PrimaryAllowed(mode)
-            && ImGui.IsKeyPressed(ImGuiKey.Enter)
+            && ImGui.IsKeyPressed(ImGuiKey.Enter, repeat: false)
         )
             Primary(source, toOpen);
     }
