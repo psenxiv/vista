@@ -146,6 +146,14 @@ public class SceneJsonTests
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
 
+    [Fact]
+    public void ASlotNameReadsTrimmed()
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![0]!["name"] = "  Dolly in  ");
+
+        Assert.Equal("Dolly in", SceneJson.Read(json).Switchboard.Slots[0]!.Name);
+    }
+
     // FullScene has slot 4 on Program at 2.5 s and slot 0 Next; slot 3 is empty.
     [Theory]
     [InlineData(-1)]
@@ -558,7 +566,7 @@ public class SceneJsonTests
         }
     );
 
-    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them, with any toggles, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
+    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them under trimmed names, with any toggles, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
     private static readonly Gen<Scene> AnyScene = Gen.Select(
         AnySavedTrack.Array[1, 4],
         Gen.Select(
@@ -570,9 +578,13 @@ public class SceneJsonTests
         Gen.Select(Gen.Bool.Array[4], Gen.Int[0, 2]),
         Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool),
         Gen.Select(
-            Gen.Select(Gen.Int[0, 2], Gen.Int[0, 3], AnyName, Gen.Bool, Gen.Double[0.0, 600.0]).Array[
-                SwitchboardEditing.SlotCount
-            ],
+            Gen.Select(
+                Gen.Int[0, 2],
+                Gen.Int[0, 3],
+                AnyName.Select(n => n.Trim()),
+                Gen.Bool,
+                Gen.Double[0.0, 600.0]
+            ).Array[SwitchboardEditing.SlotCount],
             Gen.Bool.Array[3],
             Gen.Select(
                 Gen.Int[-1, SwitchboardEditing.SlotCount - 1],

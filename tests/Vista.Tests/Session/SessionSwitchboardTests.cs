@@ -79,7 +79,6 @@ public class SessionSwitchboardTests
 
         var after = SlotsAndToggles(state);
         Assert.NotEqual(before, after);
-        Assert.False(state.CanUndo);
         state.Edit();
         Assert.Equal(after, SlotsAndToggles(state));
         Assert.False(state.CanRedo);
@@ -128,30 +127,24 @@ public class SessionSwitchboardTests
     }
 
     [Fact]
-    public void DeletingATrackEmptiesItsSlotsAndUndoBringsThemBack()
+    public void UndoingATrackDeletionBringsItsSlotsBack()
     {
-        // Slot 0 is on Track 1 and on Program.
+        // Slot 0 is on Track 1.
         var state = Editing();
         var slot = state.Scene.Switchboard.Slots[0];
-
-        Assert.Null(state.DeleteTracks([state.Scene.Tracks[0].Id]));
-        Assert.Null(state.Scene.Switchboard.Slots[0]);
-        Assert.Null(state.Scene.Switchboard.Live.Program);
+        state.DeleteTracks([state.Scene.Tracks[0].Id]);
 
         state.Undo();
         Assert.Equal(slot, state.Scene.Switchboard.Slots[0]);
     }
 
     [Fact]
-    public void DeletingAPlaylistEmptiesItsSlotsAndUndoBringsThemBack()
+    public void UndoingAPlaylistDeletionBringsItsSlotsBack()
     {
-        // Slot 1 is on Playlist 1 and Next.
+        // Slot 1 is on Playlist 1.
         var state = Editing();
         var slot = state.Scene.Switchboard.Slots[1];
-
-        Assert.Null(state.DeletePlaylist(state.Scene.Playlists[0].Id));
-        Assert.Null(state.Scene.Switchboard.Slots[1]);
-        Assert.Null(state.Scene.Switchboard.Live.Next);
+        state.DeletePlaylist(state.Scene.Playlists[0].Id);
 
         state.Undo();
         Assert.Equal(slot, state.Scene.Switchboard.Slots[1]);

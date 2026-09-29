@@ -197,7 +197,7 @@ public static class SceneJson
             _ => throw new InvalidDataException("A switchboard slot needs one track or playlist."),
         };
         return known
-            ? new Slot(slot.Name, slot.TrackId, slot.PlaylistId)
+            ? new Slot(slot.Name.Trim(), slot.TrackId, slot.PlaylistId)
             : throw new InvalidDataException("A switchboard slot names a missing track or playlist.");
     }
 
