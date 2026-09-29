@@ -37,7 +37,7 @@ public class SessionPlaylistTests
         state.AddToPlaylist([TrackId(state, 0)]);
         state.SetEntryLoops(Entries(state.Scene)[0].Id, 3);
 
-        var items = state.PlaylistItems();
+        var items = state.PlaylistItems(PlaylistEditing.Selected(state.Scene));
 
         Assert.Equal([Entries(state.Scene)[0].Id, Entries(state.Scene)[2].Id], items.Select(i => i.EntryId));
         Assert.Equal([TrackId(state, 1), TrackId(state, 0)], items.Select(i => i.Track.Id));
@@ -87,122 +87,25 @@ public class SessionPlaylistTests
         Assert.Equal(2, Entries(state.Scene).Count);
     }
 
-    [Fact]
-    public void LiveIsRefusedWhenNothingCanPlay()
-    {
-        var state = Editing();
-        Assert.Equal(PlayOutcome.Refused, state.Cue());
-    }
+    // The entry the Live board is playing.
+    private static Guid Playing(SessionState state) => state.Board!.Timeline!.Segments[state.Board.EntryIndex].EntryId;
 
     [Fact]
-    public void PlayAndRestartFromViewAreRefusedWhenNothingCanPlay()
+    public void APlaylistSlotPlaysItsPlayableEntriesInTurn()
     {
-        var state = Editing();
-        state.Release(CameraMode.View);
-
-        Assert.Equal(PlayOutcome.Refused, state.Play());
-        Assert.Equal(CameraMode.View, state.Mode);
-
-        Assert.Equal(PlayOutcome.Refused, state.Restart());
-        Assert.Equal(CameraMode.View, state.Mode);
-    }
-
-    [Fact]
-    public void LiveCuesThePlaylistAtItsFirstPlayableEntryAndPlaysItInTurn()
-    {
+        // An empty track's entry, then Track 2's 2 s and Track 1's 10 s: 12 s in all.
         var state = Editing();
         state.AddTrack();
         state.AddToPlaylist([state.EditedTrackId]);
         TwoEntries(state);
 
-        Assert.Equal(PlayOutcome.Cued, state.Cue());
-        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(2.0, state.Transport.ScrubLength, 4);
-
-        state.Play();
-        state.Director.Tick(3f);
-        Assert.Equal(Entries(state.Scene)[2].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
-        Assert.Equal(10.0, state.Transport.ScrubLength, 4);
-    }
-
-    [Fact]
-    public void ScrubbingLiveSeeksWithinThePlayingEntry()
-    {
-        var state = Editing();
-        TwoEntries(state);
         GoLive(state);
-        state.Director.Tick(3f);
+        Assert.Equal(EntryId(state, 1), Playing(state));
+        Assert.Equal(12.0, state.Board!.Timeline!.Total, 4);
 
-        state.Transport.BeginScrub();
-        state.Transport.ScrubTo(7.0);
-        state.Transport.EndScrub();
-
-        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(7.0, state.Transport.ScrubHead, 4);
-    }
-
-    [Fact]
-    public void ScrubbingPastThePlayingEntrysLengthClampsAndStaysOnIt()
-    {
-        var state = Editing();
-        TwoEntries(state);
-        GoLive(state);
-
-        state.Transport.BeginScrub();
-        state.Transport.ScrubTo(99.0);
-        state.Transport.EndScrub();
-
-        Assert.Equal(Entries(state.Scene)[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(2.0, state.Transport.ScrubHead, 4);
-    }
-
-    [Fact]
-    public void ScrubbingLiveByPlaylistTimeCutsToTheEntryThere()
-    {
-        var state = Editing();
-        TwoEntries(state);
-        GoLive(state);
-
-        // Track 2's 2 s, then Track 1's 10 s: 12 s. 5 is 3 s into Track 1's entry.
-        Assert.Equal(12.0, state.Transport.Timeline!.Total, 4);
-        state.Transport.BeginScrub();
-        state.Transport.ScrubPlaylistTo(5.0);
-        state.Transport.EndScrub();
-
-        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(3.0, state.Transport.ScrubHead, 4);
-        Assert.Equal(5.0, state.Transport.PlaylistHead, 4);
-    }
-
-    [Fact]
-    public void ThePlaylistTimelineIsOnlyLives()
-    {
-        var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.Transport.ScrubTo(1.0);
-
-        state.Transport.ScrubPlaylistTo(0.5);
-
-        Assert.Null(state.Transport.Timeline);
-        Assert.Equal(0.0, state.Transport.PlaylistHead);
-        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
-    }
-
-    [Fact]
-    public void TheEndHoldsAndPlayStartsAgain()
-    {
-        var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        GoLive(state);
-        state.Director.Tick(5f);
-
-        Assert.True(state.Director.IsFinished);
-        Assert.Equal(CameraMode.Live, state.Mode);
-        Assert.Equal(2.0, state.Transport.ScrubHead, 4);
-
-        Assert.Equal(PlayOutcome.Started, state.Play());
-        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
+        state.LiveFrame(3f);
+        Assert.Equal(EntryId(state, 2), Playing(state));
+        Assert.Equal(3.0, state.Board.Head, 4);
     }
 
     [Fact]
@@ -211,12 +114,12 @@ public class SessionPlaylistTests
         var state = Editing();
         TwoEntries(state);
         GoLive(state);
-        state.Director.Tick(5f);
+        state.LiveFrame(5f);
 
         state.Restart();
 
-        Assert.Equal(Entries(state.Scene)[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
+        Assert.Equal(EntryId(state, 0), Playing(state));
+        Assert.Equal(0.0, state.Board!.Head, 4);
     }
 
     [Fact]
@@ -227,38 +130,12 @@ public class SessionPlaylistTests
         state.AddToPlaylist([state.EditedTrackId]);
         state.AddToPlaylist([TrackId(state, 0)]);
         GoLive(state);
-        state.Director.Tick(3f);
+        state.LiveFrame(3f);
 
         state.Restart();
 
-        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
-    }
-
-    [Fact]
-    public void EditFromLiveTakesTheShotTimeOnlyWhenTheEditedTrackIsPlaying()
-    {
-        var state = Editing();
-        TwoEntries(state);
-        GoLive(state);
-        state.Director.Tick(1f);
-
-        state.Edit();
-        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
-
-        state.SwitchTrack(TrackId(state, 0));
-        GoLive(state);
-        state.Director.Tick(1f);
-        state.Edit();
-        Assert.Equal(0.0, state.Transport.ScrubHead, 4);
-    }
-
-    [Fact]
-    public void PlayingEntryIsNullUnlessLive()
-    {
-        var state = Editing();
-        state.AddToPlaylist([TrackId(state, 0)]);
-        Assert.Null(state.PlayingEntry);
+        Assert.Equal(EntryId(state, 1), Playing(state));
+        Assert.Equal(0.0, state.Board!.Head, 4);
     }
 
     [Fact]
@@ -281,11 +158,12 @@ public class SessionPlaylistTests
         state.SetPlaylistLoops(true);
         GoLive(state);
 
-        state.Director.Tick(3f);
+        // 3 s round Track 2's 2 s playlist is 1 s into its second time round.
+        state.LiveFrame(3f);
 
-        Assert.False(state.Director.IsFinished);
-        Assert.Equal(Entries(state.Scene)[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
+        Assert.False(state.Board!.IsFinished);
+        Assert.Equal(EntryId(state, 0), Playing(state));
+        Assert.Equal(1.0, state.Board.Head, 4);
     }
 
     [Fact]
@@ -298,33 +176,37 @@ public class SessionPlaylistTests
         state.SetPlaylistLoops(true);
         GoLive(state);
 
-        state.Director.Tick(3f);
-        Assert.Equal(Entries(state.Scene)[2].Id, state.PlayingEntry!.Id);
+        state.LiveFrame(3f);
+        Assert.Equal(EntryId(state, 2), Playing(state));
 
-        state.Director.Tick(10f);
+        // 13 s round the 12 s playlist is 1 s into Track 2's entry, the first that plays.
+        state.LiveFrame(10f);
 
-        Assert.False(state.Director.IsFinished);
-        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
+        Assert.False(state.Board!.IsFinished);
+        Assert.Equal(EntryId(state, 1), Playing(state));
+        Assert.Equal(1.0, state.Board.Head, 4);
     }
 
     [Fact]
-    public void LivePlaysTheSelectedPlaylistWithItsOwnLoop()
+    public void APlaylistSlotPlaysItsOwnPlaylistWithItsLoopWhicheverIsSelected()
     {
-        // The first playlist holds Track 2 and doesn't loop; the second, selected, holds Track 1 (a 10 s shot) and loops.
+        // The selected playlist holds Track 2 and doesn't loop; the slot's, "Main", holds Track 1 (a 10 s shot) and loops.
         var state = Editing();
         var intro = new Playlist(Guid.NewGuid(), "Intro", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 1))]);
         var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 0))], true);
-        state.LoadScene(state.Scene with { Playlists = [intro, main], SelectedPlaylistId = main.Id });
+        state.LoadScene(state.Scene with { Playlists = [intro, main], SelectedPlaylistId = intro.Id });
 
-        Assert.Equal([main.Entries[0].Id], state.PlaylistItems().Select(i => i.EntryId));
-        GoLive(state);
+        Assert.Equal([main.Entries[0].Id], state.PlaylistItems(main).Select(i => i.EntryId));
+        state.Cue();
+        state.AssignSlot(0, main.Id);
+        state.Board!.Click(0);
+        state.Board.Cut();
         // 11 s into a looping 10 s playlist is 1 s into its second time round.
-        state.Director.Tick(11f);
+        state.LiveFrame(11f);
 
-        Assert.False(state.Director.IsFinished);
-        Assert.Equal(main.Entries[0].Id, state.PlayingEntry!.Id);
-        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
+        Assert.False(state.Board.IsFinished);
+        Assert.Equal(main.Entries[0].Id, Playing(state));
+        Assert.Equal(1.0, state.Board.Head, 4);
     }
 
     [Fact]

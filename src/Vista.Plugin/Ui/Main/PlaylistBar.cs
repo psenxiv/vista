@@ -1,29 +1,29 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Vista.Core.Display;
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
-using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>Live's scrub bar over the whole playlist, drawn like a slider: a segment per entry, pass ticks, the playing entry lit, and each entry's name above it on hover.</summary>
+/// <summary>The scrub bar over the whole Program shot, drawn like a slider: a segment per entry, pass ticks, the playing entry lit, and each entry's name above it on hover.</summary>
 internal static class PlaylistBar
 {
     // ImGui's inset of a slider's grab from its frame.
     private const float GrabPadding = 2f;
 
-    /// <summary>Draws the bar <paramref name="width"/> wide over <paramref name="view"/> and seeks while it's held, calling <paramref name="activated"/> as a drag starts; false, drawing nothing, when Live has no playlist.</summary>
-    public static bool Draw(SessionState session, Scrubber scrub, Action activated, float width, TimingView view)
+    /// <summary>Draws <paramref name="board"/>'s bar <paramref name="width"/> wide over <paramref name="view"/> and seeks while it's held, calling <paramref name="activated"/> as a drag starts; false, drawing nothing, with nothing on Program.</summary>
+    public static bool Draw(SwitchboardPlayer board, Scene scene, Action activated, float width, TimingView view)
     {
-        if (session.Transport.Timeline is not { } timeline || session.Director.Playlist is not { } playlist)
+        if (board.Timeline is not { } timeline || board.ProgramSlot is not { } program)
             return false;
 
-        var bar = new PlaylistScrub(timeline, session.Scene, view);
+        var bar = new PlaylistScrub(timeline, scene, program, view);
         var style = ImGui.GetStyle();
-        ImGui.BeginDisabled(session.Released || timeline.Total <= 0.0);
+        ImGui.BeginDisabled(timeline.Total <= 0.0);
 
         var min = ImGui.GetCursorScreenPos();
         var size = new Vector2(MathF.Max(width, 1f), ImGui.GetFrameHeight());
@@ -38,13 +38,13 @@ internal static class PlaylistBar
         if (activating)
         {
             activated();
-            scrub.Begin();
+            board.BeginScrub();
         }
         if (activating || (ImGui.IsItemActive() && ImGui.GetIO().MouseDelta.X != 0f))
-            session.Transport.ScrubPlaylistTo(bar.TimeAt(mouse));
+            board.ScrubTo(bar.TimeAt(mouse));
         // A window that stops drawing mid-drag never reports the bar deactivating, so any idle frame ends the scrub too.
         if (ImGui.IsItemDeactivated() || !ImGui.IsItemActive())
-            scrub.End();
+            board.EndScrub();
 
         var active = ImGui.IsItemActive();
         var hovered = !active && ImGui.IsItemHovered() ? bar.SegmentAt(mouse) : null;
@@ -56,9 +56,19 @@ internal static class PlaylistBar
             style.FrameRounding
         );
         foreach (var segment in timeline.Segments)
-            DrawSegment(list, bar, segment, segment == hovered, segment.Index == playlist.Index, min, max, left, right);
+            DrawSegment(
+                list,
+                bar,
+                segment,
+                segment == hovered,
+                segment.Index == board.EntryIndex,
+                min,
+                max,
+                left,
+                right
+            );
 
-        var head = session.Transport.PlaylistHead;
+        var head = board.Head;
         if (bar.Shows(head))
         {
             var at = float.Lerp(left, right, bar.FractionOf(head));

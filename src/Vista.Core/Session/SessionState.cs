@@ -9,21 +9,29 @@ using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Session;
 
-/// <summary>The mode, the Director, the scene and the edited track: the rules for moving between modes, and every edit as one undo step.</summary>
+/// <summary>The mode, Live's switchboard player, the scene and the edited track: the rules for moving between modes, and every edit as one undo step.</summary>
 public sealed class SessionState
 {
     private readonly EditHistory history = new();
     private readonly Func<Vector3, float?> groundBelow;
     private readonly NearbyCharacters? aimTargets;
     private readonly EvaluatorCache liveStartEvaluator = new();
+    private readonly SwitchboardPlayer live;
     private EditSnapshot? liveEditStart;
+    private CameraState? heldFrame;
 
     /// <summary>A session; <paramref name="groundBelow"/> finds the ground's height under a world point, or null when it can't, and <paramref name="aimTargets"/> finds watched or followed characters.</summary>
     public SessionState(Func<Vector3, float?>? groundBelow = null, NearbyCharacters? aimTargets = null)
     {
         this.groundBelow = groundBelow ?? (_ => null);
         this.aimTargets = aimTargets;
-        Director = new Director(aimTargets);
+        live = new SwitchboardPlayer(
+            this,
+            new Director(aimTargets),
+            remembers: true,
+            () => Scene.Switchboard.Live,
+            air => Scene = Scene with { Switchboard = Scene.Switchboard with { Live = air } }
+        );
         Selection = new SelectionState(this);
         World = new WorldView(this, aimTargets);
         Transport = new Transport(this);
@@ -32,7 +40,8 @@ public sealed class SessionState
 
     public CameraMode Mode { get; private set; }
 
-    public Director Director { get; }
+    /// <summary>The switchboard player for the mode: Live's in Live, otherwise null.</summary>
+    public SwitchboardPlayer? Board => Mode == CameraMode.Live ? live : null;
 
     /// <summary>What's selected while editing.</summary>
     public SelectionState Selection { get; }
@@ -71,9 +80,8 @@ public sealed class SessionState
     /// <summary>True in Off and View, where the game has its camera.</summary>
     public bool Released => Mode is CameraMode.Off or CameraMode.View;
 
-    /// <summary>True while a preview is running in Edit, or a live shot is running and neither paused nor finished.</summary>
-    public bool IsPlaying =>
-        Transport.Previewing || (Mode == CameraMode.Live && !Director.IsPaused && !Director.IsFinished);
+    /// <summary>True while a preview is running in Edit, or Live's Program shot is running and neither paused nor finished.</summary>
+    public bool IsPlaying => Transport.Previewing || (Mode == CameraMode.Live && live.IsPlaying);
 
     /// <summary>True while editing with a step to undo.</summary>
     public bool CanUndo => Mode == CameraMode.Editing && history.CanUndo;
@@ -84,8 +92,8 @@ public sealed class SessionState
     /// <summary>True in Edit with the scene or a track anchor selected: whether <see cref="MoveAnchorTo"/> can run.</summary>
     public bool CanMoveAnchor => Mode == CameraMode.Editing && Selection.Anchor is AnchorKind.Scene or AnchorKind.Track;
 
-    /// <summary>True when Vista hasn't stopped and the playlist has an entry whose track has points.</summary>
-    public bool CanGoLive => !Stopped && PlaylistEditing.CanPlay(Scene);
+    /// <summary>True until Vista has stopped.</summary>
+    public bool CanGoLive => !Stopped;
 
     /// <summary>Why a preview is refused outside a live edit.</summary>
     private const string NoLiveEdit = "No live edit is in progress.";
@@ -128,8 +136,14 @@ public sealed class SessionState
         return true;
     }
 
-    /// <summary>True when Play has something to play: the edited track's points in Edit, otherwise a playlist that can go live.</summary>
-    public bool CanStart => Mode == CameraMode.Editing ? Local.Points.Count > 0 : CanGoLive;
+    /// <summary>True when Play has something to do: the edited track's points in Edit, a shot on Program in Live, otherwise going Live.</summary>
+    public bool CanStart =>
+        Mode switch
+        {
+            CameraMode.Editing => Local.Points.Count > 0,
+            CameraMode.Live => live.HasProgram,
+            _ => CanGoLive,
+        };
 
     /// <summary>True when Restart has something to play, which Off and View never do.</summary>
     public bool CanRestart => !Released && CanStart;
@@ -146,19 +160,13 @@ public sealed class SessionState
         : Transport.Scrubbing ? "Points cannot be added while scrubbing."
         : null;
 
-    /// <summary>The entry playing while live, or null.</summary>
-    public PlaylistEntry? PlayingEntry =>
-        Mode == CameraMode.Live && Director.Playlist is { } playing
-            ? PlaylistEditing.Selected(Scene).Entries.FirstOrDefault(e => e.Id == playing.EntryId)
-            : null;
-
     /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
     public Orbit? FollowOrbit =>
         Local is { Aim: AimMode.FollowTarget, Points.Count: 1 } local
             ? Tracks.Aiming.FollowOrbit.Of(local.Points[0])
             : null;
 
-    /// <summary>Enters editing; from live, takes the Director offline. Refused once Vista has stopped.</summary>
+    /// <summary>Enters editing; from Live, stores where the Program shot had got to and stops it. Refused once Vista has stopped.</summary>
     public EditOutcome Edit()
     {
         if (Stopped)
@@ -171,10 +179,7 @@ public sealed class SessionState
             case CameraMode.Live:
                 Transport.DropScrub();
                 Transport.DropHandOff();
-                Transport.Park(
-                    PlayingEntry?.TrackId == EditedTrackId ? Math.Clamp(Director.ShotTime, 0.0, Duration) : 0.0
-                );
-                Director.GoOffline();
+                live.Store();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
             default:
@@ -185,47 +190,69 @@ public sealed class SessionState
         }
     }
 
-    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live with the playlist.</summary>
-    public PlayOutcome Play()
+    /// <summary>In Edit, previews from the scrub head; in Live, plays the Program shot, from its start once finished; otherwise enters Live at <paramref name="start"/> and plays. Refused when nothing can play or Vista has stopped.</summary>
+    public PlayOutcome Play(CameraState? start = null)
     {
         if (Mode == CameraMode.Editing)
             return Transport.Previewing ? PlayOutcome.Previewed : StartPreview(fromStart: false);
-        if (Mode == CameraMode.Live && !Director.IsFinished)
+        if (Mode == CameraMode.Live)
         {
-            if (!Director.IsPaused)
+            if (!live.HasProgram)
+                return PlayOutcome.Refused;
+            if (live.IsFinished)
+            {
+                live.Restart();
+                return PlayOutcome.Started;
+            }
+
+            if (!live.IsPaused)
                 return PlayOutcome.ReHid;
-            Director.Resume();
+            live.Resume();
             return PlayOutcome.Resumed;
         }
 
-        return GoLive();
+        if (Stopped)
+            return PlayOutcome.Refused;
+        EnterLive(start);
+        if (!live.HasProgram)
+            return PlayOutcome.CuedFromGame;
+        live.Resume();
+        return PlayOutcome.StartedFromGame;
     }
 
-    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start. Refused when nothing can play or Vista has stopped.</summary>
-    public PlayOutcome Restart() => Mode == CameraMode.Editing ? StartPreview(fromStart: true) : GoLive();
-
-    /// <summary>Goes live with the playlist paused at its start. Refused when nothing can play or Vista has stopped.</summary>
-    public PlayOutcome Cue()
+    /// <summary>In Edit, previews from the beginning; in Live, plays the Program shot from its start. Refused otherwise, with nothing on Program, or once Vista has stopped.</summary>
+    public PlayOutcome Restart()
     {
-        var outcome = GoLive();
-        if (outcome == PlayOutcome.Refused)
-            return outcome;
-        Director.Pause();
-        return outcome == PlayOutcome.StartedFromGame ? PlayOutcome.CuedFromGame : PlayOutcome.Cued;
+        if (Mode == CameraMode.Editing)
+            return StartPreview(fromStart: true);
+        if (Mode != CameraMode.Live || !live.HasProgram)
+            return PlayOutcome.Refused;
+        live.Restart();
+        return PlayOutcome.Started;
     }
 
-    /// <summary>Live, holds the current frame; in Edit, stops a preview. Returns false when there was nothing to stop.</summary>
+    /// <summary>Enters Live at <paramref name="start"/> with the Program shot where it had got to, paused. Refused in Live or once Vista has stopped.</summary>
+    public PlayOutcome Cue(CameraState? start = null)
+    {
+        if (Stopped || Mode == CameraMode.Live)
+            return PlayOutcome.Refused;
+        var fromGame = Released;
+        EnterLive(start);
+        return fromGame ? PlayOutcome.CuedFromGame : PlayOutcome.Cued;
+    }
+
+    /// <summary>In Live, pauses the Program shot; in Edit, stops a preview. Returns false when there was nothing to stop.</summary>
     public bool Stop()
     {
         if (Mode == CameraMode.Editing)
             return Transport.StopPreview();
-        if (Mode != CameraMode.Live)
+        if (Mode != CameraMode.Live || !live.HasProgram)
             return false;
-        Director.Pause();
+        live.Pause();
         return true;
     }
 
-    /// <summary>Hands the camera to the game in <paramref name="to"/>, Off or View, taking the Director offline. Returns false if the game already had it.</summary>
+    /// <summary>Hands the camera to the game in <paramref name="to"/>, Off or View; from Live, stores where the Program shot had got to and stops it. Returns false if the game already had it.</summary>
     public bool Release(CameraMode to = CameraMode.Off)
     {
         if (to is not (CameraMode.Off or CameraMode.View))
@@ -236,7 +263,8 @@ public sealed class SessionState
         {
             Transport.DropScrub();
             EndLiveEdit();
-            Director.GoOffline();
+            if (Mode == CameraMode.Live)
+                live.Store();
         }
 
         Selection.DropGroup();
@@ -244,29 +272,31 @@ public sealed class SessionState
         return owned;
     }
 
-    /// <summary>Goes live with the playlist from its start. Refused when nothing can play or Vista has stopped.</summary>
-    private PlayOutcome GoLive()
+    /// <summary>Live's camera this frame, <paramref name="dt"/> seconds on: the Program shot's frame, or with nothing playing the last frame shown, first the frame Live began at. Null outside Live.</summary>
+    public CameraState? LiveFrame(float dt)
     {
-        if (Stopped)
-            return PlayOutcome.Refused;
-        var items = PlaylistItems();
-        if (items.Count == 0)
-            return PlayOutcome.Refused;
+        if (Mode != CameraMode.Live)
+            return null;
+        if (live.Tick(dt) is { } frame)
+            heldFrame = frame;
+        return heldFrame;
+    }
+
+    /// <summary>Enters Live holding <paramref name="start"/>, with the Program shot restored paused.</summary>
+    private void EnterLive(CameraState? start)
+    {
         Transport.StopPreview();
         Transport.DropScrub();
         EndLiveEdit();
-
         Selection.DropGroup();
-        Director.GoLive(new PlaylistShot(items, PlaylistEditing.Selected(Scene).Loops));
-        var fromGame = Released;
+        heldFrame = start;
         Mode = CameraMode.Live;
-        return fromGame ? PlayOutcome.StartedFromGame : PlayOutcome.Started;
+        live.Restore();
     }
 
-    /// <summary>The selected playlist's entries whose tracks have points, in order and in the world, as Live plays them.</summary>
-    public IReadOnlyList<PlaylistItem> PlaylistItems() =>
-        PlaylistEditing
-            .Selected(Scene)
+    /// <summary><paramref name="playlist"/>'s entries whose tracks have points, in order and in the world, as Live plays them.</summary>
+    public IReadOnlyList<PlaylistItem> PlaylistItems(Playlist playlist) =>
+        playlist
             .Entries.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
             .Where(x => x.Track.Points.Count > 0)
             .Select(x => new PlaylistItem(x.Entry.Id, World.WorldOf(x.Track), x.Entry.Loops))
@@ -436,7 +466,7 @@ public sealed class SessionState
     public string? SetEntryLoops(Guid entryId, int? loops) =>
         CommitScene(scene => (PlaylistEditing.SetLoops(scene, entryId, loops), EditedTrackId));
 
-    /// <summary>Sets whether Live loops the playlist, as one undo step. Returns why it was refused, or null.</summary>
+    /// <summary>Sets whether the selected playlist loops, as one undo step. Returns why it was refused, or null.</summary>
     public string? SetPlaylistLoops(bool loops) =>
         CommitScene(scene => (PlaylistEditing.SetPlaylistLoops(scene, loops), EditedTrackId));
 
@@ -1012,8 +1042,8 @@ public sealed class SessionState
         if (s.Edited != EditedTrackId)
             ClearForSwitch();
         var board = s.Scene.Switchboard;
-        var live = SwitchboardEditing.Follow(Scene.Switchboard.Live, Scene.Switchboard.Slots, board.Slots);
-        Scene = s.Scene with { Switchboard = board with { Live = live } };
+        var air = SwitchboardEditing.Follow(Scene.Switchboard.Live, Scene.Switchboard.Slots, board.Slots);
+        Scene = s.Scene with { Switchboard = board with { Live = air } };
         EditedTrackId = s.Edited;
         Selection.Restore(s.Selection, pointsBefore);
         return true;

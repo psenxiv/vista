@@ -132,7 +132,10 @@ public class PlaylistTimelineTests
     {
         var state = new SessionState();
         state.LoadScene(scene);
-        return new PlaylistPlayback(state.PlaylistItems(), PlaylistEditing.Selected(scene).Loops).Timeline;
+        return new PlaylistPlayback(
+            state.PlaylistItems(PlaylistEditing.Selected(scene)),
+            PlaylistEditing.Selected(scene).Loops
+        ).Timeline;
     }
 
     [Fact]

@@ -119,18 +119,6 @@ public sealed class PlaylistPlayback
     private CameraState? Frame(float dt) =>
         aim.Frame(evaluators[Index], items[Index].Track, ShotTime, Math.Max(dt, 0f));
 
-    /// <summary>Jumps to <paramref name="time"/> in the playing entry, staying in the loop pass it is on; a seek to a pass's end stays there until the clock moves on. The smoothing starts afresh.</summary>
-    public void Seek(double time)
-    {
-        var pass = PassClock;
-        var onReturn = PlaybackClock.OnReturnPass(Direction, ShotLength, pass);
-        var passClock = PlaybackClock.ClockFor(Direction, ShotLength, time, onReturn);
-        clock = clock - pass + passClock;
-        atPassEnd = passClock >= Cycle;
-        IsFinished = !loops && Index == items.Count - 1 && clock >= Total;
-        aim.Reset();
-    }
-
     /// <summary>Cuts to the entry and time at <paramref name="time"/> through the playlist; the very end holds the last frame until the clock moves on. The smoothing starts afresh.</summary>
     public void SeekPlaylist(double time)
     {

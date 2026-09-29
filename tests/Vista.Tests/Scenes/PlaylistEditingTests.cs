@@ -37,11 +37,9 @@ public class PlaylistEditingTests
         var (scene, first) = SecondSelected();
         var tracks = scene.Tracks.Select(t => t.Id).ToArray();
 
-        // The first playlist could play Track 1's points, but the selected one is empty.
-        Assert.False(PlaylistEditing.CanPlay(scene));
+        // The first playlist has an entry, but the selected one is empty.
         Assert.Equal(-1, PlaylistEditing.IndexOf(scene, first.Entries[0].Id));
         scene = PlaylistEditing.Add(scene, [tracks[0], tracks[1]]);
-        Assert.True(PlaylistEditing.CanPlay(scene));
         scene = PlaylistEditing.Reorder(scene, [1, 0]);
         scene = PlaylistEditing.SetPlaylistLoops(scene, true);
 
@@ -155,15 +153,6 @@ public class PlaylistEditingTests
         var (a, _) = AddOne(scene, scene.Tracks[1].Id);
 
         Assert.False(PlaylistEditing.HoldsPlaylist(a, Entries(a)[0]));
-    }
-
-    [Fact]
-    public void ThePlaylistCanPlayOnlyWithAnEntryWhoseTrackHasPoints()
-    {
-        var scene = TwoTracks();
-        Assert.False(PlaylistEditing.CanPlay(scene));
-        Assert.False(PlaylistEditing.CanPlay(PlaylistEditing.Add(scene, [scene.Tracks[1].Id])));
-        Assert.True(PlaylistEditing.CanPlay(PlaylistEditing.Add(scene, [scene.Tracks[0].Id])));
     }
 
     [Fact]

@@ -45,7 +45,7 @@ internal sealed class GameSession
             config.Save();
             if (state.Mode != CameraMode.Live)
                 return;
-            if (value && !state.Director.IsPaused && !state.Director.IsFinished)
+            if (value && state.IsPlaying)
                 GameUi.Hide();
             else if (!value)
                 GameUi.Restore();
@@ -175,22 +175,22 @@ internal sealed class GameSession
         Plugin.Log.Information("mode: editing");
     }
 
-    /// <summary>In Edit, previews from the scrub head; live, resumes a paused shot or leaves a playing one alone; otherwise goes live with the playlist. Refused when nothing can play.</summary>
+    /// <summary>In Edit, previews from the scrub head; in Live, plays the Program shot; otherwise enters Live and plays, taking the camera. Refused when nothing can play.</summary>
     public void StartPlay()
     {
         var previewing = state.Mode == CameraMode.Editing;
-        Apply(state.Play(), previewing);
+        Apply(state.Play(LiveStart()), previewing);
     }
 
-    /// <summary>In Edit, previews from the beginning; otherwise goes live with the playlist from the start, taking the camera if in Off or View. Refused when nothing can play.</summary>
+    /// <summary>In Edit, previews from the beginning; in Live, plays the Program shot from its start. Refused when nothing can play.</summary>
     public void RestartPlay()
     {
         var previewing = state.Mode == CameraMode.Editing;
         Apply(state.Restart(), previewing);
     }
 
-    /// <summary>Goes live with the playlist paused at its start, leaving the UI shown. Refused when nothing can play.</summary>
-    public void CueLive() => Apply(state.Cue());
+    /// <summary>Enters Live with the Program shot paused where it had got to, leaving the UI shown.</summary>
+    public void CueLive() => Apply(state.Cue(LiveStart()));
 
     /// <summary>Live, holds the current frame; in Edit, stops a preview.</summary>
     public void StopPlay()
@@ -296,7 +296,7 @@ internal sealed class GameSession
         var frame = state.Mode switch
         {
             CameraMode.Editing => EditingFrame(dt),
-            CameraMode.Live => state.Director.Tick(dt),
+            CameraMode.Live => state.LiveFrame(dt),
             _ => null,
         };
 
@@ -338,7 +338,11 @@ internal sealed class GameSession
         return step.Shown ?? freeCam.Tick(dt);
     }
 
-    /// <summary>Carries out a play or restart outcome in game. <paramref name="previewRefusal"/> says a refusal is the edited track's, not the playlist's.</summary>
+    /// <summary>Where Live begins, holding until something plays: the Edit camera's last frame, otherwise the game camera's; null when it can't be read.</summary>
+    private CameraState? LiveStart() =>
+        state.Mode == CameraMode.Editing ? lastFrame ?? CameraAccess.ReadState() : CameraAccess.ReadState();
+
+    /// <summary>Carries out a play or restart outcome in game. <paramref name="previewRefusal"/> says a refusal is the edited track's, not Live's.</summary>
     private void Apply(PlayOutcome outcome, bool previewRefusal = false)
     {
         switch (outcome)
@@ -348,9 +352,7 @@ internal sealed class GameSession
                 return;
             case PlayOutcome.Refused:
                 Plugin.Log.Debug(
-                    previewRefusal
-                        ? "cannot preview a track with no points."
-                        : "nothing to play: add a track with points to the playlist."
+                    previewRefusal ? "cannot preview a track with no points." : "nothing to play: Program is empty."
                 );
                 return;
             case PlayOutcome.ReHid:
@@ -371,18 +373,14 @@ internal sealed class GameSession
         freeCam.Disable();
         if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromGame)
         {
-            Plugin.Log.Information(
-                "mode: live, cued, {Count} playlist entries",
-                PlaylistEditing.Selected(state.Scene).Entries.Count
-            );
+            Plugin.Log.Information("mode: live, cued");
             return;
         }
 
         if (HideUiInLive)
             GameUi.Hide();
         Plugin.Log.Information(
-            "mode: live, {Count} playlist entries",
-            PlaylistEditing.Selected(state.Scene).Entries.Count
+            outcome == PlayOutcome.StartedFromGame ? "mode: live, playing" : "playing from the start"
         );
     }
 

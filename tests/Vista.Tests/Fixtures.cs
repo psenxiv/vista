@@ -260,11 +260,13 @@ internal static class Fixtures
     internal static Track WithTwoPoints(Track track) =>
         TrackEditing.Append(TrackEditing.Append(track, Point(0f)), Point(10f));
 
-    /// <summary>Goes live with the playlist and plays it from the start: Cue, then Play.</summary>
+    /// <summary>Goes Live and plays the selected playlist from its start: Cue, put the playlist on slot 0, click it and Cut.</summary>
     internal static void GoLive(SessionState state)
     {
         state.Cue();
-        state.Play();
+        state.AssignSlot(0, state.Scene.SelectedPlaylistId);
+        state.Board!.Click(0);
+        state.Board.Cut();
     }
 
     /// <summary>Editing a new session whose track has points at x = 0 and 10: one 2 s leg at the default speed.</summary>

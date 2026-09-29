@@ -13,13 +13,13 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 ### Core
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
-- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and Live's scrub bar over the playlist.
+- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and the scrub bar over the switchboard's Program shot.
 - `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Input`: the key, modifier and hotkey types, the table naming every hotkey Vista binds, and which hotkey a press or held keys resolve to.
 - `Scenes`: scenes, playlists, switchboards and presets as data, their edits and names, their place in the world, and their files.
 - `SelfTest`: the rules that decide whether each `/vista selftest` check passed, and its report lines.
-- `Session`: the mode, selection, undo history, Edit preview and scrub head, and the scene's tracks in the world.
+- `Session`: the mode, selection, undo history, Edit preview and scrub head, the switchboard player that cuts Live between slots, and the scene's tracks in the world.
 - `Tracks`: the track and its control points and anchor, editing its points and timing, and evaluating it at a moment.
 - `Tracks/Aiming`: where the camera looks and which way is up: recorded aim (with roll and field of view, blended by distance along the path), direction of travel, Look At, watched and followed characters, and smoothing.
 - `Tracks/Playback`: the Director, playing a track or a playlist frame by frame, and the playlist laid end to end as Live's timeline.
@@ -32,7 +32,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Game`: reading and writing the game: the camera and its hook, the free-cam, input blocking, movement lock, the UI toggle, ground and nearby characters, and faults.
 - `SelfTest`: running `/vista selftest` in the game.
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
-- `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, its point list, and Live's playlist scrub bar.
+- `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, its point list, and the scrub bar over the switchboard's Program shot.
 - `Ui/Widgets`: the ImGui pieces the windows share.
 - `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, User Guide, Setup, Welcome and the scene, preset and playlist picker, with one source per kind it lists.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.
@@ -78,7 +78,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Editing/RowPicking`: a click on a list row, with Ctrl and Shift, and what a drag carries.
 - `Editing/BlockMove`: the new order when rows are dragged as a block, and applying an order to a list.
 - `Scenes/SceneEditing` and `PlaylistEditing`: finding a track, playlist or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist; playlist names and the create, rename, duplicate, delete and select rules.
-- `Scenes/SwitchboardEditing`: the slot count, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
+- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
 
 ### Formatting
 

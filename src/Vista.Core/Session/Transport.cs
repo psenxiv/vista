@@ -5,7 +5,7 @@ using Vista.Core.Tracks.Playback;
 
 namespace Vista.Core.Session;
 
-/// <summary>The Edit preview, its tools and the scrub head: what plays while editing, and where the scrub bar stands in any mode.</summary>
+/// <summary>The Edit preview, its tools and the edited track's scrub head: what plays while editing, and where the scrub bar stands in any mode.</summary>
 public sealed class Transport
 {
     /// <summary>The slowest playback rate, as a multiple of normal speed.</summary>
@@ -22,7 +22,6 @@ public sealed class Transport
     private CameraState? previewFrame;
     private bool previewShown;
     private double scrubTime;
-    private bool resumeAfterScrub;
 
     internal Transport(SessionState session) => this.session = session;
 
@@ -38,25 +37,8 @@ public sealed class Transport
     /// <summary>How fast Edit previews play, as a multiple of normal speed, from <see cref="MinPlaybackRate"/> to <see cref="MaxPlaybackRate"/>. Never saved.</summary>
     public float PlaybackRate { get; private set; } = 1f;
 
-    /// <summary>Seconds under the scrub head: shot time while live or previewing, otherwise the last scrubbed or jumped-to time.</summary>
-    public double ScrubHead =>
-        session.Mode == CameraMode.Live
-            ? session.Director.ShotTime
-            : preview?.ShotTime ?? Math.Min(scrubTime, session.Duration);
-
-    /// <summary>True unless Live is playing a track other than the edited one, so the scrub head's time is the edited track's.</summary>
-    public bool HeadOnEditedTrack =>
-        session.Mode != CameraMode.Live || session.PlayingEntry?.TrackId == session.EditedTrackId;
-
-    /// <summary>The scrub bar's length: the playing entry's while live, otherwise the edited track's.</summary>
-    public double ScrubLength => session.Mode == CameraMode.Live ? session.Director.ShotLength : session.Duration;
-
-    /// <summary>Live's playlist laid end to end, or null outside Live.</summary>
-    public PlaylistTimeline? Timeline => session.Mode == CameraMode.Live ? session.Director.Playlist?.Timeline : null;
-
-    /// <summary>Seconds through Live's playlist under the head; 0 outside Live.</summary>
-    public double PlaylistHead =>
-        session.Mode == CameraMode.Live ? session.Director.Playlist?.PlaylistTime ?? 0.0 : 0.0;
+    /// <summary>Seconds into the edited track under the scrub head: the preview's shot time while one plays, otherwise the last scrubbed or jumped-to time.</summary>
+    public double ScrubHead => preview?.ShotTime ?? Math.Min(scrubTime, session.Duration);
 
     /// <summary>Where the ghost camera is: the preview's frame while one plays, otherwise the scrub head's; null unless the ghost is on in Edit.</summary>
     public CameraState? GhostFrame =>
@@ -140,45 +122,29 @@ public sealed class Transport
         return true;
     }
 
-    /// <summary>Starts dragging the scrub head; live, playback holds until <see cref="EndScrub"/>. No effect in Off or View.</summary>
+    /// <summary>Starts dragging the scrub head, stopping any preview. Edit only.</summary>
     public void BeginScrub()
     {
         StopPreview();
-        if (session.Released || Scrubbing)
-            return;
-        Scrubbing = true;
-        resumeAfterScrub = session.Mode == CameraMode.Live && !session.Director.IsPaused;
-        if (session.Mode == CameraMode.Live)
-            session.Director.Pause();
+        if (session.Mode == CameraMode.Editing)
+            Scrubbing = true;
     }
 
-    /// <summary>Moves the scrub head to <paramref name="time"/> within the track; live, playback seeks there. No effect in Off or View.</summary>
+    /// <summary>Moves the scrub head to <paramref name="time"/> within the edited track, stopping any preview. Edit only.</summary>
     public void ScrubTo(double time)
     {
-        if (session.Mode == CameraMode.Editing)
-            StopPreview();
-        if (session.Released)
+        if (session.Mode != CameraMode.Editing)
             return;
-        scrubTime = Math.Clamp(time, 0.0, ScrubLength);
-        if (session.Mode == CameraMode.Live)
-            session.Director.Seek(scrubTime);
+        StopPreview();
+        scrubTime = Math.Clamp(time, 0.0, session.Duration);
     }
 
-    /// <summary>Live, moves the head to <paramref name="time"/> through the playlist, clamped to it, cutting to the entry there. No effect outside Live.</summary>
-    public void ScrubPlaylistTo(double time)
-    {
-        if (session.Mode == CameraMode.Live && session.Director.Playlist is { } playlist)
-            playlist.SeekPlaylist(time);
-    }
-
-    /// <summary>Stops dragging the scrub head; live, playback carries on as it was. Returns the scrub head's frame for the free-cam in Edit without the ghost, otherwise null.</summary>
+    /// <summary>Stops dragging the scrub head. Returns the scrub head's frame for the free-cam without the ghost, otherwise null.</summary>
     public CameraState? EndScrub()
     {
         if (!Scrubbing)
             return null;
         Scrubbing = false;
-        if (session.Mode == CameraMode.Live && resumeAfterScrub)
-            session.Director.Resume();
         if (session.Mode != CameraMode.Editing || Ghost)
             return null;
         previewShown = false;

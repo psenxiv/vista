@@ -17,7 +17,7 @@ public class SessionStopTests
         Assert.True(state.Stopped);
         Assert.Equal("fault in camera update hook", state.StopReason);
         Assert.Equal(CameraMode.Off, state.Mode);
-        Assert.False(state.Director.IsLive);
+        Assert.Null(state.Board);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class SessionStopTests
         Assert.Equal(PlayOutcome.Refused, state.Restart());
         Assert.Equal(PlayOutcome.Refused, state.Cue());
         Assert.Equal(CameraMode.Off, state.Mode);
-        Assert.False(state.Director.IsLive);
+        Assert.Null(state.Board);
     }
 
     [Fact]

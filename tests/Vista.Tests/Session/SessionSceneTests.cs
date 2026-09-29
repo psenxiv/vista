@@ -275,7 +275,7 @@ public class SessionSceneTests
         Assert.Equal(2, state.Scene.Tracks.Count);
 
         state.Stop();
-        Assert.True(state.Director.IsPaused);
+        Assert.True(state.Board!.IsPaused);
 
         Assert.Equal(refused, state.AddTrack());
         Assert.Equal(noSwitch, state.SwitchTrack(first));
@@ -290,23 +290,23 @@ public class SessionSceneTests
     }
 
     [Fact]
-    public void LiveCuesAndPlaysThePlaylistEntryNotTheEditedTrack()
+    public void LivePlaysTheProgramShotNotTheEditedTrack()
     {
+        // Track 2 (a 2 s shot) is edited; slot 0 holds Track 1 (10 s), which goes on Program.
         var state = EditingThreePoints();
         state.AddTrack();
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
         var first = TrackId(state, 0);
-        state.AddToPlaylist([first]);
+        state.AssignSlot(0, first);
         Assert.NotEqual(first, state.EditedTrackId);
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
-        Assert.Equal(first, state.PlayingEntry!.TrackId);
-        Assert.Equal(10.0, state.Transport.ScrubLength, 3);
+        state.Board!.Click(0);
+        state.Board.Cut();
 
-        state.Release();
-        Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
-        Assert.Equal(first, state.PlayingEntry!.TrackId);
+        Assert.Equal(first, state.Board.ProgramSlot!.TrackId);
+        Assert.Equal(10.0, state.Board.Timeline!.Total, 3);
     }
 
     // "Crane": one point at local (2, 0, 0), its anchor facing yaw π/2.

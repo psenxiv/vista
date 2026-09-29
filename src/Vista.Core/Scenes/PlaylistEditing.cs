@@ -3,7 +3,7 @@ using Vista.Core.Editing;
 
 namespace Vista.Core.Scenes;
 
-/// <summary>Edits a scene's playlists and their entries: create, rename, duplicate, delete and select a playlist; add, remove, reorder and loop counts; and what Live can play.</summary>
+/// <summary>Edits a scene's playlists and their entries: create, rename, duplicate, delete and select a playlist; add, remove, reorder and loop counts.</summary>
 public static class PlaylistEditing
 {
     private const string Stem = "Playlist";
@@ -29,7 +29,7 @@ public static class PlaylistEditing
     /// <summary>An empty playlist named <see cref="FirstName"/>, with a new id.</summary>
     public static Playlist Empty() => new(Guid.NewGuid(), FirstName, []);
 
-    /// <summary>The selected playlist, which Live plays and the Playlist panel shows.</summary>
+    /// <summary>The selected playlist, which the Playlist panel shows and edits.</summary>
     public static Playlist Selected(Scene scene) => scene.Playlists.First(p => p.Id == scene.SelectedPlaylistId);
 
     /// <summary>The playlist <paramref name="id"/>, refusing an unknown one.</summary>
@@ -203,7 +203,7 @@ public static class PlaylistEditing
         : loops is { } n && n > 1 ? n - 1
         : null;
 
-    /// <summary>Sets whether Live wraps from the selected playlist's last entry to its first.</summary>
+    /// <summary>Sets whether the selected playlist wraps from its last entry to its first.</summary>
     public static Scene SetPlaylistLoops(Scene scene, bool loops) =>
         Selected(scene) is var playlist && playlist.Loops == loops
             ? scene
@@ -216,10 +216,6 @@ public static class PlaylistEditing
     /// <summary>True when an entry holds the playlist for good: no loop count and a looping track with points.</summary>
     public static bool HoldsPlaylist(Scene scene, PlaylistEntry entry) =>
         entry.Loops is null && SceneEditing.Get(scene, entry.TrackId) is { Loop: true, Points.Count: > 0 };
-
-    /// <summary>True when an entry in the selected playlist has a track with points, so Live has something to play.</summary>
-    public static bool CanPlay(Scene scene) =>
-        Selected(scene).Entries.Any(e => SceneEditing.Get(scene, e.TrackId).Points.Count > 0);
 
     /// <summary>The index of entry <paramref name="entryId"/> in the selected playlist, refusing an unknown one.</summary>
     public static int Require(Scene scene, Guid entryId) =>

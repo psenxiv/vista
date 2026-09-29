@@ -1,6 +1,7 @@
 #if DEBUG
 using Dalamud.Game.ClientState.Conditions;
 using Vista.Core.Camera;
+using Vista.Core.Scenes;
 using Vista.Core.SelfTest;
 using Vista.Core.Session;
 using Vista.Core.Tracks.Playback;
@@ -187,10 +188,10 @@ internal sealed class SelfTestRunner(GameSession game, Func<IReadOnlyList<(strin
         Report(SelfTestRules.InputHooks(whileHeld, Plugin.Input.SelfTestHookState().Enabled, total));
     }
 
-    /// <summary>Check 6: plays the open scene's playlist once through the Director and the camera hook, checking every frame.</summary>
+    /// <summary>Check 6: plays the open scene's selected playlist once through the Director and the camera hook, checking every frame.</summary>
     private IEnumerable<int> DryRun()
     {
-        if (SelfTestDryRun.Shot(game.State.PlaylistItems()) is not { } shot)
+        if (SelfTestDryRun.Shot(game.State.PlaylistItems(PlaylistEditing.Selected(game.State.Scene))) is not { } shot)
         {
             Report(SelfTestDryRun.Skipped);
             yield break;

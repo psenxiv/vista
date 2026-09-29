@@ -198,7 +198,7 @@ public class DirectorTests
     }
 
     [Fact]
-    public void SeekMovesALiveTrackAndKeepsItsPause()
+    public void SeekMovesALiveShotAndKeepsItsPause()
     {
         var director = new Director();
         director.GoLive(new PlaylistShot([Item(StraightTrack())]));
@@ -232,9 +232,6 @@ public class DirectorTests
 
         Assert.Equal(items[1].EntryId, director.Playlist!.EntryId);
         Assert.Equal(2.0, director.ShotTime, 4);
-        Assert.Equal(10.0, director.ShotLength, 4);
-        director.Seek(5.0);
-        Assert.Equal(5.0, director.ShotTime, 4);
         director.Tick(10f);
         Assert.True(director.IsFinished);
     }
@@ -277,7 +274,6 @@ public class DirectorTests
     {
         var director = new Director();
         director.GoLive(new PlaylistShot([Item(StraightTrack(direction: PlaybackDirection.Reverse))]));
-        Assert.Equal(10.0, director.ShotLength, 5);
 
         // Shot time is length - clock, so clocks 0, 2.5 and 5 give 10, 7.5 and 5.
         Assert.Equal(10f, XAfter(director, 0f), 3);
@@ -319,21 +315,42 @@ public class DirectorTests
     }
 
     [Fact]
-    public void SeekTakesAShotTimeWhicheverWayTheTrackRuns()
+    public void SeekTakesATimeThroughThePlaylist()
     {
-        var forward = new Director();
-        forward.GoLive(new PlaylistShot([Item(StraightTrack())]));
-        forward.Seek(2.5);
+        var items = new[] { Item(StraightTrack()), Item(StraightTrack()) };
+        var director = new Director();
+        director.GoLive(new PlaylistShot(items));
 
-        var reverse = new Director();
-        reverse.GoLive(new PlaylistShot([Item(StraightTrack(direction: PlaybackDirection.Reverse))]));
-        reverse.Seek(2.5);
+        // Two 10 s entries: 13 s through is 3 s into the second.
+        director.Seek(13.0);
 
-        // Both land on shot time 2.5 and so on x = 2.5, though Reverse's clock behind it is 7.5.
-        Assert.Equal(2.5, forward.ShotTime, 5);
-        Assert.Equal(2.5, reverse.ShotTime, 5);
-        Assert.Equal(2.5f, XAfter(forward, 0f), 3);
-        Assert.Equal(2.5f, XAfter(reverse, 0f), 3);
+        Assert.Equal(items[1].EntryId, director.Playlist!.EntryId);
+        Assert.Equal(3.0, director.ShotTime, 5);
+    }
+
+    [Fact]
+    public void RestartPlaysTheShotFromItsStartUnpaused()
+    {
+        var items = new[] { Item(StraightTrack()), Item(StraightTrack()) };
+        var director = new Director();
+        director.GoLive(new PlaylistShot(items));
+        director.Tick(25f);
+        director.Pause();
+
+        director.Restart();
+
+        Assert.Equal(items[0].EntryId, director.Playlist!.EntryId);
+        Assert.Equal(0.0, director.ShotTime);
+        Assert.False(director.IsPaused);
+        Assert.False(director.IsFinished);
+    }
+
+    [Fact]
+    public void RestartDoesNothingOffline()
+    {
+        var director = new Director();
+        director.Restart();
+        Assert.False(director.IsLive);
     }
 
     /// <summary>The most frames a live playlist is ticked for.</summary>
@@ -349,12 +366,12 @@ public class DirectorTests
                 {
                     var state = new SessionState();
                     state.LoadScene(scene);
-                    state.Restart();
-                    var director = state.Director;
+                    GoLive(state);
+                    var board = state.Board!;
                     AssertEveryFrameWellFormed(
                         steps,
                         FrameBudget,
-                        dt => director.IsFinished ? null : new Played(director.Tick(dt), director.ShotTime)
+                        dt => board.IsFinished ? null : new Played(state.LiveFrame(dt), board.Head)
                     );
                 },
                 iter: 500,

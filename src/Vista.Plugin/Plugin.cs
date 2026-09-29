@@ -389,8 +389,8 @@ public sealed class Plugin : IDalamudPlugin
         );
         Faults.Attempt("closing the windows", windows.RemoveAllWindows);
         Faults.Attempt("disposing the User Guide", guideWindow.Dispose);
-        Faults.Attempt("saving", () => sceneFiles?.SaveBeforeUnload());
         Faults.Attempt("releasing", () => game?.Release("plugin unload"));
+        Faults.Attempt("saving", () => sceneFiles?.SaveBeforeUnload());
         Faults.Attempt("disposing the movement lock", () => Movement?.Dispose());
         Faults.Attempt("disposing the input hooks", () => Input?.Dispose());
         Faults.Attempt("disposing the camera hook", () => Camera?.Dispose());

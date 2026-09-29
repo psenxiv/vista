@@ -446,7 +446,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.SameLine();
     }
 
-    /// <summary>View, Edit and Live; View releases the camera and Live cues the playlist paused at its first entry's start.</summary>
+    /// <summary>View, Edit and Live; View releases the camera and Live enters with the Program shot paused where it had got to.</summary>
     private void DrawModeCombo()
     {
         var current = session.Mode switch
@@ -488,8 +488,8 @@ internal sealed class TrackEditorWindow : Window
             fields.Commit();
             game.CueLive();
         }
-        if (!session.CanGoLive)
-            Tooltip.OnHover(session.Stopped ? SessionState.StopMessage : "Add a track with points to the playlist.");
+        if (session.Stopped)
+            Tooltip.OnHover(SessionState.StopMessage);
         ImGui.EndDisabled();
         ImGui.EndCombo();
     }
@@ -722,14 +722,15 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>The scrub bars' grab, as a share of the style's usual slider grab.</summary>
     private const float ScrubGrabScale = 0.5f;
 
-    /// <summary>Play/Pause and Restart, the scrub bar (the whole playlist in Live, otherwise the edited track), then how far through it the head is.</summary>
+    /// <summary>Play/Pause and Restart, the scrub bar (the Program shot in Live, otherwise the edited track), then how far through it the head is.</summary>
     private void DrawScrubRow()
     {
-        var transport = session.Transport;
-        var timeline = transport.Timeline;
-        var (head, total) = timeline is null
-            ? (transport.ScrubHead, transport.ScrubLength)
-            : (transport.PlaylistHead, timeline.Total);
+        var live = session.Mode == CameraMode.Live ? session.Board : null;
+        var timeline = live?.Timeline;
+        var (head, total) =
+            live is not null && timeline is not null
+                ? (live.Head, timeline.Total)
+                : (session.Transport.ScrubHead, session.Duration);
         var view = scrubZoom.View((session.Mode, timeline is null ? session.EditedTrackId : Guid.Empty), (float)total);
 
         DrawTransport();
@@ -739,7 +740,7 @@ internal sealed class TrackEditorWindow : Window
         var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
         using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubGrabScale))
         {
-            if (!PlaylistBar.Draw(session, scrub, fields.Commit, width, view))
+            if (live is null || !PlaylistBar.Draw(live, session.Scene, fields.Commit, width, view))
                 DrawTrackBar(width, view);
         }
         ZoomScrub(view, (float)total);
@@ -755,18 +756,18 @@ internal sealed class TrackEditorWindow : Window
             return;
         ImGuiP.SetItemUsingMouseWheel();
         var wheel = ImGui.GetIO().MouseWheel;
-        if (wheel == 0f || scrub.Active)
+        if (wheel == 0f || scrub.Active || session.Board?.Scrubbing == true)
             return;
         var along = Fraction.Between(ImGui.GetMousePos().X, ImGui.GetItemRectMin().X, ImGui.GetItemRectMax().X, 0.5f);
         scrubZoom.Zoom(view.TimeAt(along), wheel, total);
     }
 
-    /// <summary>The edited track's scrub bar, <paramref name="width"/> wide over <paramref name="view"/>; the grab hides while the head is outside it.</summary>
+    /// <summary>The edited track's scrub bar, <paramref name="width"/> wide over <paramref name="view"/>, disabled outside Edit; the grab hides while the head is outside it.</summary>
     private void DrawTrackBar(float width, TimingView view)
     {
-        var duration = (float)session.Transport.ScrubLength;
+        var duration = (float)session.Duration;
         var head = (float)session.Transport.ScrubHead;
-        ImGui.BeginDisabled(session.Released || duration <= 0f);
+        ImGui.BeginDisabled(session.Mode != CameraMode.Editing || duration <= 0f);
         ImGui.SetNextItemWidth(MathF.Max(width, 1f));
         var outside = head < view.From || head > view.To;
         using var hidden = ImRaii

@@ -315,11 +315,9 @@ internal sealed class TimingWindow : Window
         list.PathStroke(colour, ImDrawFlags.None, CurveThickness);
     }
 
-    /// <summary>A vertical line at the scrub head, across the plot and the strip; none while Live plays another track.</summary>
+    /// <summary>A vertical line at the scrub head, across the plot and the strip.</summary>
     private void DrawPlayhead(ImDrawListPtr list, TimingGraph graph, float stripBottom)
     {
-        if (!session.Transport.HeadOnEditedTrack)
-            return;
         if (!graph.ShowsTime((float)session.Transport.ScrubHead))
             return;
         var x = graph.ToScreen((float)session.Transport.ScrubHead, 0f).X;

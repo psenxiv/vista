@@ -23,7 +23,7 @@ public class SessionPreviewTests
         Assert.Equal(4.0, state.Transport.ScrubHead, 5);
         state.Transport.AdvancePreview(1f);
         Assert.Equal(5.0, state.Transport.ScrubHead, 5);
-        Assert.False(state.Director.IsLive);
+        Assert.Null(state.Board);
     }
 
     [Theory]

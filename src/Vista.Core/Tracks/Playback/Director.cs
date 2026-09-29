@@ -24,9 +24,6 @@ public sealed class Director
     /// <summary>Where the current shot's camera is in the playing entry; 0 before going live.</summary>
     public double ShotTime => _playback?.ShotTime ?? 0.0;
 
-    /// <summary>The playing entry's length in seconds; 0 before going live.</summary>
-    public double ShotLength => _playback?.ShotLength ?? 0.0;
-
     /// <summary>The playlist being played, or null before going live.</summary>
     public PlaylistPlayback? Playlist => _playback;
 
@@ -54,8 +51,17 @@ public sealed class Director
         IsPaused = false;
     }
 
-    /// <summary>Jumps the live playlist to <paramref name="time"/>, keeping pause. No effect otherwise.</summary>
-    public void Seek(double time) => _playback?.Seek(time);
+    /// <summary>Jumps the live playlist to <paramref name="time"/> through it, keeping pause. No effect otherwise.</summary>
+    public void Seek(double time) => _playback?.SeekPlaylist(time);
+
+    /// <summary>Plays the live playlist again from its start, unpaused. No effect otherwise.</summary>
+    public void Restart()
+    {
+        if (_playback is null)
+            return;
+        _playback.Restart();
+        IsPaused = false;
+    }
 
     /// <summary>Where the camera should be this frame, or null to leave the game camera alone.</summary>
     public CameraState? Tick(float dt) => IsLive ? _playback!.Advance(IsPaused ? 0f : dt) : null;

@@ -1,6 +1,5 @@
 using Vista.Core.Session;
 using Vista.Core.Tracks;
-using Vista.Core.Tracks.Playback;
 using Xunit;
 using static Vista.Tests.Fixtures;
 using static Vista.Tests.Session.SessionFixtures;
@@ -187,56 +186,6 @@ public class SessionEditingTests
         Assert.Equal(3, state.Track.Points.Count);
     }
 
-    [Fact]
-    public void EditFromLiveMovesTheScrubHeadToThePlaybackTime()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        GoLive(state);
-        state.Director.Tick(2f);
-        state.Edit();
-        Assert.Equal(2.0, state.Transport.ScrubHead, 5);
-    }
-
-    [Fact]
-    public void CueingAReverseShotPutsTheScrubHeadAtTheEnd()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
-        state.Cue();
-        Assert.Equal(10.0, state.Transport.ScrubHead, 5);
-    }
-
-    [Fact]
-    public void EditFromALiveReverseShotTakesItsShotTime()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.Reverse));
-        GoLive(state);
-        state.Director.Tick(2f);
-        state.Edit();
-        Assert.Equal(8.0, state.Transport.ScrubHead, 5);
-    }
-
-    [Fact]
-    public void ScrubbingALivePingPongShotOnItsWayBackKeepsItGoingBack()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        state.ChangeTrack(t => TrackEditing.SetDirection(t, PlaybackDirection.PingPong));
-        GoLive(state);
-        state.Director.Tick(13f);
-        Assert.Equal(7.0, state.Transport.ScrubHead, 3);
-
-        state.Transport.BeginScrub();
-        state.Transport.ScrubTo(4.0);
-        state.Transport.EndScrub();
-        state.Director.Tick(1f);
-        Assert.Equal(3.0, state.Transport.ScrubHead, 3);
-    }
-
     [Theory]
     [InlineData(1, 1, 3, 3)] // the selected point itself moves
     [InlineData(1, 0, 2, 0)] // a point before it moves past it
@@ -411,51 +360,6 @@ public class SessionEditingTests
     }
 
     [Fact]
-    public void ScrubbingLiveHoldsPlaybackThenResumesIt()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        GoLive(state);
-        state.Transport.BeginScrub();
-        Assert.True(state.Director.IsPaused);
-        state.Transport.ScrubTo(6.0);
-        Assert.Equal(6.0, state.Transport.ScrubHead, 5);
-        state.Transport.EndScrub();
-        Assert.False(state.Director.IsPaused);
-        Assert.False(state.Transport.Scrubbing);
-    }
-
-    [Fact]
-    public void ScrubbingAPausedShotLeavesItPaused()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        GoLive(state);
-        state.Stop();
-        state.Transport.BeginScrub();
-        state.Transport.ScrubTo(2.0);
-        state.Transport.EndScrub();
-        Assert.True(state.Director.IsPaused);
-        Assert.Equal(2.0, state.Transport.ScrubHead, 5);
-    }
-
-    [Fact]
-    public void ScrubbingAFinishedForwardShotBackUnfinishesIt()
-    {
-        var state = EditingThreePoints();
-        state.AddToPlaylist([state.EditedTrackId]);
-        GoLive(state);
-        state.Director.Tick(20f);
-        Assert.True(state.Director.IsFinished);
-
-        state.Transport.BeginScrub();
-        state.Transport.ScrubTo(3.0);
-        state.Transport.EndScrub();
-        Assert.False(state.Director.IsFinished);
-        Assert.False(state.Director.IsPaused);
-    }
-
-    [Fact]
     public void ModeChangesEndAScrub()
     {
         var state = EditingThreePoints();
@@ -464,10 +368,11 @@ public class SessionEditingTests
         GoLive(state);
         Assert.False(state.Transport.Scrubbing);
 
+        // Live leaves the edited track's scrub bar alone.
         state.Transport.BeginScrub();
-        state.Edit();
         Assert.False(state.Transport.Scrubbing);
 
+        state.Edit();
         state.Transport.BeginScrub();
         state.Release();
         Assert.False(state.Transport.Scrubbing);

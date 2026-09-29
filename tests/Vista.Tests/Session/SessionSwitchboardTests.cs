@@ -68,11 +68,11 @@ public class SessionSwitchboardTests
     [MemberData(nameof(Commands))]
     public void EachCommandWorksLiveWithoutAnUndoStep(string _, Func<SessionState, string?> command)
     {
-        // One undo step (Auto Next on) before going live; the live command adds none, so one Undo empties the history.
+        // One undo step (Auto Next on) before going live, where slot 0's Track 1 comes back on Program; the live command adds none, so one Undo empties the history.
         var state = EditingPlayable();
         state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
-        GoLive(state);
-        Assert.Equal(CameraMode.Live, state.Mode);
+        state.Cue();
+        Assert.True(state.Board!.HasProgram);
         var before = SlotsAndToggles(state);
 
         Assert.Null(command(state));

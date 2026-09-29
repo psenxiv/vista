@@ -34,14 +34,14 @@ public class SessionAimTests
         var (state, characters) = EditingWatchingGuard();
         state.AddToPlaylist([state.EditedTrackId]);
         GoLive(state);
-        AimsAt(WatchedAtA, state.Director.Tick(1f / 60f)!.Value, 3);
+        AimsAt(WatchedAtA, state.LiveFrame(1f / 60f)!.Value, 3);
 
         GuardAt(characters, WatchedAtB);
-        state.Director.Tick(0.5f);
+        state.LiveFrame(0.5f);
 
-        state.Transport.BeginScrub();
-        state.Transport.ScrubTo(1.0);
-        AimsAt(WatchedAtB, state.Director.Tick(1f / 60f)!.Value, 3);
+        state.Board!.BeginScrub();
+        state.Board.ScrubTo(1.0);
+        AimsAt(WatchedAtB, state.LiveFrame(1f / 60f)!.Value, 3);
     }
 
     [Fact]

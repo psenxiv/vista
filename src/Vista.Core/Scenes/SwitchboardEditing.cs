@@ -91,7 +91,7 @@ public static class SwitchboardEditing
     }
 
     /// <summary>The track or playlist a slot points at, or null for an empty one.</summary>
-    private static Guid? Target(Slot? slot) => slot?.TrackId ?? slot?.PlaylistId;
+    public static Guid? Target(Slot? slot) => slot?.TrackId ?? slot?.PlaylistId;
 
     /// <summary>Refuses a slot index outside the switchboard.</summary>
     private static void RequireSlot(int slot)

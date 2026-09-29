@@ -1,3 +1,4 @@
+using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Playback;
@@ -5,8 +6,8 @@ using static System.FormattableString;
 
 namespace Vista.Core.Display;
 
-/// <summary>Live's scrub bar over the whole playlist, or the stretch of it <paramref name="view"/> zooms to: where times fall along it, its pass ticks, and its entries' labels.</summary>
-public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, TimingView? view = null)
+/// <summary>The scrub bar over the whole of slot <paramref name="program"/>'s shot, or the stretch of it <paramref name="view"/> zooms to: where times fall along it, its pass ticks, and its entries' labels.</summary>
+public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Slot program, TimingView? view = null)
 {
     private readonly TimingView shown = view ?? TimingView.Whole((float)timeline.Total);
 
@@ -34,18 +35,15 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Timing
             .Where(Shows)
             .Select(FractionOf);
 
-    /// <summary>The segment's entry number in the playlist and its track's name, as "3 · Hairpin"; null when the scene no longer has them.</summary>
-    public string? Label(PlaylistSegment segment) =>
-        Entry(segment) is (var number, var name) ? Invariant($"{number} · {name}") : null;
-
-    /// <summary>The segment's entry as its 1-based place in the selected playlist and its track's name, or null when either is gone.</summary>
-    private (int Number, string Name)? Entry(PlaylistSegment segment)
+    /// <summary>A playlist's segment as its entry's number in the playlist and its track's name, as "3 · Hairpin"; a track's as its name; null when the scene no longer has them.</summary>
+    public string? Label(PlaylistSegment segment)
     {
-        var index = PlaylistEditing.IndexOf(scene, segment.EntryId);
-        return
-            index >= 0
-            && SceneEditing.TryGet(scene, PlaylistEditing.Selected(scene).Entries[index].TrackId, out var track)
-            ? (index + 1, track.Name)
+        if (program.TrackId is { } trackId)
+            return SceneEditing.TryGet(scene, trackId, out var played) ? played.Name : null;
+        var entries = scene.Playlists.FirstOrDefault(p => p.Id == program.PlaylistId)?.Entries ?? [];
+        var index = ListEdit.IndexOf(entries, e => e.Id == segment.EntryId);
+        return index >= 0 && SceneEditing.TryGet(scene, entries[index].TrackId, out var track)
+            ? Invariant($"{index + 1} · {track.Name}")
             : null;
     }
 }
