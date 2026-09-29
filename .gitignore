@@ -10,6 +10,7 @@ StrykerOutput/
 # Local specs, plans and working notes
 docs/
 analysis
+.superpowers
 HANDOVER.md
 TASKS.md
 WORKFLOW.md
