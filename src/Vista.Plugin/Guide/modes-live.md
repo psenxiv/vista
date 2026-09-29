@@ -1,6 +1,6 @@
 # Live
 
-Live is for filming. Vista plays the [playlist](playlist.md) through the camera, one track after another.
+Live is for filming. Vista plays the selected [playlist](playlist.md) through the camera, one track after another.
 
 Choosing Live waits at the first frame until you play.
 

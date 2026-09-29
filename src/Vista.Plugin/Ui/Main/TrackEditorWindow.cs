@@ -139,7 +139,7 @@ internal sealed class TrackEditorWindow : Window
         );
         this.guide = guide;
         scrub = new Scrubber(game);
-        hierarchy = new HierarchyPanel(game, picker, presetSave);
+        hierarchy = new HierarchyPanel(game, files, picker, presetSave);
         playlist = new PlaylistPanel(session, picker);
         points = new PointList(game, fields);
         RespectCloseHotkey = false;

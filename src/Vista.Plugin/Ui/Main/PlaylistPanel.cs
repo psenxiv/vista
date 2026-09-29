@@ -42,7 +42,7 @@ internal sealed class PlaylistPanel
         loopsDrag = new PendingEdit<int>(() => session.Mode == CameraMode.Editing);
     }
 
-    /// <summary>The header with its open, loop and add buttons, then one row per entry; editing is disabled unless in Edit mode.</summary>
+    /// <summary>The header with its open, loop and add buttons, the selected playlist's name, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
     {
         // Rows can remove or reorder entries, so every row reads this snapshot.
@@ -92,6 +92,7 @@ internal sealed class PlaylistPanel
         }
 
         ImGui.EndDisabled();
+        NameStrip.Draw("playlist-name", playlist.Name);
         ImGui.Separator();
 
         ImGui.BeginDisabled(!editing);

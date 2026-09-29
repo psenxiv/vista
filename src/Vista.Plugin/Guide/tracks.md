@@ -6,7 +6,7 @@ A scene holds several tracks. You edit one at a time. The others are drawn in gr
 
 ## The Hierarchy
 
-The Hierarchy is the panel on the left of the **Vista** window. It lists the scene's tracks.
+The Hierarchy is the panel on the left of the **Vista** window. It lists the scene's tracks, and the strip under the Scene heading names the open scene.
 
 | | Control | Does |
 |---|---|---|

@@ -19,24 +19,25 @@ internal sealed class HierarchyPanel
 {
     private readonly GameSession game;
     private readonly SessionState session;
+    private readonly SceneFiles files;
     private readonly FilePickerWindow picker;
     private readonly PresetSave presetSave;
     private Guid? renaming;
     private string renameText = string.Empty;
     private bool focusRename;
 
-    public HierarchyPanel(GameSession game, FilePickerWindow picker, PresetSave presetSave)
+    public HierarchyPanel(GameSession game, SceneFiles files, FilePickerWindow picker, PresetSave presetSave)
     {
         this.game = game;
         session = game.State;
+        this.files = files;
         this.picker = picker;
         this.presetSave = presetSave;
     }
 
-    /// <summary>The Scene heading, the scene anchor button and the add button, then one row per track; disabled unless editing.</summary>
+    /// <summary>The Scene heading, the scene anchor button and the add button, the open scene's name, then one row per track; the buttons and rows are disabled unless editing.</summary>
     public void Draw(bool editing)
     {
-        ImGui.BeginDisabled(!editing);
         var headerWidth = MathF.Max(0f, ImGui.GetContentRegionAvail().X - ButtonsWidth());
         var headerStart = ImGui.GetCursorPosX();
         ImGui.AlignTextToFramePadding();
@@ -45,6 +46,7 @@ internal sealed class HierarchyPanel
         ImGui.SameLine();
         ImGui.SetCursorPosX(headerStart + headerWidth + ImGui.GetStyle().ItemSpacing.X);
 
+        ImGui.BeginDisabled(!editing);
         ImGui.BeginDisabled(!session.Scene.AnchorPlaced);
         if (IconButton.Draw("scene-anchor", FontAwesomeIcon.Anchor, "Select scene anchor"))
             Report(session.Selection.SelectSceneAnchor());
@@ -55,6 +57,7 @@ internal sealed class HierarchyPanel
             ImGui.OpenPopup("add-track-menu");
         DrawAddMenu();
         ImGui.EndDisabled();
+        NameStrip.Draw("scene-name", files.CurrentName);
         ImGui.Separator();
 
         // Rows can delete or reorder tracks, so every row reads this snapshot.

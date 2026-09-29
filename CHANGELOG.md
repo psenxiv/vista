@@ -1,5 +1,12 @@
 # Changelog
 
+## X.Y.Z.N
+
+- A scene can now hold several playlists. Choose, make, rename, duplicate and delete them from Open playlist at the top of the Playlist, and Live plays the one you choose.
+- The open scene's name shows under the Scene heading, and the selected playlist's under the Playlist heading.
+- Vista updates older scene files to a new format, and keeps a copy of each in the backups folder inside vistaxiv.
+- Pressing Enter to confirm a name in New scene or Rename scene no longer also opens the highlighted scene.
+
 ## 0.14.0.1
 
 - The Level camera roll and Camera window buttons are back on the top row, next to the fly speed slider.
