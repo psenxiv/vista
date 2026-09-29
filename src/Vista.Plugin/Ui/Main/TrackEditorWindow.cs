@@ -336,7 +336,11 @@ internal sealed class TrackEditorWindow : Window
         IconButton.WindowToggle("timing", FontAwesomeIcon.ChartLine, "Timing", timing);
 
         // Level camera roll, Camera and fly speed are Edit's, so they show disabled in the other modes.
-        var tools = IconButton.RowWidth(FontAwesomeIcon.RulerHorizontal, FontAwesomeIcon.Camera, FontAwesomeIcon.Video);
+        var tools = IconButton.RowWidth(
+            FontAwesomeIcon.RulerHorizontal,
+            FontAwesomeIcon.Camera,
+            FontAwesomeIcon.ThLarge
+        );
         AlignTo(FlySpeedStart() - tools - ImGui.GetStyle().ItemSpacing.X, gap);
         using (ImRaii.Disabled(!editing))
         {
@@ -353,7 +357,7 @@ internal sealed class TrackEditorWindow : Window
         }
 
         ImGui.SameLine();
-        IconButton.WindowToggle("switchboard", FontAwesomeIcon.Video, "Switchboard", switchboard);
+        IconButton.WindowToggle("switchboard", FontAwesomeIcon.ThLarge, "Switchboard", switchboard);
         ImGui.SameLine();
         using (ImRaii.Disabled(!editing))
             DrawFlySpeed();
@@ -811,7 +815,7 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.ChartLine)
             + IconButton.Width(FontAwesomeIcon.RulerHorizontal)
             + IconButton.Width(FontAwesomeIcon.Camera)
-            + IconButton.Width(FontAwesomeIcon.Video)
+            + IconButton.Width(FontAwesomeIcon.ThLarge)
             + IconButton.Width(FontAwesomeIcon.EyeSlash)
             + IconButton.Width(FontAwesomeIcon.Comment)
             + IconButton.Width(FontAwesomeIcon.Question);
