@@ -463,37 +463,15 @@ public class SessionPreviewToolsTests
         Assert.Equal(1f, state.Transport.PlaybackRate);
     }
 
-    // EditingThreePoints with slot 0 on its track (x = 2t over 10 s) and slot 1 on a 2 s track, x = 2t to x = 4; nothing cut to yet.
-    private static SessionState EditingWithSlots()
-    {
-        var state = EditingThreePoints();
-        var edited = state.EditedTrackId;
-        state.AddTrack();
-        state.SetTrackSpeed(2f);
-        state.AddToEnd(Point(0f));
-        state.AddToEnd(Point(4f));
-        state.AssignSlot(1, state.EditedTrackId);
-        state.AssignSlot(0, edited);
-        state.SwitchTrack(edited);
-        return state;
-    }
-
-    // Cuts Edit's switchboard to slot.
-    private static void CutTo(SessionState state, int slot)
-    {
-        state.Board!.Click(slot);
-        state.Board.Cut();
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void ASwitchboardPreviewShowsOnTheEditCameraAtNormalSpeed(bool ghost)
     {
-        var state = EditingWithSlots();
+        var state = EditingSwitchboard();
         state.Transport.SetGhost(ghost);
         state.Transport.SetPlaybackRate(0.5f);
-        CutTo(state, 0);
+        CutTo(state.Board!, 0);
 
         var frame = state.Transport.EditingFrame(1f, flying: false);
 
@@ -507,9 +485,9 @@ public class SessionPreviewToolsTests
     [InlineData(true)]
     public void FlyingStopsASwitchboardPreviewAndHandsTheFreeCamItsLastFrameOnce(bool ghost)
     {
-        var state = EditingWithSlots();
+        var state = EditingSwitchboard();
         state.Transport.SetGhost(ghost);
-        CutTo(state, 0);
+        CutTo(state.Board!, 0);
         state.Transport.EditingFrame(1f, flying: false);
 
         var frame = state.Transport.EditingFrame(1f, flying: true);
@@ -524,8 +502,8 @@ public class SessionPreviewToolsTests
     [Fact]
     public void AStoppedSwitchboardPreviewHandsTheFreeCamItsLastFrame()
     {
-        var state = EditingWithSlots();
-        CutTo(state, 0);
+        var state = EditingSwitchboard();
+        CutTo(state.Board!, 0);
         state.Transport.EditingFrame(3f, flying: false);
         state.RenameTrack(state.EditedTrackId, "Wide");
 
@@ -539,8 +517,8 @@ public class SessionPreviewToolsTests
     [Fact]
     public void ASwitchboardShotHoldsItsLastFrameAtItsEnd()
     {
-        var state = EditingWithSlots();
-        CutTo(state, 1);
+        var state = EditingSwitchboard();
+        CutTo(state.Board!, 1);
 
         // Slot 1's track ends at 2 s on x = 4, and holds there.
         Assert.Equal(4f, state.Transport.EditingFrame(3f, flying: false).Shown!.Value.Position.X, 1e-3f);
@@ -553,10 +531,10 @@ public class SessionPreviewToolsTests
     [InlineData(true)]
     public void TheEditedTracksPreviewReplacesASwitchboardPreview(bool ghost)
     {
-        var state = EditingWithSlots();
+        var state = EditingSwitchboard();
         state.Transport.SetGhost(ghost);
         state.Transport.ScrubTo(4.0);
-        CutTo(state, 0);
+        CutTo(state.Board!, 0);
         state.Transport.EditingFrame(1f, flying: false);
 
         state.Play();
@@ -581,9 +559,9 @@ public class SessionPreviewToolsTests
     [InlineData(true)]
     public void NewPointsComeFromASwitchboardPreviewOnTheCamera(bool ghost)
     {
-        var state = EditingWithSlots();
+        var state = EditingSwitchboard();
         state.Transport.SetGhost(ghost);
-        CutTo(state, 0);
+        CutTo(state.Board!, 0);
         state.Transport.EditingFrame(1f, flying: false);
 
         // 1 s in: x = 2.
@@ -595,8 +573,8 @@ public class SessionPreviewToolsTests
     [Fact]
     public void JumpingToAPointDropsAWaitingSwitchboardHandOff()
     {
-        var state = EditingWithSlots();
-        CutTo(state, 0);
+        var state = EditingSwitchboard();
+        CutTo(state.Board!, 0);
         state.Transport.EditingFrame(1f, flying: false);
 
         state.JumpToPoint(1);
@@ -607,8 +585,8 @@ public class SessionPreviewToolsTests
     [Fact]
     public void AScrubReleaseDropsAWaitingSwitchboardHandOff()
     {
-        var state = EditingWithSlots();
-        CutTo(state, 0);
+        var state = EditingSwitchboard();
+        CutTo(state.Board!, 0);
         state.Transport.EditingFrame(1f, flying: false);
         state.Transport.BeginScrub();
         state.Transport.EndScrub();

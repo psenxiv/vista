@@ -62,6 +62,13 @@ internal static class SessionFixtures
         return state;
     }
 
+    /// <summary>Makes slot <paramref name="slot"/> Next on <paramref name="board"/> and cuts to it.</summary>
+    internal static void CutTo(SwitchboardPlayer board, int slot)
+    {
+        board.Click(slot);
+        board.Cut();
+    }
+
     /// <summary>Editing with the ground at y = 1; Track 1 has points at x = 10, 20, 30 at head height, y = 5, all aimed along −z.</summary>
     internal static SessionState EditingOverGround()
     {

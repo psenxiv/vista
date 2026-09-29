@@ -32,13 +32,6 @@ public class SwitchboardPlayerTests
         return state.Board!;
     }
 
-    // Makes slot Next and cuts to it.
-    private static void CutTo(SwitchboardPlayer board, int slot)
-    {
-        board.Click(slot);
-        board.Cut();
-    }
-
     private static OnAir Air(SessionState state) => state.Scene.Switchboard.Live;
 
     // The camera's x after dt seconds more of Live.
@@ -731,6 +724,8 @@ public class SwitchboardPlayerTests
         Assert.Null(state.LiveFrame(1f));
 
         Assert.NotSame(edit, Live(state));
+        state.Release();
+        Assert.Null(state.Board);
         state.Release(CameraMode.View);
         Assert.Null(state.Board);
     }

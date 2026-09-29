@@ -56,7 +56,7 @@ public sealed class SessionState
     /// <summary>The scene's tracks as they stand in the world.</summary>
     public WorldView World { get; }
 
-    /// <summary>The Edit preview and the scrub head.</summary>
+    /// <summary>The Edit previews (the edited track's and the switchboard's), their tools and the edited track's scrub head.</summary>
     public Transport Transport { get; }
 
     /// <summary>The tracks being edited, their order and which are hidden.</summary>

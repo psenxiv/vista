@@ -168,8 +168,7 @@ public class SessionSwitchboardTests
         state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
         state.Undo();
         var board = state.Board!;
-        board.Click(0);
-        board.Cut();
+        CutTo(board, 0);
         board.Click(1);
         state.Transport.EditingFrame(1f, flying: false);
         Assert.True(board.HasProgram);
@@ -343,8 +342,7 @@ public class SessionSwitchboardTests
     {
         var state = EditingSwitchboard();
         state.Transport.SetGhost(ghost);
-        state.Board!.Click(1);
-        state.Board.Cut();
+        CutTo(state.Board!, 1);
         Assert.False(state.OverlayEditable);
 
         // Track 2 is 2 s long, so 3 s holds its last frame.
