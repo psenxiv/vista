@@ -20,7 +20,7 @@ internal static class UiColours
     /// <summary>The share of full opacity that off, greyed-out and unplayable things are drawn at.</summary>
     public const float DimAlpha = 0.4f;
 
-    /// <summary>A selected row: the accent at 45%.</summary>
+    /// <summary>Selected rows, the playing part of a scrub bar and a Cut that's ready: the accent at 45%.</summary>
     public static uint Selected() => AccentAt(0.45f);
 
     /// <summary>A hovered row: the accent at 30%.</summary>
@@ -35,7 +35,7 @@ internal static class UiColours
     /// <summary>Section headers: the text colour at 60%.</summary>
     public static uint Muted() => Text(0.6f);
 
-    /// <summary>The User Guide's dividers: the text colour at 15%.</summary>
+    /// <summary>Dividers and faint outlines: the text colour at 15%.</summary>
     public static uint Faint() => Text(0.15f);
 
     /// <summary>A flat value cell while its row is hovered: the frame colour at 40%.</summary>

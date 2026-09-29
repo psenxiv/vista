@@ -123,7 +123,7 @@ public sealed class Plugin : IDalamudPlugin
         pointWindow = new PointWindow(game, pointGizmo);
         timingWindow = new TimingWindow(game);
         cameraWindow = new CameraWindow(game);
-        switchboardWindow = new SwitchboardWindow(game.State, fields);
+        switchboardWindow = new SwitchboardWindow(game.State, fields, PluginInterface.UiBuilder.FontAtlas);
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(game.State, game.Characters);
         followTargetWindow = new FollowTargetWindow(game.State, game.Characters);
@@ -393,6 +393,7 @@ public sealed class Plugin : IDalamudPlugin
         );
         Faults.Attempt("closing the windows", windows.RemoveAllWindows);
         Faults.Attempt("disposing the User Guide", guideWindow.Dispose);
+        Faults.Attempt("disposing the Switchboard", switchboardWindow.Dispose);
         Faults.Attempt("releasing", () => game?.Release("plugin unload"));
         Faults.Attempt("saving", () => sceneFiles?.SaveBeforeUnload());
         Faults.Attempt("disposing the movement lock", () => Movement?.Dispose());

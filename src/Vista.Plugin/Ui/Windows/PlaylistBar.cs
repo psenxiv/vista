@@ -9,7 +9,7 @@ using Vista.Plugin.Ui.Widgets;
 
 namespace Vista.Plugin.Ui.Windows;
 
-/// <summary>The scrub bar over the whole Program shot, drawn like a slider: a segment per entry, pass ticks, the playing entry lit, and each entry's name above it on hover.</summary>
+/// <summary>The scrub bar over the whole Program shot, drawn like a slider: a segment per entry, pass ticks, the playing entry filled up to the head, and each entry's name above it on hover.</summary>
 internal static class PlaylistBar
 {
     // ImGui's inset of a slider's grab from its frame.
@@ -55,6 +55,9 @@ internal static class PlaylistBar
             ImGui.GetColorU32(active ? ImGuiCol.FrameBgActive : ImGuiCol.FrameBg),
             style.FrameRounding
         );
+        // Past the grab's travel the fill runs to the frame's edge, so a finished shot reads as full.
+        var headX = float.Lerp(left, right, bar.FractionOf(board.Head));
+        var filledTo = headX >= right ? max.X : headX;
         foreach (var segment in timeline.Segments)
             DrawSegment(
                 list,
@@ -62,6 +65,7 @@ internal static class PlaylistBar
                 segment,
                 segment == hovered,
                 segment.Index == board.EntryIndex,
+                filledTo,
                 min,
                 max,
                 left,
@@ -103,13 +107,14 @@ internal static class PlaylistBar
         return true;
     }
 
-    /// <summary>One entry's segment: its fill when hovered or playing, its pass ticks, and the divider at its start.</summary>
+    /// <summary>One entry's segment: its fill when hovered, filled up to <paramref name="filledTo"/> when playing, its pass ticks, and the divider at its start.</summary>
     private static void DrawSegment(
         ImDrawListPtr list,
         PlaylistScrub bar,
         PlaylistSegment segment,
         bool hovered,
         bool playing,
+        float filledTo,
         Vector2 min,
         Vector2 max,
         float left,
@@ -143,7 +148,8 @@ internal static class PlaylistBar
                 rounding,
                 corners
             );
-        if (playing)
+        var end = MathF.Min(to, filledTo);
+        if (playing && end > from)
             list.AddRectFilled(
                 min with
                 {
@@ -151,11 +157,11 @@ internal static class PlaylistBar
                 },
                 max with
                 {
-                    X = to,
+                    X = end,
                 },
                 ImGui.GetColorU32(UiColours.Selected()),
                 rounding,
-                corners
+                end >= max.X ? corners : corners & ~ImDrawFlags.RoundCornersRight
             );
 
         foreach (var tick in bar.PassTicks(segment))
