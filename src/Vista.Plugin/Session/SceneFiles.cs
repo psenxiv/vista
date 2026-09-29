@@ -162,7 +162,7 @@ internal sealed class SceneFiles
             Dalamud.Utility.Util.OpenLink(presets ? l.Folder.PresetsDir : l.Folder.ScenesDir);
     }
 
-    /// <summary>Creates <paramref name="parent"/>'s vistaxiv folder, upgrades its older scenes the first time, and uses it: for a move, leaves the current library for it; otherwise opens <paramref name="last"/>. A refused move leaves <see cref="library"/> and the chosen folder untouched.</summary>
+    /// <summary>Creates <paramref name="parent"/>'s vistaxiv folder, upgrades its older scenes when the settings record of the scene format is behind, and uses it: for a move, leaves the current library for it; otherwise opens <paramref name="last"/>. A refused move leaves <see cref="library"/> and the chosen folder untouched.</summary>
     private string? Use(string parent, bool move, string? last)
     {
         var folder = new SceneFolder(
@@ -180,11 +180,11 @@ internal sealed class SceneFiles
             return Checked($"Could not create {folder.Root}: {e.Message}");
         }
 
-        if (!config.UpgradedFolders.Any(done => SceneFolder.SameParent(done, parent)))
+        if (FormatVersions.SceneUpgradeDue(config.Versions.AsReadOnly()))
         {
             foreach (var failed in folder.UpgradeAll())
                 Plugin.Log.Warning("[scenes] {Refusal}", failed);
-            config.UpgradedFolders.Add(parent);
+            FormatVersions.RecordScenes(config.Versions);
             config.Save();
         }
 

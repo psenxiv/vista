@@ -12,6 +12,9 @@ namespace Vista.Core.Scenes;
 /// <summary>Reads and writes scene and preset files.</summary>
 public static class SceneJson
 {
+    /// <summary>The first scene file format, which a settings record with no scenes entry counts as.</summary>
+    public const int FirstSceneFormat = 1;
+
     /// <summary>The scene file format this version writes; it reads this one and every earlier one.</summary>
     public const int SceneFormat = 2;
 
@@ -53,7 +56,7 @@ public static class SceneJson
     public static Scene Read(string json) =>
         FormatOf(json) switch
         {
-            1 => FromV1(Parse<SceneFileV1>(json, 1)),
+            FirstSceneFormat => FromV1(Parse<SceneFileV1>(json, FirstSceneFormat)),
             SceneFormat => FromFile(Parse<SceneFile>(json, SceneFormat)),
             > SceneFormat => throw new NewerFormatException(),
             var other => throw new InvalidDataException($"There is no scene format {other}."),

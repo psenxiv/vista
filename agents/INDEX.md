@@ -140,6 +140,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 ### Files
 
 - `Scenes/SceneFolder`: scene and preset files, backing up and upgrading older scene files, and which exceptions are the file errors callers expect.
+- `Scenes/FormatVersions`: the settings' record of the format each kind of file was last upgraded to, and whether the scene upgrade pass is due.
 
 ### Game access
 
