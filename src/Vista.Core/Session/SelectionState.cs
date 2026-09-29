@@ -39,12 +39,16 @@ public sealed class SelectionState
 
     /// <summary>The selected playlist entries, in playlist order.</summary>
     public IReadOnlyList<Guid> Entries =>
-        session.Scene.Playlist.Select(e => e.Id).Where(selection.Entries.Contains).ToArray();
+        PlaylistEditing.Selected(session.Scene).Entries.Select(e => e.Id).Where(selection.Entries.Contains).ToArray();
 
     /// <summary>The playlist entries that play the edited track, in playlist order; none outside Edit.</summary>
     public IReadOnlyList<Guid> EditedEntries =>
         session.Mode == CameraMode.Editing
-            ? session.Scene.Playlist.Where(e => e.TrackId == session.EditedTrackId).Select(e => e.Id).ToArray()
+            ? PlaylistEditing
+                .Selected(session.Scene)
+                .Entries.Where(e => e.TrackId == session.EditedTrackId)
+                .Select(e => e.Id)
+                .ToArray()
             : [];
 
     /// <summary>The selected timing key's index, or null. Never set together with <see cref="Leg"/>.</summary>
@@ -156,14 +160,17 @@ public sealed class SelectionState
         var at = PlaylistEditing.IndexOf(session.Scene, id);
         if (at < 0)
             return PlaylistEditing.NoSuchEntry;
-        if (click == RowClick.Plain && session.SwitchTrack(session.Scene.Playlist[at].TrackId) is { } refusal)
+        if (
+            click == RowClick.Plain
+            && session.SwitchTrack(PlaylistEditing.Selected(session.Scene).Entries[at].TrackId) is { } refusal
+        )
             return refusal;
         if (click != RowClick.Plain && (selection.Points.Count >= 2 || Tracks.Count >= 2))
             return null;
 
         var scene = session.Scene;
         var (entries, last) = RowPicking.Click(
-            scene.Playlist.Select(e => e.Id).ToArray(),
+            PlaylistEditing.Selected(scene).Entries.Select(e => e.Id).ToArray(),
             Entries,
             lastEntry,
             id,

@@ -36,8 +36,8 @@ public class PlaylistScrubTests
                 Name = "Orbit",
             },
         ];
-        var scene = PlaylistEditing.Add(new Scene(tracks, new HashSet<Guid>(), []), tracks.Select(t => t.Id).ToArray());
-        scene = PlaylistEditing.SetLoops(scene, scene.Playlist[2].Id, 3);
+        var scene = PlaylistEditing.Add(OnePlaylist(tracks), tracks.Select(t => t.Id).ToArray());
+        scene = PlaylistEditing.SetLoops(scene, Entries(scene)[2].Id, 3);
         var (scrub, timeline) = Scrub(scene);
         return (scrub, timeline, scene);
     }
@@ -136,7 +136,7 @@ public class PlaylistScrubTests
     {
         // A lone point with no hold runs for no time.
         var zero = TrackEditing.Append(TrackEditing.Empty(), Point(0f));
-        var scene = PlaylistEditing.Add(new Scene([zero], new HashSet<Guid>(), []), [zero.Id]);
+        var scene = PlaylistEditing.Add(OnePlaylist([zero]), [zero.Id]);
 
         Assert.Equal(0f, Scrub(scene).Scrub.FractionOf(3.0), Tolerance);
     }
@@ -195,7 +195,7 @@ public class PlaylistScrubTests
     public void AnEntryTheSceneNoLongerHasHasNoLabel()
     {
         var (_, timeline, scene) = Example();
-        var removed = PlaylistEditing.Remove(scene, [scene.Playlist[2].Id]);
+        var removed = PlaylistEditing.Remove(scene, [Entries(scene)[2].Id]);
 
         Assert.Null(new PlaylistScrub(timeline, removed).Label(timeline.Segments[1]));
     }

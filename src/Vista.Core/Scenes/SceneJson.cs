@@ -12,8 +12,11 @@ namespace Vista.Core.Scenes;
 /// <summary>Reads and writes scene and preset files.</summary>
 public static class SceneJson
 {
-    /// <summary>The file format this version writes and the only one it reads.</summary>
-    public const int Format = 1;
+    /// <summary>The scene file format this version writes; it reads this one and every earlier one.</summary>
+    public const int SceneFormat = 2;
+
+    /// <summary>The preset file format this version writes and the only one it reads.</summary>
+    public const int PresetFormat = 1;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -28,74 +31,135 @@ public static class SceneJson
     public static string Write(Scene scene) =>
         JsonSerializer.Serialize(
             new SceneFile(
-                Format,
+                SceneFormat,
                 FromAnchor(scene.Anchor),
                 scene.AnchorPlaced,
-                scene.PlaylistLoops,
+                scene.SelectedPlaylistId,
                 scene.Hidden.Order().ToList(),
-                scene.Playlist.Select(e => new EntryDto(e.Id, e.TrackId, e.Loops, e.Transition)).ToList(),
+                scene
+                    .Playlists.Select(p => new PlaylistDto(
+                        p.Id,
+                        p.Name,
+                        p.Loops,
+                        p.Entries.Select(e => new EntryDto(e.Id, e.TrackId, e.Loops, e.Transition)).ToList()
+                    ))
+                    .ToList(),
                 scene.Tracks.Select(t => FromTrack(t, identity: true)).ToList()
             ),
             Options
         );
 
-    /// <summary>The scene in <paramref name="json"/>; throws InvalidDataException when it is malformed or another format.</summary>
-    public static Scene Read(string json)
+    /// <summary>The scene in <paramref name="json"/>, from this format or an earlier one; throws NewerFormatException for a later format and InvalidDataException when it is malformed.</summary>
+    public static Scene Read(string json) =>
+        FormatOf(json) switch
+        {
+            1 => FromV1(Parse<SceneFileV1>(json, 1)),
+            SceneFormat => FromFile(Parse<SceneFile>(json, SceneFormat)),
+            > SceneFormat => throw new NewerFormatException(),
+            var other => throw new InvalidDataException($"There is no scene format {other}."),
+        };
+
+    /// <summary>The format number of the scene or preset file in <paramref name="json"/>; throws InvalidDataException when it has none.</summary>
+    public static int FormatOf(string json)
     {
-        var file = Parse<SceneFile>(json);
-        var tracks = Each(file.Tracks, t => Checked(ToTrack(t, identity: true)));
-        if (tracks.Count == 0)
-            throw new InvalidDataException("A scene needs a track.");
-        var ids = tracks.Select(t => t.Id).ToHashSet();
-        if (ids.Count != tracks.Count)
-            throw new InvalidDataException("Two tracks share an id.");
-        if (file.Playlist.Any(e => e is not null && !ids.Contains(e.TrackId)))
-            throw new InvalidDataException("A playlist entry names a missing track.");
-        if (file.Playlist.Any(e => e?.Loops is { } n && (n < 1 || n > PlaylistEditing.MaxLoops)))
-            throw new InvalidDataException("A playlist entry's repeats are out of range.");
-        if (!Finite(file.Anchor.Position) || !float.IsFinite(file.Anchor.Yaw))
-            throw new InvalidDataException("The scene anchor is out of range.");
-        return new Scene(
-            tracks,
-            file.Hidden.ToHashSet(),
-            Each(file.Playlist, e => new PlaylistEntry(e.Id, e.TrackId, e.Loops, e.Transition)),
-            ToAnchor(file.Anchor),
-            file.AnchorPlaced,
-            file.PlaylistLoops
-        );
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return FormatOf(document.RootElement);
+        }
+        catch (JsonException e)
+        {
+            throw new InvalidDataException(e.Message, e);
+        }
     }
 
     /// <summary>The preset as indented JSON, without the track's id, name or anchor.</summary>
     public static string WritePreset(Preset preset) =>
-        JsonSerializer.Serialize(new PresetFile(Format, preset.Yaw, FromTrack(preset.Track, identity: false)), Options);
+        JsonSerializer.Serialize(
+            new PresetFile(PresetFormat, preset.Yaw, FromTrack(preset.Track, identity: false)),
+            Options
+        );
 
     /// <summary>The preset in <paramref name="json"/>, its track with a new id, an empty name and no anchor; throws InvalidDataException when it is malformed or another format.</summary>
     public static Preset ReadPreset(string json)
     {
-        var file = Parse<PresetFile>(json);
+        var file = Parse<PresetFile>(json, PresetFormat);
         if (!float.IsFinite(file.Yaw))
             throw new InvalidDataException("The preset's yaw is out of range.");
         return new Preset(Checked(ToTrack(file.Track, identity: false)), file.Yaw);
     }
 
-    private static T Parse<T>(string json)
+    private static Scene FromFile(SceneFile file)
+    {
+        var tracks = Tracks(file.Tracks);
+        var playlists = Each(file.Playlists, p => new Playlist(p.Id, p.Name, Entries(p.Entries, tracks), p.Loops));
+        if (playlists.Count == 0)
+            throw new InvalidDataException("A scene needs a playlist.");
+        if (playlists.Select(p => p.Id).Distinct().Count() != playlists.Count)
+            throw new InvalidDataException("Two playlists share an id.");
+        var selected = playlists.Any(p => p.Id == file.SelectedPlaylist) ? file.SelectedPlaylist : playlists[0].Id;
+        return new Scene(
+            tracks,
+            file.Hidden.ToHashSet(),
+            playlists,
+            selected,
+            CheckedAnchor(file.Anchor),
+            file.AnchorPlaced
+        );
+    }
+
+    private static Scene FromV1(SceneFileV1 file)
+    {
+        var tracks = Tracks(file.Tracks);
+        var playlist = new Playlist(
+            Guid.NewGuid(),
+            PlaylistEditing.FirstName,
+            Entries(file.Playlist, tracks),
+            file.PlaylistLoops
+        );
+        return new Scene(
+            tracks,
+            file.Hidden.ToHashSet(),
+            [playlist],
+            playlist.Id,
+            CheckedAnchor(file.Anchor),
+            file.AnchorPlaced
+        );
+    }
+
+    private static List<Track> Tracks(IReadOnlyList<TrackDto?> items)
+    {
+        var tracks = Each(items, t => Checked(ToTrack(t, identity: true)));
+        if (tracks.Count == 0)
+            throw new InvalidDataException("A scene needs a track.");
+        if (tracks.Select(t => t.Id).Distinct().Count() != tracks.Count)
+            throw new InvalidDataException("Two tracks share an id.");
+        return tracks;
+    }
+
+    private static List<PlaylistEntry> Entries(IReadOnlyList<EntryDto?> items, IReadOnlyList<Track> tracks)
+    {
+        if (items.Any(e => e is not null && !tracks.Any(t => t.Id == e.TrackId)))
+            throw new InvalidDataException("A playlist entry names a missing track.");
+        if (items.Any(e => e?.Loops is { } n && (n < 1 || n > PlaylistEditing.MaxLoops)))
+            throw new InvalidDataException("A playlist entry's repeats are out of range.");
+        return Each(items, e => new PlaylistEntry(e.Id, e.TrackId, e.Loops, e.Transition));
+    }
+
+    private static Anchor CheckedAnchor(AnchorDto anchor) =>
+        Finite(anchor.Position) && float.IsFinite(anchor.Yaw)
+            ? ToAnchor(anchor)
+            : throw new InvalidDataException("The scene anchor is out of range.");
+
+    private static T Parse<T>(string json, int format)
         where T : class
     {
         try
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
-            if (
-                root.ValueKind != JsonValueKind.Object
-                || !root.TryGetProperty("format", out var format)
-                || format.ValueKind != JsonValueKind.Number
-                || !format.TryGetInt32(out var version)
-                || version != Format
-            )
-            {
-                throw new InvalidDataException($"Not a format {Format} file.");
-            }
-
+            if (FormatOf(root) != format)
+                throw new InvalidDataException($"Not a format {format} file.");
             return root.Deserialize<T>(Options) ?? throw new InvalidDataException("The file is empty.");
         }
         catch (JsonException e)
@@ -103,6 +167,14 @@ public static class SceneJson
             throw new InvalidDataException(e.Message, e);
         }
     }
+
+    private static int FormatOf(JsonElement root) =>
+        root.ValueKind == JsonValueKind.Object
+        && root.TryGetProperty("format", out var format)
+        && format.ValueKind == JsonValueKind.Number
+        && format.TryGetInt32(out var version)
+            ? version
+            : throw new InvalidDataException("The file has no format number.");
 
     private static List<T> Each<TDto, T>(IReadOnlyList<TDto?> items, Func<TDto, T> map)
         where TDto : class =>
@@ -240,11 +312,24 @@ public static class SceneJson
         int Format,
         AnchorDto Anchor,
         bool AnchorPlaced,
+        Guid SelectedPlaylist,
+        IReadOnlyList<Guid> Hidden,
+        IReadOnlyList<PlaylistDto?> Playlists,
+        IReadOnlyList<TrackDto?> Tracks
+    );
+
+    /// <summary>A scene file in format 1, which held one playlist; frozen, as files in it are still read.</summary>
+    private sealed record SceneFileV1(
+        int Format,
+        AnchorDto Anchor,
+        bool AnchorPlaced,
         bool PlaylistLoops,
         IReadOnlyList<Guid> Hidden,
         IReadOnlyList<EntryDto?> Playlist,
         IReadOnlyList<TrackDto?> Tracks
     );
+
+    private sealed record PlaylistDto(Guid Id, string Name, bool Loops, IReadOnlyList<EntryDto?> Entries);
 
     private sealed record PresetFile(int Format, float Yaw, TrackDto Track);
 

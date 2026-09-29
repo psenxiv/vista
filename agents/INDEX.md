@@ -76,7 +76,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Editing/ListEdit`: finding an item by a test, and a copy of a list with one item replaced or items inserted.
 - `Editing/RowPicking`: a click on a list row, with Ctrl and Shift, and what a drag carries.
 - `Editing/BlockMove`: the new order when rows are dragged as a block, and applying an order to a list.
-- `Scenes/SceneEditing` and `PlaylistEditing`: finding a track or playlist entry by id, and refusing unknown ones with their "no such" message.
+- `Scenes/SceneEditing` and `PlaylistEditing`: finding a track or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist.
 
 ### Formatting
 
@@ -150,10 +150,10 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Test fixtures
 
-- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, a well-formed frame value, and vector assertions.
+- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, a scene with one playlist and the selected playlist's entries, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, a well-formed frame value, and vector assertions.
 - `PathShapes`: the path shapes the movement sweep and the camera regression scene play, as positions, and the field of view their points are recorded at.
 - `TrackRuns`: playing a track, or hand-made motion, and measuring it: a run's frame at a time, length and point arrive and depart times; clocks (fixed steps, and the evaluator, a playback or the Director stepped within a frame budget); and measures: steps and snaps, picture twist, the largest change or value over samples and when, world turn rate, speed, and well-formed on every frame.
 - `Session/SessionFixtures`: the sessions the session tests start from, track and entry ids by index, and a control point at head height.
 - `Tracks/Timing/TimingFixtures`: key times, key drags, and asserting a track's key times within tolerance.
 - `Tracks/Playback/PlaybackFixtures`: the tracks and playlist items the playback tests play, and generated played tracks and playlist scenes.
-- `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, and a scene folder in a temporary directory.
+- `Scenes/SceneFixtures` and `TempFolder`: scenes told apart by name, a format 1 scene file, and a scene folder in a temporary directory.

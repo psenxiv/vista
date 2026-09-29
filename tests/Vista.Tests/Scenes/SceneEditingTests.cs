@@ -24,7 +24,11 @@ public class SceneEditingTests
         Assert.Equal("Track 1", track.Name);
         Assert.Empty(track.Points);
         Assert.Empty(scene.Hidden);
-        Assert.Empty(scene.Playlist);
+        var playlist = Assert.Single(scene.Playlists);
+        Assert.Equal("Playlist 1", playlist.Name);
+        Assert.Empty(playlist.Entries);
+        Assert.False(playlist.Loops);
+        Assert.Equal(playlist.Id, scene.SelectedPlaylistId);
     }
 
     [Fact]
@@ -284,8 +288,29 @@ public class SceneEditingTests
 
         var result = SceneEditing.Delete(scene, [ids[1], ids[2]], ids[0]).Scene;
 
-        Assert.Equal(new[] { ids[0] }, result.Playlist.Select(e => e.TrackId));
+        Assert.Equal(new[] { ids[0] }, Entries(result).Select(e => e.TrackId));
         Assert.Empty(result.Hidden);
+    }
+
+    [Fact]
+    public void DeletingATrackRemovesItsEntriesFromEveryPlaylist()
+    {
+        // Each playlist plays tracks 1, 2, 3, 2; deleting track 2 leaves 1, 3 in both.
+        var scene = Three();
+        var ids = scene.Tracks.Select(t => t.Id).ToArray();
+        scene = PlaylistEditing.Add(scene, [ids[0], ids[1], ids[2], ids[1]]);
+        var other = new Playlist(
+            Guid.NewGuid(),
+            "Playlist 2",
+            new[] { ids[0], ids[1], ids[2], ids[1] }.Select(id => new PlaylistEntry(Guid.NewGuid(), id)).ToArray()
+        );
+        scene = scene with { Playlists = [.. scene.Playlists, other] };
+
+        var result = SceneEditing.Delete(scene, [ids[1]], ids[0]).Scene;
+
+        Assert.Equal(new[] { ids[0], ids[2] }, result.Playlists[0].Entries.Select(e => e.TrackId));
+        Assert.Equal(new[] { ids[0], ids[2] }, result.Playlists[1].Entries.Select(e => e.TrackId));
+        Assert.Equal(new[] { other.Entries[0].Id, other.Entries[2].Id }, result.Playlists[1].Entries.Select(e => e.Id));
     }
 
     [Fact]

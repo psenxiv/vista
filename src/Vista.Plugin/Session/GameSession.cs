@@ -371,13 +371,19 @@ internal sealed class GameSession
         freeCam.Disable();
         if (outcome is PlayOutcome.Cued or PlayOutcome.CuedFromGame)
         {
-            Plugin.Log.Information("mode: live, cued, {Count} playlist entries", state.Scene.Playlist.Count);
+            Plugin.Log.Information(
+                "mode: live, cued, {Count} playlist entries",
+                PlaylistEditing.Selected(state.Scene).Entries.Count
+            );
             return;
         }
 
         if (HideUiInLive)
             GameUi.Hide();
-        Plugin.Log.Information("mode: live, {Count} playlist entries", state.Scene.Playlist.Count);
+        Plugin.Log.Information(
+            "mode: live, {Count} playlist entries",
+            PlaylistEditing.Selected(state.Scene).Entries.Count
+        );
     }
 
     /// <summary>Takes the camera, remembering what to put back on release.</summary>

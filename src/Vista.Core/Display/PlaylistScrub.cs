@@ -38,11 +38,13 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Timing
     public string? Label(PlaylistSegment segment) =>
         Entry(segment) is (var number, var name) ? Invariant($"{number} · {name}") : null;
 
-    /// <summary>The segment's entry as its 1-based place in the scene's playlist and its track's name, or null when either is gone.</summary>
+    /// <summary>The segment's entry as its 1-based place in the selected playlist and its track's name, or null when either is gone.</summary>
     private (int Number, string Name)? Entry(PlaylistSegment segment)
     {
         var index = PlaylistEditing.IndexOf(scene, segment.EntryId);
-        return index >= 0 && SceneEditing.TryGet(scene, scene.Playlist[index].TrackId, out var track)
+        return
+            index >= 0
+            && SceneEditing.TryGet(scene, PlaylistEditing.Selected(scene).Entries[index].TrackId, out var track)
             ? (index + 1, track.Name)
             : null;
     }

@@ -96,13 +96,13 @@ public sealed class SceneFolderTests : IDisposable
     [Fact]
     public void ASavedSceneLoadsBack()
     {
-        var scene = Named("Crane") with { PlaylistLoops = true };
+        var scene = PlaylistEditing.SetPlaylistLoops(Named("Crane"), true);
         Folder.SaveScene("Dusk", scene);
 
         var read = Folder.LoadScene("Dusk");
         Assert.Equal(scene.Tracks[0].Id, read.Tracks[0].Id);
         Assert.Equal("Crane", read.Tracks[0].Name);
-        Assert.True(read.PlaylistLoops);
+        Assert.True(PlaylistEditing.Selected(read).Loops);
     }
 
     [Fact]

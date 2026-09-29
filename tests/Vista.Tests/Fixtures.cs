@@ -155,7 +155,21 @@ internal static class Fixtures
     }
 
     /// <summary>A track as a scene file, so a failing property prints something to paste into a test.</summary>
-    internal static string PrintTrack(Track track) => SceneJson.Write(new Scene([track], new HashSet<Guid>(), []));
+    internal static string PrintTrack(Track track) => SceneJson.Write(OnePlaylist([track]));
+
+    /// <summary>A scene of <paramref name="tracks"/> with one playlist, selected, holding <paramref name="entries"/>.</summary>
+    internal static Scene OnePlaylist(
+        IReadOnlyList<Track> tracks,
+        IReadOnlyList<PlaylistEntry>? entries = null,
+        bool loops = false
+    )
+    {
+        var playlist = PlaylistEditing.Empty() with { Entries = entries ?? [], Loops = loops };
+        return new Scene(tracks, new HashSet<Guid>(), [playlist], playlist.Id);
+    }
+
+    /// <summary>The selected playlist's entries.</summary>
+    internal static IReadOnlyList<PlaylistEntry> Entries(Scene scene) => PlaylistEditing.Selected(scene).Entries;
 
     /// <summary>A control point at the given position, aim and field of view.</summary>
     internal static ControlPoint Point(

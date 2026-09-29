@@ -42,8 +42,8 @@ public class SelfTestDryRunTests
         var scene = TwoEntries();
         var run = new SelfTestDryRun(scene, 0f);
 
-        run.Check(scene.Playlist[0].Id, 0.0, WellFormedFrame, WellFormedFrame);
-        run.Check(scene.Playlist[1].Id, 0.5, WellFormedFrame, WellFormedFrame);
+        run.Check(Entries(scene)[0].Id, 0.0, WellFormedFrame, WellFormedFrame);
+        run.Check(Entries(scene)[1].Id, 0.5, WellFormedFrame, WellFormedFrame);
 
         Assert.Equal(
             SelfTestResult.Pass("scene dry run", "2 frames well-formed and read back exactly"),
@@ -62,9 +62,9 @@ public class SelfTestDryRunTests
             Fov = 3f,
         };
 
-        run.Check(scene.Playlist[0].Id, 0.0, WellFormedFrame, WellFormedFrame);
-        run.Check(scene.Playlist[1].Id, 1.25, wide, wide);
-        run.Check(scene.Playlist[1].Id, 1.5, WellFormedFrame, WellFormedFrame);
+        run.Check(Entries(scene)[0].Id, 0.0, WellFormedFrame, WellFormedFrame);
+        run.Check(Entries(scene)[1].Id, 1.25, wide, wide);
+        run.Check(Entries(scene)[1].Id, 1.5, WellFormedFrame, WellFormedFrame);
 
         Assert.Equal(
             SelfTestResult.Fail(
@@ -87,7 +87,7 @@ public class SelfTestDryRunTests
             LookAt = new Vector3(1f, 2.5f, -7f),
         };
 
-        run.Check(scene.Playlist[0].Id, 0.1, written, WellFormedFrame);
+        run.Check(Entries(scene)[0].Id, 0.1, written, WellFormedFrame);
 
         Assert.Equal(
             "entry 1 (Opening) at 0.10 s: the position read back as (1, 2, 3), written (1, 2.5, 3)",
@@ -102,7 +102,7 @@ public class SelfTestDryRunTests
         // The game's floor seen in game (2026-09-27) is 0.69: a 0.6 frame reads back as 0.69.
         var run = new SelfTestDryRun(scene, 0.69f);
 
-        run.Check(scene.Playlist[0].Id, 0.1, WellFormedFrame with { Fov = 0.6f }, WellFormedFrame with { Fov = 0.69f });
+        run.Check(Entries(scene)[0].Id, 0.1, WellFormedFrame with { Fov = 0.6f }, WellFormedFrame with { Fov = 0.69f });
 
         Assert.Null(run.FirstFailure);
     }
@@ -114,7 +114,7 @@ public class SelfTestDryRunTests
         var run = new SelfTestDryRun(scene, 0f);
 
         // Written with a 3 rad field of view, read back as 1 rad: both wrong, and the broken rule comes first.
-        run.Check(scene.Playlist[0].Id, 0.0, WellFormedFrame with { Fov = 3f }, WellFormedFrame);
+        run.Check(Entries(scene)[0].Id, 0.0, WellFormedFrame with { Fov = 3f }, WellFormedFrame);
 
         Assert.Equal("entry 1 (Opening) at 0.00 s: the field of view is out of range (3)", run.FirstFailure);
     }
@@ -126,8 +126,8 @@ public class SelfTestDryRunTests
         var run = new SelfTestDryRun(scene, 0f);
         var wide = WellFormedFrame with { Fov = 3f };
 
-        run.Check(scene.Playlist[0].Id, 0.0, wide, wide);
-        run.Check(scene.Playlist[1].Id, 2.0, WellFormedFrame with { Fov = 0f }, WellFormedFrame);
+        run.Check(Entries(scene)[0].Id, 0.0, wide, wide);
+        run.Check(Entries(scene)[1].Id, 2.0, WellFormedFrame with { Fov = 0f }, WellFormedFrame);
 
         Assert.Equal(2, run.Frames);
         Assert.Equal("entry 1 (Opening) at 0.00 s: the field of view is out of range (3)", run.FirstFailure);
@@ -138,7 +138,7 @@ public class SelfTestDryRunTests
     {
         var scene = TwoEntries();
         var run = new SelfTestDryRun(scene, 0f);
-        run.Check(scene.Playlist[0].Id, 0.0, WellFormedFrame, WellFormedFrame);
+        run.Check(Entries(scene)[0].Id, 0.0, WellFormedFrame, WellFormedFrame);
 
         Assert.Equal(
             SelfTestResult.Fail("scene dry run", "1 frame checked; the camera hook stopped before the end"),

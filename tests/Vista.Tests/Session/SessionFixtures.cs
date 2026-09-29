@@ -57,5 +57,5 @@ internal static class SessionFixtures
     internal static Guid TrackId(SessionState state, int index) => state.Scene.Tracks[index].Id;
 
     /// <summary>The Id of the playlist entry at <paramref name="index"/>.</summary>
-    internal static Guid EntryId(SessionState state, int index) => state.Scene.Playlist[index].Id;
+    internal static Guid EntryId(SessionState state, int index) => Entries(state.Scene)[index].Id;
 }

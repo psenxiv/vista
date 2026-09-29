@@ -53,7 +53,7 @@ public sealed class SelfTestDryRun(Scene scene, float fovFloor)
     private string EntryLabel(Guid entryId)
     {
         var index = PlaylistEditing.IndexOf(scene, entryId);
-        return $"entry {index + 1} ({SceneEditing.Get(scene, scene.Playlist[index].TrackId).Name})";
+        return $"entry {index + 1} ({SceneEditing.Get(scene, PlaylistEditing.Selected(scene).Entries[index].TrackId).Name})";
     }
 }
 #endif

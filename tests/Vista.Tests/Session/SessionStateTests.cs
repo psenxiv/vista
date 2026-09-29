@@ -271,7 +271,7 @@ public class SessionStateTests
     }
 
     // Two tracks; the first has points at x = 0, 10, 20 at 2 yalms per second, a 10 s track.
-    private static Scene Loaded() => SceneEditing.Add(new Scene([Build3PointTrack()], new HashSet<Guid>(), [])).Scene;
+    private static Scene Loaded() => SceneEditing.Add(OnePlaylist([Build3PointTrack()])).Scene;
 
     [Fact]
     public void LoadingASceneEditsItsFirstTrackAndStartsAfresh()

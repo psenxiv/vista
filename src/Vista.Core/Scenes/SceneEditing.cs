@@ -10,8 +10,12 @@ public static class SceneEditing
     /// <summary>Why a track Id can't be used: no track has it.</summary>
     public const string NoSuchTrack = "There is no such track.";
 
-    /// <summary>A scene holding one empty track, "Track 1".</summary>
-    public static Scene New() => new([TrackEditing.Empty()], new HashSet<Guid>(), []);
+    /// <summary>A scene holding one empty track, "Track 1", and one empty playlist, selected.</summary>
+    public static Scene New()
+    {
+        var playlist = PlaylistEditing.Empty();
+        return new([TrackEditing.Empty()], new HashSet<Guid>(), [playlist], playlist.Id);
+    }
 
     /// <summary>The index of track <paramref name="id"/>, or −1.</summary>
     public static int IndexOf(Scene scene, Guid id) => ListEdit.IndexOf(scene.Tracks, t => t.Id == id);
@@ -87,7 +91,14 @@ public static class SceneEditing
             {
                 Tracks = tracks,
                 Hidden = hidden,
-                Playlist = scene.Playlist.Where(e => !gone.Contains(e.TrackId)).ToArray(),
+                Playlists = scene
+                    .Playlists.Select(p =>
+                        p with
+                        {
+                            Entries = p.Entries.Where(e => !gone.Contains(e.TrackId)).ToArray(),
+                        }
+                    )
+                    .ToArray(),
             },
             next.Id
         );

@@ -51,11 +51,11 @@ internal static class PlaybackFixtures
     /// <summary>A scene of <paramref name="tracks"/> whose playlist plays each entry's track its count of times (0 follows the track).</summary>
     private static Scene PlaylistScene(Track[] tracks, (int Track, int Loops)[] entries, bool loops)
     {
-        var scene = new Scene(tracks, new HashSet<Guid>(), []);
+        var scene = OnePlaylist(tracks);
         foreach (var (track, count) in entries)
         {
             scene = PlaylistEditing.Add(scene, [tracks[track].Id]);
-            scene = PlaylistEditing.SetLoops(scene, scene.Playlist[^1].Id, count == 0 ? null : count);
+            scene = PlaylistEditing.SetLoops(scene, Entries(scene)[^1].Id, count == 0 ? null : count);
         }
 
         return PlaylistEditing.SetPlaylistLoops(scene, loops);

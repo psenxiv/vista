@@ -19,7 +19,7 @@ public class SaveDebounceTests
     public void AChangedSceneIsDueOneSecondAfterItWasFirstSeen()
     {
         var saved = SceneEditing.New();
-        var changed = saved with { PlaylistLoops = true };
+        var changed = PlaylistEditing.SetPlaylistLoops(saved, true);
         var debounce = new SaveDebounce(saved);
 
         // First seen at 10 s, so due from 10 + 1 = 11 s.
@@ -32,7 +32,7 @@ public class SaveDebounceTests
     public void AnotherChangeRestartsTheWait()
     {
         var saved = SceneEditing.New();
-        var first = saved with { PlaylistLoops = true };
+        var first = PlaylistEditing.SetPlaylistLoops(saved, true);
         var second = first with { AnchorPlaced = true };
         var debounce = new SaveDebounce(saved);
 
@@ -65,7 +65,7 @@ public class SaveDebounceTests
     public void SavingOrReturningToTheSavedSceneStopsItBeingDue()
     {
         var saved = SceneEditing.New();
-        var changed = saved with { PlaylistLoops = true };
+        var changed = PlaylistEditing.SetPlaylistLoops(saved, true);
         var debounce = new SaveDebounce(saved);
 
         debounce.Due(changed, 0.0);

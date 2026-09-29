@@ -44,6 +44,8 @@ internal sealed class PlaylistPanel
     {
         // Rows can remove or reorder entries, so every row reads this snapshot.
         var scene = session.Scene;
+        var playlist = PlaylistEditing.Selected(scene);
+        var entries = playlist.Entries;
         var playing = session.PlayingEntry;
         if (loopsDrag.HeldBy is { } dragged && (!editing || PlaylistEditing.IndexOf(scene, Guid.Parse(dragged)) < 0))
             loopsDrag.Clear();
@@ -54,7 +56,7 @@ internal sealed class PlaylistPanel
         ImGui.AlignTextToFramePadding();
         var header = playing is { } now
             ? FormattableString.Invariant(
-                $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {scene.Playlist.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
+                $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {entries.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
             )
             : "Playlist";
         // Cut to the room left of the buttons, so a long name can't widen the panel.
@@ -68,8 +70,8 @@ internal sealed class PlaylistPanel
         ImGui.BeginDisabled(!editing);
         ImGui.SameLine();
         Layout.RightAlign(IconButton.RowWidth(FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus));
-        if (IconButton.Toggle("playlist-loop", FontAwesomeIcon.Repeat, scene.PlaylistLoops, "Loop playlist"))
-            Report(session.SetPlaylistLoops(!scene.PlaylistLoops));
+        if (IconButton.Toggle("playlist-loop", FontAwesomeIcon.Repeat, playlist.Loops, "Loop playlist"))
+            Report(session.SetPlaylistLoops(!playlist.Loops));
         ImGui.SameLine();
         if (IconButton.Draw("add-entry", FontAwesomeIcon.Plus, "Add to playlist"))
             ImGui.OpenPopup("add-entry");
@@ -94,14 +96,14 @@ internal sealed class PlaylistPanel
             var held = false;
             var selected = session.Selection.Entries;
             var marked = session.Selection.EditedEntries;
-            for (var i = 0; i < scene.Playlist.Count; i++)
+            for (var i = 0; i < entries.Count; i++)
             {
-                DrawRow(scene, scene.Playlist[i], i, held, playing?.Id, selected, marked, editing);
-                held |= PlaylistEditing.HoldsPlaylist(scene, scene.Playlist[i]);
+                DrawRow(scene, entries[i], i, held, playing?.Id, selected, marked, editing);
+                held |= PlaylistEditing.HoldsPlaylist(scene, entries[i]);
             }
 
             // An empty playlist's hint sits under the drop space, which starts back at its top so drops land on it too.
-            if (scene.Playlist.Count == 0)
+            if (entries.Count == 0)
             {
                 var top = ImGui.GetCursorPos();
                 Layout.CentredText("Drag tracks here, or click +.", UiColours.Dim());
@@ -110,7 +112,7 @@ internal sealed class PlaylistPanel
 
             // The space under the rows takes dropped rows at the end.
             DragRows.Space(session, editing);
-            DropTarget(scene, scene.Playlist.Count, editing);
+            DropTarget(scene, entries.Count, editing);
             DragRows.ScrollNearEdges(DragRows.Entry, DragRows.Track);
         }
 
@@ -283,7 +285,11 @@ internal sealed class PlaylistPanel
     private void ApplyTyped(Scene scene, Guid id, string text)
     {
         var index = PlaylistEditing.IndexOf(scene, id);
-        if (index >= 0 && PlaylistEditing.ParseLoops(text, out var loops) && loops != scene.Playlist[index].Loops)
+        if (
+            index >= 0
+            && PlaylistEditing.ParseLoops(text, out var loops)
+            && loops != PlaylistEditing.Selected(scene).Entries[index].Loops
+        )
             Report(session.SetEntryLoops(id, loops));
     }
 
@@ -309,12 +315,13 @@ internal sealed class PlaylistPanel
         if (!editing || !ImGui.BeginDragDropTarget())
             return;
 
-        if (DragRows.Accept(DragRows.Entry) is { } entries && entries.Grabbed < scene.Playlist.Count)
+        var playlist = PlaylistEditing.Selected(scene).Entries;
+        if (DragRows.Accept(DragRows.Entry) is { } entries && entries.Grabbed < playlist.Count)
             Report(
                 session.MoveEntries(
                     DragRows.Entries(session, scene, entries),
-                    scene.Playlist[entries.Grabbed].Id,
-                    index < scene.Playlist.Count ? scene.Playlist[index].Id : null
+                    playlist[entries.Grabbed].Id,
+                    index < playlist.Count ? playlist[index].Id : null
                 )
             );
 

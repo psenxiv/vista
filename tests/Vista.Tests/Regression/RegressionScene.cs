@@ -148,8 +148,16 @@ internal static class RegressionScene
                     }
             )
             .ToArray();
-        var playlist = tracks.Select((t, i) => new PlaylistEntry(Id(2, i), t.Id)).ToArray();
-        return new Scene(tracks, new HashSet<Guid>(), playlist, new Anchor(SceneAnchor, 0f), AnchorPlaced: true);
+        var entries = tracks.Select((t, i) => new PlaylistEntry(Id(2, i), t.Id)).ToArray();
+        var playlist = new Playlist(Id(3, 0), PlaylistEditing.FirstName, entries);
+        return new Scene(
+            tracks,
+            new HashSet<Guid>(),
+            [playlist],
+            playlist.Id,
+            new Anchor(SceneAnchor, 0f),
+            AnchorPlaced: true
+        );
     }
 
     /// <summary>The committed scene file's path in the repository.</summary>

@@ -8,6 +8,7 @@ using Vista.Core.Tracks.Playback;
 using Vista.Core.Tracks.Timing;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Scenes.SceneFixtures;
 
 namespace Vista.Tests.Scenes;
 
@@ -42,16 +43,23 @@ public class SceneJsonTests
             false
         );
 
+    // Two playlists, the second selected and looping.
     private static Scene FullScene()
     {
         var full = FullTrack();
         var plain = TrackEditing.Empty();
+        var intro = new Playlist(
+            Guid.NewGuid(),
+            "Intro",
+            [new PlaylistEntry(Guid.NewGuid(), full.Id, 3), new PlaylistEntry(Guid.NewGuid(), plain.Id)]
+        );
+        var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), plain.Id, 2)], true);
         return new Scene(
             [full, plain],
             new HashSet<Guid> { plain.Id },
-            [new PlaylistEntry(Guid.NewGuid(), full.Id, 3), new PlaylistEntry(Guid.NewGuid(), plain.Id)],
+            [intro, main],
+            main.Id,
             new Anchor(new Vector3(-100f, 50f, 25f), -2f),
-            true,
             true
         );
     }
@@ -64,6 +72,25 @@ public class SceneJsonTests
         Assert.Equal(expected, actual with { Points = expected.Points, Timing = expected.Timing });
     }
 
+    // As SameTrack, for each playlist's entries.
+    private static void SamePlaylists(IReadOnlyList<Playlist> expected, IReadOnlyList<Playlist> actual)
+    {
+        Assert.Equal(expected.Count, actual.Count);
+        for (var i = 0; i < expected.Count; i++)
+        {
+            Assert.Equal(expected[i].Entries, actual[i].Entries);
+            Assert.Equal(expected[i], actual[i] with { Entries = expected[i].Entries });
+        }
+    }
+
+    // A format 2 scene file, edited as JSON.
+    private static string Edited(Scene scene, Action<JsonNode> edit)
+    {
+        var node = JsonNode.Parse(SceneJson.Write(scene))!;
+        edit(node);
+        return node.ToJsonString();
+    }
+
     [Fact]
     public void ASceneRoundTripsEveryField()
     {
@@ -74,8 +101,116 @@ public class SceneJsonTests
         for (var i = 0; i < scene.Tracks.Count; i++)
             SameTrack(scene.Tracks[i], read.Tracks[i]);
         Assert.True(scene.Hidden.SetEquals(read.Hidden));
-        Assert.Equal(scene.Playlist, read.Playlist);
-        Assert.Equal(scene, read with { Tracks = scene.Tracks, Hidden = scene.Hidden, Playlist = scene.Playlist });
+        SamePlaylists(scene.Playlists, read.Playlists);
+        Assert.Equal(scene, read with { Tracks = scene.Tracks, Hidden = scene.Hidden, Playlists = scene.Playlists });
+    }
+
+    [Fact]
+    public void AFormatOneSceneReadsAsOneSelectedLoopingPlaylist()
+    {
+        var read = SceneJson.Read(FormatOneSceneJson());
+
+        // The fixture's playlist, in file order: five entries, the second repeating twice, and playlistLoops true.
+        var playlist = Assert.Single(read.Playlists);
+        Assert.Equal("Playlist 1", playlist.Name);
+        Assert.True(playlist.Loops);
+        Assert.Equal(playlist.Id, read.SelectedPlaylistId);
+        Assert.Equal(
+            new PlaylistEntry[]
+            {
+                new(
+                    Guid.Parse("3b7fa88d-8888-4124-b207-29893e56e637"),
+                    Guid.Parse("f8688d0d-14c7-47af-8df5-edb2bb6d0553")
+                ),
+                new(
+                    Guid.Parse("207bbd93-54f1-4772-84bf-970f541ef70c"),
+                    Guid.Parse("643e8e6b-e089-4664-bed2-04826979c289"),
+                    2
+                ),
+                new(
+                    Guid.Parse("af961abd-b459-43b8-b68b-46d05926a199"),
+                    Guid.Parse("e30aece0-efd0-4c9b-8f01-65017a4b66c0")
+                ),
+                new(
+                    Guid.Parse("e0a09bda-658a-4a57-ad61-4ee0982f5913"),
+                    Guid.Parse("c4fd65bd-4eca-49d5-aa11-f67d1cbb7594")
+                ),
+                new(
+                    Guid.Parse("7855e698-f816-43ca-8265-14f7e8194582"),
+                    Guid.Parse("d776513b-f0dd-4367-b1ac-ae58cc1dc132")
+                ),
+            },
+            playlist.Entries
+        );
+    }
+
+    [Fact]
+    public void FormatOfReadsTheFormatNumber()
+    {
+        Assert.Equal(1, SceneJson.FormatOf(FormatOneSceneJson()));
+        Assert.Equal(2, SceneJson.FormatOf(SceneJson.Write(FullScene())));
+        Assert.Throws<InvalidDataException>(() => SceneJson.FormatOf("{ \"tracks\": [] }"));
+        Assert.Throws<InvalidDataException>(() => SceneJson.FormatOf("not json"));
+    }
+
+    [Fact]
+    public void ASelectedIdNamingNoPlaylistSelectsTheFirst()
+    {
+        var scene = FullScene();
+        var json = Edited(scene, n => n["selectedPlaylist"] = Guid.NewGuid().ToString());
+
+        Assert.Equal(scene.Playlists[0].Id, SceneJson.Read(json).SelectedPlaylistId);
+    }
+
+    [Fact]
+    public void TwoPlaylistsWithOneIdAreRefused()
+    {
+        var scene = FullScene();
+        var json = Edited(scene, n => n["playlists"]![1]!["id"] = scene.Playlists[0].Id.ToString());
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
+    }
+
+    [Fact]
+    public void TwoPlaylistsWithOneNameLoadAsTheyAre()
+    {
+        var json = Edited(FullScene(), n => n["playlists"]![1]!["name"] = "intro");
+
+        Assert.Equal(new[] { "Intro", "intro" }, SceneJson.Read(json).Playlists.Select(p => p.Name));
+    }
+
+    [Fact]
+    public void ASceneWithNoPlaylistsIsRefused()
+    {
+        var json = Edited(FullScene(), n => n["playlists"] = new JsonArray());
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
+    }
+
+    [Fact]
+    public void AnEntryInAnyPlaylistForAMissingTrackIsRefused()
+    {
+        var json = Edited(FullScene(), n => n["playlists"]![1]!["entries"]![0]!["trackId"] = Guid.NewGuid().ToString());
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
+    }
+
+    [Fact]
+    public void ANewerSceneFormatAsksForANewerVista()
+    {
+        var json = SceneJson.Write(FullScene()).Replace("\"format\": 2", "\"format\": 3");
+
+        var refused = Assert.Throws<NewerFormatException>(() => SceneJson.Read(json));
+        Assert.Equal("This scene needs a newer version of Vista. Update Vista to open it.", refused.Message);
+    }
+
+    [Fact]
+    public void APresetIsStillWrittenAndReadAsFormatOne()
+    {
+        var json = SceneJson.WritePreset(new Preset(Plain(), 0.5f));
+
+        Assert.Equal(1, SceneJson.FormatOf(json));
+        Assert.Equal(0.5f, SceneJson.ReadPreset(json).Yaw);
     }
 
     [Fact]
@@ -84,7 +219,7 @@ public class SceneJsonTests
         var json = SceneJson.Write(FullScene());
         var nl = Environment.NewLine;
 
-        Assert.StartsWith($"{{{nl}  \"format\": 1,{nl}", json);
+        Assert.StartsWith($"{{{nl}  \"format\": 2,{nl}", json);
         Assert.Contains("\"aim\": \"FollowTarget\"", json);
         Assert.Contains("\"direction\": \"PingPong\"", json);
     }
@@ -116,7 +251,7 @@ public class SceneJsonTests
     [Fact]
     public void AnotherFormatIsRefused()
     {
-        var json = SceneJson.Write(FullScene()).Replace("\"format\": 1", "\"format\": 2");
+        var json = SceneJson.Write(FullScene()).Replace("\"format\": 2", "\"format\": 0");
         var preset = SceneJson.WritePreset(new Preset(FullTrack(), 0f)).Replace("\"format\": 1", "\"format\": 2");
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
@@ -140,7 +275,7 @@ public class SceneJsonTests
     {
         var json = SceneJson.Write(FullScene());
 
-        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json.Replace("\"playlistLoops\": true,", "")));
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json.Replace("\"loops\": true,", "")));
         Assert.Throws<InvalidDataException>(() =>
             SceneJson.Read(json.Replace("\"name\": \"Dolly in\"", "\"name\": null"))
         );
@@ -152,7 +287,7 @@ public class SceneJsonTests
     [Fact]
     public void ASceneWithNoTracksIsRefused()
     {
-        var json = SceneJson.Write(new Scene([], new HashSet<Guid>(), []));
+        var json = SceneJson.Write(OnePlaylist([]));
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
@@ -161,7 +296,7 @@ public class SceneJsonTests
     public void ATrackWhosePointsAndTimingDifferInCountIsRefused()
     {
         var track = FullTrack();
-        var json = SceneJson.Write(new Scene([track with { Timing = [track.Timing[0]] }], new HashSet<Guid>(), []));
+        var json = SceneJson.Write(OnePlaylist([track with { Timing = [track.Timing[0]] }]));
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
@@ -170,9 +305,7 @@ public class SceneJsonTests
     public void APlaylistEntryForAMissingTrackIsRefused()
     {
         var track = TrackEditing.Empty();
-        var json = SceneJson.Write(
-            new Scene([track], new HashSet<Guid>(), [new PlaylistEntry(Guid.NewGuid(), Guid.NewGuid())])
-        );
+        var json = SceneJson.Write(OnePlaylist([track], [new PlaylistEntry(Guid.NewGuid(), Guid.NewGuid())]));
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
@@ -181,7 +314,7 @@ public class SceneJsonTests
     public void TwoTracksWithOneIdAreRefused()
     {
         var track = TrackEditing.Empty();
-        var json = SceneJson.Write(new Scene([track, track with { Name = "Twin" }], new HashSet<Guid>(), []));
+        var json = SceneJson.Write(OnePlaylist([track, track with { Name = "Twin" }]));
 
         Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
     }
@@ -190,7 +323,7 @@ public class SceneJsonTests
     private static Track Plain() => WithTwoPoints(TrackEditing.Empty());
 
     private static string SceneOf(Track track, int? loops = null) =>
-        SceneJson.Write(new Scene([track], new HashSet<Guid>(), [new PlaylistEntry(Guid.NewGuid(), track.Id, loops)]));
+        SceneJson.Write(OnePlaylist([track], [new PlaylistEntry(Guid.NewGuid(), track.Id, loops)]));
 
     private static Track WithPoint(Track t, ControlPoint p) => t with { Points = [p, t.Points[1]] };
 
@@ -325,27 +458,42 @@ public class SceneJsonTests
         }
     );
 
-    /// <summary>One to four tracks, some hidden, a playlist of them with random repeats, and a random anchor, built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
+    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, and a random anchor, built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
     private static readonly Gen<Scene> AnyScene = Gen.Select(
         AnySavedTrack.Array[1, 4],
-        Gen.Select(Gen.Int[0, 3], Gen.Int[0, PlaylistEditing.MaxLoops], Gen.Guid).Array[0, 6],
-        Gen.Bool.Array[4],
-        Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool, Gen.Bool),
-        (tracks, entries, hidden, scene) =>
-            new Scene(
+        Gen.Select(
+            Gen.Guid,
+            AnyName,
+            Gen.Bool,
+            Gen.Select(Gen.Int[0, 3], Gen.Int[0, PlaylistEditing.MaxLoops], Gen.Guid).Array[0, 6]
+        ).Array[1, 3],
+        Gen.Select(Gen.Bool.Array[4], Gen.Int[0, 2]),
+        Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool),
+        (tracks, playlists, picks, scene) =>
+        {
+            var (hidden, selected) = picks;
+            var built = playlists
+                .Select(p => new Playlist(
+                    p.Item1,
+                    p.Item2,
+                    p.Item4.Select(e => new PlaylistEntry(
+                            e.Item3,
+                            tracks[e.Item1 % tracks.Length].Id,
+                            e.Item2 == 0 ? null : e.Item2
+                        ))
+                        .ToList(),
+                    p.Item3
+                ))
+                .ToList();
+            return new Scene(
                 tracks,
                 tracks.Where((_, i) => hidden[i]).Select(t => t.Id).ToHashSet(),
-                entries
-                    .Select(e => new PlaylistEntry(
-                        e.Item3,
-                        tracks[e.Item1 % tracks.Length].Id,
-                        e.Item2 == 0 ? null : e.Item2
-                    ))
-                    .ToList(),
+                built,
+                built[selected % built.Count].Id,
                 new Anchor(scene.Item1, scene.Item2),
-                scene.Item3,
-                scene.Item4
-            )
+                scene.Item3
+            );
+        }
     );
 
     [Fact]
@@ -367,14 +515,14 @@ public class SceneJsonTests
                 }
 
                 Assert.True(scene.Hidden.SetEquals(read.Hidden));
-                Assert.Equal(scene.Playlist, read.Playlist);
+                SamePlaylists(scene.Playlists, read.Playlists);
                 Assert.Equal(
                     scene,
                     read with
                     {
                         Tracks = scene.Tracks,
                         Hidden = scene.Hidden,
-                        Playlist = scene.Playlist,
+                        Playlists = scene.Playlists,
                     }
                 );
             },

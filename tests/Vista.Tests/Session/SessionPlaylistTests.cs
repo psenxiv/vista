@@ -1,3 +1,4 @@
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Xunit;
 using static Vista.Tests.Fixtures;
@@ -34,11 +35,11 @@ public class SessionPlaylistTests
         state.AddToPlaylist([TrackId(state, 1)]);
         state.AddToPlaylist([state.Scene.Tracks[2].Id]);
         state.AddToPlaylist([TrackId(state, 0)]);
-        state.SetEntryLoops(state.Scene.Playlist[0].Id, 3);
+        state.SetEntryLoops(Entries(state.Scene)[0].Id, 3);
 
         var items = state.PlaylistItems();
 
-        Assert.Equal([state.Scene.Playlist[0].Id, state.Scene.Playlist[2].Id], items.Select(i => i.EntryId));
+        Assert.Equal([Entries(state.Scene)[0].Id, Entries(state.Scene)[2].Id], items.Select(i => i.EntryId));
         Assert.Equal([TrackId(state, 1), TrackId(state, 0)], items.Select(i => i.Track.Id));
         Assert.Equal([3, null], items.Select(i => i.Loops));
     }
@@ -48,7 +49,7 @@ public class SessionPlaylistTests
     {
         var state = Editing();
         Assert.Null(state.AddToPlaylist([TrackId(state, 0)]));
-        var entry = state.Scene.Playlist[0].Id;
+        var entry = Entries(state.Scene)[0].Id;
 
         Assert.Equal("There is no such playlist entry.", state.MoveEntries([Guid.NewGuid()], entry, null));
         Assert.Equal("There is no such playlist entry.", state.MoveEntries([entry], entry, Guid.NewGuid()));
@@ -60,17 +61,17 @@ public class SessionPlaylistTests
         var state = Editing();
         Assert.Null(state.AddToPlaylist([TrackId(state, 0)]));
         Assert.Null(state.AddToPlaylist([TrackId(state, 1)], 0));
-        var entry = state.Scene.Playlist[1].Id;
+        var entry = Entries(state.Scene)[1].Id;
         Assert.Null(state.SetEntryLoops(entry, 2));
-        Assert.Null(state.MoveEntries([entry], entry, state.Scene.Playlist[0].Id));
+        Assert.Null(state.MoveEntries([entry], entry, Entries(state.Scene)[0].Id));
         Assert.Null(state.RemoveFromPlaylist([entry]));
 
-        Assert.Single(state.Scene.Playlist);
+        Assert.Single(Entries(state.Scene));
         state.Undo();
         state.Undo();
-        Assert.Equal(2, state.Scene.Playlist[1].Loops);
+        Assert.Equal(2, Entries(state.Scene)[1].Loops);
         state.Undo();
-        Assert.Null(state.Scene.Playlist[1].Loops);
+        Assert.Null(Entries(state.Scene)[1].Loops);
     }
 
     [Fact]
@@ -80,10 +81,10 @@ public class SessionPlaylistTests
         TwoEntries(state);
 
         state.DeleteTracks([TrackId(state, 1)]);
-        Assert.Single(state.Scene.Playlist);
+        Assert.Single(Entries(state.Scene));
 
         state.Undo();
-        Assert.Equal(2, state.Scene.Playlist.Count);
+        Assert.Equal(2, Entries(state.Scene).Count);
     }
 
     [Fact]
@@ -115,12 +116,12 @@ public class SessionPlaylistTests
         TwoEntries(state);
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());
-        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
         Assert.Equal(2.0, state.Transport.ScrubLength, 4);
 
         state.Play();
         state.Director.Tick(3f);
-        Assert.Equal(state.Scene.Playlist[2].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[2].Id, state.PlayingEntry!.Id);
         Assert.Equal(1.0, state.Transport.ScrubHead, 4);
         Assert.Equal(10.0, state.Transport.ScrubLength, 4);
     }
@@ -137,7 +138,7 @@ public class SessionPlaylistTests
         state.Transport.ScrubTo(7.0);
         state.Transport.EndScrub();
 
-        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
         Assert.Equal(7.0, state.Transport.ScrubHead, 4);
     }
 
@@ -152,7 +153,7 @@ public class SessionPlaylistTests
         state.Transport.ScrubTo(99.0);
         state.Transport.EndScrub();
 
-        Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[0].Id, state.PlayingEntry!.Id);
         Assert.Equal(2.0, state.Transport.ScrubHead, 4);
     }
 
@@ -169,7 +170,7 @@ public class SessionPlaylistTests
         state.Transport.ScrubPlaylistTo(5.0);
         state.Transport.EndScrub();
 
-        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
         Assert.Equal(3.0, state.Transport.ScrubHead, 4);
         Assert.Equal(5.0, state.Transport.PlaylistHead, 4);
     }
@@ -214,7 +215,7 @@ public class SessionPlaylistTests
 
         state.Restart();
 
-        Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[0].Id, state.PlayingEntry!.Id);
         Assert.Equal(0.0, state.Transport.ScrubHead, 4);
     }
 
@@ -230,7 +231,7 @@ public class SessionPlaylistTests
 
         state.Restart();
 
-        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
         Assert.Equal(0.0, state.Transport.ScrubHead, 4);
     }
 
@@ -266,10 +267,10 @@ public class SessionPlaylistTests
         var state = Editing();
 
         Assert.Null(state.SetPlaylistLoops(true));
-        Assert.True(state.Scene.PlaylistLoops);
+        Assert.True(PlaylistEditing.Selected(state.Scene).Loops);
 
         state.Undo();
-        Assert.False(state.Scene.PlaylistLoops);
+        Assert.False(PlaylistEditing.Selected(state.Scene).Loops);
     }
 
     [Fact]
@@ -283,7 +284,7 @@ public class SessionPlaylistTests
         state.Director.Tick(3f);
 
         Assert.False(state.Director.IsFinished);
-        Assert.Equal(state.Scene.Playlist[0].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[0].Id, state.PlayingEntry!.Id);
         Assert.Equal(1.0, state.Transport.ScrubHead, 4);
     }
 
@@ -298,12 +299,31 @@ public class SessionPlaylistTests
         GoLive(state);
 
         state.Director.Tick(3f);
-        Assert.Equal(state.Scene.Playlist[2].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[2].Id, state.PlayingEntry!.Id);
 
         state.Director.Tick(10f);
 
         Assert.False(state.Director.IsFinished);
-        Assert.Equal(state.Scene.Playlist[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(Entries(state.Scene)[1].Id, state.PlayingEntry!.Id);
+        Assert.Equal(1.0, state.Transport.ScrubHead, 4);
+    }
+
+    [Fact]
+    public void LivePlaysTheSelectedPlaylistWithItsOwnLoop()
+    {
+        // The first playlist holds Track 2 and doesn't loop; the second, selected, holds Track 1 (a 10 s shot) and loops.
+        var state = Editing();
+        var intro = new Playlist(Guid.NewGuid(), "Intro", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 1))]);
+        var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 0))], true);
+        state.LoadScene(state.Scene with { Playlists = [intro, main], SelectedPlaylistId = main.Id });
+
+        Assert.Equal([main.Entries[0].Id], state.PlaylistItems().Select(i => i.EntryId));
+        GoLive(state);
+        // 11 s into a looping 10 s playlist is 1 s into its second time round.
+        state.Director.Tick(11f);
+
+        Assert.False(state.Director.IsFinished);
+        Assert.Equal(main.Entries[0].Id, state.PlayingEntry!.Id);
         Assert.Equal(1.0, state.Transport.ScrubHead, 4);
     }
 
@@ -314,6 +334,6 @@ public class SessionPlaylistTests
 
         Assert.Null(state.AddToPlaylist([TrackId(state, 1), TrackId(state, 0)]));
 
-        Assert.Equal(new[] { TrackId(state, 0), TrackId(state, 1) }, state.Scene.Playlist.Select(e => e.TrackId));
+        Assert.Equal(new[] { TrackId(state, 0), TrackId(state, 1) }, Entries(state.Scene).Select(e => e.TrackId));
     }
 }

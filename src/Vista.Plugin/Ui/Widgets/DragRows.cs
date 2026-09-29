@@ -67,7 +67,7 @@ internal static unsafe class DragRows
     /// <summary>The entries a dropped entry payload carries: the selection, or the grabbed entry alone.</summary>
     public static IReadOnlyList<Guid> Entries(SessionState session, Scene scene, Payload payload) =>
         RowPicking.Carried(
-            scene.Playlist.Select(e => e.Id).ToArray(),
+            PlaylistEditing.Selected(scene).Entries.Select(e => e.Id).ToArray(),
             session.Selection.Entries,
             payload.Grabbed,
             payload.Group

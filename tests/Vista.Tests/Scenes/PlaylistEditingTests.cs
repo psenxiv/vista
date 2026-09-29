@@ -19,7 +19,47 @@ public class PlaylistEditingTests
     private static (Scene Scene, Guid Added) AddOne(Scene scene, Guid track, int? index = null)
     {
         var result = PlaylistEditing.Add(scene, [track], index);
-        return (result, result.Playlist[index ?? result.Playlist.Count - 1].Id);
+        return (result, Entries(result)[index ?? Entries(result).Count - 1].Id);
+    }
+
+    // TwoTracks with a first playlist playing Track 1 then Track 2, and an empty second playlist, selected.
+    private static (Scene Scene, Playlist First) SecondSelected()
+    {
+        var scene = TwoTracks();
+        var first = PlaylistEditing.Selected(PlaylistEditing.Add(scene, [scene.Tracks[0].Id, scene.Tracks[1].Id]));
+        var second = new Playlist(Guid.NewGuid(), "Playlist 2", []);
+        return (scene with { Playlists = [first, second], SelectedPlaylistId = second.Id }, first);
+    }
+
+    [Fact]
+    public void EditsActOnTheSelectedPlaylistAndLeaveTheOtherAlone()
+    {
+        var (scene, first) = SecondSelected();
+        var tracks = scene.Tracks.Select(t => t.Id).ToArray();
+
+        // The first playlist could play Track 1's points, but the selected one is empty.
+        Assert.False(PlaylistEditing.CanPlay(scene));
+        Assert.Equal(-1, PlaylistEditing.IndexOf(scene, first.Entries[0].Id));
+        scene = PlaylistEditing.Add(scene, [tracks[0], tracks[1]]);
+        Assert.True(PlaylistEditing.CanPlay(scene));
+        scene = PlaylistEditing.Reorder(scene, [1, 0]);
+        scene = PlaylistEditing.SetPlaylistLoops(scene, true);
+
+        Assert.Equal(new[] { tracks[1], tracks[0] }, Entries(scene).Select(e => e.TrackId));
+        Assert.True(PlaylistEditing.Selected(scene).Loops);
+        Assert.Same(first, scene.Playlists[0]);
+    }
+
+    [Fact]
+    public void RemoveAndSetLoopsReachAnEntryInAPlaylistThatIsntSelected()
+    {
+        var (scene, first) = SecondSelected();
+        var (one, two) = (first.Entries[0].Id, first.Entries[1].Id);
+
+        Assert.Equal(4, PlaylistEditing.SetLoops(scene, one, 4).Playlists[0].Entries[0].Loops);
+        var removed = PlaylistEditing.Remove(scene, [two]);
+        Assert.Equal(new[] { one }, removed.Playlists[0].Entries.Select(e => e.Id));
+        Assert.Empty(Entries(removed));
     }
 
     [Fact]
@@ -29,10 +69,10 @@ public class PlaylistEditingTests
         var (one, first) = AddOne(scene, scene.Tracks[0].Id);
         var (two, second) = AddOne(one, scene.Tracks[1].Id, 0);
 
-        Assert.Equal(new[] { second, first }, two.Playlist.Select(e => e.Id));
-        Assert.Equal(scene.Tracks[1].Id, two.Playlist[0].TrackId);
-        Assert.Null(two.Playlist[1].Loops);
-        Assert.Equal(Transition.Cut, two.Playlist[1].Transition);
+        Assert.Equal(new[] { second, first }, Entries(two).Select(e => e.Id));
+        Assert.Equal(scene.Tracks[1].Id, Entries(two)[0].TrackId);
+        Assert.Null(Entries(two)[1].Loops);
+        Assert.Equal(Transition.Cut, Entries(two)[1].Transition);
     }
 
     [Fact]
@@ -42,7 +82,7 @@ public class PlaylistEditingTests
         scene = PlaylistEditing.Add(scene, [scene.Tracks[0].Id]);
         scene = PlaylistEditing.Add(scene, [scene.Tracks[0].Id]);
 
-        Assert.Equal(2, scene.Playlist.Count);
+        Assert.Equal(2, Entries(scene).Count);
         Assert.Throws<ArgumentException>(() => PlaylistEditing.Add(scene, [Guid.NewGuid()]));
     }
 
@@ -53,9 +93,9 @@ public class PlaylistEditingTests
         var (a, first) = AddOne(scene, scene.Tracks[0].Id);
         var (b, second) = AddOne(a, scene.Tracks[1].Id);
 
-        Assert.Equal(new[] { second, first }, PlaylistEditing.Reorder(b, [1, 0]).Playlist.Select(e => e.Id));
+        Assert.Equal(new[] { second, first }, Entries(PlaylistEditing.Reorder(b, [1, 0])).Select(e => e.Id));
         Assert.Same(b, PlaylistEditing.Reorder(b, [0, 1]));
-        Assert.Equal(new[] { second }, PlaylistEditing.Remove(b, [first]).Playlist.Select(e => e.Id));
+        Assert.Equal(new[] { second }, Entries(PlaylistEditing.Remove(b, [first])).Select(e => e.Id));
         Assert.Throws<ArgumentException>(() => PlaylistEditing.Remove(b, [Guid.NewGuid()]));
         Assert.Throws<ArgumentException>(() => PlaylistEditing.Reorder(b, [0, 0]));
     }
@@ -88,10 +128,10 @@ public class PlaylistEditingTests
         var scene = TwoTracks();
         var (a, id) = AddOne(scene, scene.Tracks[0].Id);
 
-        Assert.Equal(3, PlaylistEditing.SetLoops(a, id, 3).Playlist[0].Loops);
-        Assert.Equal(PlaylistEditing.MaxLoops, PlaylistEditing.SetLoops(a, id, 500).Playlist[0].Loops);
-        Assert.Equal(1, PlaylistEditing.SetLoops(a, id, 0).Playlist[0].Loops);
-        Assert.Null(PlaylistEditing.SetLoops(PlaylistEditing.SetLoops(a, id, 4), id, null).Playlist[0].Loops);
+        Assert.Equal(3, Entries(PlaylistEditing.SetLoops(a, id, 3))[0].Loops);
+        Assert.Equal(PlaylistEditing.MaxLoops, Entries(PlaylistEditing.SetLoops(a, id, 500))[0].Loops);
+        Assert.Equal(1, Entries(PlaylistEditing.SetLoops(a, id, 0))[0].Loops);
+        Assert.Null(Entries(PlaylistEditing.SetLoops(PlaylistEditing.SetLoops(a, id, 4), id, null))[0].Loops);
         Assert.Same(a, PlaylistEditing.SetLoops(a, id, null));
     }
 
@@ -102,9 +142,9 @@ public class PlaylistEditingTests
         scene = SceneEditing.Replace(scene, TrackEditing.SetLoop(scene.Tracks[0], true));
         var (a, id) = AddOne(scene, scene.Tracks[0].Id);
 
-        Assert.True(PlaylistEditing.HoldsPlaylist(a, a.Playlist[0]));
+        Assert.True(PlaylistEditing.HoldsPlaylist(a, Entries(a)[0]));
         var counted = PlaylistEditing.SetLoops(a, id, 2);
-        Assert.False(PlaylistEditing.HoldsPlaylist(counted, counted.Playlist[0]));
+        Assert.False(PlaylistEditing.HoldsPlaylist(counted, Entries(counted)[0]));
     }
 
     [Fact]
@@ -114,7 +154,7 @@ public class PlaylistEditingTests
         scene = SceneEditing.Replace(scene, TrackEditing.SetLoop(scene.Tracks[1], true));
         var (a, _) = AddOne(scene, scene.Tracks[1].Id);
 
-        Assert.False(PlaylistEditing.HoldsPlaylist(a, a.Playlist[0]));
+        Assert.False(PlaylistEditing.HoldsPlaylist(a, Entries(a)[0]));
     }
 
     [Fact]
@@ -136,7 +176,7 @@ public class PlaylistEditingTests
 
         var result = SceneEditing.Delete(scene, [scene.Tracks[1].Id], scene.Tracks[0].Id).Scene;
 
-        Assert.Equal(new[] { scene.Tracks[0].Id }, result.Playlist.Select(e => e.TrackId));
+        Assert.Equal(new[] { scene.Tracks[0].Id }, Entries(result).Select(e => e.TrackId));
     }
 
     [Fact]
@@ -144,7 +184,7 @@ public class PlaylistEditingTests
     {
         var scene = TwoTracks();
         var withEntry = PlaylistEditing.Add(scene, [scene.Tracks[0].Id]);
-        Assert.Single(SceneEditing.Duplicate(withEntry, scene.Tracks[0].Id).Scene.Playlist);
+        Assert.Single(Entries(SceneEditing.Duplicate(withEntry, scene.Tracks[0].Id).Scene));
     }
 
     [Fact]
@@ -157,9 +197,9 @@ public class PlaylistEditingTests
 
         Assert.Equal(
             new[] { scene.Tracks[1].Id, scene.Tracks[0].Id, scene.Tracks[0].Id },
-            result.Playlist.Select(e => e.TrackId)
+            Entries(result).Select(e => e.TrackId)
         );
-        Assert.Equal(existing, result.Playlist[2].Id);
+        Assert.Equal(existing, Entries(result)[2].Id);
         Assert.Same(one, PlaylistEditing.Add(one, []));
     }
 
@@ -168,9 +208,9 @@ public class PlaylistEditingTests
     {
         var tracks = TwoTracks();
         var full = PlaylistEditing.Add(tracks, [tracks.Tracks[0].Id, tracks.Tracks[1].Id, tracks.Tracks[0].Id]);
-        var ids = full.Playlist.Select(e => e.Id).ToArray();
+        var ids = Entries(full).Select(e => e.Id).ToArray();
 
-        Assert.Equal(new[] { ids[1] }, PlaylistEditing.Remove(full, [ids[0], ids[2]]).Playlist.Select(e => e.Id));
+        Assert.Equal(new[] { ids[1] }, Entries(PlaylistEditing.Remove(full, [ids[0], ids[2]])).Select(e => e.Id));
         Assert.Same(full, PlaylistEditing.Remove(full, []));
     }
 

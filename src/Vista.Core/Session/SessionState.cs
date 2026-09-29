@@ -149,7 +149,7 @@ public sealed class SessionState
     /// <summary>The entry playing while live, or null.</summary>
     public PlaylistEntry? PlayingEntry =>
         Mode == CameraMode.Live && Director.Playlist is { } playing
-            ? Scene.Playlist.FirstOrDefault(e => e.Id == playing.EntryId)
+            ? PlaylistEditing.Selected(Scene).Entries.FirstOrDefault(e => e.Id == playing.EntryId)
             : null;
 
     /// <summary>The edited Follow Target track's offset as an orbit round its character, or null unless it follows with its one point.</summary>
@@ -257,16 +257,17 @@ public sealed class SessionState
         EndLiveEdit();
 
         Selection.DropGroup();
-        Director.GoLive(new PlaylistShot(items, Scene.PlaylistLoops));
+        Director.GoLive(new PlaylistShot(items, PlaylistEditing.Selected(Scene).Loops));
         var fromGame = Released;
         Mode = CameraMode.Live;
         return fromGame ? PlayOutcome.StartedFromGame : PlayOutcome.Started;
     }
 
-    /// <summary>The playlist's entries whose tracks have points, in order and in the world, as Live plays them.</summary>
+    /// <summary>The selected playlist's entries whose tracks have points, in order and in the world, as Live plays them.</summary>
     public IReadOnlyList<PlaylistItem> PlaylistItems() =>
-        Scene
-            .Playlist.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
+        PlaylistEditing
+            .Selected(Scene)
+            .Entries.Select(entry => (Entry: entry, Track: SceneEditing.Get(Scene, entry.TrackId)))
             .Where(x => x.Track.Points.Count > 0)
             .Select(x => new PlaylistItem(x.Entry.Id, World.WorldOf(x.Track), x.Entry.Loops))
             .ToList();
@@ -400,7 +401,7 @@ public sealed class SessionState
         CommitScene(scene =>
         {
             var order = BlockMove.Order(
-                scene.Playlist.Count,
+                PlaylistEditing.Selected(scene).Entries.Count,
                 ids.Select(id => PlaylistEditing.Require(scene, id)).ToArray(),
                 PlaylistEditing.Require(scene, grabbed),
                 target is { } t ? PlaylistEditing.Require(scene, t) : null
@@ -979,18 +980,26 @@ public sealed class SessionState
         Transport.Park(0.0);
     }
 
-    /// <summary>True when two scenes hold the same anchor, hidden set, playlist, playlist loop and tracks by value.</summary>
+    /// <summary>True when two scenes hold the same anchor, hidden set, playlists, selected playlist and tracks by value.</summary>
     private static bool SameValues(Scene a, Scene b)
     {
         if (
             a.Anchor != b.Anchor
             || a.AnchorPlaced != b.AnchorPlaced
-            || a.PlaylistLoops != b.PlaylistLoops
+            || a.SelectedPlaylistId != b.SelectedPlaylistId
+            || a.Playlists.Count != b.Playlists.Count
             || a.Tracks.Count != b.Tracks.Count
             || !a.Hidden.SetEquals(b.Hidden)
-            || !a.Playlist.SequenceEqual(b.Playlist)
         )
             return false;
+        for (var i = 0; i < a.Playlists.Count; i++)
+        {
+            var x = a.Playlists[i];
+            var y = b.Playlists[i];
+            if (x with { Entries = y.Entries } != y || !x.Entries.SequenceEqual(y.Entries))
+                return false;
+        }
+
         for (var i = 0; i < a.Tracks.Count; i++)
         {
             var x = a.Tracks[i];

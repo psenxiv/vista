@@ -31,8 +31,8 @@ public sealed class SceneFolder
     /// <summary>True for the errors reading or writing a file can be expected to throw: missing, locked or forbidden.</summary>
     public static bool IsFileError(Exception e) => e is IOException or UnauthorizedAccessException;
 
-    /// <summary>True for a file error, or a file that was read but isn't a scene or preset Vista can use.</summary>
-    public static bool IsUnreadable(Exception e) => e is InvalidDataException || IsFileError(e);
+    /// <summary>True for a file error, or a file that was read but isn't a scene or preset this Vista can use.</summary>
+    public static bool IsUnreadable(Exception e) => e is InvalidDataException or NewerFormatException || IsFileError(e);
 
     /// <summary>The vistaxiv folder.</summary>
     public string Root { get; }
