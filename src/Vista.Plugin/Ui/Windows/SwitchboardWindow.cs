@@ -59,6 +59,8 @@ internal sealed class SwitchboardWindow : Window
     /// <summary>Fixes the height to the content and keeps the slots wide enough for the toggles.</summary>
     public override void PreDraw()
     {
+        // Measured with the spacing Draw pushes, so the height fits what it draws.
+        using var spacing = WindowStyle.Push();
         var style = ImGui.GetStyle();
         var slot = MathF.Max(MinSlotWidth * ImGuiHelpers.GlobalScale, IconButton.RowWidth(ToggleIcons));
         var width = (slot * (SlotsPerRow + 1)) + (style.ItemSpacing.X * SlotsPerRow) + (style.WindowPadding.X * 2f);
@@ -69,7 +71,7 @@ internal sealed class SwitchboardWindow : Window
             + (SlotHeight() * 2f)
             + ImGui.GetFrameHeight()
             + (style.ItemSpacing.Y * 3f);
-        // Dalamud scales the constraints by the global scale, and the style is already scaled.
+        // Dalamud multiplies the constraints by the global scale; these are already on-screen sizes.
         var scale = ImGuiHelpers.GlobalScale;
         SizeConstraints = new WindowSizeConstraints
         {
@@ -268,7 +270,7 @@ internal sealed class SwitchboardWindow : Window
         if (held is not null || fill != ImGuiCol.FrameBg)
             list.AddRectFilled(min, max, ImGui.GetColorU32(fill), style.FrameRounding);
         if (held is null)
-            DashedRect(list, min, max, ImGui.GetColorU32(UiColours.Dim()));
+            DashedRect(list, min, max, ImGui.GetColorU32(UiColours.Dim()), style.FrameRounding);
 
         var inset = style.FramePadding * 2f;
         var nameTop = min.Y + inset.Y + ImGui.GetTextLineHeight() + (style.ItemSpacing.Y / 2f);
@@ -321,21 +323,38 @@ internal sealed class SwitchboardWindow : Window
         }
     }
 
-    /// <summary>A dashed outline around an empty slot.</summary>
-    private static void DashedRect(ImDrawListPtr list, Vector2 min, Vector2 max, uint colour)
+    /// <summary>A dashed outline around an empty slot, its corners solid arcs rounded like a frame's.</summary>
+    private static void DashedRect(ImDrawListPtr list, Vector2 min, Vector2 max, uint colour, float rounding)
     {
         void Dashes(Vector2 from, Vector2 to)
         {
             var length = Vector2.Distance(from, to);
+            if (length <= 0f)
+                return;
             var step = (to - from) / length;
             for (var at = 0f; at < length; at += DashLength * 2f)
                 list.AddLine(from + (step * at), from + (step * MathF.Min(at + DashLength, length)), colour);
         }
 
-        Dashes(min, min with { X = max.X });
-        Dashes(min with { X = max.X }, max);
-        Dashes(max, max with { X = min.X });
-        Dashes(max with { X = min.X }, min);
+        // Rounding is clamped to half the shorter side, as ImGui clamps a frame's.
+        var r = MathF.Min(rounding, MathF.Min(max.X - min.X, max.Y - min.Y) / 2f);
+        Dashes(min with { X = min.X + r }, new Vector2(max.X - r, min.Y));
+        Dashes(new Vector2(max.X, min.Y + r), max with { Y = max.Y - r });
+        Dashes(max with { X = max.X - r }, new Vector2(min.X + r, max.Y));
+        Dashes(new Vector2(min.X, max.Y - r), min with { Y = min.Y + r });
+        if (r <= 0f)
+            return;
+        void Corner(Vector2 centre, float from)
+        {
+            list.PathArcTo(centre, r, from, from + (MathF.PI / 2f));
+            list.PathStroke(colour, ImDrawFlags.None, 1f);
+        }
+
+        // Angles run clockwise on screen from the +x axis, since y points down.
+        Corner(max - new Vector2(r), 0f);
+        Corner(new Vector2(min.X + r, max.Y - r), MathF.PI / 2f);
+        Corner(min + new Vector2(r), MathF.PI);
+        Corner(new Vector2(max.X - r, min.Y + r), MathF.PI * 1.5f);
     }
 
     /// <summary>Direct cut, Keep rolling and Auto Next, centred in the sixth column's top cell and lit while on.</summary>
@@ -377,7 +396,8 @@ internal sealed class SwitchboardWindow : Window
                         slot,
                         scene.Playlists[i].Id
                     );
-                ImGui.Separator();
+                if (scene.Playlists.Count > 0 && scene.Tracks.Count > 0)
+                    ImGui.Separator();
                 for (var i = 0; i < scene.Tracks.Count; i++)
                     AssignItem($"track-{i}", FontAwesomeIcon.Route, scene.Tracks[i].Name, slot, scene.Tracks[i].Id);
             }
@@ -395,14 +415,23 @@ internal sealed class SwitchboardWindow : Window
         ImGui.EndPopup();
     }
 
-    /// <summary>An Assign entry: the icon, then the track or playlist's name.</summary>
+    /// <summary>An Assign entry: the icon, then the track or playlist's name, hovered and chosen as one item across the menu's width.</summary>
     private void AssignItem(string id, FontAwesomeIcon icon, string name, int slot, Guid target)
     {
-        using var pushed = ImRaii.PushId(id);
-        IconButton.Glyph(icon);
-        ImGui.SameLine();
-        if (Menu.Item(name))
+        var iconWidth = IconButton.GlyphWidth(icon);
+        var gap = ImGui.GetStyle().ItemInnerSpacing.X;
+        var width = iconWidth + gap + ImGui.CalcTextSize(name).X;
+        // Sized to its content so the menu fits it, but hovered across the menu's width, as ImGui's own menu items are.
+        var span = (ImGuiSelectableFlags)ImGuiSelectableFlagsPrivate.SpanAvailWidth;
+        if (ImGui.Selectable($"##{id}", false, span, new Vector2(width, 0f)))
             Report(session.AssignSlot(slot, target));
+
+        var at = ImGui.GetItemRectMin();
+        var list = ImGui.GetWindowDrawList();
+        var colour = ImGui.GetColorU32(ImGuiCol.Text);
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            list.AddText(at, colour, icon.ToIconString());
+        list.AddText(at with { X = at.X + iconWidth + gap }, colour, name);
     }
 
     /// <summary>The Program shot's scrub bar and its time, or an empty disabled bar with nothing on Program.</summary>
