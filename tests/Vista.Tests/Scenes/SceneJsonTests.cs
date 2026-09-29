@@ -43,7 +43,7 @@ public class SceneJsonTests
             false
         );
 
-    // Two playlists, the second selected and looping.
+    // Two playlists, the second selected and looping; slot 0 on the full track, slot 4 on Intro under another name, every toggle on, slot 4 on Program at 2.5 s, slot 0 Next and resuming at 1.25 s.
     private static Scene FullScene()
     {
         var full = FullTrack();
@@ -54,15 +54,28 @@ public class SceneJsonTests
             [new PlaylistEntry(Guid.NewGuid(), full.Id, 3), new PlaylistEntry(Guid.NewGuid(), plain.Id)]
         );
         var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), plain.Id, 2)], true);
+        var slots = new Slot?[SwitchboardEditing.SlotCount];
+        slots[0] = new Slot("Dolly in", full.Id, null);
+        slots[4] = new Slot("Opening", null, intro.Id);
         return new Scene(
             [full, plain],
             new HashSet<Guid> { plain.Id },
             [intro, main],
             main.Id,
+            new Switchboard(slots, true, true, true, new OnAir(4, 0, 2.5, Resume((0, 1.25)))),
             new Anchor(new Vector3(-100f, 50f, 25f), -2f),
             true
         );
     }
+
+    // The switchboard a file without one reads with: ten empty slots, every toggle off and nothing on air.
+    private static readonly Switchboard NoSwitchboard = new(
+        new Slot?[10],
+        false,
+        false,
+        false,
+        new OnAir(null, null, 0.0, new double?[10])
+    );
 
     // Record equality compares lists by reference, so the lists are compared by element and then swapped in.
     private static void SameTrack(Track expected, Track actual)
@@ -102,8 +115,91 @@ public class SceneJsonTests
             SameTrack(scene.Tracks[i], read.Tracks[i]);
         Assert.True(scene.Hidden.SetEquals(read.Hidden));
         SamePlaylists(scene.Playlists, read.Playlists);
-        Assert.Equal(scene, read with { Tracks = scene.Tracks, Hidden = scene.Hidden, Playlists = scene.Playlists });
+        SameBoard(scene.Switchboard, read.Switchboard);
+        Assert.Equal(
+            scene,
+            read with
+            {
+                Tracks = scene.Tracks,
+                Hidden = scene.Hidden,
+                Playlists = scene.Playlists,
+                Switchboard = scene.Switchboard,
+            }
+        );
     }
+
+    [Fact]
+    public void AFormatTwoFileWithoutASwitchboardReadsWithAnEmptyOne()
+    {
+        var json = Edited(FullScene(), n => n.AsObject().Remove("switchboard"));
+
+        SameBoard(NoSwitchboard, SceneJson.Read(json).Switchboard);
+    }
+
+    [Theory]
+    [InlineData(0, "trackId")]
+    [InlineData(4, "playlistId")]
+    public void ASlotNamingAMissingTrackOrPlaylistIsRefused(int slot, string id)
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![slot]![id] = Guid.NewGuid().ToString());
+
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(json));
+    }
+
+    // FullScene has slot 4 on Program at 2.5 s and slot 0 Next; slot 3 is empty.
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(10)]
+    [InlineData(3)]
+    public void AProgramOffTheSlotsOrOnAnEmptyOneReadsAsNoProgram(int program)
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["live"]!["program"] = program);
+
+        // With nothing on Program its time reads as 0; Next and the resume stay.
+        SameAir(new OnAir(null, 0, 0.0, Resume((0, 1.25))), SceneJson.Read(json).Switchboard.Live);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(10)]
+    [InlineData(3)]
+    public void ANextOffTheSlotsOrOnAnEmptyOneReadsAsNoNext(int next)
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["live"]!["next"] = next);
+
+        SameAir(new OnAir(4, null, 2.5, Resume((0, 1.25))), SceneJson.Read(json).Switchboard.Live);
+    }
+
+    [Fact]
+    public void AResumeOnAnEmptySlotReadsAsNone()
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["live"]!["resume"]![3] = 7.5);
+
+        SameAir(new OnAir(4, 0, 2.5, Resume((0, 1.25))), SceneJson.Read(json).Switchboard.Live);
+    }
+
+    public static TheoryData<string, Action<JsonNode>> MalformedSwitchboards =>
+        new()
+        {
+            { "nine slots", n => n["switchboard"]!["slots"]!.AsArray().RemoveAt(9) },
+            { "eleven slots", n => n["switchboard"]!["slots"]!.AsArray().Add(null) },
+            {
+                "both ids",
+                n => n["switchboard"]!["slots"]![0]!["playlistId"] = n["playlists"]![0]!["id"]!.GetValue<string>()
+            },
+            { "neither id", n => n["switchboard"]!["slots"]![0]!["trackId"] = null },
+            { "a blank name", n => n["switchboard"]!["slots"]![0]!["name"] = "   " },
+            { "a name too long", n => n["switchboard"]!["slots"]![0]!["name"] = new string('a', 101) },
+            { "a negative program time", n => n["switchboard"]!["live"]!["programTime"] = -0.5 },
+            { "nine resumes", n => n["switchboard"]!["live"]!["resume"]!.AsArray().RemoveAt(9) },
+            { "eleven resumes", n => n["switchboard"]!["live"]!["resume"]!.AsArray().Add(null) },
+            { "a negative resume", n => n["switchboard"]!["live"]!["resume"]![0] = -1.0 },
+        };
+
+    [Theory]
+    [MemberData(nameof(MalformedSwitchboards))]
+    public void AMalformedSwitchboardMakesTheSceneUnreadable(string _, Action<JsonNode> spoil) =>
+        Assert.Throws<InvalidDataException>(() => SceneJson.Read(Edited(FullScene(), spoil)));
 
     [Fact]
     public void AFormatOneSceneReadsAsOneSelectedLoopingPlaylist()
@@ -111,6 +207,7 @@ public class SceneJsonTests
         var read = SceneJson.Read(FormatOneSceneJson());
 
         // The fixture's playlist, in file order: five entries, the second repeating twice, and playlistLoops true.
+        SameBoard(NoSwitchboard, read.Switchboard);
         var playlist = Assert.Single(read.Playlists);
         Assert.Equal("Playlist 1", playlist.Name);
         Assert.True(playlist.Loops);
@@ -461,7 +558,7 @@ public class SceneJsonTests
         }
     );
 
-    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, and a random anchor, built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
+    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them, with any toggles, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
     private static readonly Gen<Scene> AnyScene = Gen.Select(
         AnySavedTrack.Array[1, 4],
         Gen.Select(
@@ -472,7 +569,18 @@ public class SceneJsonTests
         ).Array[1, 3],
         Gen.Select(Gen.Bool.Array[4], Gen.Int[0, 2]),
         Gen.Select(AnyPosition, Gen.Float[-MathF.PI, MathF.PI], Gen.Bool),
-        (tracks, playlists, picks, scene) =>
+        Gen.Select(
+            Gen.Select(Gen.Int[0, 2], Gen.Int[0, 3], AnyName, Gen.Bool, Gen.Double[0.0, 600.0]).Array[
+                SwitchboardEditing.SlotCount
+            ],
+            Gen.Bool.Array[3],
+            Gen.Select(
+                Gen.Int[-1, SwitchboardEditing.SlotCount - 1],
+                Gen.Int[-1, SwitchboardEditing.SlotCount - 1],
+                Gen.Double[0.0, 600.0]
+            )
+        ),
+        (tracks, playlists, picks, scene, board) =>
         {
             var (hidden, selected) = picks;
             var built = playlists
@@ -488,11 +596,31 @@ public class SceneJsonTests
                     p.Item3
                 ))
                 .ToList();
+            var (slotPicks, toggles, air) = board;
+            var slots = slotPicks
+                .Select(s =>
+                    s.Item1 switch
+                    {
+                        1 => new Slot(s.Item3, tracks[s.Item2 % tracks.Length].Id, null),
+                        2 => new Slot(s.Item3, null, built[s.Item2 % built.Count].Id),
+                        _ => null,
+                    }
+                )
+                .ToArray();
+            int? OnSlot(int i) => i >= 0 && slots[i] is not null ? i : null;
+            var program = OnSlot(air.Item1);
+            var live = new OnAir(
+                program,
+                OnSlot(air.Item2),
+                program is null ? 0.0 : air.Item3,
+                slotPicks.Select((s, i) => slots[i] is not null && s.Item4 ? s.Item5 : (double?)null).ToArray()
+            );
             return new Scene(
                 tracks,
                 tracks.Where((_, i) => hidden[i]).Select(t => t.Id).ToHashSet(),
                 built,
                 built[selected % built.Count].Id,
+                new Switchboard(slots, toggles[0], toggles[1], toggles[2], live),
                 new Anchor(scene.Item1, scene.Item2),
                 scene.Item3
             );
@@ -519,6 +647,7 @@ public class SceneJsonTests
 
                 Assert.True(scene.Hidden.SetEquals(read.Hidden));
                 SamePlaylists(scene.Playlists, read.Playlists);
+                SameBoard(scene.Switchboard, read.Switchboard);
                 Assert.Equal(
                     scene,
                     read with
@@ -526,6 +655,7 @@ public class SceneJsonTests
                         Tracks = scene.Tracks,
                         Hidden = scene.Hidden,
                         Playlists = scene.Playlists,
+                        Switchboard = scene.Switchboard,
                     }
                 );
             },

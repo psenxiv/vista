@@ -221,6 +221,18 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void DeletingTracksEmptiesTheirSlotsAndTakesProgramOffThem()
+    {
+        // OnAirScene: slot 0 on Track 1 (Program), slot 1 on Playlist 1 (Next), slot 2 on Track 2; deleting Track 1 empties slot 0.
+        var scene = OnAirScene();
+
+        var result = SceneEditing.Delete(scene, [scene.Tracks[0].Id], scene.Tracks[1].Id).Scene;
+
+        Assert.Equal([null, scene.Switchboard.Slots[1], scene.Switchboard.Slots[2]], result.Switchboard.Slots.Take(3));
+        SameAir(new OnAir(null, 1, 0.0, Resume((1, 2.0), (2, 4.0))), result.Switchboard.Live);
+    }
+
+    [Fact]
     public void ReorderPutsTheTracksInTheOrderGiven()
     {
         var scene = Three();

@@ -10,11 +10,11 @@ public static class SceneEditing
     /// <summary>Why a track Id can't be used: no track has it.</summary>
     public const string NoSuchTrack = "There is no such track.";
 
-    /// <summary>A scene holding one empty track, "Track 1", and one empty playlist, selected.</summary>
+    /// <summary>A scene holding one empty track, "Track 1", one empty playlist, selected, and an empty switchboard.</summary>
     public static Scene New()
     {
         var playlist = PlaylistEditing.Empty();
-        return new([TrackEditing.Empty()], new HashSet<Guid>(), [playlist], playlist.Id);
+        return new([TrackEditing.Empty()], new HashSet<Guid>(), [playlist], playlist.Id, SwitchboardEditing.Empty());
     }
 
     /// <summary>The index of track <paramref name="id"/>, or −1.</summary>
@@ -72,7 +72,7 @@ public static class SceneEditing
         return (scene with { Tracks = ListEdit.Insert(scene.Tracks, index + 1, copy) }, copy.Id);
     }
 
-    /// <summary>Deletes tracks <paramref name="ids"/> and their playlist entries, refusing to delete every track; names the track to edit after: <paramref name="edited"/> if it stays, else the first remaining track after it, or the last.</summary>
+    /// <summary>Deletes tracks <paramref name="ids"/>, their playlist entries and the slots on them, refusing to delete every track; names the track to edit after: <paramref name="edited"/> if it stays, else the first remaining track after it, or the last.</summary>
     public static (Scene Scene, Guid Edited) Delete(Scene scene, IReadOnlyCollection<Guid> ids, Guid edited)
     {
         RequireAll(scene, ids);
@@ -87,7 +87,7 @@ public static class SceneEditing
             : scene.Tracks[at];
         var hidden = new HashSet<Guid>(scene.Hidden.Where(id => !gone.Contains(id)));
         return (
-            scene with
+            gone.Aggregate(scene, SwitchboardEditing.Forget) with
             {
                 Tracks = tracks,
                 Hidden = hidden,

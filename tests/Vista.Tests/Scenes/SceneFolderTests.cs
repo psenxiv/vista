@@ -108,9 +108,15 @@ public sealed class SceneFolderTests : IDisposable
     }
 
     [Fact]
-    public void TheShippedDemoSceneReads()
+    public void TheShippedDemoSceneReadsWithSlot1OnItsPlaylistOnProgram()
     {
-        Assert.Equal(5, DemoScene().Tracks.Count);
+        var scene = DemoScene();
+
+        Assert.Equal(5, scene.Tracks.Count);
+        var playlist = Assert.Single(scene.Playlists);
+        Assert.Equal(new Slot("Playlist 1", null, playlist.Id), scene.Switchboard.Slots[0]);
+        Assert.All(scene.Switchboard.Slots.Skip(1), Assert.Null);
+        SameAir(new OnAir(0, null, 0.0, new double?[10]), scene.Switchboard.Live);
     }
 
     [Fact]
@@ -434,7 +440,7 @@ public sealed class SceneFolderTests : IDisposable
         var dawn = entries[0];
         var dusk = entries[1];
         Assert.Equal("Dawn", dawn.Name);
-        // DemoScene has five tracks (see TheShippedDemoSceneReads).
+        // DemoScene has five tracks (see TheShippedDemoSceneReadsWithSlot1OnItsPlaylistOnProgram).
         Assert.Equal(5, dawn.Tracks);
         Assert.Equal("Dusk", dusk.Name);
         // Named() makes a scene with a single track.

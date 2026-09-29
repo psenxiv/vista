@@ -47,7 +47,8 @@ public static class SceneJson
                         p.Entries.Select(e => new EntryDto(e.Id, e.TrackId, e.Loops, e.Transition)).ToList()
                     ))
                     .ToList(),
-                scene.Tracks.Select(t => FromTrack(t, identity: true)).ToList()
+                scene.Tracks.Select(t => FromTrack(t, identity: true)).ToList(),
+                FromSwitchboard(scene.Switchboard)
             ),
             Options
         );
@@ -106,6 +107,7 @@ public static class SceneJson
             file.Hidden.ToHashSet(),
             playlists,
             selected,
+            file.Switchboard is { } board ? ReadSwitchboard(board, tracks, playlists) : SwitchboardEditing.Empty(),
             CheckedAnchor(file.Anchor),
             file.AnchorPlaced
         );
@@ -125,6 +127,7 @@ public static class SceneJson
             file.Hidden.ToHashSet(),
             [playlist],
             playlist.Id,
+            SwitchboardEditing.Empty(),
             CheckedAnchor(file.Anchor),
             file.AnchorPlaced
         );
@@ -148,6 +151,64 @@ public static class SceneJson
             throw new InvalidDataException("A playlist entry's repeats are out of range.");
         return Each(items, e => new PlaylistEntry(e.Id, e.TrackId, e.Loops, e.Transition));
     }
+
+    /// <summary>The switchboard in a file: a Program or Next off the slots or on an empty one reads as none, as does a resume point on an empty slot; any other malformed value throws InvalidDataException.</summary>
+    private static Switchboard ReadSwitchboard(
+        SwitchboardDto board,
+        IReadOnlyList<Track> tracks,
+        IReadOnlyList<Playlist> playlists
+    )
+    {
+        if (board.Slots.Count != SwitchboardEditing.SlotCount)
+            throw new InvalidDataException($"The switchboard needs {SwitchboardEditing.SlotCount} slots.");
+        var slots = board.Slots.Select(s => s is null ? null : ReadSlot(s, tracks, playlists)).ToArray();
+
+        var live = board.Live;
+        if (live.Resume.Count != SwitchboardEditing.SlotCount)
+            throw new InvalidDataException($"The switchboard needs {SwitchboardEditing.SlotCount} resume points.");
+        if (live.ProgramTime < 0.0 || live.Resume.Any(r => r < 0.0))
+            throw new InvalidDataException("A switchboard time is negative.");
+        int? OnSlot(int? slot) =>
+            slot is >= 0 and < SwitchboardEditing.SlotCount && slots[slot.Value] is not null ? slot : null;
+        var program = OnSlot(live.Program);
+        return new Switchboard(
+            slots,
+            board.DirectCut,
+            board.KeepRolling,
+            board.AutoNext,
+            new OnAir(
+                program,
+                OnSlot(live.Next),
+                program is null ? 0.0 : live.ProgramTime,
+                live.Resume.Select((r, i) => slots[i] is null ? null : r).ToArray()
+            )
+        );
+    }
+
+    /// <summary>A slot in a file, which must name exactly one of the scene's tracks or playlists and have a name a track could.</summary>
+    private static Slot ReadSlot(SlotDto slot, IReadOnlyList<Track> tracks, IReadOnlyList<Playlist> playlists)
+    {
+        if (SceneNames.LengthRefusal(slot.Name) is not null)
+            throw new InvalidDataException("A switchboard slot's name is blank or too long.");
+        var known = (slot.TrackId, slot.PlaylistId) switch
+        {
+            ({ } track, null) => tracks.Any(t => t.Id == track),
+            (null, { } playlist) => playlists.Any(p => p.Id == playlist),
+            _ => throw new InvalidDataException("A switchboard slot needs one track or playlist."),
+        };
+        return known
+            ? new Slot(slot.Name, slot.TrackId, slot.PlaylistId)
+            : throw new InvalidDataException("A switchboard slot names a missing track or playlist.");
+    }
+
+    private static SwitchboardDto FromSwitchboard(Switchboard board) =>
+        new(
+            board.Slots.Select(s => s is null ? null : new SlotDto(s.Name, s.TrackId, s.PlaylistId)).ToList(),
+            board.DirectCut,
+            board.KeepRolling,
+            board.AutoNext,
+            new OnAirDto(board.Live.Program, board.Live.Next, board.Live.ProgramTime, board.Live.Resume)
+        );
 
     private static Anchor CheckedAnchor(AnchorDto anchor) =>
         Finite(anchor.Position) && float.IsFinite(anchor.Yaw)
@@ -318,8 +379,21 @@ public static class SceneJson
         Guid SelectedPlaylist,
         IReadOnlyList<Guid> Hidden,
         IReadOnlyList<PlaylistDto?> Playlists,
-        IReadOnlyList<TrackDto?> Tracks
+        IReadOnlyList<TrackDto?> Tracks,
+        SwitchboardDto? Switchboard = null
     );
+
+    private sealed record SwitchboardDto(
+        IReadOnlyList<SlotDto?> Slots,
+        bool DirectCut,
+        bool KeepRolling,
+        bool AutoNext,
+        OnAirDto Live
+    );
+
+    private sealed record SlotDto(string Name, Guid? TrackId, Guid? PlaylistId);
+
+    private sealed record OnAirDto(int? Program, int? Next, double ProgramTime, IReadOnlyList<double?> Resume);
 
     /// <summary>A scene file in format 1, which held one playlist; frozen, as files in it are still read.</summary>
     private sealed record SceneFileV1(

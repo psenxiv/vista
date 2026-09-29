@@ -440,6 +440,27 @@ public sealed class SessionState
     public string? SetPlaylistLoops(bool loops) =>
         CommitScene(scene => (PlaylistEditing.SetPlaylistLoops(scene, loops), EditedTrackId));
 
+    /// <summary>Points switchboard slot <paramref name="slot"/> at the track or playlist <paramref name="id"/>. Returns why it was refused, or null.</summary>
+    public string? AssignSlot(int slot, Guid id) =>
+        ChangeSwitchboard(scene => SwitchboardEditing.Assign(scene, slot, id));
+
+    /// <summary>Renames switchboard slot <paramref name="slot"/>. Returns why it was refused, or null.</summary>
+    public string? RenameSlot(int slot, string name) =>
+        ChangeSwitchboard(scene => SwitchboardEditing.Rename(scene, slot, name));
+
+    /// <summary>Empties switchboard slot <paramref name="slot"/>. Returns why it was refused, or null.</summary>
+    public string? ClearSlot(int slot) => ChangeSwitchboard(scene => SwitchboardEditing.Clear(scene, slot));
+
+    /// <summary>Turns a switchboard toggle on or off. Returns why it was refused, or null.</summary>
+    public string? SetSwitchboardToggle(SwitchboardToggle toggle, bool on) =>
+        ChangeSwitchboard(scene => SwitchboardEditing.SetToggle(scene, toggle, on));
+
+    /// <summary>Applies a switchboard change: in Edit as one undo step, Live at once with no undo step. Returns why it was refused, or null.</summary>
+    private string? ChangeSwitchboard(Func<Scene, Scene> change) =>
+        Mode == CameraMode.Live
+            ? Refusal(() => Scene = change(Scene))
+            : CommitScene(scene => (change(scene), EditedTrackId));
+
     /// <summary>Applies <paramref name="change"/> if editing and the result can be played. Returns why it was refused, or null once applied.</summary>
     public string? ChangeTrack(Func<Track, Track> change) =>
         Apply(change, result => Selection.Points.Where(p => TrackEditing.IsPoint(result, p)).ToArray());
@@ -990,7 +1011,9 @@ public sealed class SessionState
         var pointsBefore = Local.Points;
         if (s.Edited != EditedTrackId)
             ClearForSwitch();
-        Scene = s.Scene;
+        var board = s.Scene.Switchboard;
+        var live = SwitchboardEditing.Follow(Scene.Switchboard.Live, Scene.Switchboard.Slots, board.Slots);
+        Scene = s.Scene with { Switchboard = board with { Live = live } };
         EditedTrackId = s.Edited;
         Selection.Restore(s.Selection, pointsBefore);
         return true;
@@ -1003,11 +1026,12 @@ public sealed class SessionState
         Transport.Park(0.0);
     }
 
-    /// <summary>True when two scenes hold the same anchor, hidden set, playlists, selected playlist and tracks by value.</summary>
+    /// <summary>True when two scenes hold the same anchor, hidden set, playlists, selected playlist, switchboard and tracks by value.</summary>
     private static bool SameValues(Scene a, Scene b)
     {
         if (
-            a.Anchor != b.Anchor
+            !SameSwitchboard(a.Switchboard, b.Switchboard)
+            || a.Anchor != b.Anchor
             || a.AnchorPlaced != b.AnchorPlaced
             || a.SelectedPlaylistId != b.SelectedPlaylistId
             || a.Playlists.Count != b.Playlists.Count
@@ -1039,4 +1063,10 @@ public sealed class SessionState
 
         return true;
     }
+
+    /// <summary>True when two switchboards hold the same slots, toggles and Live by value.</summary>
+    private static bool SameSwitchboard(Switchboard a, Switchboard b) =>
+        a.Slots.SequenceEqual(b.Slots)
+        && a.Live.Resume.SequenceEqual(b.Live.Resume)
+        && a with { Slots = b.Slots, Live = a.Live with { Resume = b.Live.Resume } } == b;
 }

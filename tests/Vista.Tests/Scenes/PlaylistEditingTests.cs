@@ -450,6 +450,18 @@ public class PlaylistEditingTests
     }
 
     [Fact]
+    public void DeletingAPlaylistEmptiesItsSlotsAndTakesNextOffThem()
+    {
+        // OnAirScene: slot 1 on Playlist 1 is Next and resumes at 2 s; slot 0 (Program) and slot 2 hold tracks.
+        var scene = OnAirScene();
+
+        var result = PlaylistEditing.Delete(scene, scene.Playlists[0].Id);
+
+        Assert.Equal([scene.Switchboard.Slots[0], null, scene.Switchboard.Slots[2]], result.Switchboard.Slots.Take(3));
+        SameAir(new OnAir(0, null, 3.0, Resume((2, 4.0))), result.Switchboard.Live);
+    }
+
+    [Fact]
     public void DeleteRefusesAnUnknownPlaylist()
     {
         var scene = WithNames("a", "b");

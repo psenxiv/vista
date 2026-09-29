@@ -3061,5 +3061,43 @@
       ],
       "lookAhead": 10
     }
-  ]
+  ],
+  "switchboard": {
+    "slots": [
+      {
+        "name": "Playlist 1",
+        "trackId": null,
+        "playlistId": "00000000-0000-0000-0003-000000000000"
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "directCut": false,
+    "keepRolling": false,
+    "autoNext": false,
+    "live": {
+      "program": 0,
+      "next": null,
+      "programTime": 0,
+      "resume": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  }
 }

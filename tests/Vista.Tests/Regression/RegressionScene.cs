@@ -133,7 +133,7 @@ internal static class RegressionScene
     private static ControlPoint[] RunIntoASharpTurn =>
         [P(0f, 0f, -70f), P(0f, 0f, -50f), P(0f, 0f, -30f), P(0f, 0f, -10f), P(0f, 0f, 10f), P(0.26f, 0f, -5f)];
 
-    /// <summary>The scene as the builder makes it, with fixed ids so its file only changes when a case does.</summary>
+    /// <summary>The scene as the builder makes it, slot 1 on its playlist on Program, with fixed ids so its file only changes when a case does.</summary>
     internal static Scene Build()
     {
         var tracks = Cases
@@ -150,14 +150,17 @@ internal static class RegressionScene
             .ToArray();
         var entries = tracks.Select((t, i) => new PlaylistEntry(Id(2, i), t.Id)).ToArray();
         var playlist = new Playlist(Id(3, 0), PlaylistEditing.FirstName, entries);
-        return new Scene(
+        var scene = new Scene(
             tracks,
             new HashSet<Guid>(),
             [playlist],
             playlist.Id,
+            SwitchboardEditing.Empty(),
             new Anchor(SceneAnchor, 0f),
             AnchorPlaced: true
         );
+        var board = SwitchboardEditing.Assign(scene, 0, playlist.Id).Switchboard;
+        return scene with { Switchboard = board with { Live = board.Live with { Program = 0 } } };
     }
 
     /// <summary>The committed scene file's path in the repository.</summary>

@@ -165,11 +165,55 @@ internal static class Fixtures
     )
     {
         var playlist = PlaylistEditing.Empty() with { Entries = entries ?? [], Loops = loops };
-        return new Scene(tracks, new HashSet<Guid>(), [playlist], playlist.Id);
+        return new Scene(tracks, new HashSet<Guid>(), [playlist], playlist.Id, SwitchboardEditing.Empty());
     }
 
     /// <summary>The selected playlist's entries.</summary>
     internal static IReadOnlyList<PlaylistEntry> Entries(Scene scene) => PlaylistEditing.Selected(scene).Entries;
+
+    /// <summary>A new scene with a second track, "Track 2", and a second playlist, "Playlist 2", the first playlist selected.</summary>
+    internal static Scene TwoTracksTwoPlaylists()
+    {
+        var scene = SceneEditing.Add(SceneEditing.New()).Scene;
+        return PlaylistEditing.Select(PlaylistEditing.New(scene, "Playlist 2"), scene.Playlists[0].Id);
+    }
+
+    /// <summary><see cref="TwoTracksTwoPlaylists"/> with slot 0 on Track 1, slot 1 on Playlist 1 and slot 2 on Track 2; Live has slot 0 on Program at 3 s, slot 1 Next, and slots 1 and 2 resuming at 2 s and 4 s.</summary>
+    internal static Scene OnAirScene()
+    {
+        var scene = TwoTracksTwoPlaylists();
+        scene = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 1, scene.Playlists[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 2, scene.Tracks[1].Id);
+        return scene with
+        {
+            Switchboard = scene.Switchboard with { Live = new OnAir(0, 1, 3.0, Resume((1, 2.0), (2, 4.0))) },
+        };
+    }
+
+    /// <summary>A resume list of <see cref="SwitchboardEditing.SlotCount"/> with only <paramref name="set"/> holding a time.</summary>
+    internal static double?[] Resume(params (int Slot, double Seconds)[] set)
+    {
+        var resume = new double?[SwitchboardEditing.SlotCount];
+        foreach (var (slot, seconds) in set)
+            resume[slot] = seconds;
+        return resume;
+    }
+
+    /// <summary>Asserts two switchboards hold the same slots, toggles and Live, comparing lists by element.</summary>
+    internal static void SameBoard(Switchboard expected, Switchboard actual)
+    {
+        Assert.Equal(expected.Slots, actual.Slots);
+        SameAir(expected.Live, actual.Live);
+        Assert.Equal(expected, actual with { Slots = expected.Slots, Live = expected.Live });
+    }
+
+    /// <summary>Asserts two Live states match, comparing the resume lists by element.</summary>
+    internal static void SameAir(OnAir expected, OnAir actual)
+    {
+        Assert.Equal(expected.Resume, actual.Resume);
+        Assert.Equal(expected, actual with { Resume = expected.Resume });
+    }
 
     /// <summary>A control point at the given position, aim and field of view.</summary>
     internal static ControlPoint Point(

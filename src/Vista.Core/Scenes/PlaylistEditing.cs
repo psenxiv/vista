@@ -98,14 +98,14 @@ public static class PlaylistEditing
         };
     }
 
-    /// <summary>Deletes playlist <paramref name="id"/>, refusing the last; deleting the selected one selects the first remaining by name.</summary>
+    /// <summary>Deletes playlist <paramref name="id"/> and empties the slots on it, refusing the last; deleting the selected one selects the first remaining by name.</summary>
     public static Scene Delete(Scene scene, Guid id)
     {
         Get(scene, id);
         if (!CanDelete(scene))
             throw new ArgumentException(LastPlaylist);
         var remaining = scene.Playlists.Where(p => p.Id != id).ToArray();
-        return scene with
+        return SwitchboardEditing.Forget(scene, id) with
         {
             Playlists = remaining,
             SelectedPlaylistId =
