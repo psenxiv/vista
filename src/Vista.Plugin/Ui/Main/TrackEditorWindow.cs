@@ -140,7 +140,7 @@ internal sealed class TrackEditorWindow : Window
         this.guide = guide;
         scrub = new Scrubber(game);
         hierarchy = new HierarchyPanel(game, picker, presetSave);
-        playlist = new PlaylistPanel(session);
+        playlist = new PlaylistPanel(session, picker);
         points = new PointList(game, fields);
         RespectCloseHotkey = false;
         SizeCondition = ImGuiCond.FirstUseEver;

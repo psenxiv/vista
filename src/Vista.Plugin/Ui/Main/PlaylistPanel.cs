@@ -9,6 +9,7 @@ using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks.Aiming;
 using Vista.Plugin.Ui.Widgets;
+using Vista.Plugin.Ui.Windows;
 using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Main;
@@ -22,6 +23,7 @@ internal sealed class PlaylistPanel
     private const float EditedBarWidth = 3f;
 
     private readonly SessionState session;
+    private readonly FilePickerWindow picker;
 
     // A repeat count being dragged, applied when the field is let go; its field is the entry's id.
     private readonly PendingEdit<int> loopsDrag;
@@ -33,13 +35,14 @@ internal sealed class PlaylistPanel
     private readonly WheelSteps wheel = new();
     private bool loopsHovered;
 
-    public PlaylistPanel(SessionState session)
+    public PlaylistPanel(SessionState session, FilePickerWindow picker)
     {
         this.session = session;
+        this.picker = picker;
         loopsDrag = new PendingEdit<int>(() => session.Mode == CameraMode.Editing);
     }
 
-    /// <summary>The header with its loop and add buttons, then one row per entry; editing is disabled unless in Edit mode.</summary>
+    /// <summary>The header with its open, loop and add buttons, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
     {
         // Rows can remove or reorder entries, so every row reads this snapshot.
@@ -59,17 +62,18 @@ internal sealed class PlaylistPanel
                 $"{PlaylistEditing.IndexOf(scene, now.Id) + 1} / {entries.Count} — {SceneEditing.Get(scene, now.TrackId).Name}"
             )
             : "Playlist";
+        var buttons = IconButton.RowWidth(FontAwesomeIcon.LayerGroup, FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus);
         // Cut to the room left of the buttons, so a long name can't widen the panel.
-        var room =
-            ImGui.GetContentRegionAvail().X
-            - IconButton.RowWidth(FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus)
-            - ImGui.GetStyle().ItemSpacing.X;
+        var room = ImGui.GetContentRegionAvail().X - buttons - ImGui.GetStyle().ItemSpacing.X;
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted(), playing is null))
             ImGui.TextUnformatted(RowFit.Ellipsis(header, room, s => ImGui.CalcTextSize(s).X));
 
         ImGui.BeginDisabled(!editing);
         ImGui.SameLine();
-        Layout.RightAlign(IconButton.RowWidth(FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus));
+        Layout.RightAlign(buttons);
+        if (IconButton.Draw("open-playlist", FontAwesomeIcon.LayerGroup, PlaylistPickerSource.OpenPlaylist))
+            picker.Show(FilePickerKind.Playlist);
+        ImGui.SameLine();
         if (IconButton.Toggle("playlist-loop", FontAwesomeIcon.Repeat, playlist.Loops, "Loop playlist"))
             Report(session.SetPlaylistLoops(!playlist.Loops));
         ImGui.SameLine();

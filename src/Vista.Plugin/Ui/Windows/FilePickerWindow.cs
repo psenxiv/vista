@@ -12,7 +12,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Windows;
 
-/// <summary>Opens a scene or preset from a searchable list.</summary>
+/// <summary>Opens a scene, preset or playlist from a searchable list.</summary>
 internal sealed class FilePickerWindow : Window
 {
     private const string TitleId = "###vista-file-picker";
@@ -42,6 +42,7 @@ internal sealed class FilePickerWindow : Window
         {
             [FilePickerKind.Scene] = new ScenePickerSource(files),
             [FilePickerKind.Preset] = new PresetPickerSource(files),
+            [FilePickerKind.Playlist] = new PlaylistPickerSource(session),
         };
         WindowName = Source.Title + TitleId;
         files.Changed += (_, _) =>
@@ -339,6 +340,6 @@ internal sealed class FilePickerWindow : Window
     /// <summary>The New footer button's label and the new prompt's heading.</summary>
     private static string NewHeading(IPickerSource source) => $"New {source.Noun}";
 
-    /// <summary>Reports a refusal; a successful action relists through <see cref="SceneFiles.Changed"/>.</summary>
+    /// <summary>Reports a refusal; a successful action relists through <see cref="SceneFiles.Changed"/>, or next frame for a source read each frame.</summary>
     private static void Confirm(string? refusal) => Report(refusal);
 }
