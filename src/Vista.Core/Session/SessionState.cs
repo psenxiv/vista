@@ -516,12 +516,10 @@ public sealed class SessionState
     public string? SetSwitchboardToggle(SwitchboardToggle toggle, bool on) =>
         ChangeSwitchboard(scene => SwitchboardEditing.SetToggle(scene, toggle, on));
 
-    /// <summary>Applies a switchboard change: in Edit as one undo step that leaves the switchboard preview playing, Live at once with no undo step. Returns why it was refused, or null.</summary>
+    /// <summary>Applies a switchboard change as one undo step, in Edit or Live, leaving the switchboard's shot playing. Returns why it was refused, or null.</summary>
     private string? ChangeSwitchboard(Func<Scene, Scene> change)
     {
-        if (Mode == CameraMode.Live)
-            return Refusal(() => Scene = change(Scene));
-        if (Mode != CameraMode.Editing)
+        if (Mode is not (CameraMode.Editing or CameraMode.Live))
             return SwitchboardOnlyInEditOrLive;
         Transport.StopPreview();
         return RecordScene(scene => (change(scene), EditedTrackId));
@@ -1038,18 +1036,16 @@ public sealed class SessionState
         });
     }
 
-    /// <summary>Applies a scene change and the edited track it leaves, as one undo step, stopping both previews. Returns why it was refused, or null.</summary>
+    /// <summary>Applies a scene change and the edited track it leaves, as one undo step in Edit, stopping both previews. Returns why it was refused, or null.</summary>
     private string? CommitScene(Func<Scene, (Scene Scene, Guid Edited)> change)
     {
         Transport.StopPreviews();
-        return RecordScene(change);
+        return Mode == CameraMode.Editing ? RecordScene(change) : "The scene can only change while editing.";
     }
 
-    /// <summary>Records a scene change and the edited track it leaves as one undo step, in Edit only. Returns why it was refused, or null.</summary>
+    /// <summary>Records a scene change and the edited track it leaves as one undo step. Returns why it was refused, or null.</summary>
     private string? RecordScene(Func<Scene, (Scene Scene, Guid Edited)> change)
     {
-        if (Mode != CameraMode.Editing)
-            return "The scene can only change while editing.";
         EndLiveEdit();
 
         return Refusal(() =>

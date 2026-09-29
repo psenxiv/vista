@@ -1,5 +1,7 @@
+using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
+using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;
 using static Vista.Tests.Session.SessionFixtures;
@@ -64,23 +66,83 @@ public class SessionSwitchboardTests
 
     [Theory]
     [MemberData(nameof(Commands))]
-    public void EachCommandWorksLiveWithoutAnUndoStep(string _, Func<SessionState, string?> command)
+    public void EachCommandIsOneUndoStepInLive(string _, Func<SessionState, string?> command)
     {
-        // One undo step (Auto Next on) before going live, where slot 0's Track 1 comes back on Program; the live command adds none, so one Undo empties the history.
+        // Auto Next on is a step to undo and Direct cut on, undone, one to redo; going live, slot 0's Track 1 comes back on Program and plays.
         var state = EditingPlayable();
         state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
+        state.SetSwitchboardToggle(SwitchboardToggle.DirectCut, true);
+        state.Undo();
         state.Cue();
-        Assert.True(state.Board!.HasProgram);
+        Assert.Equal(PlayOutcome.Resumed, state.Play());
         var before = SlotsAndToggles(state);
 
         Assert.Null(command(state));
 
         var after = SlotsAndToggles(state);
         Assert.NotEqual(before, after);
-        state.Edit();
+        Assert.False(state.CanUndo);
+        Assert.False(state.Undo());
         Assert.Equal(after, SlotsAndToggles(state));
+        Assert.True(state.IsPlaying);
+        state.Edit();
         Assert.False(state.CanRedo);
         Assert.True(state.Undo());
+        Assert.Equal(before, SlotsAndToggles(state));
+        Assert.True(state.Undo());
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void UndoInEditWalksBackThroughLiveSwitchboardChangesThenEditChanges()
+    {
+        var state = EditingPlayable();
+        var track2 = TrackId(state, 1);
+        var playlist2 = state.Scene.Playlists[1].Id;
+        state.SetTrackSpeed(2f);
+        state.Cue();
+        state.AssignSlot(3, track2);
+        state.AssignSlot(4, playlist2);
+        state.RenameSlot(3, "Wide");
+        state.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true);
+        state.Edit();
+        var board = state.Scene.Switchboard;
+
+        Assert.True(state.Undo());
+        board = board with { AutoNext = false };
+        SameBoard(board, state.Scene.Switchboard);
+
+        Assert.True(state.Undo());
+        board = board with { Slots = ListEdit.Replace(board.Slots, 3, new Slot("Track 2", track2, null)) };
+        SameBoard(board, state.Scene.Switchboard);
+
+        Assert.True(state.Undo());
+        board = board with { Slots = ListEdit.Replace(board.Slots, 4, null) };
+        SameBoard(board, state.Scene.Switchboard);
+
+        Assert.True(state.Undo());
+        board = board with { Slots = ListEdit.Replace(board.Slots, 3, null) };
+        SameBoard(board, state.Scene.Switchboard);
+        Assert.Equal(2f, state.StoredTrack.Speed);
+
+        Assert.True(state.Undo());
+        Assert.Equal(TrackEditing.DefaultSpeed, state.StoredTrack.Speed);
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void ALiveCommandThatChangesNothingIsNoUndoStep()
+    {
+        // Slot 0 already holds Track 1 under its name, slot 5 is empty and Direct cut is off.
+        var state = EditingPlayable();
+        state.Cue();
+
+        Assert.Null(state.AssignSlot(0, TrackId(state, 0)));
+        Assert.Null(state.RenameSlot(0, "Track 1"));
+        Assert.Null(state.ClearSlot(5));
+        Assert.Null(state.SetSwitchboardToggle(SwitchboardToggle.DirectCut, false));
+        state.Edit();
+
         Assert.False(state.CanUndo);
     }
 
