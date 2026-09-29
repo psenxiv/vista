@@ -123,7 +123,7 @@ public sealed class Plugin : IDalamudPlugin
         pointWindow = new PointWindow(game, pointGizmo);
         timingWindow = new TimingWindow(game);
         cameraWindow = new CameraWindow(game);
-        switchboardWindow = new SwitchboardWindow(game.State, fields, PluginInterface.UiBuilder.FontAtlas);
+        switchboardWindow = new SwitchboardWindow(game, fields, PluginInterface.UiBuilder.FontAtlas);
         guideWindow = new GuideWindow(PluginInterface.UiBuilder.FontAtlas);
         watchTargetWindow = new WatchTargetWindow(game.State, game.Characters);
         followTargetWindow = new FollowTargetWindow(game.State, game.Characters);

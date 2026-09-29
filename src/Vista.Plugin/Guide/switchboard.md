@@ -20,7 +20,7 @@ You can change slots in Live as well as in Edit.
 
 Click a slot to make it Next, then click **Cut** to put it on Program. It plays straight away. The slot on Program is outlined red, and Next green.
 
-The strip along the top shows what's on **Program** and what's **Next**. The scrub bar along the bottom shows how far through the Program shot you are. For a playlist, it covers the whole playlist.
+The strip along the top shows what's on **Program** and what's **Next**. Along the bottom, {icon:Play} **Play** / {icon:Pause} **Pause** and {icon:StepBackward} **Restart** act on the Program shot, and the scrub bar shows how far through it you are. For a playlist, the bar covers the whole playlist.
 
 | | Toggle | Does |
 |---|---|---|

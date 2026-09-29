@@ -118,6 +118,18 @@ public sealed class SwitchboardPlayer
         director.Restart();
     }
 
+    /// <summary>Plays the Program shot: on from a pause, or from its start once it has finished.</summary>
+    public void Play()
+    {
+        Sync();
+        if (playing is null)
+            return;
+        if (director.IsFinished)
+            director.Restart();
+        else
+            director.Resume();
+    }
+
     /// <summary>Holds the Program shot's frame.</summary>
     public void Pause()
     {

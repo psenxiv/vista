@@ -226,16 +226,11 @@ public sealed class SessionState
         {
             if (!live.HasProgram)
                 return PlayOutcome.Refused;
-            if (live.IsFinished)
-            {
-                live.Restart();
-                return PlayOutcome.Started;
-            }
-
-            if (!live.IsPaused)
+            if (live.IsPlaying)
                 return PlayOutcome.ReHid;
-            live.Resume();
-            return PlayOutcome.Resumed;
+            var finished = live.IsFinished;
+            live.Play();
+            return finished ? PlayOutcome.Started : PlayOutcome.Resumed;
         }
 
         if (Stopped)
@@ -257,6 +252,37 @@ public sealed class SessionState
         live.Restart();
         return PlayOutcome.Started;
     }
+
+    /// <summary>True when the mode's switchboard has a shot on Program, so its Play/Pause and Restart can act.</summary>
+    public bool CanPlayBoard => Board?.HasProgram ?? false;
+
+    /// <summary>True while the mode's switchboard plays its Program shot, neither paused nor finished.</summary>
+    public bool BoardPlaying => Board?.IsPlaying ?? false;
+
+    /// <summary>Plays the mode's switchboard's Program shot: in Live as Play does; in Edit, on from a pause or from its start once finished. Refused with nothing on Program.</summary>
+    public PlayOutcome PlayBoard()
+    {
+        if (Mode == CameraMode.Live)
+            return Play();
+        if (Board is not { HasProgram: true } board)
+            return PlayOutcome.Refused;
+        board.Play();
+        return PlayOutcome.Previewed;
+    }
+
+    /// <summary>Plays the mode's switchboard's Program shot from its start: in Live as Restart does. Refused with nothing on Program.</summary>
+    public PlayOutcome RestartBoard()
+    {
+        if (Mode == CameraMode.Live)
+            return Restart();
+        if (Board is not { HasProgram: true } board)
+            return PlayOutcome.Refused;
+        board.Restart();
+        return PlayOutcome.Previewed;
+    }
+
+    /// <summary>Holds the mode's switchboard's Program shot on its frame.</summary>
+    public void PauseBoard() => Board?.Pause();
 
     /// <summary>Enters Live at <paramref name="start"/> with the Program shot where it had got to, paused. Refused in Live or once Vista has stopped.</summary>
     public PlayOutcome Cue(CameraState? start = null)

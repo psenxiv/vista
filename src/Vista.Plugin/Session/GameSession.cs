@@ -209,6 +209,23 @@ internal sealed class GameSession
             StartPlay();
     }
 
+    /// <summary>The switchboard's Play/Pause: holds its Program shot while it plays, plays it otherwise.</summary>
+    public void ToggleBoard()
+    {
+        if (state.BoardPlaying)
+        {
+            state.PauseBoard();
+            Plugin.Log.Information("switchboard paused");
+        }
+        else
+        {
+            Apply(state.PlayBoard());
+        }
+    }
+
+    /// <summary>The switchboard's Restart: plays its Program shot from the start.</summary>
+    public void RestartBoard() => Apply(state.RestartBoard());
+
     /// <summary>Goes to Off, or to View when asked: stops playback and free-cam, unlocks, and hands the camera back. Every step is attempted, whatever the others do.</summary>
     public void Release(string reason, CameraMode to = CameraMode.Off)
     {

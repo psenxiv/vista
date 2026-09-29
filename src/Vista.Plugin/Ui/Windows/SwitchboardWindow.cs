@@ -7,8 +7,10 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Vista.Core.Display;
 using Vista.Core.Editing;
+using Vista.Core.Input;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
+using Vista.Plugin.Session;
 using Vista.Plugin.Ui.Widgets;
 using static Vista.Plugin.Ui.Widgets.Refusal;
 
@@ -33,6 +35,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         FontAwesomeIcon.StepForward,
     ];
 
+    private readonly GameSession game;
     private readonly SessionState session;
     private readonly PendingEdit<float> fields;
     private readonly IFontHandle slotText;
@@ -42,13 +45,14 @@ internal sealed class SwitchboardWindow : Window, IDisposable
     private CameraMode lastMode;
     private int menuSlot;
 
-    public SwitchboardWindow(SessionState session, PendingEdit<float> fields, IFontAtlas atlas)
+    public SwitchboardWindow(GameSession game, PendingEdit<float> fields, IFontAtlas atlas)
         : base(
             "Switchboard###vista-switchboard",
             ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
         )
     {
-        this.session = session;
+        this.game = game;
+        session = game.State;
         this.fields = fields;
         RespectCloseHotkey = false;
         // Built smaller rather than scaled, so the slots' text and icons stay crisp.
@@ -389,7 +393,40 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         list.AddText(at with { X = at.X + iconWidth + gap }, colour, name);
     }
 
-    /// <summary>The Program shot's scrub bar and its time, or an empty disabled bar with nothing on Program.</summary>
+    /// <summary>Play/Pause and Restart for the Program shot; in Live they're the same as the Vista window's, so they show its keys.</summary>
+    private void DrawTransport()
+    {
+#if DEBUG
+        using var selfTest = ImRaii.Disabled(game.SelfTestRunning);
+#endif
+        var live = session.Mode == CameraMode.Live;
+        var playing = session.BoardPlaying;
+        using (ImRaii.Disabled(!session.CanPlayBoard))
+        {
+            var label = playing ? "Pause" : "Play";
+            if (
+                IconButton.Draw(
+                    "board-play-pause",
+                    playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play,
+                    live ? HotkeyTable.Play.Hotkey.Tooltip(label) : label
+                )
+            )
+                game.ToggleBoard();
+            ImGui.SameLine();
+            if (
+                IconButton.Draw(
+                    "board-restart",
+                    FontAwesomeIcon.StepBackward,
+                    live ? HotkeyTable.Restart.Hotkey.Tooltip("Restart") : "Restart"
+                )
+            )
+                game.RestartBoard();
+        }
+
+        ImGui.SameLine();
+    }
+
+    /// <summary>The Program shot's Play/Pause and Restart, its scrub bar and its time, or an empty disabled bar with nothing on Program.</summary>
     private void DrawBar(SwitchboardPlayer? board, Scene scene)
     {
         var timeline = board?.Timeline;
@@ -397,6 +434,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var head = timeline is null ? 0.0 : board!.Head;
         var key = (session.Mode, board?.Program ?? -1, SwitchboardEditing.Target(board?.ProgramSlot) ?? Guid.Empty);
         var view = zoom.View(key, (float)total);
+        DrawTransport();
 
         // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
         var timeWidth = ImGui.CalcTextSize(Units.ClockOf(total, total)).X;

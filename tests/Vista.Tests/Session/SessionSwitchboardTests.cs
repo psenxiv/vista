@@ -461,4 +461,94 @@ public class SessionSwitchboardTests
         state.Transport.EditingFrame(1f, flying: true);
         Assert.True(state.OverlayEditable);
     }
+
+    [Fact]
+    public void EditsBoardPausesAndPlaysOnFromThePause()
+    {
+        var state = EditingSwitchboard();
+        var board = state.Board!;
+        CutTo(board, 0);
+        state.Transport.EditingFrame(1f, flying: false);
+
+        state.PauseBoard();
+        state.Transport.EditingFrame(1f, flying: false);
+        // Paused 1 s into Track 1, so another second leaves the head at 1 s.
+        Assert.False(state.BoardPlaying);
+        Assert.True(board.HasProgram);
+        Assert.Equal(1.0, board.Head, 1e-6);
+
+        Assert.Equal(PlayOutcome.Previewed, state.PlayBoard());
+        state.Transport.EditingFrame(1f, flying: false);
+        // On from 1 s for 1 s: 2 s.
+        Assert.True(state.BoardPlaying);
+        Assert.Equal(2.0, board.Head, 1e-6);
+    }
+
+    [Fact]
+    public void PlayingEditsBoardAfterItsShotEndsStartsItAgain()
+    {
+        var state = EditingSwitchboard();
+        var board = state.Board!;
+        CutTo(board, 1);
+        // Track 2 is 2 s long, so 3 s holds it at its end.
+        state.Transport.EditingFrame(3f, flying: false);
+        Assert.True(board.IsFinished);
+
+        state.PlayBoard();
+        state.Transport.EditingFrame(0.5f, flying: false);
+        // From its start again for 0.5 s.
+        Assert.Equal(0.5, board.Head, 1e-6);
+    }
+
+    [Fact]
+    public void RestartingEditsBoardPlaysItsShotFromTheStart()
+    {
+        var state = EditingSwitchboard();
+        var board = state.Board!;
+        CutTo(board, 0);
+        state.Transport.EditingFrame(4f, flying: false);
+        state.PauseBoard();
+
+        Assert.Equal(PlayOutcome.Previewed, state.RestartBoard());
+        Assert.Equal(0.0, board.Head, 1e-6);
+        Assert.True(state.BoardPlaying);
+    }
+
+    [Fact]
+    public void TheBoardsPlayAndRestartAreRefusedWithNothingOnProgram()
+    {
+        var state = EditingSwitchboard();
+        Assert.False(state.CanPlayBoard);
+        Assert.Equal(PlayOutcome.Refused, state.PlayBoard());
+        Assert.Equal(PlayOutcome.Refused, state.RestartBoard());
+
+        // Off has no switchboard, and the board's Play doesn't go Live from there.
+        state.Release();
+        Assert.False(state.CanPlayBoard);
+        Assert.Equal(PlayOutcome.Refused, state.PlayBoard());
+        Assert.Equal(CameraMode.Off, state.Mode);
+    }
+
+    [Fact]
+    public void LivesBoardPausesPlaysAndRestartsTheProgramShot()
+    {
+        var state = EditingSwitchboard();
+        state.Cue();
+        var board = state.Board!;
+        CutTo(board, 0);
+        state.LiveFrame(1f);
+
+        state.PauseBoard();
+        state.LiveFrame(1f);
+        // Paused 1 s into Track 1.
+        Assert.False(state.BoardPlaying);
+        Assert.Equal(1.0, board.Head, 1e-6);
+
+        Assert.Equal(PlayOutcome.Resumed, state.PlayBoard());
+        state.LiveFrame(1f);
+        Assert.Equal(2.0, board.Head, 1e-6);
+
+        Assert.Equal(PlayOutcome.Started, state.RestartBoard());
+        Assert.Equal(0.0, board.Head, 1e-6);
+    }
 }
