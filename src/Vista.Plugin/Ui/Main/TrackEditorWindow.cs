@@ -1,6 +1,7 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Vista.Core.Camera;
@@ -152,7 +153,10 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>Widens the minimum size to fit the top bar, the track row and any open compartment, and opens at that width on first use.</summary>
     public override void PreDraw()
     {
-        var width = MathF.Max(MathF.Max(MinWidth, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth());
+        // The measured widths are on-screen sizes, and Dalamud multiplies the size and constraints by the global scale.
+        var scale = ImGuiHelpers.GlobalScale;
+        var width =
+            MathF.Max(MathF.Max(MinWidth * scale, TrackRowWidth()) + CompartmentsWidth(), TopRowWidth()) / scale;
         SetMinimumWidth(width);
         Size = new Vector2(width, MinHeight);
     }
