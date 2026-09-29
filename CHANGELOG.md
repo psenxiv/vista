@@ -3,8 +3,7 @@
 ## X.Y.Z.N
 
 - A scene can now hold several playlists. Choose, make, rename, duplicate and delete them with the Open playlist button at the top of the Playlist.
-- The new Switchboard window runs Live like a live show. Put tracks and playlists in its ten slots, click one to line it up as Next, and press Cut to put it on Program. Direct cut, Keep rolling and Auto Next change how cuts happen. Open it from the top row or the View menu, or choose Live.
-- Live now plays whatever is on the switchboard's Program instead of the selected playlist, and picks up where you left it next time. Its scrub bar and progress move from the Vista window and the Playlist to the Switchboard window.
+- Live now plays from the new Switchboard window. Put tracks and playlists in its ten slots, click one to line it up as Next, and press Cut to put it on Program. Direct cut, Keep rolling and Auto Next change how cuts happen. Live picks up where you left it, and its scrub bar is now in the Switchboard window. Open it from the top row or the View menu, or choose Live.
 - The open scene's name moves from the window title to a strip under the Scene heading, and the selected playlist's name shows under the Playlist heading.
 - Vista updates older scene files to a new format, and keeps a copy of each in the backups folder inside vistaxiv.
 - Pressing Enter to confirm a name in Open scene no longer also opens the highlighted scene.

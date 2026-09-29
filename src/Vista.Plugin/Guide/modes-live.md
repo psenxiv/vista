@@ -11,7 +11,7 @@ When nothing is on Program, as the first time you choose Live in a new scene, th
 | {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses the Program shot. |
 | {key:Restart} | {icon:StepBackward} **Restart** | Plays the Program shot from the start. |
 
-These buttons stay on the **Vista** window. The scrub bar for the Program shot is along the bottom of the **Switchboard** window.
+They're on the **Vista** window. The Program shot's scrub bar is along the bottom of the **Switchboard** window.
 
 ## Hiding the game UI
 

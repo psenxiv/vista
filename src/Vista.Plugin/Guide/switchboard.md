@@ -32,6 +32,6 @@ Without **Auto Next**, the camera holds the Program shot's last frame when it en
 
 ## In Edit
 
-In Edit, the switchboard plays your cuts on your own camera, so you can try them out. Program and Next start empty each time you choose Edit, and nothing you do there changes where Live had got to. Every shot plays from its beginning, at normal speed, even with **Ghost camera** on.
+In Edit, the switchboard plays your cuts on your own camera, so you can try them out. Program and Next start empty each time you choose Edit, and nothing you do there changes where Live had got to. Every shot plays from its beginning.
 
-Flying, playing the edited track, or changing a track or playlist stops it, and you fly on from that frame. **Undo** takes back changes to slots and toggles, but not cuts.
+Flying, playing the edited track, or changing a track or playlist stops it, and you fly on from that frame.
