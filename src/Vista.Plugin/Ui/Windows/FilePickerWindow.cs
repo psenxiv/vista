@@ -70,7 +70,7 @@ internal sealed class FilePickerWindow : Window
         BringToFront();
     }
 
-    /// <summary>Lists the folder and clears the search each time the window opens.</summary>
+    /// <summary>Lists the rows and clears the search each time the window opens.</summary>
     public override void OnOpen() => Reset();
 
     public override void PreDraw() => Layout.CentreOnAppearing();
@@ -109,7 +109,7 @@ internal sealed class FilePickerWindow : Window
         focusSearch = true;
     }
 
-    /// <summary>Relists the folder, dropping the selection.</summary>
+    /// <summary>Relists the rows, dropping the selection.</summary>
     public void Refresh()
     {
         rows = Source.Rows();

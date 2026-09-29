@@ -308,7 +308,7 @@ public class PlaylistEditingTests
         var scene = WithNames("Alpha");
 
         Assert.Equal(
-            PlaylistEditing.NoSuchPlaylist,
+            "There is no such playlist.",
             Assert.Throws<ArgumentException>(() => PlaylistEditing.Rename(scene, Guid.NewGuid(), "Beta")).Message
         );
     }
@@ -319,7 +319,10 @@ public class PlaylistEditingTests
         var scene = SceneEditing.New();
 
         Assert.Equal("Playlist 1 copy", PlaylistEditing.CopySuggestion(scene, scene.SelectedPlaylistId));
-        Assert.Throws<ArgumentException>(() => PlaylistEditing.CopySuggestion(scene, Guid.NewGuid()));
+        Assert.Equal(
+            "There is no such playlist.",
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.CopySuggestion(scene, Guid.NewGuid())).Message
+        );
     }
 
     // Two entries on Track 1 and Track 2 (repeating 3 times), in a looping playlist.
@@ -422,14 +425,15 @@ public class PlaylistEditingTests
         Assert.Equal(IdOf(scene, "a"), result.SelectedPlaylistId);
     }
 
+    // b is selected; deleting C leaves b and a, where a is first by name, so only a kept selection stays on b.
     [Fact]
     public void DeletingAnUnselectedPlaylistKeepsTheSelection()
     {
         var scene = WithNames("b", "C", "a");
 
-        var result = PlaylistEditing.Delete(scene, IdOf(scene, "a"));
+        var result = PlaylistEditing.Delete(scene, IdOf(scene, "C"));
 
-        Assert.Equal(["b", "C"], result.Playlists.Select(p => p.Name));
+        Assert.Equal(["b", "a"], result.Playlists.Select(p => p.Name));
         Assert.Equal(IdOf(scene, "b"), result.SelectedPlaylistId);
     }
 

@@ -353,6 +353,21 @@ public class SessionPlaylistTests
         Assert.False(state.CanUndo);
     }
 
+    [Fact]
+    public void SelectingAPlaylistMidDragEndsTheDragAsOneUndoStep()
+    {
+        var state = Editing();
+        var second = new Playlist(Guid.NewGuid(), "Second", []);
+        state.LoadScene(state.Scene with { Playlists = [.. state.Scene.Playlists, second] });
+        state.BeginLiveEdit();
+        state.PreviewPoint(1, Point(20f));
+
+        Assert.Null(state.SelectPlaylist(second.Id));
+
+        // Only an ended drag is on the undo history; a drag still open would leave it empty.
+        Assert.True(state.CanUndo);
+    }
+
     [Theory]
     [InlineData(CameraMode.View)]
     [InlineData(CameraMode.Live)]
