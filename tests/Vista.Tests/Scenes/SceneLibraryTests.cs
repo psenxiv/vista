@@ -110,7 +110,7 @@ public sealed class SceneLibraryTests : IDisposable
     [Fact]
     public void AnOlderSceneOpenedWithoutABackupIsOnlySavedOnceItsBackupIsWritten()
     {
-        File.WriteAllText(temp.ScenePath("Harbour"), FormatOneSceneJson());
+        temp.WriteFormatOne("Harbour");
         temp.BlockBackups();
         Assert.Null(library.Open("Harbour"));
         RenameFirstTrack("Jib");

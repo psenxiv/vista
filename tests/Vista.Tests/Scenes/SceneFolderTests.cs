@@ -9,15 +9,23 @@ namespace Vista.Tests.Scenes;
 
 public sealed class SceneFolderTests : IDisposable
 {
-    // Backups made in these tests are named for 2026-09-29 12:08:49.
-    private readonly TempFolder temp = new(() => new DateTime(2026, 9, 29, 12, 8, 49));
+    private readonly TempFolder temp;
+
+    // Backups are named for this time: 2026-09-29 12:08:49 unless a test moves it on.
+    private DateTime now = new(2026, 9, 29, 12, 8, 49);
+
+    public SceneFolderTests() => temp = new TempFolder(() => now);
 
     private SceneFolder Folder => temp.Folder;
 
-    // The backup folder for format 1 files at the fixed time: v{format}-{yyyy-MM-dd_HH-mm-ss}.
-    private string Backups => Path.Combine(Folder.Root, "backups", "v1-2026-09-29_12-08-49");
+    // The backup folder for format 1 files at the first time: v{format}-{yyyy-MM-dd_HH-mm-ss}.
+    private string Backups => Path.Combine(Folder.BackupsDir, "v1-2026-09-29_12-08-49");
 
-    private void WriteFormatOne(string name) => File.WriteAllText(temp.ScenePath(name), FormatOneSceneJson());
+    private void WriteFormatOne(string name) => temp.WriteFormatOne(name);
+
+    // The backup folder names, sorted ordinally.
+    private IEnumerable<string> BackupFolders() =>
+        Directory.GetDirectories(Folder.BackupsDir).Select(d => Path.GetFileName(d)).Order(StringComparer.Ordinal);
 
     // A scene file in the current format but not as Vista lays it out, so a rewrite would change its bytes.
     private void WriteCompact(string name) =>
@@ -181,45 +189,79 @@ public sealed class SceneFolderTests : IDisposable
     [Fact]
     public void AnOlderSceneIsBackedUpOnceWhileItsRewriteKeepsFailing()
     {
-        var now = new DateTime(2026, 9, 29, 12, 8, 49);
-        using var ticking = new TempFolder(() => now);
-        File.WriteAllText(ticking.ScenePath("Harbour"), FormatOneSceneJson());
-        // A folder where the rewrite's temporary file goes, so the rewrite fails after the backup is made.
-        Directory.CreateDirectory(ticking.ScenePath("Harbour") + ".tmp");
+        WriteFormatOne("Harbour");
+        temp.BlockSaving("Harbour");
 
-        ticking.Folder.LoadScene("Harbour");
+        Folder.LoadScene("Harbour");
         now = now.AddSeconds(1);
-        var refused = Record.Exception(() => ticking.Folder.SaveScene("Harbour", Named("Crane")));
+        var refused = Record.Exception(() => Folder.SaveScene("Harbour", Named("Crane")));
 
         Assert.True(SceneFolder.IsFileError(refused));
-        Assert.Equal(["Harbour.json"], ticking.NotUpgraded);
-        // Only the first attempt's folder, v1 at 12:08:49; the save a second later made none.
-        Assert.Equal(
-            ["v1-2026-09-29_12-08-49"],
-            Directory.GetDirectories(ticking.Folder.BackupsDir).Select(d => Path.GetFileName(d))
-        );
+        Assert.Equal(["Harbour.json"], temp.NotUpgraded);
+        // Only the first attempt's folder, 12:08:49; the save a second later made none.
+        Assert.Equal(["v1-2026-09-29_12-08-49"], BackupFolders());
+    }
+
+    [Fact]
+    public void AnOlderSceneIsBackedUpOnceWhateverTheCaseOfItsName()
+    {
+        WriteFormatOne("Harbour");
+        temp.BlockSaving("Harbour");
+
+        Folder.LoadScene("harbour");
+        now = now.AddSeconds(1);
+        Record.Exception(() => Folder.SaveScene("HARBOUR", Named("Crane")));
+
+        // Only the load's folder, 12:08:49; the save a second later, under another case, made none.
+        Assert.Equal(["v1-2026-09-29_12-08-49"], BackupFolders());
     }
 
     [Fact]
     public void AnOlderFilePutBackUnderTheSameNameIsBackedUpAgain()
     {
-        var now = new DateTime(2026, 9, 29, 12, 8, 49);
-        using var ticking = new TempFolder(() => now);
-        File.WriteAllText(ticking.ScenePath("Harbour"), FormatOneSceneJson());
-        ticking.Folder.LoadScene("Harbour");
+        WriteFormatOne("Harbour");
+        Folder.LoadScene("Harbour");
         now = now.AddSeconds(1);
-        File.WriteAllText(ticking.ScenePath("Harbour"), FormatOneSceneJson());
+        WriteFormatOne("Harbour");
 
-        ticking.Folder.LoadScene("Harbour");
+        Folder.LoadScene("Harbour");
 
         // One backup folder per load: 12:08:49, then 12:08:50.
-        Assert.Equal(
-            ["v1-2026-09-29_12-08-49", "v1-2026-09-29_12-08-50"],
-            Directory
-                .GetDirectories(ticking.Folder.BackupsDir)
-                .Select(d => Path.GetFileName(d))
-                .Order(StringComparer.Ordinal)
-        );
+        Assert.Equal(["v1-2026-09-29_12-08-49", "v1-2026-09-29_12-08-50"], BackupFolders());
+    }
+
+    [Fact]
+    public void AnOlderFileAddedAfterDeletingOneStillStuckIsBackedUp()
+    {
+        WriteFormatOne("Harbour");
+        temp.BlockSaving("Harbour");
+        Folder.LoadScene("Harbour");
+        Folder.DeleteScene("Harbour");
+        Directory.Delete(temp.ScenePath("Harbour") + SceneFolder.TempSuffix);
+        now = now.AddSeconds(1);
+        WriteFormatOne("Harbour");
+
+        Folder.LoadScene("Harbour");
+
+        // The stuck file's folder at 12:08:49, then the new file's at 12:08:50.
+        Assert.Equal(["v1-2026-09-29_12-08-49", "v1-2026-09-29_12-08-50"], BackupFolders());
+    }
+
+    [Fact]
+    public void AnOlderFileAddedAfterRenamingOneStillStuckIsBackedUp()
+    {
+        WriteFormatOne("Harbour");
+        temp.BlockSaving("Harbour");
+        Folder.LoadScene("Harbour");
+        Folder.RenameScene("Harbour", "Quay");
+        Directory.Delete(temp.ScenePath("Harbour") + SceneFolder.TempSuffix);
+        now = now.AddSeconds(1);
+        WriteFormatOne("Harbour");
+
+        Folder.LoadScene("Harbour");
+
+        // The stuck file's folder at 12:08:49, then the new file's at 12:08:50.
+        Assert.Equal(["v1-2026-09-29_12-08-49", "v1-2026-09-29_12-08-50"], BackupFolders());
     }
 
     [Fact]

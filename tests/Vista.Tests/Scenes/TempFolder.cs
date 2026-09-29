@@ -37,6 +37,12 @@ internal sealed class TempFolder : IDisposable
     /// <summary>The path of scene file <paramref name="name"/>.</summary>
     internal string ScenePath(string name) => Path.Combine(Scenes, name + ".json");
 
+    /// <summary>Writes the format 1 scene fixture as scene file <paramref name="name"/>.</summary>
+    internal void WriteFormatOne(string name) => File.WriteAllText(ScenePath(name), SceneFixtures.FormatOneSceneJson());
+
+    /// <summary>Puts a folder where a save of scene file <paramref name="name"/> writes its temporary copy, so the save fails.</summary>
+    internal void BlockSaving(string name) => Directory.CreateDirectory(ScenePath(name) + SceneFolder.TempSuffix);
+
     /// <summary>Puts a file where the backups folder should be, so no backup can be written.</summary>
     internal void BlockBackups() => File.WriteAllText(Folder.BackupsDir, "");
 

@@ -8,6 +8,9 @@ public sealed class SceneFolder
     /// <summary>The folder Vista keeps inside the chosen parent.</summary>
     public const string FolderName = "vistaxiv";
 
+    /// <summary>What a save adds to a file's name for the temporary copy it writes before moving it into place.</summary>
+    public const string TempSuffix = ".tmp";
+
     private const string Extension = ".json";
 
     private readonly Action<string, Exception>? unreadable;
@@ -154,16 +157,22 @@ public sealed class SceneFolder
         if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
         {
             // A case-insensitive file system sees a case-only rename as a move onto itself.
-            var step = Path.Combine(ScenesDir, $"{Guid.NewGuid():N}.tmp");
+            var step = Path.Combine(ScenesDir, $"{Guid.NewGuid():N}{TempSuffix}");
             File.Move(source, step);
             source = step;
         }
 
         File.Move(source, target);
+        backedUp.Remove(PathOf(ScenesDir, from));
     }
 
     /// <summary>Deletes scene file <paramref name="name"/>.</summary>
-    public void DeleteScene(string name) => File.Delete(PathOf(ScenesDir, name));
+    public void DeleteScene(string name)
+    {
+        var path = PathOf(ScenesDir, name);
+        File.Delete(path);
+        backedUp.Remove(path);
+    }
 
     /// <summary>The names of the preset files that can be read, sorted ignoring case.</summary>
     public IReadOnlyList<string> PresetNames() => PresetEntries().Select(e => e.Name).ToList();
@@ -262,7 +271,7 @@ public sealed class SceneFolder
 
     private static void Write(string path, string json)
     {
-        var temp = path + ".tmp";
+        var temp = path + TempSuffix;
         File.WriteAllText(temp, json);
         File.Move(temp, path, overwrite: true);
     }
