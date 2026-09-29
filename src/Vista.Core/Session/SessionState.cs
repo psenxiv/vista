@@ -383,6 +383,29 @@ public sealed class SessionState
         return CommitScene(scene => (SceneEditing.SetHidden(scene, change, hidden), EditedTrackId));
     }
 
+    /// <summary>Selects playlist <paramref name="id"/>. Not an undo step itself. Returns why it was refused, or null.</summary>
+    public string? SelectPlaylist(Guid id)
+    {
+        if (Mode != CameraMode.Editing)
+            return "Playlists can only be switched while editing.";
+        EndLiveEdit();
+        return Refusal(() => Scene = PlaylistEditing.Select(Scene, id));
+    }
+
+    /// <summary>Adds an empty playlist named <paramref name="name"/> and selects it. Returns why it was refused, or null.</summary>
+    public string? NewPlaylist(string name) => CommitScene(scene => (PlaylistEditing.New(scene, name), EditedTrackId));
+
+    /// <summary>Renames playlist <paramref name="id"/>. Returns why it was refused, or null.</summary>
+    public string? RenamePlaylist(Guid id, string name) =>
+        CommitScene(scene => (PlaylistEditing.Rename(scene, id, name), EditedTrackId));
+
+    /// <summary>Copies playlist <paramref name="id"/> under <paramref name="name"/>. Returns why it was refused, or null.</summary>
+    public string? DuplicatePlaylist(Guid id, string name) =>
+        CommitScene(scene => (PlaylistEditing.Duplicate(scene, id, name), EditedTrackId));
+
+    /// <summary>Deletes playlist <paramref name="id"/>, refusing the last. Returns why it was refused, or null.</summary>
+    public string? DeletePlaylist(Guid id) => CommitScene(scene => (PlaylistEditing.Delete(scene, id), EditedTrackId));
+
     /// <summary>Adds an entry for each of tracks <paramref name="ids"/>, in Hierarchy order, at <paramref name="index"/>, or at the end. Returns why it was refused, or null.</summary>
     public string? AddToPlaylist(IReadOnlyCollection<Guid> ids, int? index = null) =>
         CommitScene(scene =>

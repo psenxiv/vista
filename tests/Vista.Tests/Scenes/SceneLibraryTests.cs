@@ -771,4 +771,19 @@ public sealed class SceneLibraryTests : IDisposable
 
         Assert.Equal("Alpha", next.CurrentName);
     }
+
+    [Fact]
+    public void ASelectedPlaylistIsSaved()
+    {
+        Save("Dawn", "Crane");
+        library.Open("Dawn");
+        Assert.Null(state.NewPlaylist("Second"));
+        Assert.Null(library.SaveNow());
+        var first = state.Scene.Playlists[0].Id;
+
+        Assert.Null(state.SelectPlaylist(first));
+        Assert.Null(library.SaveNow());
+
+        Assert.Equal(first, temp.Folder.LoadScene("Dawn").SelectedPlaylistId);
+    }
 }

@@ -3,11 +3,13 @@ using Vista.Core.Editing;
 
 namespace Vista.Core.Scenes;
 
-/// <summary>Edits a scene's playlists: add, remove, reorder and loop counts, and what Live can play.</summary>
+/// <summary>Edits a scene's playlists and their entries: create, rename, duplicate, delete and select a playlist; add, remove, reorder and loop counts; and what Live can play.</summary>
 public static class PlaylistEditing
 {
+    private const string Stem = "Playlist";
+
     /// <summary>The name of a new scene's playlist.</summary>
-    public const string FirstName = "Playlist 1";
+    public const string FirstName = $"{Stem} 1";
 
     /// <summary>The most times an entry can play its track.</summary>
     public const int MaxLoops = 99;
@@ -15,11 +17,103 @@ public static class PlaylistEditing
     /// <summary>Why a playlist entry Id can't be used: no entry has it.</summary>
     public const string NoSuchEntry = "There is no such playlist entry.";
 
+    /// <summary>Why a playlist name can't be used: another playlist has it.</summary>
+    public const string NameTaken = "A playlist with that name exists.";
+
+    /// <summary>Why a playlist Id can't be used: no playlist has it.</summary>
+    public const string NoSuchPlaylist = "There is no such playlist.";
+
+    /// <summary>Why a playlist can't be deleted: it is the only one.</summary>
+    public const string LastPlaylist = "The last playlist can't be deleted.";
+
     /// <summary>An empty playlist named <see cref="FirstName"/>, with a new id.</summary>
     public static Playlist Empty() => new(Guid.NewGuid(), FirstName, []);
 
     /// <summary>The selected playlist, which Live plays and the Playlist panel shows.</summary>
     public static Playlist Selected(Scene scene) => scene.Playlists.First(p => p.Id == scene.SelectedPlaylistId);
+
+    /// <summary>The playlist <paramref name="id"/>, refusing an unknown one.</summary>
+    public static Playlist Get(Scene scene, Guid id) =>
+        scene.Playlists.FirstOrDefault(p => p.Id == id) ?? throw new ArgumentException(NoSuchPlaylist);
+
+    /// <summary>Why <paramref name="name"/> can't name a playlist, or null; playlist <paramref name="renaming"/> may take any case of its own name, as a scene may.</summary>
+    public static string? NameRefusal(Scene scene, string name, Guid? renaming = null)
+    {
+        var own = scene.Playlists.FirstOrDefault(p => p.Id == renaming)?.Name;
+        var same = own is not null && string.Equals(name.Trim(), own, StringComparison.OrdinalIgnoreCase);
+        return SceneNames.LengthRefusal(name) ?? (!same && SceneNames.Taken(name, Names(scene)) ? NameTaken : null);
+    }
+
+    /// <summary>The first "Playlist n" no playlist has.</summary>
+    public static string NewSuggestion(Scene scene) => SceneNames.NextFree(Stem, Names(scene));
+
+    /// <summary>A name for a copy of playlist <paramref name="id"/> that no playlist has.</summary>
+    public static string CopySuggestion(Scene scene, Guid id) => SceneNames.CopyOf(Get(scene, id).Name, Names(scene));
+
+    /// <summary>True when the scene has more than one playlist.</summary>
+    public static bool CanDelete(Scene scene) => scene.Playlists.Count > 1;
+
+    /// <summary>Selects playlist <paramref name="id"/>, refusing an unknown one.</summary>
+    public static Scene Select(Scene scene, Guid id)
+    {
+        Get(scene, id);
+        return scene.SelectedPlaylistId == id ? scene : scene with { SelectedPlaylistId = id };
+    }
+
+    /// <summary>Appends an empty playlist named <paramref name="name"/>, trimmed, and selects it.</summary>
+    public static Scene New(Scene scene, string name)
+    {
+        RequireName(scene, name);
+        var added = new Playlist(Guid.NewGuid(), name.Trim(), []);
+        return scene with
+        {
+            Playlists = ListEdit.Insert(scene.Playlists, scene.Playlists.Count, added),
+            SelectedPlaylistId = added.Id,
+        };
+    }
+
+    /// <summary>Renames playlist <paramref name="id"/> to <paramref name="name"/>, trimmed.</summary>
+    public static Scene Rename(Scene scene, Guid id, string name)
+    {
+        var playlist = Get(scene, id);
+        RequireName(scene, name, id);
+        return playlist.Name == name.Trim() ? scene : WithPlaylist(scene, playlist with { Name = name.Trim() });
+    }
+
+    /// <summary>Appends a copy of playlist <paramref name="id"/> named <paramref name="name"/>, trimmed, with new ids; selects the copy when the source was selected.</summary>
+    public static Scene Duplicate(Scene scene, Guid id, string name)
+    {
+        var source = Get(scene, id);
+        RequireName(scene, name);
+        var copy = source with
+        {
+            Id = Guid.NewGuid(),
+            Name = name.Trim(),
+            Entries = source.Entries.Select(e => e with { Id = Guid.NewGuid() }).ToArray(),
+        };
+        return scene with
+        {
+            Playlists = ListEdit.Insert(scene.Playlists, scene.Playlists.Count, copy),
+            SelectedPlaylistId = scene.SelectedPlaylistId == id ? copy.Id : scene.SelectedPlaylistId,
+        };
+    }
+
+    /// <summary>Deletes playlist <paramref name="id"/>, refusing the last; deleting the selected one selects the first remaining by name.</summary>
+    public static Scene Delete(Scene scene, Guid id)
+    {
+        Get(scene, id);
+        if (!CanDelete(scene))
+            throw new ArgumentException(LastPlaylist);
+        var remaining = scene.Playlists.Where(p => p.Id != id).ToArray();
+        return scene with
+        {
+            Playlists = remaining,
+            SelectedPlaylistId =
+                scene.SelectedPlaylistId == id
+                    ? remaining.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).First().Id
+                    : scene.SelectedPlaylistId,
+        };
+    }
 
     /// <summary>Adds an entry to the selected playlist for each of <paramref name="trackIds"/>, in that order, at <paramref name="index"/>, or at the end; an index past either end of the playlist adds at that end rather than being refused.</summary>
     public static Scene Add(Scene scene, IReadOnlyList<Guid> trackIds, int? index = null)
@@ -130,6 +224,16 @@ public static class PlaylistEditing
     /// <summary>The index of entry <paramref name="entryId"/> in the selected playlist, refusing an unknown one.</summary>
     public static int Require(Scene scene, Guid entryId) =>
         IndexOf(scene, entryId) is var index and >= 0 ? index : throw new ArgumentException(NoSuchEntry);
+
+    /// <summary>Throws the <see cref="NameRefusal"/> for <paramref name="name"/>, if any.</summary>
+    private static void RequireName(Scene scene, string name, Guid? renaming = null)
+    {
+        if (NameRefusal(scene, name, renaming) is { } refusal)
+            throw new ArgumentException(refusal);
+    }
+
+    /// <summary>The names of the scene's playlists.</summary>
+    private static IEnumerable<string> Names(Scene scene) => scene.Playlists.Select(p => p.Name);
 
     /// <summary>The playlist holding entry <paramref name="entryId"/>, refusing an unknown one.</summary>
     private static Playlist Holding(Scene scene, Guid entryId) =>

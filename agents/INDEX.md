@@ -76,7 +76,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Editing/ListEdit`: finding an item by a test, and a copy of a list with one item replaced or items inserted.
 - `Editing/RowPicking`: a click on a list row, with Ctrl and Shift, and what a drag carries.
 - `Editing/BlockMove`: the new order when rows are dragged as a block, and applying an order to a list.
-- `Scenes/SceneEditing` and `PlaylistEditing`: finding a track or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist.
+- `Scenes/SceneEditing` and `PlaylistEditing`: finding a track, playlist or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist; playlist names and the create, rename, duplicate, delete and select rules.
 
 ### Formatting
 

@@ -336,4 +336,153 @@ public class SessionPlaylistTests
 
         Assert.Equal(new[] { TrackId(state, 0), TrackId(state, 1) }, Entries(state.Scene).Select(e => e.TrackId));
     }
+
+    private static IEnumerable<string> Names(SessionState state) => state.Scene.Playlists.Select(p => p.Name);
+
+    [Fact]
+    public void SelectingAPlaylistIsNotAnUndoStep()
+    {
+        var state = Editing();
+        var second = new Playlist(Guid.NewGuid(), "Second", []);
+        state.LoadScene(state.Scene with { Playlists = [.. state.Scene.Playlists, second] });
+        Assert.False(state.CanUndo);
+
+        Assert.Null(state.SelectPlaylist(second.Id));
+
+        Assert.Equal(second.Id, state.Scene.SelectedPlaylistId);
+        Assert.False(state.CanUndo);
+    }
+
+    [Theory]
+    [InlineData(CameraMode.View)]
+    [InlineData(CameraMode.Live)]
+    public void SelectingAPlaylistIsRefusedOutsideEditing(CameraMode mode)
+    {
+        var state = Editing();
+        state.NewPlaylist("Second");
+        var first = state.Scene.Playlists[0].Id;
+        state.SelectPlaylist(first);
+        TwoEntries(state);
+        if (mode == CameraMode.Live)
+            GoLive(state);
+        else
+            state.Release(CameraMode.View);
+
+        Assert.Equal(
+            "Playlists can only be switched while editing.",
+            state.SelectPlaylist(state.Scene.Playlists[1].Id)
+        );
+        Assert.Equal(first, state.Scene.SelectedPlaylistId);
+    }
+
+    [Fact]
+    public void SelectingAnUnknownPlaylistIsRefused()
+    {
+        var state = Editing();
+
+        Assert.Equal(PlaylistEditing.NoSuchPlaylist, state.SelectPlaylist(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void NewPlaylistIsOneUndoStepAndUndoRestoresTheSelection()
+    {
+        var state = Editing();
+        var before = state.Scene.SelectedPlaylistId;
+
+        Assert.Null(state.NewPlaylist("Second"));
+
+        Assert.Equal(["Playlist 1", "Second"], Names(state));
+        Assert.Equal("Second", PlaylistEditing.Selected(state.Scene).Name);
+        state.Undo();
+        Assert.Equal(["Playlist 1"], Names(state));
+        Assert.Equal(before, state.Scene.SelectedPlaylistId);
+    }
+
+    [Fact]
+    public void RenamePlaylistIsOneUndoStep()
+    {
+        var state = Editing();
+
+        Assert.Null(state.RenamePlaylist(state.Scene.SelectedPlaylistId, "Opening"));
+
+        Assert.Equal(["Opening"], Names(state));
+        state.Undo();
+        Assert.Equal(["Playlist 1"], Names(state));
+    }
+
+    [Fact]
+    public void DuplicatePlaylistIsOneUndoStep()
+    {
+        var state = Editing();
+        TwoEntries(state);
+        var source = state.Scene.SelectedPlaylistId;
+
+        Assert.Null(state.DuplicatePlaylist(source, "Playlist 1 copy"));
+
+        Assert.Equal(["Playlist 1", "Playlist 1 copy"], Names(state));
+        Assert.Equal(2, Entries(state.Scene).Count);
+        Assert.NotEqual(source, state.Scene.SelectedPlaylistId);
+        state.Undo();
+        Assert.Equal(["Playlist 1"], Names(state));
+        Assert.Equal(source, state.Scene.SelectedPlaylistId);
+    }
+
+    [Fact]
+    public void DeletingTheSelectedPlaylistIsOneUndoStepAndUndoBringsItBackSelected()
+    {
+        var state = Editing();
+        TwoEntries(state);
+        var first = state.Scene.SelectedPlaylistId;
+        state.NewPlaylist("Second");
+
+        Assert.Null(state.SelectPlaylist(first));
+        Assert.Null(state.DeletePlaylist(first));
+
+        Assert.Equal(["Second"], Names(state));
+        Assert.Equal("Second", PlaylistEditing.Selected(state.Scene).Name);
+        state.Undo();
+        Assert.Equal(["Playlist 1", "Second"], Names(state));
+        Assert.Equal(first, state.Scene.SelectedPlaylistId);
+        Assert.Equal(2, Entries(state.Scene).Count);
+    }
+
+    [Fact]
+    public void DeletingTheLastPlaylistIsRefusedWithoutAnUndoStep()
+    {
+        var state = Editing();
+        var undoable = state.CanUndo;
+
+        Assert.Equal(PlaylistEditing.LastPlaylist, state.DeletePlaylist(state.Scene.SelectedPlaylistId));
+
+        Assert.Equal(["Playlist 1"], Names(state));
+        Assert.Equal(undoable, state.CanUndo);
+    }
+
+    [Fact]
+    public void PlaylistOperationsAreRefusedOutsideEditing()
+    {
+        var state = Editing();
+        state.Release(CameraMode.View);
+
+        Assert.Equal("The scene can only change while editing.", state.NewPlaylist("Second"));
+        Assert.Equal(["Playlist 1"], Names(state));
+    }
+
+    [Fact]
+    public void AddingToThePlaylistAfterSelectingAnotherAddsToTheSelectedOne()
+    {
+        var state = Editing();
+        var first = state.Scene.SelectedPlaylistId;
+        state.NewPlaylist("Second");
+        Assert.Null(state.SelectPlaylist(first));
+        Assert.Null(state.AddToPlaylist([TrackId(state, 0)]));
+        state.NewPlaylist("Third");
+
+        Assert.Null(state.SelectPlaylist(state.Scene.Playlists[1].Id));
+        Assert.Null(state.AddToPlaylist([TrackId(state, 1)]));
+
+        Assert.Equal([TrackId(state, 1)], Entries(state.Scene).Select(e => e.TrackId));
+        Assert.Equal([TrackId(state, 0)], state.Scene.Playlists[0].Entries.Select(e => e.TrackId));
+        Assert.Empty(state.Scene.Playlists[2].Entries);
+    }
 }

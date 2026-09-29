@@ -235,4 +235,250 @@ public class PlaylistEditingTests
     [InlineData(null, false, null)]
     public void AWheelNotchStepsTheCountByOne(int? loops, bool up, int? expected) =>
         Assert.Equal(expected, PlaylistEditing.StepLoops(loops, up));
+
+    // A scene whose playlists are named as given, in that order, with the first selected.
+    private static Scene WithNames(params string[] names)
+    {
+        var playlists = names.Select(n => new Playlist(Guid.NewGuid(), n, [])).ToArray();
+        return SceneEditing.New() with { Playlists = playlists, SelectedPlaylistId = playlists[0].Id };
+    }
+
+    private static Guid IdOf(Scene scene, string name) => scene.Playlists.Single(p => p.Name == name).Id;
+
+    // A new scene holds "Playlist 1", so the next free name is "Playlist 2".
+    [Fact]
+    public void ANewSuggestionSkipsTheNamesInUse() =>
+        Assert.Equal("Playlist 2", PlaylistEditing.NewSuggestion(SceneEditing.New()));
+
+    [Fact]
+    public void NewAppendsATrimmedEmptyPlaylistAndSelectsIt()
+    {
+        var scene = SceneEditing.New();
+
+        var result = PlaylistEditing.New(scene, " Intro ");
+
+        Assert.Equal(["Playlist 1", "Intro"], result.Playlists.Select(p => p.Name));
+        var added = PlaylistEditing.Selected(result);
+        Assert.Equal("Intro", added.Name);
+        Assert.Empty(added.Entries);
+        Assert.False(added.Loops);
+        Assert.Same(scene.Playlists[0], result.Playlists[0]);
+        Assert.NotEqual(scene.SelectedPlaylistId, added.Id);
+    }
+
+    [Fact]
+    public void NewRefusesATakenOrBlankName()
+    {
+        var scene = SceneEditing.New();
+
+        Assert.Equal(
+            PlaylistEditing.NameTaken,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.New(scene, "playlist 1")).Message
+        );
+        Assert.Equal("Enter a name.", Assert.Throws<ArgumentException>(() => PlaylistEditing.New(scene, "")).Message);
+        Assert.Equal("A playlist with that name exists.", PlaylistEditing.NameTaken);
+    }
+
+    [Fact]
+    public void RenameAllowsACaseChangeButNotAnotherPlaylistsName()
+    {
+        var scene = WithNames("Alpha", "Beta");
+        var alpha = IdOf(scene, "Alpha");
+
+        var recased = PlaylistEditing.Rename(scene, alpha, "ALPHA");
+        Assert.Equal(["ALPHA", "Beta"], recased.Playlists.Select(p => p.Name));
+        Assert.Equal(
+            PlaylistEditing.NameTaken,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.Rename(scene, alpha, " beta ")).Message
+        );
+    }
+
+    [Fact]
+    public void RenameToTheSameTrimmedNameReturnsTheSameScene()
+    {
+        var scene = WithNames("Alpha", "Beta");
+
+        Assert.Same(scene, PlaylistEditing.Rename(scene, IdOf(scene, "Alpha"), " Alpha "));
+    }
+
+    [Fact]
+    public void RenameRefusesAnUnknownPlaylist()
+    {
+        var scene = WithNames("Alpha");
+
+        Assert.Equal(
+            PlaylistEditing.NoSuchPlaylist,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.Rename(scene, Guid.NewGuid(), "Beta")).Message
+        );
+    }
+
+    [Fact]
+    public void ACopySuggestionAppendsCopy()
+    {
+        var scene = SceneEditing.New();
+
+        Assert.Equal("Playlist 1 copy", PlaylistEditing.CopySuggestion(scene, scene.SelectedPlaylistId));
+    }
+
+    // Two entries on Track 1 and Track 2 (repeating 3 times), in a looping playlist.
+    private static Scene LoopingTwoEntries()
+    {
+        var scene = TwoTracks();
+        scene = PlaylistEditing.Add(scene, [scene.Tracks[0].Id, scene.Tracks[1].Id]);
+        scene = PlaylistEditing.SetLoops(scene, Entries(scene)[1].Id, 3);
+        return PlaylistEditing.SetPlaylistLoops(scene, true);
+    }
+
+    [Fact]
+    public void DuplicateCopiesEntriesUnderNewIdsAndSelectsTheCopyWhenTheSourceWasSelected()
+    {
+        var scene = LoopingTwoEntries();
+        var source = PlaylistEditing.Selected(scene);
+
+        var result = PlaylistEditing.Duplicate(scene, source.Id, " Copy ");
+
+        Assert.Equal([source.Name, "Copy"], result.Playlists.Select(p => p.Name));
+        var copy = PlaylistEditing.Selected(result);
+        Assert.Equal("Copy", copy.Name);
+        Assert.NotEqual(source.Id, copy.Id);
+        Assert.Equal(source.Entries.Select(e => e.TrackId), copy.Entries.Select(e => e.TrackId));
+        Assert.Equal(new int?[] { null, 3 }, copy.Entries.Select(e => e.Loops));
+        Assert.Empty(source.Entries.Select(e => e.Id).Intersect(copy.Entries.Select(e => e.Id)));
+        Assert.True(copy.Loops);
+        Assert.Same(source, result.Playlists[0]);
+    }
+
+    [Fact]
+    public void DuplicateKeepsTheSelectionWhenTheSourceWasNotSelected()
+    {
+        var scene = LoopingTwoEntries();
+        var source = PlaylistEditing.Selected(scene);
+        scene = PlaylistEditing.New(scene, "Other");
+
+        var result = PlaylistEditing.Duplicate(scene, source.Id, "Copy");
+
+        Assert.Equal("Other", PlaylistEditing.Selected(result).Name);
+        Assert.Equal(["Playlist 1", "Other", "Copy"], result.Playlists.Select(p => p.Name));
+    }
+
+    [Fact]
+    public void DuplicateRefusesATakenNameAndAnUnknownPlaylist()
+    {
+        var scene = SceneEditing.New();
+
+        Assert.Equal(
+            PlaylistEditing.NameTaken,
+            Assert
+                .Throws<ArgumentException>(() =>
+                    PlaylistEditing.Duplicate(scene, scene.SelectedPlaylistId, "PLAYLIST 1")
+                )
+                .Message
+        );
+        Assert.Equal(
+            PlaylistEditing.NoSuchPlaylist,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.Duplicate(scene, Guid.NewGuid(), "Copy")).Message
+        );
+    }
+
+    // Removing an entry of the copy must not touch the source, which would happen if they shared entry ids.
+    [Fact]
+    public void RemovingACopiedEntryLeavesTheSourceUntouched()
+    {
+        var scene = LoopingTwoEntries();
+        var source = PlaylistEditing.Selected(scene);
+        var result = PlaylistEditing.Duplicate(scene, source.Id, "Copy");
+        var copiedEntry = PlaylistEditing.Selected(result).Entries[0].Id;
+
+        var removed = PlaylistEditing.Remove(result, [copiedEntry]);
+
+        Assert.Equal(source.Entries.Select(e => e.Id), Get(removed, source.Id).Entries.Select(e => e.Id));
+        Assert.Single(Get(removed, PlaylistEditing.Selected(result).Id).Entries);
+    }
+
+    private static Playlist Get(Scene scene, Guid id) => PlaylistEditing.Get(scene, id);
+
+    [Fact]
+    public void TheLastPlaylistCantBeDeleted()
+    {
+        var scene = SceneEditing.New();
+
+        Assert.False(PlaylistEditing.CanDelete(scene));
+        Assert.Equal(
+            PlaylistEditing.LastPlaylist,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.Delete(scene, scene.SelectedPlaylistId)).Message
+        );
+        Assert.Equal("The last playlist can't be deleted.", PlaylistEditing.LastPlaylist);
+        Assert.True(PlaylistEditing.CanDelete(PlaylistEditing.New(scene, "Two")));
+    }
+
+    // Stored as b, C, a with b selected: ignoring case the order is a, b, C, so deleting b selects a.
+    [Fact]
+    public void DeletingTheSelectedPlaylistSelectsTheFirstByNameIgnoringCase()
+    {
+        var scene = WithNames("b", "C", "a");
+
+        var result = PlaylistEditing.Delete(scene, IdOf(scene, "b"));
+
+        Assert.Equal(["C", "a"], result.Playlists.Select(p => p.Name));
+        Assert.Equal(IdOf(scene, "a"), result.SelectedPlaylistId);
+    }
+
+    [Fact]
+    public void DeletingAnUnselectedPlaylistKeepsTheSelection()
+    {
+        var scene = WithNames("b", "C", "a");
+
+        var result = PlaylistEditing.Delete(scene, IdOf(scene, "a"));
+
+        Assert.Equal(["b", "C"], result.Playlists.Select(p => p.Name));
+        Assert.Equal(IdOf(scene, "b"), result.SelectedPlaylistId);
+    }
+
+    // Same name in two cases: the first stored wins the tie.
+    [Fact]
+    public void DeletingSelectsTheFirstStoredWhenNamesTie()
+    {
+        var scene = WithNames("x", "Dup", "dup");
+        scene = PlaylistEditing.Select(scene, IdOf(scene, "x"));
+
+        var result = PlaylistEditing.Delete(scene, IdOf(scene, "x"));
+
+        Assert.Equal(IdOf(scene, "Dup"), result.SelectedPlaylistId);
+    }
+
+    [Fact]
+    public void DeleteRefusesAnUnknownPlaylist()
+    {
+        var scene = WithNames("a", "b");
+
+        Assert.Equal(
+            PlaylistEditing.NoSuchPlaylist,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.Delete(scene, Guid.NewGuid())).Message
+        );
+    }
+
+    // Hand-edited files can hold two playlists with one name: a third can't take it in any case, and either can be renamed by case.
+    [Fact]
+    public void NameRefusalWithDuplicateNamesPresent()
+    {
+        var scene = WithNames("Dup", "Dup");
+
+        Assert.Equal(PlaylistEditing.NameTaken, PlaylistEditing.NameRefusal(scene, "dup"));
+        Assert.Null(PlaylistEditing.NameRefusal(scene, "DUP", scene.Playlists[0].Id));
+        Assert.Null(PlaylistEditing.NameRefusal(scene, "Other"));
+        Assert.Equal("Enter a name.", PlaylistEditing.NameRefusal(scene, "  "));
+    }
+
+    [Fact]
+    public void SelectRefusesAnUnknownPlaylistAndReturnsTheSameSceneWhenAlreadySelected()
+    {
+        var scene = WithNames("a", "b");
+
+        Assert.Equal(
+            PlaylistEditing.NoSuchPlaylist,
+            Assert.Throws<ArgumentException>(() => PlaylistEditing.Select(scene, Guid.NewGuid())).Message
+        );
+        Assert.Same(scene, PlaylistEditing.Select(scene, scene.SelectedPlaylistId));
+        Assert.Equal(IdOf(scene, "b"), PlaylistEditing.Select(scene, IdOf(scene, "b")).SelectedPlaylistId);
+    }
 }
