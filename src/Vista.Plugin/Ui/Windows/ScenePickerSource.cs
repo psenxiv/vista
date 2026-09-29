@@ -30,7 +30,7 @@ internal sealed class ScenePickerSource(SceneFiles files) : IPickerSource
 
     public string? Primary(PickerRow row) => files.Switch(row.Name);
 
-    public string? NewLabel => "New scene";
+    public bool Creates => true;
 
     public bool NewAllowed(CameraMode mode) => SceneActions.Allowed(SceneAction.New, targetsOpenScene: true, mode);
 

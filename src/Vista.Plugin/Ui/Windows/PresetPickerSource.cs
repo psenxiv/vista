@@ -25,12 +25,12 @@ internal sealed class PresetPickerSource(SceneFiles files) : IPickerSource
 
     public bool IsCurrent(PickerRow row) => false;
 
-    /// <summary>Adding a preset needs Edit, same as adding a track.</summary>
+    /// <summary>Only Edit allows adding a preset.</summary>
     public bool PrimaryAllowed(CameraMode mode) => mode == CameraMode.Editing;
 
     public string? Primary(PickerRow row) => files.AddPreset(row.Name);
 
-    public string? NewLabel => null;
+    public bool Creates => false;
 
     public bool NewAllowed(CameraMode mode) => false;
 

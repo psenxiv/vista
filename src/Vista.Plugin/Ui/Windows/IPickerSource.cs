@@ -39,8 +39,8 @@ internal interface IPickerSource
     /// <summary>Opens or adds <paramref name="row"/>; the refusal, or null.</summary>
     string? Primary(PickerRow row);
 
-    /// <summary>The footer button that makes a new row; null hides it.</summary>
-    string? NewLabel { get; }
+    /// <summary>Whether new rows can be made; false hides the footer button.</summary>
+    bool Creates { get; }
 
     /// <summary>Whether <paramref name="mode"/> allows making a new row.</summary>
     bool NewAllowed(CameraMode mode);

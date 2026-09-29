@@ -136,7 +136,6 @@ internal sealed class FilePickerWindow : Window
 
         if (listed.Count == 0)
         {
-            // The empty-list line, centred in the space between the search box and the footer.
             Layout.CentredText(source.EmptyText, UiColours.Muted());
             ImGui.EndChild();
             return;
@@ -273,21 +272,22 @@ internal sealed class FilePickerWindow : Window
     {
         Layout.CentreRemaining(ImGui.GetFrameHeight());
 
-        if (source.NewLabel is { } newLabel)
+        if (source.Creates)
         {
             ImGui.BeginDisabled(!source.NewAllowed(mode));
-            if (ImGui.Button(newLabel, new Vector2(NewButtonWidth, 0f)))
+            if (ImGui.Button(NewHeading(source), new Vector2(NewButtonWidth, 0f)))
                 StartNew(source);
             ImGui.EndDisabled();
             ImGui.SameLine();
         }
 
         var folderIcon = FontAwesomeIcon.FolderOpen;
+        var folderTooltip = source.FolderTooltip;
         var right = FooterButtonWidth;
-        if (source.FolderTooltip is not null)
+        if (folderTooltip is not null)
             right += ImGui.GetStyle().ItemSpacing.X + IconButton.Width(folderIcon);
         Layout.RightAlign(right);
-        if (source.FolderTooltip is { } folderTooltip)
+        if (folderTooltip is not null)
         {
             if (IconButton.Draw("open-folder", folderIcon, folderTooltip))
                 source.OpenFolder();
@@ -330,11 +330,14 @@ internal sealed class FilePickerWindow : Window
 
     private void StartNew(IPickerSource source) =>
         namePrompt.Ask(
-            $"New {source.Noun}",
+            NewHeading(source),
             source.NewSuggestion(),
             text => (source.NewRefusal(text), null),
             newName => Confirm(source.New(newName))
         );
+
+    /// <summary>The New footer button's label and the new prompt's heading.</summary>
+    private static string NewHeading(IPickerSource source) => $"New {source.Noun}";
 
     /// <summary>Reports a refusal; a successful action relists through <see cref="SceneFiles.Changed"/>.</summary>
     private static void Confirm(string? refusal) => Report(refusal);
