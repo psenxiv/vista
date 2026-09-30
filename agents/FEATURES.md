@@ -2,9 +2,6 @@
 
 Ideas not yet specced.
 
-### Switchboard action buttons
-A row of buttons, each tied to a track or a playlist, plus Cue and Cut. In Live, click a button, press Cue to line it up next, then Cut to swap the camera to it. How it behaves should follow hardware switchers such as the Blackmagic ATEM.
-
 ### OBS integration
 Control the switchboard from OBS, so camera cuts can follow the stream.
 
