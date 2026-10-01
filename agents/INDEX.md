@@ -13,16 +13,16 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 ### Core
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
-- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and the scrub bar over the switchboard's Program shot.
+- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and the scrub bar over a playing track or playlist.
 - `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Input`: the key, modifier and hotkey types, the table naming every hotkey Vista binds, and which hotkey a press or held keys resolve to.
 - `Scenes`: scenes, playlists, switchboards and presets as data, their edits and names, their place in the world, and their files.
 - `SelfTest`: the rules that decide whether each `/vista selftest` check passed, and its report lines.
-- `Session`: the mode, selection, undo history, the Edit previews (the edited track's and Edit's throwaway switchboard's) and scrub head, the switchboard player that cuts Live or Edit between slots, and the scene's tracks in the world.
+- `Session`: the mode, selection, undo history, the Edit previews (the edited track's and Edit's throwaway switchboard's) and scrub head, the switchboard player that cuts Live or Edit between slots and has the Director play the one on Program, and the scene's tracks in the world.
 - `Tracks`: the track and its control points and anchor, editing its points and timing, and evaluating it at a moment.
 - `Tracks/Aiming`: where the camera looks and which way is up: recorded aim (with roll and field of view, blended by distance along the path), direction of travel, Look At, watched and followed characters, and smoothing.
-- `Tracks/Playback`: the Director, playing a track or a playlist frame by frame, and the playlist laid end to end as Live's timeline.
+- `Tracks/Playback`: the Director, playing, pausing and scrubbing a track or a playlist frame by frame, what a scrub bar draws from (`IPlayingShot`), and the playlist laid end to end as Live's timeline.
 - `Tracks/Spline`: the Catmull-Rom path and its arc-length table.
 - `Tracks/Timing`: timing keys, compiling them from speeds and holds, the timing curve, and easing.
 

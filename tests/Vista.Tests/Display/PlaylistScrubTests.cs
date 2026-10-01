@@ -42,23 +42,20 @@ public class PlaylistScrubTests
         return (scrub, timeline, scene);
     }
 
-    /// <summary>A slot holding <paramref name="scene"/>'s first playlist.</summary>
-    private static Slot PlaylistSlot(Scene scene) => new("Show", null, scene.Playlists[0].Id);
-
-    /// <summary>The bar for <paramref name="scene"/>'s first playlist on a slot as Live plays it, and the timeline it lays out.</summary>
+    /// <summary>The bar for <paramref name="scene"/>'s first playlist as Live plays it, and the timeline it lays out.</summary>
     private static (PlaylistScrub Scrub, PlaylistTimeline Timeline) Scrub(Scene scene)
     {
         var state = new SessionState();
         state.LoadScene(scene);
         var timeline = new PlaylistPlayback(state.PlaylistItems(scene.Playlists[0])).Timeline;
-        return (new PlaylistScrub(timeline, state.Scene, PlaylistSlot(scene)), timeline);
+        return (new PlaylistScrub(timeline, state.Scene, scene.Playlists[0].Id), timeline);
     }
 
     /// <summary>The example's bar zoomed to <paramref name="from"/> to <paramref name="to"/> seconds.</summary>
     private static (PlaylistScrub Scrub, PlaylistTimeline Timeline) Zoomed(float from, float to)
     {
         var (_, timeline, scene) = Example();
-        return (new PlaylistScrub(timeline, scene, PlaylistSlot(scene), new TimingView(from, to)), timeline);
+        return (new PlaylistScrub(timeline, scene, scene.Playlists[0].Id, new TimingView(from, to)), timeline);
     }
 
     [Theory]
@@ -195,7 +192,7 @@ public class PlaylistScrubTests
     }
 
     [Fact]
-    public void ASegmentIsLabelledFromTheSlotsPlaylistWhicheverIsSelected()
+    public void ASegmentIsLabelledFromThePlaylistGivenWhicheverIsSelected()
     {
         var (_, timeline, scene) = Example();
         var other = PlaylistEditing.New(scene, "Other");
@@ -203,18 +200,18 @@ public class PlaylistScrubTests
 
         Assert.Equal(
             "3 · Hairpin",
-            new PlaylistScrub(timeline, other, PlaylistSlot(scene)).Label(timeline.Segments[1])
+            new PlaylistScrub(timeline, other, scene.Playlists[0].Id).Label(timeline.Segments[1])
         );
     }
 
     [Fact]
-    public void ATrackSlotsSegmentIsLabelledWithTheTracksName()
+    public void ATracksSegmentIsLabelledWithTheTracksName()
     {
         var hairpin = OneLeg(2f) with { Name = "Hairpin" };
         var scene = OnePlaylist([hairpin]);
         var timeline = new PlaylistPlayback([new PlaylistItem(hairpin.Id, hairpin, null)]).Timeline;
 
-        var bar = new PlaylistScrub(timeline, scene, new Slot("Close-up", hairpin.Id, null));
+        var bar = new PlaylistScrub(timeline, scene, hairpin.Id);
 
         Assert.Equal("Hairpin", bar.Label(timeline.Segments[0]));
     }
@@ -225,15 +222,14 @@ public class PlaylistScrubTests
         var (_, timeline, scene) = Example();
         var removed = PlaylistEditing.Remove(scene, [Entries(scene)[2].Id]);
 
-        Assert.Null(new PlaylistScrub(timeline, removed, PlaylistSlot(scene)).Label(timeline.Segments[1]));
+        Assert.Null(new PlaylistScrub(timeline, removed, scene.Playlists[0].Id).Label(timeline.Segments[1]));
     }
 
     [Fact]
-    public void ATrackTheSceneNoLongerHasHasNoLabel()
+    public void AnIdTheSceneDoesNotHaveHasNoLabel()
     {
         var (_, timeline, scene) = Example();
-        var track = new Slot("Gone", Guid.NewGuid(), null);
 
-        Assert.Null(new PlaylistScrub(timeline, scene, track).Label(timeline.Segments[0]));
+        Assert.Null(new PlaylistScrub(timeline, scene, Guid.NewGuid()).Label(timeline.Segments[0]));
     }
 }

@@ -13,6 +13,9 @@ namespace Vista.Tests.Tracks.Playback;
 
 public class DirectorTests
 {
+    // Seconds through a shot, as the playhead counts them from float frame steps.
+    private const double HeadTolerance = 1e-5;
+
     [Fact]
     public void TickIsNullBeforeGoingLive()
     {
@@ -198,23 +201,25 @@ public class DirectorTests
     }
 
     [Fact]
-    public void SeekMovesALiveShotAndKeepsItsPause()
+    public void ScrubToMovesALiveShotAndKeepsItsPause()
     {
         var director = new Director();
         director.GoLive(new PlaylistShot([Item(StraightTrack())]));
         director.Pause();
 
-        director.Seek(6.0);
+        director.ScrubTo(6.0);
         Assert.Equal(6.0, director.ShotTime, 5);
+        Assert.Equal(6.0, director.Head, HeadTolerance);
         Assert.True(director.IsPaused);
     }
 
     [Fact]
-    public void SeekDoesNothingOffline()
+    public void ScrubToDoesNothingOffline()
     {
         var director = new Director();
-        director.Seek(3.0);
+        director.ScrubTo(3.0);
         Assert.Equal(0.0, director.ShotTime);
+        Assert.Equal(0.0, director.Head);
     }
 
     [Fact]
@@ -315,17 +320,220 @@ public class DirectorTests
     }
 
     [Fact]
-    public void SeekTakesATimeThroughThePlaylist()
+    public void ScrubToTakesATimeThroughThePlaylist()
     {
         var items = new[] { Item(StraightTrack()), Item(StraightTrack()) };
         var director = new Director();
         director.GoLive(new PlaylistShot(items));
 
-        // Two 10 s entries: 13 s through is 3 s into the second.
-        director.Seek(13.0);
+        // Two 10 s entries, 20 s in all: 13 s through is 3 s into the second.
+        director.ScrubTo(13.0);
 
+        Assert.Equal(20.0, director.Timeline!.Total, HeadTolerance);
         Assert.Equal(items[1].EntryId, director.Playlist!.EntryId);
+        Assert.Equal(1, director.EntryIndex);
         Assert.Equal(3.0, director.ShotTime, 5);
+        Assert.Equal(13.0, director.Head, HeadTolerance);
+    }
+
+    [Fact]
+    public void TheScrubBarsReadsAreEmptyBeforeGoingLive()
+    {
+        var director = new Director();
+
+        Assert.Null(director.Timeline);
+        Assert.Equal(0.0, director.Head);
+        Assert.Equal(0, director.EntryIndex);
+        Assert.False(director.Scrubbing);
+        Assert.False(director.IsPlaying);
+    }
+
+    [Fact]
+    public void IsPlayingOnlyWhileLiveUnpausedAndUnfinished()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        Assert.True(director.IsPlaying);
+
+        director.Pause();
+        Assert.False(director.IsPlaying);
+
+        director.Resume();
+        Assert.True(director.IsPlaying);
+
+        // The track runs 10 s, so 20 s plays it to its end.
+        director.Tick(20f);
+        Assert.False(director.IsPlaying);
+
+        director.GoOffline();
+        Assert.False(director.IsPlaying);
+    }
+
+    [Fact]
+    public void PlayResumesAPausedShot()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        director.Tick(3f);
+        director.Pause();
+
+        director.Play();
+
+        Assert.False(director.IsPaused);
+        // On from 3 s, 1 s more is 4 s.
+        director.Tick(1f);
+        Assert.Equal(4.0, director.Head, HeadTolerance);
+    }
+
+    [Fact]
+    public void PlayRestartsAFinishedShot()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        // The track runs 10 s, so 20 s plays it to its end.
+        director.Tick(20f);
+        Assert.True(director.IsFinished);
+
+        director.Play();
+
+        Assert.False(director.IsFinished);
+        Assert.Equal(0.0, director.Head);
+        // From the start, 2 s on is x = 2.
+        Assert.Equal(2f, XAfter(director, 2f), 1e-3f);
+    }
+
+    [Fact]
+    public void PlayDoesNothingOffline()
+    {
+        var director = new Director();
+        director.Play();
+        Assert.False(director.IsLive);
+    }
+
+    [Fact]
+    public void BeginScrubHoldsTheShot()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        director.Tick(3f);
+
+        director.BeginScrub();
+
+        Assert.True(director.Scrubbing);
+        Assert.True(director.IsPaused);
+        // Held at 3 s, so 2 s of ticking moves nothing.
+        director.Tick(2f);
+        Assert.Equal(3.0, director.Head, HeadTolerance);
+    }
+
+    [Fact]
+    public void BeginScrubDoesNothingOffline()
+    {
+        var director = new Director();
+        director.BeginScrub();
+        Assert.False(director.Scrubbing);
+    }
+
+    [Fact]
+    public void EndScrubResumesAShotThatWasUnpaused()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        director.Tick(3f);
+
+        director.BeginScrub();
+        director.ScrubTo(6.0);
+        director.EndScrub();
+
+        Assert.False(director.Scrubbing);
+        Assert.True(director.IsPlaying);
+        // Let go at 6 s, 1 s on is x = 7.
+        Assert.Equal(7f, XAfter(director, 1f), 1e-3f);
+    }
+
+    [Fact]
+    public void EndScrubLeavesAPausedShotPaused()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        director.Pause();
+
+        director.BeginScrub();
+        director.ScrubTo(6.0);
+        director.EndScrub();
+
+        Assert.False(director.Scrubbing);
+        Assert.True(director.IsPaused);
+        // Still held where it was let go.
+        director.Tick(1f);
+        Assert.Equal(6.0, director.Head, HeadTolerance);
+    }
+
+    [Fact]
+    public void ASecondBeginScrubKeepsWhatTheFirstRemembered()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+
+        // The first scrub pauses a playing shot; a second begun then must not read that pause as the shot's own.
+        director.BeginScrub();
+        director.BeginScrub();
+        director.EndScrub();
+
+        Assert.True(director.IsPlaying);
+    }
+
+    [Fact]
+    public void AFinishedShotScrubbedBackAndLetGoPlaysOn()
+    {
+        var director = new Director();
+        director.GoLive(new PlaylistShot([Item(StraightTrack())]));
+        // The track runs 10 s, so 20 s plays it to its end.
+        director.Tick(20f);
+        Assert.True(director.IsFinished);
+
+        director.BeginScrub();
+        director.ScrubTo(3.0);
+        director.EndScrub();
+
+        Assert.True(director.IsPlaying);
+        // Let go at 3 s, 1 s on is x = 4.
+        Assert.Equal(4f, XAfter(director, 1f), 1e-3f);
+    }
+
+    [Fact]
+    public void GoLiveEndsAScrub()
+    {
+        var director = new Director();
+        var shot = new PlaylistShot([Item(StraightTrack())]);
+        director.GoLive(shot);
+        director.BeginScrub();
+
+        director.GoLive(shot);
+
+        Assert.False(director.Scrubbing);
+        // The new shot's own pause isn't undone by letting go of the old scrub.
+        director.Pause();
+        director.EndScrub();
+        Assert.True(director.IsPaused);
+    }
+
+    [Fact]
+    public void GoOfflineEndsAScrub()
+    {
+        var director = new Director();
+        var shot = new PlaylistShot([Item(StraightTrack())]);
+        director.GoLive(shot);
+        director.BeginScrub();
+
+        director.GoOffline();
+
+        Assert.False(director.Scrubbing);
+        // A shot put on afterwards and paused isn't resumed by letting go of the old scrub.
+        director.GoLive(shot);
+        director.Pause();
+        director.EndScrub();
+        Assert.True(director.IsPaused);
     }
 
     [Fact]

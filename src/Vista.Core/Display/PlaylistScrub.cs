@@ -6,8 +6,8 @@ using static System.FormattableString;
 
 namespace Vista.Core.Display;
 
-/// <summary>The scrub bar over the whole of slot <paramref name="program"/>'s shot, or the stretch of it <paramref name="view"/> zooms to: where times fall along it, its pass ticks, and its entries' labels.</summary>
-public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Slot program, TimingView? view = null)
+/// <summary>The scrub bar over the whole shot of the track or playlist with id <paramref name="playing"/>, or the stretch of it <paramref name="view"/> zooms to: where times fall along it, its pass ticks, and its entries' labels.</summary>
+public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Guid playing, TimingView? view = null)
 {
     private readonly TimingView shown = view ?? TimingView.Whole((float)timeline.Total);
 
@@ -38,12 +38,11 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Slot p
     /// <summary>A playlist's segment as its entry's number in the playlist and its track's name, as "3 · Hairpin"; a track's as its name; null when the scene no longer has them.</summary>
     public string? Label(PlaylistSegment segment)
     {
-        if (program.TrackId is { } trackId)
-            return SceneEditing.TryGet(scene, trackId, out var played) ? played.Name : null;
-        var entries =
-            program.PlaylistId is { } playlistId && PlaylistEditing.TryGet(scene, playlistId, out var playlist)
-                ? playlist.Entries
-                : [];
+        if (SceneEditing.TryGet(scene, playing, out var played))
+            return played.Name;
+        if (!PlaylistEditing.TryGet(scene, playing, out var playlist))
+            return null;
+        var entries = playlist.Entries;
         var index = ListEdit.IndexOf(entries, e => e.Id == segment.EntryId);
         return index >= 0 && SceneEditing.TryGet(scene, entries[index].TrackId, out var track)
             ? Invariant($"{index + 1} · {track.Name}")

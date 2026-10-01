@@ -454,7 +454,8 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var timeline = board?.Timeline;
         var total = timeline?.Total ?? 0.0;
         var head = timeline is null ? 0.0 : board!.Head;
-        var key = (session.Mode, board?.Program ?? -1, SwitchboardEditing.Target(board?.ProgramSlot) ?? Guid.Empty);
+        var playing = SwitchboardEditing.Target(board?.ProgramSlot) ?? Guid.Empty;
+        var key = (session.Mode, board?.Program ?? -1, playing);
         var view = zoom.View(key, (float)total);
         var rowLeft = ImGui.GetCursorScreenPos().X;
         var rowWidth = ImGui.GetContentRegionAvail().X;
@@ -467,7 +468,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var width = barRight - ImGui.GetCursorScreenPos().X;
         using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubBar.GrabScale))
         {
-            if (board is not null && PlaylistBar.Draw(board, scene, fields.Commit, width, view))
+            if (board is not null && PlaylistBar.Draw(board, scene, playing, fields.Commit, width, view))
                 ScrubBar.Zoom(zoom, view, (float)total, board.Scrubbing);
             else
                 DrawEmptyBar(width);
