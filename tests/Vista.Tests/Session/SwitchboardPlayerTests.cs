@@ -192,7 +192,6 @@ public class SwitchboardPlayerTests
 
         Assert.Equal(1, board.Program);
         Assert.Null(board.Next);
-        Assert.False(board.IsPaused);
         Assert.True(board.IsPlaying);
         Assert.Equal(0.0, board.Head, Time);
     }
@@ -583,7 +582,7 @@ public class SwitchboardPlayerTests
 
         board.EndScrub();
 
-        Assert.True(board.IsPaused);
+        Assert.False(board.IsPlaying);
     }
 
     [Fact]
@@ -655,7 +654,7 @@ public class SwitchboardPlayerTests
 
         Assert.Equal(0, board.Program);
         Assert.Equal(1, board.Next);
-        Assert.True(board.IsPaused);
+        Assert.False(board.IsPlaying);
         Assert.Equal(3.0, board.Head, Time);
         // Paused at 3 s: x = 6, however long passes.
         Assert.Equal(6f, XAfter(state, 1f), Along);
@@ -675,7 +674,7 @@ public class SwitchboardPlayerTests
 
         Assert.Equal(1, board.Program);
         Assert.False(board.IsFinished);
-        Assert.True(board.IsPaused);
+        Assert.False(board.IsPlaying);
         Assert.Equal(0.0, board.Head, Time);
     }
 
@@ -829,7 +828,7 @@ public class SwitchboardPlayerTests
         CutTo(board, 3);
 
         board.BeginScrub();
-        Assert.True(board.IsPaused);
+        Assert.False(board.IsPlaying);
         Assert.True(board.Scrubbing);
         // 5 s through the playlist is 3 s into Track 1's entry, after Track 2's 2 s.
         board.ScrubTo(5.0);

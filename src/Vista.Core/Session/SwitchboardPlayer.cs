@@ -47,9 +47,6 @@ public sealed class SwitchboardPlayer : IPlayingShot
     /// <summary>True while a shot is on Program.</summary>
     public bool HasProgram => OnProgram;
 
-    /// <summary>True while the Program shot is paused.</summary>
-    public bool IsPaused => OnProgram && director.IsPaused;
-
     /// <summary>True once the Program shot has reached its end and holds its last frame.</summary>
     public bool IsFinished => OnProgram && director.IsFinished;
 

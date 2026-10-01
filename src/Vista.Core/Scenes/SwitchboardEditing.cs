@@ -31,7 +31,7 @@ public static class SwitchboardEditing
     public const string UseTooltip = "Use switchboard";
 
     /// <summary>The Use switchboard toggle's tooltip where it can't be changed.</summary>
-    public const string UseTooltipOutsideEdit = "Use switchboard (change it in Edit)";
+    public const string UseTooltipOutsideEdit = "Use switchboard (toggle in Edit)";
 
     /// <summary>A switchboard with every slot empty, every toggle off, nothing on air, and not in use.</summary>
     public static Switchboard Empty() => new(new Slot?[SlotCount], false, false, false, EmptyAir());

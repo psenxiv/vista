@@ -468,7 +468,7 @@ public class SessionSwitchboardTests
 
         state.Cue();
         Assert.Equal(CameraMode.Live, state.Mode);
-        Assert.Equal("Use switchboard (change it in Edit)", state.UseSwitchboardTooltip);
+        Assert.Equal("Use switchboard (toggle in Edit)", state.UseSwitchboardTooltip);
     }
 
     [Fact]
