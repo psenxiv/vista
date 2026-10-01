@@ -7,7 +7,10 @@ namespace Vista.Plugin.Ui.Windows;
 /// <summary>The picker's scenes: open one, or make, rename, duplicate or delete one.</summary>
 internal sealed class ScenePickerSource(SceneFiles files) : IPickerSource
 {
-    public string Title => "Open scene";
+    /// <summary>The picker's title, and the name of what opens it.</summary>
+    public const string OpenScene = "Open scene";
+
+    public string Title => OpenScene;
 
     public string PrimaryLabel => "Open";
 

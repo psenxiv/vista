@@ -29,8 +29,8 @@ internal sealed class TimingWindow : Window
     private const float TickLength = 4f;
     private const float TickLabelGap = 2f;
     private const float HandleLength = 40f;
-    private const float HandleRadius = 5f;
-    private const float HandleHitRadius = 8f;
+    private const float HandleRadius = 7f;
+    private const float HandleHitRadius = 11f;
     private const float HoverRadius = 3f;
     private const float EasingWidth = 130f;
     private const string EmptyText = "Add two points to shape timing.";

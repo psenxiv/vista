@@ -42,7 +42,7 @@ internal sealed class PlaylistPanel
         loopsDrag = new PendingEdit<int>(() => session.Mode == CameraMode.Editing);
     }
 
-    /// <summary>The header, naming the entry Live is playing, with its open, loop and add buttons, the selected playlist's name, then one row per entry; editing is disabled unless in Edit mode.</summary>
+    /// <summary>The header, naming the entry Live is playing, with its loop and add buttons, the selected playlist's name, which opens the playlists, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
     {
         // Rows can remove or reorder entries, so every row reads this snapshot.
@@ -57,7 +57,7 @@ internal sealed class PlaylistPanel
         loopsHovered = false;
 
         ImGui.AlignTextToFramePadding();
-        var buttons = IconButton.RowWidth(FontAwesomeIcon.LayerGroup, FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus);
+        var buttons = IconButton.RowWidth(FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus);
         if (playing is not null && PlaylistHeading.NowPlaying(scene, playing.Id) is { } heading)
         {
             // Cut to the room left of the buttons, so a long name can't widen the panel.
@@ -73,9 +73,6 @@ internal sealed class PlaylistPanel
         ImGui.BeginDisabled(!editing);
         ImGui.SameLine();
         Layout.RightAlign(buttons);
-        if (IconButton.Draw("open-playlist", FontAwesomeIcon.LayerGroup, PlaylistPickerSource.OpenPlaylist))
-            picker.Show(FilePickerKind.Playlist);
-        ImGui.SameLine();
         if (IconButton.Toggle("playlist-loop", FontAwesomeIcon.Repeat, playlist.Loops, "Loop playlist"))
             Report(session.SetPlaylistLoops(!playlist.Loops));
         ImGui.SameLine();
@@ -94,7 +91,8 @@ internal sealed class PlaylistPanel
         }
 
         ImGui.EndDisabled();
-        NameStrip.Draw("playlist-name", playlist.Name);
+        if (NameStrip.Draw("playlist-name", playlist.Name, PlaylistPickerSource.OpenPlaylist, editing))
+            picker.Show(FilePickerKind.Playlist);
         ImGui.Separator();
 
         ImGui.BeginDisabled(!editing);

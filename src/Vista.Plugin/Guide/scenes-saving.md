@@ -4,7 +4,7 @@ Vista saves your scene as you work, a moment after each change. There is no save
 
 ## Switching scenes
 
-Choose **Open scene** in the **Scene** menu to see your scenes and open one.
+Choose **Open scene** in the **Scene** menu, or the scene's name at the top of the Hierarchy, to see your scenes and open one.
 
 | | Button | Does |
 |---|---|---|

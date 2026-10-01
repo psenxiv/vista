@@ -57,7 +57,9 @@ internal sealed class HierarchyPanel
             ImGui.OpenPopup("add-track-menu");
         DrawAddMenu();
         ImGui.EndDisabled();
-        NameStrip.Draw("scene-name", files.CurrentName);
+        var canOpen = SceneActions.Allowed(SceneAction.Open, targetsOpenScene: true, session.Mode);
+        if (NameStrip.Draw("scene-name", files.CurrentName, ScenePickerSource.OpenScene, canOpen))
+            picker.Show(FilePickerKind.Scene);
         ImGui.Separator();
 
         // Rows can delete or reorder tracks, so every row reads this snapshot.

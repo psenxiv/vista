@@ -2,11 +2,12 @@
 
 ## X.Y.Z.N
 
-- A scene can now hold several playlists. Choose, make, rename, duplicate and delete them with the Open playlist button at the top of the Playlist. A new scene's playlist starts with its first track in it.
+- A scene can now hold several playlists. Choose, make, rename, duplicate and delete them from the playlist's name at the top of the Playlist. A new scene's playlist starts with its first track in it.
 - The new Switchboard window, on the top row and in the View menu, cuts Live between tracks and playlists in ten slots, with Direct cut, Keep rolling and Auto Next. Turn on Use switchboard in that window, in Edit, to use it for a scene. Otherwise Live plays the selected playlist.
-- The open scene's name moves from the window title to a strip under the Scene heading, and the selected playlist's name shows under the Playlist heading.
+- The open scene's name moves from the window title to a strip under the Scene heading, and the selected playlist's name shows under the Playlist heading. Choose either name to open its list.
 - Vista updates older scene files to a new format, and keeps a copy of each in the backups folder inside vistaxiv.
 - Pressing Enter to confirm a name in Open scene no longer also opens the highlighted scene.
+- The handles in the Timing window are larger and easier to grab.
 - The Vista window opens at the right size, and can't be shrunk too far, when Dalamud's UI scale isn't 100%.
 - Vista now tells you when a scene file can't be read, instead of leaving it out of the list without a word. If it was the scene you last had open, it says which scene opened instead.
 

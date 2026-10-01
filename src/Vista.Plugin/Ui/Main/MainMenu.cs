@@ -97,7 +97,9 @@ internal sealed class MainMenu
         if (!menu)
             return;
         var mode = session.Mode;
-        if (Menu.Item("Open scene", SceneActions.Allowed(SceneAction.Open, targetsOpenScene: true, mode)))
+        if (
+            Menu.Item(ScenePickerSource.OpenScene, SceneActions.Allowed(SceneAction.Open, targetsOpenScene: true, mode))
+        )
             picker.Show(FilePickerKind.Scene);
         if (Menu.Item("New scene", SceneActions.Allowed(SceneAction.New, targetsOpenScene: true, mode)))
             namePrompt.Ask(
