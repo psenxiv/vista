@@ -111,7 +111,7 @@ Link to another page by its file name, as it appears in `index.md`: `[Timing](ti
 
 - Check every instruction against the current plugin before you write it. If you can't confirm how something behaves, ask rather than guess.
 - When a change to Vista adds, removes or changes something a user can see or do, update the pages that describe it in the same change.
-- `hotkeys.md` repeats the keys table in `README.md`. If a key changes, update both.
+- `hotkeys.md` is the only list of keys. If a key changes, update it.
 
 ## An example
 

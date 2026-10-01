@@ -103,7 +103,7 @@ Game logs: `~/Library/Application Support/XIV on Mac/logs/dalamud.log`.
 
 The in-plugin User Guide is Markdown in `src/Vista.Plugin/Guide/`. **Read `agents/GUIDES.md` before writing or changing any page.**
 
-When a change affects what a user can see or do, update the guide in the same change. If a key changes, update `hotkeys.md` and the README's keys table together.
+When a change affects what a user can see or do, update the guide in the same change. If a key changes, update `hotkeys.md`.
 
 ## Docs
 
