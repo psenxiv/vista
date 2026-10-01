@@ -26,19 +26,22 @@ public class SessionSwitchboardTests
         return (string.Join("|", board.Slots), board.DirectCut, board.KeepRolling, board.AutoNext);
     }
 
-    // A session with OnAirScene open, in Edit.
-    private static SessionState Editing()
+    // OnAirScene with Use switchboard on.
+    private static Scene OnAirSceneInUse() => SwitchboardEditing.SetEnabled(OnAirScene(), true);
+
+    // A session with OnAirScene open, in Edit, using its switchboard unless told not to.
+    private static SessionState Editing(bool on = true)
     {
         var state = new SessionState();
-        state.LoadScene(OnAirScene());
+        state.LoadScene(SwitchboardEditing.SetEnabled(OnAirScene(), on));
         state.Edit();
         return state;
     }
 
-    // Editing OnAirScene with Track 1 given points at x = 0 and 10 and put in Playlist 1, so Live has a shot to play.
-    private static SessionState EditingPlayable()
+    // Editing OnAirScene with Track 1 given points at x = 0 and 10, a 2 s shot, and put in Playlist 1, so Live has a shot to play; it uses its switchboard unless told not to.
+    private static SessionState EditingPlayable(bool on = true)
     {
-        var scene = OnAirScene();
+        var scene = SwitchboardEditing.SetEnabled(OnAirScene(), on);
         scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
         scene = PlaylistEditing.Add(scene, [scene.Tracks[0].Id]);
         var state = new SessionState();
@@ -69,7 +72,7 @@ public class SessionSwitchboardTests
     {
         // Slot 0 holds Track 1 as "Wide"; loading the scene starts the undo history empty.
         var state = new SessionState();
-        state.LoadScene(SwitchboardEditing.Rename(OnAirScene(), 0, "Wide"));
+        state.LoadScene(SwitchboardEditing.Rename(OnAirSceneInUse(), 0, "Wide"));
         state.Edit();
 
         Assert.Null(state.RenameSlot(0, ""));
@@ -167,20 +170,258 @@ public class SessionSwitchboardTests
     [MemberData(nameof(Commands))]
     public void EachCommandIsRefusedOffAndInView(string _, Func<SessionState, string?> command)
     {
-        var state = new SessionState();
-        state.LoadScene(OnAirScene());
+        // The mode is why, whether or not the scene uses its switchboard.
+        foreach (var on in new[] { true, false })
+        {
+            var state = new SessionState();
+            state.LoadScene(SwitchboardEditing.SetEnabled(OnAirScene(), on));
+            var scene = state.Scene;
+
+            Assert.Equal("The switchboard can only change in Edit or Live.", command(state));
+            state.Release(CameraMode.View);
+            Assert.Equal("The switchboard can only change in Edit or Live.", command(state));
+            Assert.Same(scene, state.Scene);
+        }
+    }
+
+    public static TheoryData<string, Func<SessionState, string?>> EveryCommand =>
+        new()
+        {
+            { "assign", s => s.AssignSlot(3, s.Scene.Tracks[1].Id) },
+            { "rename", s => s.RenameSlot(0, "Wide") },
+            { "clear", s => s.ClearSlot(2) },
+            { "direct cut", s => s.SetSwitchboardToggle(SwitchboardToggle.DirectCut, true) },
+            { "keep rolling", s => s.SetSwitchboardToggle(SwitchboardToggle.KeepRolling, true) },
+            { "auto next", s => s.SetSwitchboardToggle(SwitchboardToggle.AutoNext, true) },
+        };
+
+    [Theory]
+    [MemberData(nameof(EveryCommand))]
+    public void EachCommandIsRefusedInEditAndLiveWhileTheSceneDoesntUseItsSwitchboard(
+        string _,
+        Func<SessionState, string?> command
+    )
+    {
+        var state = EditingPlayable(on: false);
         var scene = state.Scene;
 
-        Assert.Equal("The switchboard can only change in Edit or Live.", command(state));
-        state.Release(CameraMode.View);
-        Assert.Equal("The switchboard can only change in Edit or Live.", command(state));
+        Assert.Equal("Turn on Use switchboard first.", command(state));
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Equal("Turn on Use switchboard first.", command(state));
+
         Assert.Same(scene, state.Scene);
+        state.Edit();
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void ASceneThatDoesntUseItsSwitchboardHasNoneToDriveOrShow()
+    {
+        // The scene saves slot 0 on Program and slot 1 Next, which aren't shown while it is off.
+        var state = EditingPlayable(on: false);
+        Assert.Equal(CameraMode.Editing, state.Mode);
+        Assert.Null(state.Board);
+        Assert.Equal<(int?, int?)>((null, null), state.ShownAir);
+
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Null(state.Board);
+        Assert.Equal<(int?, int?)>((null, null), state.ShownAir);
+
+        state.Release();
+        Assert.Equal<(int?, int?)>((null, null), state.ShownAir);
+        Assert.Equal(0, state.Scene.Switchboard.Live.Program);
+        Assert.Equal(1, state.Scene.Switchboard.Live.Next);
+    }
+
+    [Fact]
+    public void TheBoardsPlayPauseAndRestartLeaveLivesPlaylistAlone()
+    {
+        // Live plays the playlist's 2 s shot, paused 1 s in.
+        var state = EditingPlayable(on: false);
+        GoLive(state);
+        state.LiveFrame(1f);
+        state.Stop();
+
+        Assert.False(state.CanPlayBoard);
+        Assert.Equal(PlayOutcome.Refused, state.PlayBoard());
+        Assert.Equal(PlayOutcome.Refused, state.RestartBoard());
+        state.LiveFrame(0.5f);
+        Assert.False(state.IsPlaying);
+        Assert.Equal(1.0, state.LivePlaylist!.Head, 1e-5);
+
+        Assert.Equal(PlayOutcome.Resumed, state.Play());
+        Assert.False(state.BoardPlaying);
+        state.PauseBoard();
+        Assert.True(state.IsPlaying);
+    }
+
+    [Fact]
+    public void TurningUseSwitchboardOnInEditGivesABoardWithNothingOnProgramOrNext()
+    {
+        var state = EditingPlayable(on: false);
+
+        Assert.Null(state.SetUseSwitchboard(true));
+
+        Assert.NotNull(state.Board);
+        Assert.Null(state.Board.Program);
+        Assert.Null(state.Board.Next);
+        Assert.Equal<(int?, int?)>((null, null), state.ShownAir);
+    }
+
+    [Fact]
+    public void TurningUseSwitchboardOnLeavesTheEditedTracksPreviewPlaying()
+    {
+        var state = EditingTwoPoints();
+        Assert.Equal(PlayOutcome.Previewed, state.Play());
+
+        Assert.Null(state.SetUseSwitchboard(true));
+
+        Assert.True(state.Transport.Previewing);
+    }
+
+    public static TheoryData<string, Action<SessionState>, Action<SessionState>> WaysToTurnItOff =>
+        new()
+        {
+            { "command", _ => { }, s => s.SetUseSwitchboard(false) },
+            {
+                "undo",
+                s =>
+                {
+                    s.SetUseSwitchboard(false);
+                    s.SetUseSwitchboard(true);
+                },
+                s => s.Undo()
+            },
+            {
+                "redo",
+                s =>
+                {
+                    s.SetUseSwitchboard(false);
+                    s.Undo();
+                },
+                s => s.Redo()
+            },
+        };
+
+    [Theory]
+    [MemberData(nameof(WaysToTurnItOff))]
+    public void TurningUseSwitchboardOffStopsEditsCutAndFliesOnFromItsLastFrame(
+        string _,
+        Action<SessionState> prepare,
+        Action<SessionState> turnOff
+    )
+    {
+        var state = EditingSwitchboard();
+        prepare(state);
+        var board = state.Board!;
+        CutTo(board, 0);
+        // 1 s of Track 1, x = 2t: x = 2.
+        Assert.Equal(2f, state.Transport.EditingFrame(1f, flying: false).Shown!.Value.Position.X, 1e-3f);
+
+        turnOff(state);
+
+        Assert.False(state.Scene.Switchboard.Enabled);
+        Assert.Null(state.Board);
+        Assert.False(board.HasProgram);
+        Assert.True(state.OverlayEditable);
+        var next = state.Transport.EditingFrame(1f, flying: false);
+        Assert.Null(next.Shown);
+        Assert.Equal(2f, next.FlyFrom!.Value.Position.X, 1e-3f);
+        Assert.Equal(default, state.Transport.EditingFrame(1f, flying: false));
+    }
+
+    [Fact]
+    public void LoadingASceneInEditGivesABoardOnlyWhenItUsesItsSwitchboard()
+    {
+        // Slot 1 holds Playlist 1, which can play, so a click makes it Next.
+        var state = EditingPlayable();
+        state.Board!.Click(1);
+        Assert.Equal(1, state.Board.Next);
+
+        state.LoadScene(OnAirScene());
+        Assert.Null(state.Board);
+
+        state.LoadScene(OnAirSceneInUse());
+        Assert.NotNull(state.Board);
+        Assert.Null(state.Board.Program);
+        Assert.Null(state.Board.Next);
+    }
+
+    [Fact]
+    public void EnteringEditGivesNoBoardWhileTheSceneDoesntUseItsSwitchboard()
+    {
+        var state = new SessionState();
+        state.LoadScene(OnAirScene());
+
+        state.Edit();
+
+        Assert.Null(state.Board);
+    }
+
+    [Fact]
+    public void DeletingTheProgramSlotsTrackEmptiesItWhileTheSwitchboardIsOff()
+    {
+        // Slot 0 holds Track 1 and is on Program at 3 s; slot 1 is Next, and slots 1 and 2 resume at 2 s and 4 s.
+        var state = Editing(on: false);
+
+        Assert.Null(state.DeleteTracks([state.Scene.Tracks[0].Id]));
+
+        Assert.Null(state.Scene.Switchboard.Slots[0]);
+        SameAir(new OnAir(null, 1, 0.0, Resume((1, 2.0), (2, 4.0))), state.Scene.Switchboard.Live);
+    }
+
+    [Fact]
+    public void WithTheSwitchboardInUseLiveShowsNoPlaylistAndPlayWhilePlayingOnlyReHides()
+    {
+        // The playlist's 2 s shot is cut to on slot 0.
+        var state = EditingTwoPoints();
+        state.AddToPlaylist([state.EditedTrackId]);
+        CutLive(state);
+        Assert.True(state.IsPlaying);
+        Assert.Null(state.LivePlaylist);
+        Assert.Null(state.PlayingEntry);
+
+        state.LiveFrame(1f);
+        Assert.Equal(PlayOutcome.ReHid, state.Play());
+        Assert.Equal(1.0, state.Board!.Head, 1e-5);
+    }
+
+    [Fact]
+    public void HoveringASlotSaysToTurnUseSwitchboardOnWhileItIsOff()
+    {
+        // Slot 0 holds a track and slot 5 is empty.
+        var state = new SessionState();
+        state.LoadScene(OnAirScene());
+        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(0));
+        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(5));
+
+        state.Edit();
+        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(0));
+        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(5));
+    }
+
+    [Fact]
+    public void HoveringASlotGivesItsHintOnlyWhereTheSwitchboardCanBeDriven()
+    {
+        // Slot 0 holds Track 1, which has no points, and slot 5 is empty.
+        var state = new SessionState();
+        state.LoadScene(OnAirSceneInUse());
+        Assert.Null(state.SlotHint(0));
+        Assert.Null(state.SlotHint(5));
+
+        state.Release(CameraMode.View);
+        Assert.Null(state.SlotHint(0));
+        Assert.Null(state.SlotHint(5));
+
+        state.Edit();
+        Assert.Equal("Nothing to play yet", state.SlotHint(0));
+        Assert.Equal("Right-click to assign", state.SlotHint(5));
     }
 
     [Fact]
     public void UseSwitchboardIsRefusedOutsideEditAndChangesNothing()
     {
-        var state = EditingPlayable();
+        var state = EditingPlayable(on: false);
         state.Release();
 
         void Refused(CameraMode mode)
@@ -218,7 +459,7 @@ public class SessionSwitchboardTests
     public void UseSwitchboardIsOneUndoStepInEditAndUndoAndRedoRestoreIt()
     {
         // OnAirScene has it off, so setting it off is no step.
-        var state = Editing();
+        var state = Editing(on: false);
         Assert.Null(state.SetUseSwitchboard(false));
         Assert.False(state.CanUndo);
 
@@ -482,7 +723,7 @@ public class SessionSwitchboardTests
     public void TheSwitchboardShowsTheSavedLiveProgramAndNextOnlyInOffAndView()
     {
         var state = new SessionState();
-        state.LoadScene(OnAirScene());
+        state.LoadScene(OnAirSceneInUse());
 
         // OnAirScene saves slot 0 on Program and slot 1 Next.
         Assert.Equal<(int?, int?)>((0, 1), state.ShownAir);

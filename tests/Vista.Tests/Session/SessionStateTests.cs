@@ -34,13 +34,25 @@ public class SessionStateTests
         Assert.Equal(CameraMode.Editing, state.Mode);
     }
 
+    // Editing a track with points at x = 0 and 10, a 2 s shot, which is the playlist's only entry.
+    private static SessionState EditingAPlaylistOfTwoPoints()
+    {
+        var state = EditingTwoPoints();
+        state.AddToPlaylist([state.EditedTrackId]);
+        return state;
+    }
+
+    // Seconds through the playlist Live is playing.
+    private static double Head(SessionState state) => state.LivePlaylist!.Head;
+
     [Fact]
     public void EditFromLiveLeavesLive()
     {
         var state = LiveTwoPoints();
         Assert.Equal(EditOutcome.FromLive, state.Edit());
         Assert.Equal(CameraMode.Editing, state.Mode);
-        Assert.False(state.Board!.HasProgram);
+        Assert.Null(state.LivePlaylist);
+        Assert.False(state.IsPlaying);
     }
 
     [Fact]
@@ -50,17 +62,28 @@ public class SessionStateTests
         editing.Edit();
         Assert.Equal(PlayOutcome.Refused, editing.Play());
         Assert.Equal(CameraMode.Editing, editing.Mode);
-        Assert.False(editing.Board!.HasProgram);
+        Assert.False(editing.IsPlaying);
     }
 
-    [Fact]
-    public void CueFromEditingGoesLive()
+    [Theory]
+    [InlineData(CameraMode.Off, PlayOutcome.CuedFromGame)]
+    [InlineData(CameraMode.View, PlayOutcome.CuedFromGame)]
+    [InlineData(CameraMode.Editing, PlayOutcome.Cued)]
+    public void CueEntersLivePausedOnThePlaylistsFirstFrame(CameraMode from, PlayOutcome outcome)
     {
-        var state = EditingTwoPoints();
-        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        var state = EditingAPlaylistOfTwoPoints();
+        if (from != CameraMode.Editing)
+            state.Release(from);
+
+        // The game camera was at x = 1 (WellFormedFrame); the playlist's first frame is the track's first point, x = 0.
+        Assert.Equal(outcome, state.Cue(WellFormedFrame));
+
         Assert.Equal(CameraMode.Live, state.Mode);
-        Assert.NotNull(state.Board);
         Assert.True(state.LocksInput);
+        Assert.False(state.IsPlaying);
+        // Paused, so a second later the camera is still on the first frame and the head at 0.
+        Assert.Equal(0f, state.LiveFrame(1f)!.Value.Position.X, 1e-4f);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
     [Fact]
@@ -71,13 +94,56 @@ public class SessionStateTests
         Assert.True(state.IsPlaying);
     }
 
-    [Fact]
-    public void PlayFromViewSaysItStartedFromGame()
+    [Theory]
+    [InlineData(CameraMode.Off)]
+    [InlineData(CameraMode.View)]
+    public void PlayFromTheGameEntersLiveAndPlaysThePlaylistFromItsStart(CameraMode from)
     {
-        var state = LiveTwoPoints();
-        state.Release();
+        var state = EditingAPlaylistOfTwoPoints();
+        state.Release(from);
+
         Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
+
         Assert.Equal(CameraMode.Live, state.Mode);
+        Assert.True(state.IsPlaying);
+        // Playing from 0, so a second later the head is at 1 s.
+        state.LiveFrame(1f);
+        Assert.Equal(1.0, Head(state), 1e-5);
+    }
+
+    [Fact]
+    public void LiveIsRefusedWhileThePlaylistHasNothingToPlay()
+    {
+        // The playlist's only entry is a track with no points.
+        var state = new SessionState();
+        state.Edit();
+        state.AddToPlaylist([state.EditedTrackId]);
+
+        Assert.False(state.CanGoLive);
+        Assert.Equal("Add a track with points to the playlist.", state.LiveRefusal);
+        Assert.Equal(PlayOutcome.Refused, state.Cue());
+        Assert.Equal(CameraMode.Editing, state.Mode);
+
+        state.Release();
+        Assert.False(state.CanStart);
+        Assert.Equal(PlayOutcome.Refused, state.Cue());
+        Assert.Equal(PlayOutcome.Refused, state.Play());
+        Assert.Equal(CameraMode.Off, state.Mode);
+
+        state.ReportFault("draw");
+        Assert.Equal(
+            "Vista has stopped. Reload it in /xlplugins, or check for an update if that doesn't help.",
+            state.LiveRefusal
+        );
+    }
+
+    [Fact]
+    public void LiveIsntRefusedOnceThePlaylistHasATrackWithPoints()
+    {
+        var state = EditingAPlaylistOfTwoPoints();
+
+        Assert.True(state.CanGoLive);
+        Assert.Null(state.LiveRefusal);
     }
 
     [Fact]
@@ -86,7 +152,8 @@ public class SessionStateTests
         var state = LiveTwoPoints();
         state.LiveFrame(1f);
         Assert.Equal(PlayOutcome.ReHid, state.Play());
-        Assert.Equal(1.0, state.Board!.Head, 5);
+        Assert.True(state.IsPlaying);
+        Assert.Equal(1.0, Head(state), 1e-5);
     }
 
     [Fact]
@@ -96,18 +163,22 @@ public class SessionStateTests
         state.LiveFrame(1f);
         state.Stop();
         Assert.Equal(PlayOutcome.Resumed, state.Play());
-        Assert.False(state.Board!.IsPaused);
-        Assert.Equal(1.0, state.Board.Head, 5);
+        Assert.True(state.IsPlaying);
+        Assert.Equal(1.0, Head(state), 1e-5);
     }
 
     [Fact]
     public void PlayWhenFinishedStartsAgainFromZero()
     {
+        // The shot is 2 s long, so 6 s holds it at its end, 2 s.
         var state = LiveTwoPoints();
         state.LiveFrame(6f);
-        Assert.True(state.Board!.IsFinished);
+        Assert.False(state.IsPlaying);
+        Assert.Equal(2.0, Head(state), 1e-5);
+
         Assert.Equal(PlayOutcome.Started, state.Play());
-        Assert.Equal(0.0, state.Board.Head);
+        Assert.True(state.IsPlaying);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
     [Fact]
@@ -117,35 +188,37 @@ public class SessionStateTests
         state.LiveFrame(6f);
         state.Stop();
         Assert.Equal(PlayOutcome.Started, state.Play());
-        Assert.False(state.Board!.IsPaused);
-        Assert.Equal(0.0, state.Board.Head);
+        Assert.True(state.IsPlaying);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
-    [Fact]
-    public void CueFromViewSaysItCuedFromGame()
+    [Theory]
+    [InlineData("playing")]
+    [InlineData("paused")]
+    [InlineData("finished")]
+    public void RestartWhileLivePlaysFromZero(string was)
     {
-        var state = EditingTwoPoints();
-        state.Release();
-        Assert.Equal(PlayOutcome.CuedFromGame, state.Cue());
-        Assert.Equal(CameraMode.Live, state.Mode);
-    }
-
-    [Fact]
-    public void RestartWhileLiveStartsFromZero()
-    {
+        // 1 s into the 2 s shot, or 6 s on, which holds it at its end.
         var state = LiveTwoPoints();
-        state.LiveFrame(2f);
+        state.LiveFrame(was == "finished" ? 6f : 1f);
+        if (was == "paused")
+            state.Stop();
+
         Assert.Equal(PlayOutcome.Started, state.Restart());
-        Assert.Equal(0.0, state.Board!.Head);
+
+        Assert.True(state.IsPlaying);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
-    [Fact]
-    public void RestartIsRefusedWhileTheGameHasTheCamera()
+    [Theory]
+    [InlineData(CameraMode.Off)]
+    [InlineData(CameraMode.View)]
+    public void RestartIsRefusedWhileTheGameHasTheCamera(CameraMode mode)
     {
         var state = LiveTwoPoints();
-        state.Release(CameraMode.View);
+        state.Release(mode);
         Assert.Equal(PlayOutcome.Refused, state.Restart());
-        Assert.Equal(CameraMode.View, state.Mode);
+        Assert.Equal(mode, state.Mode);
     }
 
     [Fact]
@@ -155,9 +228,87 @@ public class SessionStateTests
         Assert.False(EditingTwoPoints().Stop());
 
         var live = LiveTwoPoints();
+        live.LiveFrame(1f);
         Assert.True(live.Stop());
-        Assert.True(live.Board!.IsPaused);
+        Assert.False(live.IsPlaying);
         Assert.Equal(CameraMode.Live, live.Mode);
+        // Paused at 1 s, so another second leaves the head there.
+        live.LiveFrame(1f);
+        Assert.Equal(1.0, Head(live), 1e-5);
+    }
+
+    [Fact]
+    public void EveryVisitToLiveStartsThePlaylistFromItsBeginning()
+    {
+        var state = LiveTwoPoints();
+        state.LiveFrame(1f);
+        Assert.Equal(1.0, Head(state), 1e-5);
+
+        state.Edit();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Equal(0.0, Head(state), 1e-9);
+
+        state.Play();
+        state.LiveFrame(1f);
+        state.Release();
+        Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
+        Assert.Equal(0.0, Head(state), 1e-9);
+    }
+
+    public static TheoryData<string, Action<SessionState>> WaysOutOfLive =>
+        new()
+        {
+            { "edit", s => s.Edit() },
+            { "off", s => s.Release() },
+            { "view", s => s.Release(CameraMode.View) },
+            { "fault", s => s.ReportFault("draw") },
+        };
+
+    [Theory]
+    [MemberData(nameof(WaysOutOfLive))]
+    public void AVisitToLiveLeavesTheSwitchboardsPlaceAlone(string _, Action<SessionState> leave)
+    {
+        // OnAirScene saves slot 0 on Program at 3 s, slot 1 Next, and slots 1 and 2 resuming at 2 s and 4 s; Track 1 gets a 2 s shot and goes in the playlist.
+        var scene = OnAirScene();
+        scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
+        scene = PlaylistEditing.Add(scene, [scene.Tracks[0].Id]);
+        var state = new SessionState();
+        state.LoadScene(scene);
+        var saved = state.Scene.Switchboard.Live;
+
+        Assert.Equal(PlayOutcome.StartedFromGame, state.Play());
+        state.LiveFrame(0.5f);
+        state.Edit();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.Equal(PlayOutcome.Resumed, state.Play());
+        state.LiveFrame(0.5f);
+        state.LivePlaylist!.BeginScrub();
+        state.LivePlaylist.ScrubTo(1.5);
+        state.LivePlaylist.EndScrub();
+        state.Stop();
+        state.Restart();
+        state.LiveFrame(0.5f);
+        leave(state);
+
+        Assert.NotEqual(CameraMode.Live, state.Mode);
+        Assert.Same(saved, state.Scene.Switchboard.Live);
+        SameAir(new OnAir(0, 1, 3.0, Resume((1, 2.0), (2, 4.0))), state.Scene.Switchboard.Live);
+    }
+
+    [Fact]
+    public void ThePlaylistShowsAsPlayingOnlyInLive()
+    {
+        var state = EditingAPlaylistOfTwoPoints();
+        Assert.Null(state.LivePlaylist);
+        Assert.Null(state.PlayingEntry);
+
+        state.Release();
+        Assert.Null(state.LivePlaylist);
+        Assert.Null(state.PlayingEntry);
+
+        state.Cue();
+        Assert.NotNull(state.LivePlaylist);
+        Assert.Equal(Entries(state.Scene)[0], state.PlayingEntry);
     }
 
     [Fact]
@@ -172,7 +323,8 @@ public class SessionStateTests
         var live = LiveTwoPoints();
         Assert.True(live.Release());
         Assert.Equal(CameraMode.Off, live.Mode);
-        Assert.Null(live.Board);
+        Assert.Null(live.LivePlaylist);
+        Assert.False(live.IsPlaying);
         Assert.Null(live.LiveFrame(1f / 60f));
     }
 
@@ -333,8 +485,8 @@ public class SessionStateTests
         Assert.Same(scene.Tracks, state.Scene.Tracks);
     }
 
-    // IsPlaying is Previewing || (Live && !IsPaused && !IsFinished). Every expectation below is
-    // read off the mode and director state the case sets up, not off the predicate itself.
+    // IsPlaying is true while an Edit preview runs, or Live's shot runs unpaused and unfinished. Every expectation below
+    // is read off the mode and the playing state the case sets up, not off the predicate itself.
 
     [Fact]
     public void IsPlayingIsFalseWhileReleased()
@@ -369,11 +521,10 @@ public class SessionStateTests
         Assert.Equal(CameraMode.Live, state.Mode);
         Assert.True(state.IsPlaying);
 
-        state.Stop();
-        Assert.True(state.Board!.IsPaused);
+        Assert.True(state.Stop());
         Assert.False(state.IsPlaying);
 
-        state.Play();
+        Assert.Equal(PlayOutcome.Resumed, state.Play());
         Assert.True(state.IsPlaying);
     }
 
@@ -385,17 +536,18 @@ public class SessionStateTests
         // EditingTwoPoints is a single 2 s leg, so the cycle ends at 2 s.
         state.LiveFrame(6f);
 
-        Assert.True(state.Board!.IsFinished);
+        Assert.Equal(2.0, Head(state), 1e-5);
         Assert.False(state.IsPlaying);
     }
 
-    // CanStart is the edited track's points in Edit, a Program shot in Live, else CanGoLive; CanRestart adds that Off and View can't.
+    // CanStart is the edited track's points in Edit, a playlist that can play in Off, View and Live; CanRestart adds that Off and View can't.
 
     [Fact]
-    public void CanStartNeedsPointsInEditAndAProgramShotInLive()
+    public void CanStartNeedsPointsInEditAndAPlaylistThatCanPlayOutsideIt()
     {
+        // A new scene's playlist is empty, and its track has no points.
         var state = new SessionState();
-        Assert.True(state.CanStart);
+        Assert.False(state.CanStart);
 
         state.Edit();
         Assert.False(state.CanStart);
@@ -403,6 +555,12 @@ public class SessionStateTests
         state.ChangeTrack(WithTwoPoints);
         Assert.True(state.CanStart);
 
+        // The track has points, but the playlist is still empty.
+        state.Release();
+        Assert.False(state.CanStart);
+
+        state.Edit();
+        state.AddToPlaylist([state.EditedTrackId]);
         state.Release();
         Assert.True(state.CanStart);
 
@@ -466,7 +624,7 @@ public class SessionStateTests
     [Fact]
     public void LiveLeavesTheScrubHeadWhereItWas()
     {
-        // The edited track is Live's Program shot, yet its scrub head stays at 1.5 s while Live plays and after.
+        // Live plays the edited track, yet its scrub head stays at 1.5 s while Live plays and after.
         var state = EditingTwoPoints();
         state.Transport.ScrubTo(1.5);
         state.AddToPlaylist([state.EditedTrackId]);

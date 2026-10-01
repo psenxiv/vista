@@ -38,7 +38,7 @@ public sealed class Transport
         this.aimTargets = aimTargets;
     }
 
-    /// <summary>Edit's switchboard, which previews its cuts on the Edit camera; null outside Edit.</summary>
+    /// <summary>Edit's switchboard, which previews its cuts on the Edit camera; null outside Edit, and while the scene doesn't use its switchboard.</summary>
     internal SwitchboardPlayer? Board => board;
 
     /// <summary>True while Edit's switchboard has a shot on Program, playing on the Edit camera or holding its last frame.</summary>
@@ -230,6 +230,13 @@ public sealed class Transport
             air => cuts = air,
             onCut: () => StopPreview()
         );
+    }
+
+    /// <summary>Drops Edit's switchboard while Edit goes on; a shot it was showing still hands the free-cam its last frame.</summary>
+    internal void DropBoard()
+    {
+        StopCuts();
+        board = null;
     }
 
     /// <summary>Drops Edit's switchboard, as leaving Edit does.</summary>

@@ -9,7 +9,7 @@ using Vista.Core.Tracks.Timing;
 
 namespace Vista.Core.Session;
 
-/// <summary>The mode, Live's switchboard player, the scene and the edited track: the rules for moving between modes, and every edit as one undo step.</summary>
+/// <summary>The mode, what Live plays (the selected playlist, or the switchboard when the scene uses it), the scene and the edited track: the rules for moving between modes, and every edit as one undo step.</summary>
 public sealed class SessionState
 {
     private readonly EditHistory history = new();
@@ -17,6 +17,7 @@ public sealed class SessionState
     private readonly NearbyCharacters? aimTargets;
     private readonly EvaluatorCache liveStartEvaluator = new();
     private readonly SwitchboardPlayer live;
+    private readonly Director playlistDirector;
     private EditSnapshot? liveEditStart;
     private CameraState? heldFrame;
     private Scene openScene = SceneEditing.New();
@@ -33,6 +34,7 @@ public sealed class SessionState
             () => Scene.Switchboard.Live,
             air => Scene = Scene with { Switchboard = Scene.Switchboard with { Live = air } }
         );
+        playlistDirector = new Director(aimTargets);
         Selection = new SelectionState(this);
         World = new WorldView(this, aimTargets);
         Transport = new Transport(this, aimTargets);
@@ -41,20 +43,37 @@ public sealed class SessionState
 
     public CameraMode Mode { get; private set; }
 
-    /// <summary>The switchboard player for the mode: Live's in Live, Edit's throwaway one in Edit, otherwise null.</summary>
-    public SwitchboardPlayer? Board =>
-        Mode switch
-        {
-            CameraMode.Live => live,
-            CameraMode.Editing => Transport.Board,
-            _ => null,
-        };
+    /// <summary>True while the scene uses its switchboard, so Live plays Program rather than the selected playlist.</summary>
+    private bool UsesBoard => Scene.Switchboard.Enabled;
 
-    /// <summary>The Program and Next slots the switchboard shows: the mode's player's, or the scene's saved Live ones in Off and View.</summary>
+    /// <summary>The switchboard player for the mode: Live's in Live, Edit's throwaway one in Edit, otherwise null; always null while the scene doesn't use its switchboard.</summary>
+    public SwitchboardPlayer? Board =>
+        !UsesBoard
+            ? null
+            : Mode switch
+            {
+                CameraMode.Live => live,
+                CameraMode.Editing => Transport.Board,
+                _ => null,
+            };
+
+    /// <summary>The Program and Next slots the switchboard shows: the mode's player's, or the scene's saved Live ones in Off and View; neither while the scene doesn't use its switchboard.</summary>
     public (int? Program, int? Next) ShownAir =>
-        Board is { } board
-            ? (board.Program, board.Next)
-            : (Scene.Switchboard.Live.Program, Scene.Switchboard.Live.Next);
+        !UsesBoard ? (null, null)
+        : Board is { } board ? (board.Program, board.Next)
+        : (Scene.Switchboard.Live.Program, Scene.Switchboard.Live.Next);
+
+    /// <summary>The selected playlist as Live plays it, for its scrub bar; null unless in Live with the scene not using its switchboard.</summary>
+    public IPlayingShot? LivePlaylist => Mode == CameraMode.Live && !UsesBoard ? playlistDirector : null;
+
+    /// <summary>The selected playlist's entry Live is playing; null unless in Live with the scene not using its switchboard.</summary>
+    public PlaylistEntry? PlayingEntry =>
+        LivePlaylist is not null && playlistDirector.Playlist is { } playing
+            ? PlaylistEditing.Selected(Scene).Entries.FirstOrDefault(e => e.Id == playing.EntryId)
+            : null;
+
+    /// <summary>What hovering switchboard slot <paramref name="slot"/> says: to turn the switchboard on while it is off, the slot's hint while there is a switchboard to drive, otherwise null.</summary>
+    public string? SlotHint(int slot) => !UsesBoard || Board is not null ? SwitchboardEditing.Hint(Scene, slot) : null;
 
     /// <summary>What's selected while editing.</summary>
     public SelectionState Selection { get; }
@@ -72,7 +91,14 @@ public sealed class SessionState
         private set
         {
             Transport.FollowSlots(openScene.Switchboard.Slots, value.Switchboard.Slots);
+            var used = openScene.Switchboard.Enabled;
             openScene = value;
+            if (Mode != CameraMode.Editing || used == value.Switchboard.Enabled)
+                return;
+            if (used)
+                Transport.DropBoard();
+            else
+                Transport.OpenBoard();
         }
     }
 
@@ -101,8 +127,9 @@ public sealed class SessionState
     /// <summary>True in Off and View, where the game has its camera.</summary>
     public bool Released => Mode is CameraMode.Off or CameraMode.View;
 
-    /// <summary>True while a preview is running in Edit, or Live's Program shot is running and neither paused nor finished.</summary>
-    public bool IsPlaying => Transport.Previewing || (Mode == CameraMode.Live && live.IsPlaying);
+    /// <summary>True while a preview is running in Edit, or Live's shot is running and neither paused nor finished.</summary>
+    public bool IsPlaying =>
+        Transport.Previewing || (Mode == CameraMode.Live && (UsesBoard ? live.IsPlaying : playlistDirector.IsPlaying));
 
     /// <summary>True while editing with a step to undo.</summary>
     public bool CanUndo => Mode == CameraMode.Editing && history.CanUndo;
@@ -113,8 +140,14 @@ public sealed class SessionState
     /// <summary>True in Edit with the scene or a track anchor selected: whether <see cref="MoveAnchorTo"/> can run.</summary>
     public bool CanMoveAnchor => Mode == CameraMode.Editing && Selection.Anchor is AnchorKind.Scene or AnchorKind.Track;
 
-    /// <summary>True until Vista has stopped.</summary>
-    public bool CanGoLive => !Stopped;
+    /// <summary>True until Vista has stopped, when the scene uses its switchboard or the selected playlist has an entry that can play.</summary>
+    public bool CanGoLive => !Stopped && (UsesBoard || PlaylistEditing.CanPlay(Scene, PlaylistEditing.Selected(Scene)));
+
+    /// <summary>Why Live can't be entered, or null when it can.</summary>
+    public string? LiveRefusal =>
+        Stopped ? StopMessage
+        : CanGoLive ? null
+        : NothingInPlaylist;
 
     /// <summary>Why a preview is refused outside a live edit.</summary>
     private const string NoLiveEdit = "No live edit is in progress.";
@@ -124,6 +157,12 @@ public sealed class SessionState
 
     /// <summary>Why a switchboard change is refused in Off and View.</summary>
     private const string SwitchboardOnlyInEditOrLive = "The switchboard can only change in Edit or Live.";
+
+    /// <summary>Why a switchboard change is refused while the scene doesn't use its switchboard.</summary>
+    private const string TurnOnUseSwitchboard = "Turn on Use switchboard first.";
+
+    /// <summary>Why Live can't be entered while the selected playlist has nothing to play.</summary>
+    private const string NothingInPlaylist = "Add a track with points to the playlist.";
 
     /// <summary>Why Use switchboard is refused outside Edit.</summary>
     private const string UseSwitchboardOnlyInEdit = "Use switchboard can only change in Edit.";
@@ -163,12 +202,12 @@ public sealed class SessionState
         return true;
     }
 
-    /// <summary>True when Play has something to do: the edited track's points in Edit, a shot on Program in Live, otherwise going Live.</summary>
+    /// <summary>True when Play has something to do: the edited track's points in Edit, Live's playlist or a shot on Program in Live, otherwise going Live.</summary>
     public bool CanStart =>
         Mode switch
         {
             CameraMode.Editing => TrackEditing.CanPlay(Local),
-            CameraMode.Live => live.HasProgram,
+            CameraMode.Live => UsesBoard ? live.HasProgram : playlistDirector.IsLive,
             _ => CanGoLive,
         };
 
@@ -194,7 +233,7 @@ public sealed class SessionState
             ? Tracks.Aiming.FollowOrbit.Of(local.Points[0])
             : null;
 
-    /// <summary>Enters editing; from Live, stores where the Program shot had got to and stops it. Refused once Vista has stopped.</summary>
+    /// <summary>Enters editing; from Live, stops what it played, storing where a Program shot had got to. Refused once Vista has stopped.</summary>
     public EditOutcome Edit()
     {
         if (Stopped)
@@ -207,52 +246,64 @@ public sealed class SessionState
             case CameraMode.Live:
                 Transport.DropScrub();
                 Transport.DropHandOff();
-                Transport.OpenBoard();
-                live.Store();
+                OpenEditBoard();
+                LeaveLive();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromLive;
             default:
                 Transport.DropScrub();
                 Transport.DropHandOff();
-                Transport.OpenBoard();
+                OpenEditBoard();
                 Mode = CameraMode.Editing;
                 return EditOutcome.FromGame;
         }
     }
 
-    /// <summary>In Edit, previews from the scrub head; in Live, plays the Program shot, from its start once finished; otherwise enters Live at <paramref name="start"/> and plays. Refused when nothing can play or Vista has stopped.</summary>
+    /// <summary>In Edit, previews from the scrub head; in Live, plays Live's shot, from its start once finished; otherwise enters Live at <paramref name="start"/> and plays. Refused when nothing can play or Live can't be entered.</summary>
     public PlayOutcome Play(CameraState? start = null)
     {
         if (Mode == CameraMode.Editing)
             return Transport.Previewing ? PlayOutcome.Previewed : StartPreview(fromStart: false);
         if (Mode == CameraMode.Live)
         {
-            if (!live.HasProgram)
+            if (!CanStart)
                 return PlayOutcome.Refused;
-            if (live.IsPlaying)
+            if (IsPlaying)
                 return PlayOutcome.ReHid;
-            var finished = live.IsFinished;
-            live.Play();
+            var finished = UsesBoard ? live.IsFinished : playlistDirector.IsFinished;
+            if (UsesBoard)
+                live.Play();
+            else
+                playlistDirector.Play();
             return finished ? PlayOutcome.Started : PlayOutcome.Resumed;
         }
 
-        if (Stopped)
+        if (!CanGoLive)
             return PlayOutcome.Refused;
         EnterLive(start);
+        if (!UsesBoard)
+        {
+            playlistDirector.Resume();
+            return PlayOutcome.StartedFromGame;
+        }
+
         if (!live.HasProgram)
             return PlayOutcome.CuedFromGame;
         live.Resume();
         return PlayOutcome.StartedFromGame;
     }
 
-    /// <summary>In Edit, previews from the beginning; in Live, plays the Program shot from its start. Refused otherwise, with nothing on Program, or once Vista has stopped.</summary>
+    /// <summary>In Edit, previews from the beginning; in Live, plays Live's shot from its start. Refused otherwise, or with nothing to play.</summary>
     public PlayOutcome Restart()
     {
         if (Mode == CameraMode.Editing)
             return StartPreview(fromStart: true);
-        if (Mode != CameraMode.Live || !live.HasProgram)
+        if (Mode != CameraMode.Live || !CanStart)
             return PlayOutcome.Refused;
-        live.Restart();
+        if (UsesBoard)
+            live.Restart();
+        else
+            playlistDirector.Restart();
         return PlayOutcome.Started;
     }
 
@@ -265,10 +316,10 @@ public sealed class SessionState
     /// <summary>Plays the mode's switchboard's Program shot: in Live as Play does; in Edit, on from a pause or from its start once finished. Refused with nothing on Program.</summary>
     public PlayOutcome PlayBoard()
     {
-        if (Mode == CameraMode.Live)
-            return Play();
         if (Board is not { HasProgram: true } board)
             return PlayOutcome.Refused;
+        if (Mode == CameraMode.Live)
+            return Play();
         board.Play();
         return PlayOutcome.Previewed;
     }
@@ -276,10 +327,10 @@ public sealed class SessionState
     /// <summary>Plays the mode's switchboard's Program shot from its start: in Live as Restart does. Refused with nothing on Program.</summary>
     public PlayOutcome RestartBoard()
     {
-        if (Mode == CameraMode.Live)
-            return Restart();
         if (Board is not { HasProgram: true } board)
             return PlayOutcome.Refused;
+        if (Mode == CameraMode.Live)
+            return Restart();
         board.Restart();
         return PlayOutcome.Previewed;
     }
@@ -287,28 +338,31 @@ public sealed class SessionState
     /// <summary>Holds the mode's switchboard's Program shot on its frame.</summary>
     public void PauseBoard() => Board?.Pause();
 
-    /// <summary>Enters Live at <paramref name="start"/> with the Program shot where it had got to, paused. Refused in Live or once Vista has stopped.</summary>
+    /// <summary>Enters Live at <paramref name="start"/>, paused: on the selected playlist's first frame, or with the Program shot where it had got to. Refused in Live or when Live can't be entered.</summary>
     public PlayOutcome Cue(CameraState? start = null)
     {
-        if (Stopped || Mode == CameraMode.Live)
+        if (!CanGoLive || Mode == CameraMode.Live)
             return PlayOutcome.Refused;
         var fromGame = Released;
         EnterLive(start);
         return fromGame ? PlayOutcome.CuedFromGame : PlayOutcome.Cued;
     }
 
-    /// <summary>In Live, pauses the Program shot; in Edit, stops a preview. Returns false when there was nothing to stop.</summary>
+    /// <summary>In Live, pauses Live's shot; in Edit, stops a preview. Returns false when there was nothing to stop.</summary>
     public bool Stop()
     {
         if (Mode == CameraMode.Editing)
             return Transport.StopPreview();
-        if (Mode != CameraMode.Live || !live.HasProgram)
+        if (Mode != CameraMode.Live || !CanStart)
             return false;
-        live.Pause();
+        if (UsesBoard)
+            live.Pause();
+        else
+            playlistDirector.Pause();
         return true;
     }
 
-    /// <summary>Hands the camera to the game in <paramref name="to"/>, Off or View; from Live, stores where the Program shot had got to and stops it. Returns false if the game already had it.</summary>
+    /// <summary>Hands the camera to the game in <paramref name="to"/>, Off or View; from Live, stops what it played, storing where a Program shot had got to. Returns false if the game already had it.</summary>
     public bool Release(CameraMode to = CameraMode.Off)
     {
         if (to is not (CameraMode.Off or CameraMode.View))
@@ -321,7 +375,7 @@ public sealed class SessionState
             Transport.DropScrub();
             EndLiveEdit();
             if (Mode == CameraMode.Live)
-                live.Store();
+                LeaveLive();
         }
 
         Selection.DropGroup();
@@ -329,17 +383,17 @@ public sealed class SessionState
         return owned;
     }
 
-    /// <summary>Live's camera this frame, <paramref name="dt"/> seconds on: the Program shot's frame, or with nothing playing the last frame shown, first the frame Live began at. Null outside Live.</summary>
+    /// <summary>Live's camera this frame, <paramref name="dt"/> seconds on: the frame of the playlist or the Program shot, or with nothing playing the last frame shown, first the frame Live began at. Null outside Live.</summary>
     public CameraState? LiveFrame(float dt)
     {
         if (Mode != CameraMode.Live)
             return null;
-        if (live.Tick(dt) is { } frame)
+        if ((UsesBoard ? live.Tick(dt) : playlistDirector.Tick(dt)) is { } frame)
             heldFrame = frame;
         return heldFrame;
     }
 
-    /// <summary>Enters Live holding <paramref name="start"/>, with the Program shot restored paused.</summary>
+    /// <summary>Enters Live holding <paramref name="start"/>, paused: the selected playlist at its start, or the Program shot restored.</summary>
     private void EnterLive(CameraState? start)
     {
         Transport.StopPreview();
@@ -348,8 +402,33 @@ public sealed class SessionState
         EndLiveEdit();
         Selection.DropGroup();
         heldFrame = start;
+        if (UsesBoard)
+        {
+            Mode = CameraMode.Live;
+            live.Restore();
+            return;
+        }
+
+        var selected = PlaylistEditing.Selected(Scene);
+        playlistDirector.GoLive(new PlaylistShot(PlaylistItems(selected), selected.Loops));
+        playlistDirector.Pause();
         Mode = CameraMode.Live;
-        live.Restore();
+    }
+
+    /// <summary>Stops what Live played: takes the playlist offline, or stores where the Program shot had got to.</summary>
+    private void LeaveLive()
+    {
+        if (UsesBoard)
+            live.Store();
+        else
+            playlistDirector.GoOffline();
+    }
+
+    /// <summary>Gives Edit a fresh switchboard when the scene uses one.</summary>
+    private void OpenEditBoard()
+    {
+        if (UsesBoard)
+            Transport.OpenBoard();
     }
 
     /// <summary><paramref name="playlist"/>'s entries whose tracks have points, in order and in the world, as Live plays them.</summary>
@@ -385,7 +464,7 @@ public sealed class SessionState
         World.Clear();
         history.Clear();
         if (Mode == CameraMode.Editing)
-            Transport.OpenBoard();
+            OpenEditBoard();
         return null;
     }
 
@@ -563,6 +642,8 @@ public sealed class SessionState
     {
         if (Mode is not (CameraMode.Editing or CameraMode.Live))
             return SwitchboardOnlyInEditOrLive;
+        if (!UsesBoard)
+            return TurnOnUseSwitchboard;
         return RecordScene(scene => (change(scene), EditedTrackId));
     }
 

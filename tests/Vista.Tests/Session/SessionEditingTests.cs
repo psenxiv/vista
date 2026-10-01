@@ -471,9 +471,11 @@ public class SessionEditingTests
     public void AModeChangeEndsALiveEditAsAStep()
     {
         var state = EditingThreePoints();
+        state.AddToPlaylist([state.EditedTrackId]);
         state.BeginLiveEdit();
         state.PreviewPoint(1, Point(11f));
-        state.Cue();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
+        Assert.False(state.LiveEditing);
         state.Edit();
         Assert.True(state.Undo());
         Assert.Equal(10f, state.Track.Points[1].Position.X);

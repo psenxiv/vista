@@ -39,8 +39,8 @@ public class SessionAimTests
         GuardAt(characters, WatchedAtB);
         state.LiveFrame(0.5f);
 
-        state.Board!.BeginScrub();
-        state.Board.ScrubTo(1.0);
+        state.LivePlaylist!.BeginScrub();
+        state.LivePlaylist.ScrubTo(1.0);
         AimsAt(WatchedAtB, state.LiveFrame(1f / 60f)!.Value, 3);
     }
 

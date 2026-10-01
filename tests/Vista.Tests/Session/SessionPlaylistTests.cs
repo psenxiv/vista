@@ -87,25 +87,48 @@ public class SessionPlaylistTests
         Assert.Equal(2, Entries(state.Scene).Count);
     }
 
-    // The entry the Live board is playing.
-    private static Guid Playing(SessionState state) => state.Board!.Timeline!.Segments[state.Board.EntryIndex].EntryId;
+    // The entry of the selected playlist Live is playing.
+    private static Guid Playing(SessionState state) => state.PlayingEntry!.Id;
+
+    // Seconds through the playlist Live is playing.
+    private static double Head(SessionState state) => state.LivePlaylist!.Head;
 
     [Fact]
-    public void APlaylistSlotPlaysItsPlayableEntriesInTurn()
+    public void LivePlaysThePlaylistsEntriesInTurn()
     {
-        // An empty track's entry, then Track 2's 2 s and Track 1's 10 s: 12 s in all.
+        // Track 2's 2 s (x = 2t), then Track 1's 10 s (x = 2t): 12 s in all.
+        var state = Editing();
+        TwoEntries(state);
+        GoLive(state);
+        Assert.Equal(12.0, state.LivePlaylist!.Timeline!.Total, 1e-4);
+
+        // 1 s in is 1 s into Track 2: x = 2.
+        Assert.Equal(2f, state.LiveFrame(1f)!.Value.Position.X, 1e-3f);
+        Assert.Equal(EntryId(state, 0), Playing(state));
+        Assert.Equal(0, state.LivePlaylist.EntryIndex);
+        Assert.Equal(1.0, Head(state), 1e-4);
+
+        // 1.5 s more is 2.5 s in, 0.5 s into Track 1: x = 1.
+        Assert.Equal(1f, state.LiveFrame(1.5f)!.Value.Position.X, 1e-3f);
+        Assert.Equal(EntryId(state, 1), Playing(state));
+        Assert.Equal(1, state.LivePlaylist.EntryIndex);
+        Assert.Equal(2.5, Head(state), 1e-4);
+    }
+
+    [Fact]
+    public void LiveCuesThePlaylistAtItsFirstEntryThatCanPlay()
+    {
+        // An empty track's entry, then Track 2's and Track 1's: the second entry is the first Live plays.
         var state = Editing();
         state.AddTrack();
         state.AddToPlaylist([state.EditedTrackId]);
         TwoEntries(state);
 
-        GoLive(state);
-        Assert.Equal(EntryId(state, 1), Playing(state));
-        Assert.Equal(12.0, state.Board!.Timeline!.Total, 4);
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
 
-        state.LiveFrame(3f);
-        Assert.Equal(EntryId(state, 2), Playing(state));
-        Assert.Equal(3.0, state.Board.Head, 4);
+        Assert.Equal(EntryId(state, 1), Playing(state));
+        Assert.Equal(0, state.LivePlaylist!.EntryIndex);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
     [Fact]
@@ -115,11 +138,12 @@ public class SessionPlaylistTests
         TwoEntries(state);
         GoLive(state);
         state.LiveFrame(5f);
+        Assert.Equal(EntryId(state, 1), Playing(state));
 
         state.Restart();
 
         Assert.Equal(EntryId(state, 0), Playing(state));
-        Assert.Equal(0.0, state.Board!.Head, 4);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
     [Fact]
@@ -135,7 +159,7 @@ public class SessionPlaylistTests
         state.Restart();
 
         Assert.Equal(EntryId(state, 1), Playing(state));
-        Assert.Equal(0.0, state.Board!.Head, 4);
+        Assert.Equal(0.0, Head(state), 1e-9);
     }
 
     [Fact]
@@ -151,19 +175,21 @@ public class SessionPlaylistTests
     }
 
     [Fact]
-    public void LivePlaysALoopingPlaylistRoundAgain()
+    public void LivePlaysTheSelectedPlaylistWithItsLoop()
     {
+        // "Intro" holds Track 2 and doesn't loop; the selected playlist, "Main", holds Track 1 (a 10 s shot) and loops.
         var state = Editing();
-        state.AddToPlaylist([TrackId(state, 1)]);
-        state.SetPlaylistLoops(true);
+        var intro = new Playlist(Guid.NewGuid(), "Intro", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 1))]);
+        var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 0))], true);
+        state.LoadScene(state.Scene with { Playlists = [intro, main], SelectedPlaylistId = main.Id });
         GoLive(state);
 
-        // 3 s round Track 2's 2 s playlist is 1 s into its second time round.
-        state.LiveFrame(3f);
+        // 11 s into a looping 10 s playlist is 1 s into its second time round.
+        state.LiveFrame(11f);
 
-        Assert.False(state.Board!.IsFinished);
-        Assert.Equal(EntryId(state, 0), Playing(state));
-        Assert.Equal(1.0, state.Board.Head, 4);
+        Assert.True(state.IsPlaying);
+        Assert.Equal(main.Entries[0].Id, Playing(state));
+        Assert.Equal(1.0, Head(state), 1e-4);
     }
 
     [Fact]
@@ -182,9 +208,9 @@ public class SessionPlaylistTests
         // 13 s round the 12 s playlist is 1 s into Track 2's entry, the first that plays.
         state.LiveFrame(10f);
 
-        Assert.False(state.Board!.IsFinished);
+        Assert.True(state.IsPlaying);
         Assert.Equal(EntryId(state, 1), Playing(state));
-        Assert.Equal(1.0, state.Board.Head, 4);
+        Assert.Equal(1.0, Head(state), 1e-4);
     }
 
     [Fact]
@@ -195,6 +221,7 @@ public class SessionPlaylistTests
         var intro = new Playlist(Guid.NewGuid(), "Intro", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 1))]);
         var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), TrackId(state, 0))], true);
         state.LoadScene(state.Scene with { Playlists = [intro, main], SelectedPlaylistId = intro.Id });
+        Assert.Null(state.SetUseSwitchboard(true));
 
         Assert.Equal([main.Entries[0].Id], state.PlaylistItems(main).Select(i => i.EntryId));
         state.Cue();
@@ -205,7 +232,7 @@ public class SessionPlaylistTests
         state.LiveFrame(11f);
 
         Assert.False(state.Board.IsFinished);
-        Assert.Equal(main.Entries[0].Id, Playing(state));
+        Assert.Equal(main.Entries[0].Id, state.Board.Timeline!.Segments[state.Board.EntryIndex].EntryId);
         Assert.Equal(1.0, state.Board.Head, 4);
     }
 

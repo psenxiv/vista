@@ -456,12 +456,12 @@ public class SessionSelectionTests
     {
         var state = Editing();
         state.Selection.ClickTrack(TrackId(state, 1), RowClick.Toggle);
-        state.Cue();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal([TrackId(state, 0)], state.Selection.Tracks);
 
         state.Edit();
         state.Selection.Select(2);
-        state.Cue();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.Equal([2], state.Selection.Points);
     }
 

@@ -14,6 +14,7 @@ public class SessionPreviewTests
     public void PlayInEditPreviewsFromTheScrubHeadAndStaysInEdit()
     {
         var state = EditingThreePoints();
+        Assert.Null(state.SetUseSwitchboard(true));
         state.Transport.ScrubTo(4.0);
 
         Assert.Equal(PlayOutcome.Previewed, state.Play());
@@ -199,7 +200,7 @@ public class SessionPreviewTests
         state.AddToPlaylist([state.EditedTrackId]);
         state.Play();
 
-        state.Cue();
+        Assert.Equal(PlayOutcome.Cued, state.Cue());
         Assert.False(state.Transport.Previewing);
         Assert.Equal(CameraMode.Live, state.Mode);
 

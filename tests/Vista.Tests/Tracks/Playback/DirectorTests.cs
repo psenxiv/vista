@@ -575,11 +575,12 @@ public class DirectorTests
                     var state = new SessionState();
                     state.LoadScene(scene);
                     GoLive(state);
-                    var board = state.Board!;
+                    var playlist = state.LivePlaylist!;
+                    // Never paused, so Live stops playing only once the playlist has finished.
                     AssertEveryFrameWellFormed(
                         steps,
                         FrameBudget,
-                        dt => board.IsFinished ? null : new Played(state.LiveFrame(dt), board.Head)
+                        dt => state.IsPlaying ? new Played(state.LiveFrame(dt), playlist.Head) : null
                     );
                 },
                 iter: 500,

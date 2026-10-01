@@ -43,7 +43,7 @@ internal static class SessionFixtures
         return state;
     }
 
-    /// <summary>Editing with no undo history. Track 1: x = 0, 10, 20 at 2 yalms per second, a 10 s shot with x = 2t. Track 2: x = 0 and 4, a 2 s shot with x = 2t. Track 3: no points. Playlist 1: Track 2 then Track 1, 12 s. Slots: 0 Track 1, 1 Track 2, 2 Track 3 (can't play), 3 Playlist 1.</summary>
+    /// <summary>Editing with no undo history and Use switchboard on. Track 1: x = 0, 10, 20 at 2 yalms per second, a 10 s shot with x = 2t. Track 2: x = 0 and 4, a 2 s shot with x = 2t. Track 3: no points. Playlist 1: Track 2 then Track 1, 12 s. Slots: 0 Track 1, 1 Track 2, 2 Track 3 (can't play), 3 Playlist 1.</summary>
     internal static SessionState EditingSwitchboard()
     {
         var state = EditingThreePoints();
@@ -54,6 +54,7 @@ internal static class SessionFixtures
         state.AddTrack();
         state.AddToPlaylist([TrackId(state, 1)]);
         state.AddToPlaylist([TrackId(state, 0)]);
+        state.SetUseSwitchboard(true);
         state.AssignSlot(0, TrackId(state, 0));
         state.AssignSlot(1, TrackId(state, 1));
         state.AssignSlot(2, TrackId(state, 2));

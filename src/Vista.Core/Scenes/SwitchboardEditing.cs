@@ -24,6 +24,9 @@ public static class SwitchboardEditing
     /// <summary>The hint on a slot holding something that can't play.</summary>
     public const string NothingToPlayHint = "Nothing to play yet";
 
+    /// <summary>The hint on every slot while the scene doesn't use its switchboard.</summary>
+    public const string OffHint = "Turn on Use switchboard to use the slots";
+
     /// <summary>The Use switchboard toggle's tooltip.</summary>
     public const string UseTooltip = "Use switchboard";
 
@@ -67,9 +70,10 @@ public static class SwitchboardEditing
         return trimmed.Length == 0 || trimmed == targetName ? null : trimmed;
     }
 
-    /// <summary>What to tell someone hovering slot <paramref name="slot"/>: how to fill an empty one, that a held one can't play, or null when it can.</summary>
+    /// <summary>What to tell someone hovering slot <paramref name="slot"/>: to turn the switchboard on while it is off, how to fill an empty one, that a held one can't play, or null when it can.</summary>
     public static string? Hint(Scene scene, int slot) =>
-        scene.Switchboard.Slots[slot] is null ? AssignHint
+        !scene.Switchboard.Enabled ? OffHint
+        : scene.Switchboard.Slots[slot] is null ? AssignHint
         : CanPlay(scene, slot) ? null
         : NothingToPlayHint;
 

@@ -13,13 +13,13 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 ### Core
 
 - `Camera`: the camera's pose (`CameraState`), angle and rotation maths, free-cam motion and fly speed, screen projection, and the rules every frame written must keep.
-- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, and the scrub bar over a playing track or playlist.
+- `Display`: what the editor draws, as numbers: the camera glyph, track paths and turn heat, marker hit tests, the timing graph and its view, a view's zoom kept between frames, tick spacing, row text fitting, edge scrolling, panel widths, the track name size, the scrub bar over a playing track or playlist, and the Playlist panel's heading while Live plays the playlist.
 - `Editing`: turning input into edits: pose field limits, gizmo matrices and drags, clicks on markers and list rows, block moves of dragged rows, wheel notches, and field values held until let go.
 - `Guide`: reading the User Guide's Markdown pages and index into blocks and topics.
 - `Input`: the key, modifier and hotkey types, the table naming every hotkey Vista binds, and which hotkey a press or held keys resolve to.
 - `Scenes`: scenes, playlists, switchboards and presets as data, their edits and names, their place in the world, and their files.
 - `SelfTest`: the rules that decide whether each `/vista selftest` check passed, and its report lines.
-- `Session`: the mode, selection, undo history, the Edit previews (the edited track's and Edit's throwaway switchboard's) and scrub head, the switchboard player that cuts Live or Edit between slots and has the Director play the one on Program, and the scene's tracks in the world.
+- `Session`: the mode, selection, undo history, what Live plays (the selected playlist, or the switchboard when the scene uses it), the Edit previews (the edited track's and Edit's throwaway switchboard's) and scrub head, the switchboard player that cuts Live or Edit between slots and has the Director play the one on Program, and the scene's tracks in the world.
 - `Tracks`: the track and its control points and anchor, editing its points and timing, and evaluating it at a moment.
 - `Tracks/Aiming`: where the camera looks and which way is up: recorded aim (with roll and field of view, blended by distance along the path), direction of travel, Look At, watched and followed characters, and smoothing.
 - `Tracks/Playback`: the Director, playing, pausing and scrubbing a track or a playlist frame by frame, what a scrub bar draws from (`IPlayingShot`), and the playlist laid end to end as Live's timeline.
@@ -78,7 +78,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Editing/RowPicking`: a click on a list row, with Ctrl and Shift, and what a drag carries.
 - `Editing/BlockMove`: the new order when rows are dragged as a block, and applying an order to a list.
 - `Scenes/SceneEditing` and `PlaylistEditing`: finding a track, playlist or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist; whether a playlist has an entry that can play; playlist names and the create, rename, duplicate, delete and select rules.
-- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, the name a slot shows, whether a slot can play and the hint when it can't or is empty, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
+- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, the name a slot shows, whether a slot can play and the hint when it can't, is empty or the switchboard is off, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
 
 ### Formatting
 
@@ -156,7 +156,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Test fixtures
 
-- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going live, a scene with one playlist and the selected playlist's entries, a scene with two tracks and two playlists and one with slots on air, resume lists, switchboard and Live assertions, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, a well-formed frame value, and vector assertions.
+- `Fixtures`: what's used across test areas: control points and tracks through them, Guard and the tracks watching them, going Live through the playlist or by a switchboard cut, a scene with one playlist and the selected playlist's entries, a scene with two tracks and two playlists and one with slots on air, resume lists, switchboard and Live assertions, generators (points, path tracks, target settings, frame steps), finite-difference slopes, the counterexample printer, the well-formed frame assertion, a well-formed frame value, and vector assertions.
 - `PathShapes`: the path shapes the movement sweep and the camera regression scene play, as positions, and the field of view their points are recorded at.
 - `TrackRuns`: playing a track, or hand-made motion, and measuring it: a run's frame at a time, length and point arrive and depart times; clocks (fixed steps, and the evaluator, a playback or the Director stepped within a frame budget); and measures: steps and snaps, picture twist, the largest change or value over samples and when, world turn rate, speed, and well-formed on every frame.
 - `Session/SessionFixtures`: the sessions the session tests start from, track and entry ids by index, and a control point at head height.

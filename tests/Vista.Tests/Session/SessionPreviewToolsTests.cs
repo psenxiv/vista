@@ -372,7 +372,7 @@ public class SessionPreviewToolsTests
         state.Transport.EditingFrame(1f, flying: false);
 
         if (toLive)
-            state.Cue();
+            Assert.Equal(PlayOutcome.Cued, state.Cue());
         else
             state.Release();
         state.Edit();

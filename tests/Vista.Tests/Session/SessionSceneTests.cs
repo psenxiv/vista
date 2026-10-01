@@ -274,8 +274,8 @@ public class SessionSceneTests
         Assert.Equal(refused, state.RenameTrack(first, "Crane"));
         Assert.Equal(2, state.Scene.Tracks.Count);
 
-        state.Stop();
-        Assert.True(state.Board!.IsPaused);
+        Assert.True(state.Stop());
+        Assert.False(state.IsPlaying);
 
         Assert.Equal(refused, state.AddTrack());
         Assert.Equal(noSwitch, state.SwitchTrack(first));
@@ -298,7 +298,8 @@ public class SessionSceneTests
         state.AddToEnd(Point(0f));
         state.AddToEnd(Point(4f));
         var first = TrackId(state, 0);
-        state.AssignSlot(0, first);
+        Assert.Null(state.SetUseSwitchboard(true));
+        Assert.Null(state.AssignSlot(0, first));
         Assert.NotEqual(first, state.EditedTrackId);
 
         Assert.Equal(PlayOutcome.Cued, state.Cue());

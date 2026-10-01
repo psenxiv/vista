@@ -262,7 +262,7 @@ public class SwitchboardEditingTests
     public void TheHintSaysHowToFillAnEmptySlotAndThatAHeldOneCantPlay()
     {
         // Track 1 has points and Track 2 none; Playlist 1 is empty, Playlist 2 holds only Track 2. Slot 5 is empty.
-        var scene = TwoTracksTwoPlaylists();
+        var scene = SwitchboardEditing.SetEnabled(TwoTracksTwoPlaylists(), true);
         scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
         scene = PlaylistEditing.Add(PlaylistEditing.Select(scene, scene.Playlists[1].Id), [scene.Tracks[1].Id]);
         scene = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
@@ -273,6 +273,25 @@ public class SwitchboardEditingTests
         Assert.Equal(
             [null, "Nothing to play yet", "Nothing to play yet", "Nothing to play yet", "Right-click to assign"],
             new[] { 0, 1, 2, 3, 5 }.Select(slot => SwitchboardEditing.Hint(scene, slot))
+        );
+    }
+
+    [Fact]
+    public void TheHintSaysToTurnUseSwitchboardOnForEverySlotWhileItIsOff()
+    {
+        // Slot 0 holds Track 1, which has points and could play; slot 1 holds Track 2, which has none; slot 5 is empty.
+        var scene = TwoTracksTwoPlaylists();
+        scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
+        scene = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 1, scene.Tracks[1].Id);
+
+        Assert.Equal(
+            [
+                "Turn on Use switchboard to use the slots",
+                "Turn on Use switchboard to use the slots",
+                "Turn on Use switchboard to use the slots",
+            ],
+            new[] { 0, 1, 5 }.Select(slot => SwitchboardEditing.Hint(scene, slot))
         );
     }
 

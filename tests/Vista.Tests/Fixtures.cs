@@ -260,9 +260,18 @@ internal static class Fixtures
     internal static Track WithTwoPoints(Track track) =>
         TrackEditing.Append(TrackEditing.Append(track, Point(0f)), Point(10f));
 
-    /// <summary>Goes Live and plays the selected playlist from its start: Cue, put the playlist on slot 0, click it and Cut.</summary>
+    /// <summary>Goes Live and plays the selected playlist from its start: Cue, then Play.</summary>
     internal static void GoLive(SessionState state)
     {
+        Assert.NotEqual(PlayOutcome.Refused, state.Cue());
+        state.Play();
+        Assert.True(state.IsPlaying);
+    }
+
+    /// <summary>From Edit, turns Use switchboard on, goes Live and cuts to the selected playlist: Cue, put the playlist on slot 0, click it and Cut.</summary>
+    internal static void CutLive(SessionState state)
+    {
+        Assert.Null(state.SetUseSwitchboard(true));
         state.Cue();
         state.AssignSlot(0, state.Scene.SelectedPlaylistId);
         state.Board!.Click(0);
