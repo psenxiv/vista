@@ -175,21 +175,21 @@ internal sealed class GameSession
         Plugin.Log.Information("mode: editing");
     }
 
-    /// <summary>In Edit, previews from the scrub head; in Live, plays the Program shot; otherwise enters Live and plays, taking the camera. Refused when nothing can play.</summary>
+    /// <summary>In Edit, previews from the scrub head; in Live, plays its shot; otherwise enters Live and plays, taking the camera. Refused when nothing can play.</summary>
     public void StartPlay()
     {
         var previewing = state.Mode == CameraMode.Editing;
         Apply(state.Play(LiveStart()), previewing);
     }
 
-    /// <summary>In Edit, previews from the beginning; in Live, plays the Program shot from its start. Refused when nothing can play.</summary>
+    /// <summary>In Edit, previews from the beginning; in Live, plays its shot from the start. Refused when nothing can play.</summary>
     public void RestartPlay()
     {
         var previewing = state.Mode == CameraMode.Editing;
         Apply(state.Restart(), previewing);
     }
 
-    /// <summary>Enters Live with the Program shot paused where it had got to, leaving the UI shown.</summary>
+    /// <summary>Enters Live paused, leaving the UI shown.</summary>
     public void CueLive() => Apply(state.Cue(LiveStart()));
 
     /// <summary>Live, holds the current frame; in Edit, stops a preview.</summary>
@@ -368,9 +368,7 @@ internal sealed class GameSession
                 Plugin.Log.Information("preview");
                 return;
             case PlayOutcome.Refused:
-                Plugin.Log.Debug(
-                    previewRefusal ? "cannot preview a track with no points." : "nothing to play: Program is empty."
-                );
+                Plugin.Log.Debug(previewRefusal ? "cannot preview a track with no points." : "nothing to play.");
                 return;
             case PlayOutcome.ReHid:
                 if (HideUiInLive)

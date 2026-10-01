@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
+using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Scenes;
 using Vista.Core.Session;
@@ -13,7 +14,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>The selected playlist: add, reorder, remove and set loop counts.</summary>
+/// <summary>The selected playlist: add, reorder, remove and set loop counts, and what Live is playing of it.</summary>
 internal sealed class PlaylistPanel
 {
     private const float LoopWidth = 44f;
@@ -41,13 +42,14 @@ internal sealed class PlaylistPanel
         loopsDrag = new PendingEdit<int>(() => session.Mode == CameraMode.Editing);
     }
 
-    /// <summary>The header with its open, loop and add buttons, the selected playlist's name, then one row per entry; editing is disabled unless in Edit mode.</summary>
+    /// <summary>The header, naming the entry Live is playing, with its open, loop and add buttons, the selected playlist's name, then one row per entry; editing is disabled unless in Edit mode.</summary>
     public void Draw(bool editing)
     {
         // Rows can remove or reorder entries, so every row reads this snapshot.
         var scene = session.Scene;
         var playlist = PlaylistEditing.Selected(scene);
         var entries = playlist.Entries;
+        var playing = session.PlayingEntry;
         if (loopsDrag.HeldBy is { } dragged && (!editing || PlaylistEditing.IndexOf(scene, Guid.Parse(dragged)) < 0))
             loopsDrag.Clear();
         if (loopsTyping is { } typed && (!editing || PlaylistEditing.IndexOf(scene, typed.Id) < 0))
@@ -56,8 +58,17 @@ internal sealed class PlaylistPanel
 
         ImGui.AlignTextToFramePadding();
         var buttons = IconButton.RowWidth(FontAwesomeIcon.LayerGroup, FontAwesomeIcon.Repeat, FontAwesomeIcon.Plus);
-        using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
-            ImGui.TextUnformatted("Playlist");
+        if (playing is not null && PlaylistHeading.NowPlaying(scene, playing.Id) is { } heading)
+        {
+            // Cut to the room left of the buttons, so a long name can't widen the panel.
+            var room = ImGui.GetContentRegionAvail().X - buttons - ImGui.GetStyle().ItemSpacing.X;
+            ImGui.TextUnformatted(RowFit.Ellipsis(heading, room, s => ImGui.CalcTextSize(s).X));
+        }
+        else
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
+                ImGui.TextUnformatted("Playlist");
+        }
 
         ImGui.BeginDisabled(!editing);
         ImGui.SameLine();
@@ -94,7 +105,7 @@ internal sealed class PlaylistPanel
             var marked = session.Selection.EditedEntries;
             for (var i = 0; i < entries.Count; i++)
             {
-                DrawRow(scene, entries[i], i, held, selected, marked, editing);
+                DrawRow(scene, entries[i], i, held, playing?.Id, selected, marked, editing);
                 held |= PlaylistEditing.HoldsPlaylist(scene, entries[i]);
             }
 
@@ -118,12 +129,13 @@ internal sealed class PlaylistPanel
             wheel.Reset();
     }
 
-    /// <summary>One entry: its number and track, a warning when its watched or followed character isn't found, click to edit its track and select it, drag to reorder or drop tracks on it, right-click several for their menu, its loop cell and its remove button, shown on hover; greyed when never reached, and barred at its left when <paramref name="marked"/> says it plays the edited track.</summary>
+    /// <summary>One entry: its number and track, a warning when its watched or followed character isn't found, click to edit its track and select it, drag to reorder or drop tracks on it, right-click several for their menu, its loop cell and its remove button, shown on hover; highlighted while Live plays it, greyed when never reached, and barred at its left when <paramref name="marked"/> says it plays the edited track.</summary>
     private void DrawRow(
         Scene scene,
         PlaylistEntry entry,
         int index,
         bool unreachable,
+        Guid? playing,
         IReadOnlyList<Guid> selected,
         IReadOnlyList<Guid> marked,
         bool editing
@@ -145,7 +157,7 @@ internal sealed class PlaylistPanel
         if (
             ImGui.Selectable(
                 "##entry",
-                editing && picked,
+                editing ? picked : entry.Id == playing,
                 ImGuiSelectableFlags.AllowItemOverlap,
                 new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())
             )

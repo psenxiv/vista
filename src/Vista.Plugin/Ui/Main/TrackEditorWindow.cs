@@ -8,6 +8,7 @@ using Vista.Core.Camera;
 using Vista.Core.Display;
 using Vista.Core.Editing;
 using Vista.Core.Input;
+using Vista.Core.Scenes;
 using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Vista.Core.Tracks.Aiming;
@@ -20,7 +21,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Main;
 
-/// <summary>The main Vista window: the menu bar, modes, the Hierarchy, track settings, the point list, the edited track's scrub bar and the Playlist.</summary>
+/// <summary>The main Vista window: the menu bar, modes, the Hierarchy, track settings, the point list, the scrub bar and the Playlist.</summary>
 internal sealed class TrackEditorWindow : Window
 {
     private static readonly string[] ModeNames = ["Off", "View", "Edit", "Live"];
@@ -82,7 +83,7 @@ internal sealed class TrackEditorWindow : Window
     private readonly PointList points;
     private CameraMode lastMode;
     private readonly Scrubber scrub;
-    private readonly ViewZoom<(CameraMode Mode, Guid Track)> scrubZoom = new();
+    private readonly ViewZoom<(CameraMode Mode, Guid Shown)> scrubZoom = new();
     private bool showHierarchy = true;
     private bool showPlaylist = true;
     private float pendingWidth;
@@ -166,11 +167,12 @@ internal sealed class TrackEditorWindow : Window
         (showHierarchy ? config.HierarchyWidth + Layout.Spacing.X : 0f)
         + (showPlaylist ? config.PlaylistWidth + Layout.Spacing.X : 0f);
 
-    /// <summary>Applies an unfinished field edit and ends a scrub, since a closed window never reports either finishing.</summary>
+    /// <summary>Applies an unfinished field edit and ends a scrub of the edited track or of Live's playlist, since a closed window never reports either finishing.</summary>
     public override void OnClose()
     {
         fields.Commit();
         scrub.End();
+        session.LivePlaylist?.EndScrub();
     }
 
     public override void Draw()
@@ -467,7 +469,7 @@ internal sealed class TrackEditorWindow : Window
         ImGui.SameLine();
     }
 
-    /// <summary>View, Edit and Live; View releases the camera and Live enters with the Program shot paused where it had got to.</summary>
+    /// <summary>View, Edit and Live; View releases the camera and Live enters paused, or is disabled with why as its tooltip.</summary>
     private void DrawModeCombo()
     {
         var current = session.Mode switch
@@ -509,8 +511,8 @@ internal sealed class TrackEditorWindow : Window
             fields.Commit();
             game.CueLive();
         }
-        if (session.Stopped)
-            Tooltip.OnHover(SessionState.StopMessage);
+        if (session.LiveRefusal is { } refusal)
+            Tooltip.OnHover(refusal);
         ImGui.EndDisabled();
         ImGui.EndCombo();
     }
@@ -740,20 +742,32 @@ internal sealed class TrackEditorWindow : Window
         ImGui.EndPopup();
     }
 
-    /// <summary>Play/Pause and Restart, the edited track's scrub bar, then how far through it the head is.</summary>
+    /// <summary>Play/Pause and Restart, the scrub bar over the playlist Live plays or else the edited track's, then how far through it the head is.</summary>
     private void DrawScrubRow()
     {
-        var (head, total) = (session.Transport.ScrubHead, session.Duration);
-        var view = scrubZoom.View((session.Mode, session.EditedTrackId), (float)total);
+        var live = session.LivePlaylist;
+        var timeline = live?.Timeline;
+        var (head, total) = timeline is null
+            ? (session.Transport.ScrubHead, session.Duration)
+            : (live!.Head, timeline.Total);
+        var shown = timeline is null ? session.EditedTrackId : PlaylistEditing.Selected(session.Scene).Id;
+        var view = scrubZoom.View((session.Mode, shown), (float)total);
 
         DrawTransport();
         // The time sits right of the bar, sized for its longest reading so the bar doesn't shift as it counts.
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var timeWidth = ImGui.CalcTextSize(Units.ClockOf(total, total)).X;
         var width = ImGui.GetContentRegionAvail().X - timeWidth - spacing;
+        var dragging = scrub.Active;
         using (ImRaii.PushStyle(ImGuiStyleVar.GrabMinSize, ImGui.GetStyle().GrabMinSize * ScrubBar.GrabScale))
-            DrawTrackBar(width, view);
-        ScrubBar.Zoom(scrubZoom, view, (float)total, scrub.Active);
+        {
+            if (live is not null && PlaylistBar.Draw(live, session.Scene, shown, fields.Commit, width, view))
+                dragging = live.Scrubbing;
+            else
+                DrawTrackBar(width, view);
+        }
+
+        ScrubBar.Zoom(scrubZoom, view, (float)total, dragging);
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(Units.ClockOf(head, total));

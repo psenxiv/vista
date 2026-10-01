@@ -16,7 +16,7 @@ using static Vista.Plugin.Ui.Widgets.Refusal;
 
 namespace Vista.Plugin.Ui.Windows;
 
-/// <summary>The switchboard: the Program and Next strip, ten slots, the toggles and Cut, and the Program shot's scrub bar; disabled in Off and View.</summary>
+/// <summary>The switchboard: the Use switchboard toggle, the Program and Next strip, ten slots, the toggles and Cut, and the Program shot's scrub bar; all but the first disabled in Off and View, and while the scene doesn't use it.</summary>
 internal sealed class SwitchboardWindow : Window, IDisposable
 {
     private const int SlotsPerRow = SwitchboardEditing.SlotCount / 2;
@@ -27,6 +27,8 @@ internal sealed class SwitchboardWindow : Window, IDisposable
 
     /// <summary>The size of a slot's text and icons, as a share of the default font's.</summary>
     private const float SlotTextScale = 0.85f;
+
+    private const FontAwesomeIcon UseIcon = FontAwesomeIcon.PowerOff;
 
     private static readonly FontAwesomeIcon[] ToggleIcons =
     [
@@ -69,10 +71,10 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         slotIcons.Dispose();
     }
 
-    /// <summary>Opens the window as the mode changes to Live; Dalamud calls this every frame, open or not.</summary>
+    /// <summary>Opens the window as the mode changes to Live with a switchboard to drive; Dalamud calls this every frame, open or not.</summary>
     public override void PreOpenCheck()
     {
-        if (session.Mode == CameraMode.Live && lastMode != CameraMode.Live)
+        if (session.Mode == CameraMode.Live && lastMode != CameraMode.Live && session.Board is not null)
             IsOpen = true;
         lastMode = session.Mode;
     }
@@ -146,14 +148,23 @@ internal sealed class SwitchboardWindow : Window, IDisposable
             return (style.FramePadding.Y * 4f) + (ImGui.GetTextLineHeight() * 2f) + (style.ItemSpacing.Y / 2f);
     }
 
-    /// <summary>Program and Next side by side on one line: each heading in its colour, then the slot's number and name or a dash.</summary>
-    private static void DrawStrip(Scene scene, int? program, int? next, float width)
+    /// <summary>Use switchboard, then Program and Next side by side on one line: each heading in its colour, then the slot's number and name or a dash.</summary>
+    private void DrawStrip(Scene scene, int? program, int? next, float width)
     {
         var gap = ImGui.GetStyle().ItemSpacing.X;
-        var size = new Vector2((width - gap) / 2f, ImGui.GetFrameHeight());
         var start = ImGui.GetCursorScreenPos();
-        DrawStripHalf("program", "Program", UiColours.Red, scene, program, start, size);
-        DrawStripHalf("next", "Next", UiColours.Green, scene, next, start with { X = start.X + size.X + gap }, size);
+        var on = scene.Switchboard.Enabled;
+        using (ImRaii.Disabled(!session.CanSetUseSwitchboard))
+        {
+            if (IconButton.Toggle("use-switchboard", UseIcon, on, session.UseSwitchboardTooltip))
+                Report(session.SetUseSwitchboard(!on));
+        }
+
+        var toggle = IconButton.Width(UseIcon) + gap;
+        var size = new Vector2((width - toggle - gap) / 2f, ImGui.GetFrameHeight());
+        var left = start with { X = start.X + toggle };
+        DrawStripHalf("program", "Program", UiColours.Red, scene, program, left, size);
+        DrawStripHalf("next", "Next", UiColours.Green, scene, next, left with { X = left.X + size.X + gap }, size);
         Tooltip.OnHover("Goes live on Cut");
         ImGui.SetCursorScreenPos(start);
         ImGui.Dummy(size with { X = width });
@@ -236,7 +247,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         DrawSlotMenu(scene);
     }
 
-    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, marked when it loops, dimmed when it can't play, and hinting why when it is empty or can't.</summary>
+    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, marked when it loops, dimmed when it can't play, and hinting why when it is empty, can't, or the switchboard is off.</summary>
     private void DrawSlot(
         SwitchboardPlayer? board,
         Scene scene,
@@ -256,8 +267,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
             ImGui.OpenPopup(SlotMenu);
         }
 
-        // Only where the slots can be changed: the window is disabled in Off and View.
-        if (board is not null && SwitchboardEditing.Hint(scene, slot) is { } hint)
+        if (session.SlotHint(slot) is { } hint)
             Tooltip.OnHover(hint);
 
         var style = ImGui.GetStyle();
