@@ -4,7 +4,9 @@ The switchboard is how you run a live show. It has ten slots, each holding a tra
 
 {icon:ThLarge} **Switchboard** on the top row opens the **Switchboard** window, and so does **Switchboard** in the **View** menu. Each scene has its own switchboard, saved with it.
 
-{icon:PowerOff} **Use switchboard** in that window turns the switchboard on for the scene. You change it in Edit. Without it, Live plays the selected [playlist](playlist.md). The rest of this page is about a scene that uses the switchboard, where choosing Live opens the window too.
+{icon:PowerOff} **Use switchboard** in that window turns the switchboard on for the scene. You change it in Edit. While it is off, Live plays the selected [playlist](playlist.md).
+
+The rest of this page is about a scene that uses the switchboard. Choosing Live opens the window too.
 
 ## Slots
 
