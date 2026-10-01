@@ -18,12 +18,12 @@ internal static class SessionFixtures
     /// <summary>A control point at head height: <see cref="Fixtures.Point"/> with <paramref name="y"/> defaulting to 5.</summary>
     internal static ControlPoint HeadHeightPoint(float x, float y = 5f, float z = 0f) => Fixtures.Point(x, y, z);
 
-    /// <summary>Editing a 2 s track, x = 0 to 10, watching Guard with heavy smoothing; Guard aimed at <see cref="WatchedAtA"/>.</summary>
+    /// <summary>Editing a 2 s track, x = 0 to 10, watching Guard with heavy smoothing, with an empty playlist; Guard aimed at <see cref="WatchedAtA"/>.</summary>
     internal static (SessionState State, NearbyCharacters Characters) EditingWatchingGuard()
     {
         var characters = new NearbyCharacters();
         GuardAt(characters, WatchedAtA);
-        var state = new SessionState(null, characters);
+        var state = EmptyPlaylistSession(characters);
         state.Edit();
         state.AddToEnd(Fixtures.Point(0f));
         state.AddToEnd(Fixtures.Point(10f));
@@ -31,10 +31,10 @@ internal static class SessionFixtures
         return (state, characters);
     }
 
-    /// <summary>Editing; Track 1 has points at x = 0, 10, 20 at 2 yalms per second: two 5 s legs, keys at 0, 5 and 10 s, nothing selected.</summary>
+    /// <summary>Editing with an empty playlist; Track 1 has points at x = 0, 10, 20 at 2 yalms per second: two 5 s legs, keys at 0, 5 and 10 s, nothing selected.</summary>
     internal static SessionState EditingThreePoints()
     {
-        var state = new SessionState();
+        var state = EmptyPlaylistSession();
         state.Edit();
         state.SetTrackSpeed(2f);
         state.AddToEnd(Fixtures.Point(0f));

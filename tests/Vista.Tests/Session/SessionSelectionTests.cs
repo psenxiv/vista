@@ -15,7 +15,7 @@ public class SessionSelectionTests
     // Editing Track 1, with points at x = 5, 10, 20, 30, then Tracks 2 and 3, empty, and a playlist entry for each track.
     private static SessionState Editing()
     {
-        var state = new SessionState();
+        var state = EmptyPlaylistSession();
         state.Edit();
         foreach (var x in new[] { 5f, 10f, 20f, 30f })
             state.AddToEnd(Point(x));

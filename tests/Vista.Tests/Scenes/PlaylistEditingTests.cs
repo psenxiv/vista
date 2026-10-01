@@ -7,10 +7,10 @@ namespace Vista.Tests.Scenes;
 
 public class PlaylistEditingTests
 {
-    // Two tracks; the first has two points, the second none.
+    // Two tracks and an empty playlist; the first track has two points, the second none.
     private static Scene TwoTracks()
     {
-        var scene = SceneEditing.New();
+        var scene = EmptyPlaylistScene();
         scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
         return SceneEditing.Add(scene).Scene;
     }

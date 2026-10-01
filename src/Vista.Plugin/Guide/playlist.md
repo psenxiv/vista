@@ -4,7 +4,7 @@ A playlist is a list of tracks that play top to bottom, cutting from one to the 
 
 The Playlist is the panel on the right of the **Vista** window. It shows the selected playlist, and the strip under its heading shows that playlist's name.
 
-You change playlists in Edit. A track can be in a playlist more than once, or not at all.
+You change playlists in Edit. A new scene's playlist starts with Track 1 in it. A track can be in a playlist more than once, or not at all.
 
 ## Controls
 

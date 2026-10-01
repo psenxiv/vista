@@ -14,7 +14,7 @@ public class SelfTestDryRunTests
     // Tracks "Opening" and "Pan", played in that order.
     private static Scene TwoEntries()
     {
-        var (scene, second) = SceneEditing.Add(SceneEditing.New());
+        var (scene, second) = SceneEditing.Add(EmptyPlaylistScene());
         var first = scene.Tracks[0].Id;
         scene = SceneEditing.Rename(SceneEditing.Rename(scene, first, "Opening"), second, "Pan");
         return PlaylistEditing.Add(scene, [first, second]);

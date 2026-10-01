@@ -171,10 +171,25 @@ internal static class Fixtures
     /// <summary>The selected playlist's entries.</summary>
     internal static IReadOnlyList<PlaylistEntry> Entries(Scene scene) => PlaylistEditing.Selected(scene).Entries;
 
-    /// <summary>A new scene with a second track, "Track 2", and a second playlist, "Playlist 2", the first playlist selected.</summary>
+    /// <summary>A new scene with its playlist's one entry removed, for tests that build the playlist themselves.</summary>
+    internal static Scene EmptyPlaylistScene()
+    {
+        var scene = SceneEditing.New();
+        return PlaylistEditing.Remove(scene, [Entries(scene)[0].Id]);
+    }
+
+    /// <summary>A new session, Off, with <see cref="EmptyPlaylistScene"/> open and no undo history.</summary>
+    internal static SessionState EmptyPlaylistSession(NearbyCharacters? aimTargets = null)
+    {
+        var state = new SessionState(null, aimTargets);
+        Assert.Null(state.LoadScene(EmptyPlaylistScene()));
+        return state;
+    }
+
+    /// <summary><see cref="EmptyPlaylistScene"/> with a second track, "Track 2", and a second playlist, "Playlist 2", also empty, the first playlist selected.</summary>
     internal static Scene TwoTracksTwoPlaylists()
     {
-        var scene = SceneEditing.Add(SceneEditing.New()).Scene;
+        var scene = SceneEditing.Add(EmptyPlaylistScene()).Scene;
         return PlaylistEditing.Select(PlaylistEditing.New(scene, "Playlist 2"), scene.Playlists[0].Id);
     }
 
@@ -282,16 +297,16 @@ internal static class Fixtures
         Assert.True(state.Board.HasProgram);
     }
 
-    /// <summary>Editing a new session whose track has points at x = 0 and 10: one 2 s leg at the default speed.</summary>
+    /// <summary>Editing an <see cref="EmptyPlaylistSession"/> whose track has points at x = 0 and 10: one 2 s leg at the default speed.</summary>
     internal static SessionState EditingTwoPoints()
     {
-        var state = new SessionState();
+        var state = EmptyPlaylistSession();
         state.Edit();
         state.ChangeTrack(WithTwoPoints);
         return state;
     }
 
-    /// <summary>Live with a playlist of <paramref name="state"/>'s edited track, first given points at x = 0 and 10.</summary>
+    /// <summary>Live after <paramref name="state"/>'s edited track is given points at x = 0 and 10 and added to its playlist; with no <paramref name="state"/>, <see cref="EditingTwoPoints"/>, whose playlist then holds only that track.</summary>
     internal static SessionState LiveTwoPoints(SessionState? state = null)
     {
         if (state is null)

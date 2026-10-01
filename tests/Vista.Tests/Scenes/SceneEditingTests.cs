@@ -7,16 +7,16 @@ namespace Vista.Tests.Scenes;
 
 public class SceneEditingTests
 {
-    // Three tracks: Track 1, Track 2, Track 3.
+    // Three tracks, Track 1, Track 2 and Track 3, and an empty playlist.
     private static Scene Three()
     {
-        var scene = SceneEditing.New();
+        var scene = EmptyPlaylistScene();
         scene = SceneEditing.Add(scene).Scene;
         return SceneEditing.Add(scene).Scene;
     }
 
     [Fact]
-    public void ANewSceneHoldsOneEmptyTrackNamedTrack1()
+    public void ANewSceneHoldsOneEmptyTrackNamedTrack1AndOnePlaylistPlayingIt()
     {
         var scene = SceneEditing.New();
 
@@ -26,7 +26,10 @@ public class SceneEditingTests
         Assert.Empty(scene.Hidden);
         var playlist = Assert.Single(scene.Playlists);
         Assert.Equal("Playlist 1", playlist.Name);
-        Assert.Empty(playlist.Entries);
+        // The playlist's one entry is on Track 1, with no repeat count of its own.
+        var entry = Assert.Single(playlist.Entries);
+        Assert.Equal(track.Id, entry.TrackId);
+        Assert.Null(entry.Loops);
         Assert.False(playlist.Loops);
         Assert.Equal(playlist.Id, scene.SelectedPlaylistId);
     }

@@ -10,18 +10,13 @@ public static class SceneEditing
     /// <summary>Why a track Id can't be used: no track has it.</summary>
     public const string NoSuchTrack = "There is no such track.";
 
-    /// <summary>A scene holding one empty track, "Track 1", one empty playlist, selected, and a switchboard with that playlist in its first slot and nothing on air.</summary>
+    /// <summary>A scene holding one empty track, "Track 1", one playlist, selected, with an entry for that track, and a switchboard with that playlist in its first slot and nothing on air.</summary>
     public static Scene New()
     {
+        var track = TrackEditing.Empty();
         var playlist = PlaylistEditing.Empty();
-        var scene = new Scene(
-            [TrackEditing.Empty()],
-            new HashSet<Guid>(),
-            [playlist],
-            playlist.Id,
-            SwitchboardEditing.Empty()
-        );
-        return SwitchboardEditing.Assign(scene, 0, playlist.Id);
+        var scene = new Scene([track], new HashSet<Guid>(), [playlist], playlist.Id, SwitchboardEditing.Empty());
+        return SwitchboardEditing.Assign(PlaylistEditing.Add(scene, [track.Id]), 0, playlist.Id);
     }
 
     /// <summary>The index of track <paramref name="id"/>, or −1.</summary>

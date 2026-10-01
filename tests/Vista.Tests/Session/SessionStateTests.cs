@@ -3,6 +3,7 @@ using Vista.Core.Session;
 using Vista.Core.Tracks;
 using Xunit;
 using static Vista.Tests.Fixtures;
+using static Vista.Tests.Session.SessionFixtures;
 
 namespace Vista.Tests.Session;
 
@@ -111,10 +112,9 @@ public class SessionStateTests
     [Fact]
     public void LiveIsRefusedWhileThePlaylistHasNothingToPlay()
     {
-        // The playlist's only entry is a track with no points.
+        // A new scene's playlist holds only Track 1, which has no points.
         var state = new SessionState();
         state.Edit();
-        state.AddToPlaylist([state.EditedTrackId]);
 
         Assert.False(state.CanGoLive);
         Assert.Equal("Add a track with points to the playlist.", state.LiveRefusal);
@@ -132,6 +132,27 @@ public class SessionStateTests
             "Vista has stopped. Reload it in /xlplugins, or check for an update if that doesn't help.",
             state.LiveRefusal
         );
+    }
+
+    [Fact]
+    public void ANewSessionGoesLiveAndPlaysTrack1OnceItHasPointsWithNothingAddedToThePlaylist()
+    {
+        var state = new SessionState();
+        state.Edit();
+        state.AddToEnd(Point(0f));
+        state.AddToEnd(Point(10f));
+
+        Assert.True(state.CanGoLive);
+        Assert.Null(state.LiveRefusal);
+        GoLive(state);
+
+        Assert.Equal(CameraMode.Live, state.Mode);
+        Assert.Equal(TrackId(state, 0), state.PlayingEntry!.TrackId);
+        // The playlist's one entry plays Track 1 once: 10 yalms at the default 5 yalms per second is 2 s.
+        Assert.Equal(2.0, state.LivePlaylist!.Timeline!.Total, 1e-5);
+        // A second in, the camera is 5 yalms along.
+        Assert.Equal(5f, state.LiveFrame(1f)!.Value.Position.X, 1e-3f);
+        Assert.Equal(1.0, Head(state), 1e-5);
     }
 
     [Fact]
@@ -542,7 +563,7 @@ public class SessionStateTests
     [Fact]
     public void CanStartNeedsPointsInEditAndAPlaylistThatCanPlayOutsideIt()
     {
-        // A new scene's playlist is empty, and its track has no points.
+        // A new scene's playlist holds Track 1, which has no points.
         var state = new SessionState();
         Assert.False(state.CanStart);
 
@@ -552,14 +573,16 @@ public class SessionStateTests
         state.ChangeTrack(WithTwoPoints);
         Assert.True(state.CanStart);
 
-        // The track has points, but the playlist is still empty.
-        state.Release();
-        Assert.False(state.CanStart);
-
-        state.Edit();
-        state.AddToPlaylist([state.EditedTrackId]);
+        // Track 1 has points and is in the playlist.
         state.Release();
         Assert.True(state.CanStart);
+
+        // With its entry removed the track still has points, but the playlist is empty.
+        state.Edit();
+        state.RemoveFromPlaylist([EntryId(state, 0)]);
+        Assert.True(state.CanStart);
+        state.Release();
+        Assert.False(state.CanStart);
 
         Assert.True(LiveTwoPoints().CanStart);
     }

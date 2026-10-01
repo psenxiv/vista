@@ -11,8 +11,7 @@ Type `/vista` in chat to open the **Vista** window. The first time, Vista asks w
 3. Press {key:AddToEnd} to add a point.
 4. Fly on and add a few more points along the path you want.
 5. Press {key:Play} to play the track. Press it again, or start flying, to stop.
-6. Click {icon:Plus} **Add to playlist** in the Playlist, the panel on the right, and choose Track 1. A playlist is the list of tracks that Live plays.
-7. Choose Live in the mode menu, then press {key:Play} to play the shot.
+6. Choose Live in the mode menu, then press {key:Play} to play the shot.
 
 Choose Off to give the camera back to the game.
 
