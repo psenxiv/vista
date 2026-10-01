@@ -55,7 +55,7 @@ public static class SwitchboardEditing
     public static string NameOf(Scene scene, Slot slot) => slot.Name ?? TargetName(scene, slot);
 
     /// <summary>The trimmed <paramref name="name"/> as a slot's own, or null when it is blank or <paramref name="targetName"/>, so the slot follows.</summary>
-    internal static string? OwnName(string name, string targetName)
+    private static string? OwnName(string name, string targetName)
     {
         var trimmed = name.Trim();
         return trimmed.Length == 0 || trimmed == targetName ? null : trimmed;

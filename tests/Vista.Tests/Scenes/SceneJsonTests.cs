@@ -176,13 +176,12 @@ public class SceneJsonTests
     // FullScene's slot 0 holds the track "Dolly in" and its slot 4 the playlist "Intro".
     [Theory]
     [InlineData(0, "Dolly in")]
-    [InlineData(0, "  Dolly in  ")]
     [InlineData(4, "Intro")]
-    public void ASlotNamedAsItsTrackOrPlaylistReadsAsFollowing(int slot, string name)
+    public void ASlotNamedAsItsTrackOrPlaylistInTheFileKeepsThatNameAsItsOwn(int slot, string name)
     {
         var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![slot]!["name"] = name);
 
-        Assert.Null(SceneJson.Read(json).Switchboard.Slots[slot]!.Name);
+        Assert.Equal(name, SceneJson.Read(json).Switchboard.Slots[slot]!.Name);
     }
 
     // FullScene has slot 4 on Program at 2.5 s and slot 0 Next; slot 3 is empty.
@@ -649,8 +648,6 @@ public class SceneJsonTests
                 ))
                 .ToList();
             var (slotPicks, toggles, air) = board;
-            // A name the same as its track or playlist's isn't the slot's own.
-            static string? Own(string? name, string target) => name == target ? null : name;
             var slots = slotPicks
                 .Select(s =>
                 {
@@ -658,8 +655,8 @@ public class SceneJsonTests
                     var playlist = built[s.Item2 % built.Count];
                     return s.Item1 switch
                     {
-                        1 => new Slot(Own(s.Item3, track.Name), track.Id, null),
-                        2 => new Slot(Own(s.Item3, playlist.Name), null, playlist.Id),
+                        1 => new Slot(s.Item3, track.Id, null),
+                        2 => new Slot(s.Item3, null, playlist.Id),
                         _ => null,
                     };
                 })

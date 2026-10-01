@@ -185,20 +185,20 @@ public static class SceneJson
         );
     }
 
-    /// <summary>A slot in a file, which must name exactly one of the scene's tracks or playlists; its name, if it has one, must be one a track could have, and follows when it is its track or playlist's.</summary>
+    /// <summary>A slot in a file, which must name exactly one of the scene's tracks or playlists; its name, if it has one, is its own and must be one a track could have.</summary>
     private static Slot ReadSlot(SlotDto slot, IReadOnlyList<Track> tracks, IReadOnlyList<Playlist> playlists)
     {
         if (slot.Name is not null && SceneNames.LengthRefusal(slot.Name) is not null)
             throw new InvalidDataException("A switchboard slot's name is blank or too long.");
-        var targetName =
-            (slot.TrackId, slot.PlaylistId) switch
-            {
-                ({ } track, null) => tracks.FirstOrDefault(t => t.Id == track)?.Name,
-                (null, { } playlist) => playlists.FirstOrDefault(p => p.Id == playlist)?.Name,
-                _ => throw new InvalidDataException("A switchboard slot needs one track or playlist."),
-            } ?? throw new InvalidDataException("A switchboard slot names a missing track or playlist.");
-        var name = slot.Name is null ? null : SwitchboardEditing.OwnName(slot.Name, targetName);
-        return new Slot(name, slot.TrackId, slot.PlaylistId);
+        var known = (slot.TrackId, slot.PlaylistId) switch
+        {
+            ({ } track, null) => tracks.Any(t => t.Id == track),
+            (null, { } playlist) => playlists.Any(p => p.Id == playlist),
+            _ => throw new InvalidDataException("A switchboard slot needs one track or playlist."),
+        };
+        return known
+            ? new Slot(slot.Name?.Trim(), slot.TrackId, slot.PlaylistId)
+            : throw new InvalidDataException("A switchboard slot names a missing track or playlist.");
     }
 
     private static SwitchboardDto FromSwitchboard(Switchboard board) =>
