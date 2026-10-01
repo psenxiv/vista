@@ -29,32 +29,6 @@ https://raw.githubusercontent.com/psenxiv/vista/main/repo.json
 - **Playlists and the switchboard.** Line tracks up in playlists with repeat counts, then cut between tracks and playlists live from a switchboard of ten slots, with the game UI hidden if you want.
 - **Modes.** Off leaves the game alone, View shows your scene over the normal camera, Edit is where you build, and Live plays. Your scene stays put when you change zone.
 
-## Keys
-
-| Key                              | Does                                                              |
-| -------------------------------- | ----------------------------------------------------------------- |
-| W A S D                          | Fly forward, left, back, right                                    |
-| E / Q                            | Fly up / down                                                     |
-| Ctrl + Q / Ctrl + E              | Roll left / right                                                 |
-| Alt + R                          | Level the camera's roll                                           |
-| Shift                            | Fly faster while held                                             |
-| Space                            | Play / pause                                                      |
-| Ctrl + Space                     | Restart from the beginning                                        |
-| Escape                           | Bring back the game UI Vista hid                                  |
-| Mouse wheel                      | Change fly speed                                                  |
-| Mouse                            | Look in any direction                                             |
-| Backtick                         | Add a point at the camera, at the end of the track                |
-| Alt + Backtick                   | Add a point after the selected one                                |
-| Ctrl + Backtick                  | Overwrite the selected point with the camera                      |
-| R                                | Switch the gizmo between move and rotate                          |
-| G                                | Colour the path by how fast the camera turns                      |
-| Alt while dragging an anchor     | Move the anchor alone, leaving its points in place                |
-| Ctrl while dragging a timing key | Move every later key with it, lengthening or shortening the track |
-| Ctrl + click                     | Add to the selection, or remove from it                           |
-| Shift + click                    | Add everything from the last click to this one                    |
-| Delete / Backspace               | Delete the selected points                                        |
-| Ctrl + Z / Ctrl + Y              | Undo / redo                                                       |
-
 ## Building
 
 Needs the .NET 10 SDK and Dalamud's development assemblies.
