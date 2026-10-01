@@ -14,13 +14,13 @@ Each slot shows its number, its name, and {icon:Route} for a track or {icon:List
 | **Rename** | Gives the slot a name of its own. |
 | **Clear** | Empties the slot. |
 
-A slot is named after the track or playlist it holds, and keeps up when you rename that. Once you rename the slot, it keeps its own name. Clear its name to go back.
+A slot is named after the track or playlist it holds, and keeps up when you rename that. Once you rename the slot, it keeps its own name. **Rename** it with the name left blank to go back.
 
 You can change slots in Live as well as in Edit.
 
 ## Cutting
 
-Click a slot to make it Next, then click **Cut** to put it on Program. It plays straight away. Click the Next slot again to clear Next. The slot on Program is outlined red, and Next green.
+Click a slot to make it Next, then click **Cut** to put it on Program. It plays straight away. The slot on Program is outlined red, and Next green. Click the slot that is Next again to take it off Next.
 
 The strip along the top shows what's on **Program** and what's **Next**. Along the bottom, {icon:Play} **Play** / {icon:Pause} **Pause** and {icon:StepBackward} **Restart** act on the Program shot, and the scrub bar shows how far through it you are. For a playlist, the bar covers the whole playlist.
 

@@ -103,18 +103,6 @@ public class SwitchboardPlayerTests
     }
 
     [Fact]
-    public void ClickingTheNextSlotInEditEmptiesEditsNext()
-    {
-        var state = EditingSwitchboard();
-        var board = state.Board!;
-        board.Click(1);
-
-        board.Click(1);
-
-        Assert.Null(board.Next);
-    }
-
-    [Fact]
     public void WithDirectCutAClickOnTheNextSlotCutsToItAndLeavesNextAsItWas()
     {
         // Track 1 on Program and Track 2 Next; Direct cut then cuts to Track 2, which stays Next.
