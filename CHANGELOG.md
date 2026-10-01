@@ -1,6 +1,6 @@
 # Changelog
 
-## X.Y.Z.N
+## 0.15.0.1
 
 - A scene can now hold several playlists, and a new scene's playlist starts with its first track in it.
 - The scene and playlist names under their headings now open their lists.

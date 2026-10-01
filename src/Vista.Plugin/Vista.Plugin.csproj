@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>0.14.0.1</Version>
+    <Version>0.15.0.1</Version>
     <AssemblyName>Vista</AssemblyName>
     <RootNamespace>Vista.Plugin</RootNamespace>
   </PropertyGroup>
