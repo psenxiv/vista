@@ -293,6 +293,32 @@ public class SwitchboardEditingTests
     }
 
     [Fact]
+    public void SetEnabledTurnsUseSwitchboardOnAndOffAndLeavesTheRestAlone()
+    {
+        // OnAirScene never sets it, so it starts off.
+        var scene = OnAirScene();
+        Assert.False(scene.Switchboard.Enabled);
+
+        var on = SwitchboardEditing.SetEnabled(scene, true);
+        Assert.True(on.Switchboard.Enabled);
+        SameBoard(scene.Switchboard with { Enabled = true }, on.Switchboard);
+
+        var off = SwitchboardEditing.SetEnabled(on, false);
+        Assert.False(off.Switchboard.Enabled);
+        SameBoard(scene.Switchboard, off.Switchboard);
+    }
+
+    [Fact]
+    public void SettingUseSwitchboardToWhatItIsChangesNothing()
+    {
+        var off = OnAirScene();
+        var on = SwitchboardEditing.SetEnabled(off, true);
+
+        Assert.Same(off, SwitchboardEditing.SetEnabled(off, false));
+        Assert.Same(on, SwitchboardEditing.SetEnabled(on, true));
+    }
+
+    [Fact]
     public void SettingAToggleToWhatItIsChangesNothing()
     {
         var scene = OnAirScene();

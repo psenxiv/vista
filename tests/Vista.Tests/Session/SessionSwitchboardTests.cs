@@ -178,6 +178,76 @@ public class SessionSwitchboardTests
     }
 
     [Fact]
+    public void UseSwitchboardIsRefusedOutsideEditAndChangesNothing()
+    {
+        var state = EditingPlayable();
+        state.Release();
+
+        void Refused(CameraMode mode)
+        {
+            Assert.Equal(mode, state.Mode);
+            var scene = state.Scene;
+            Assert.False(state.CanSetUseSwitchboard);
+            Assert.Equal("Use switchboard can only change in Edit.", state.SetUseSwitchboard(true));
+            Assert.Same(scene, state.Scene);
+            Assert.False(state.Scene.Switchboard.Enabled);
+        }
+
+        Refused(CameraMode.Off);
+        state.Release(CameraMode.View);
+        Refused(CameraMode.View);
+        state.Cue();
+        Refused(CameraMode.Live);
+        state.Edit();
+        Assert.False(state.CanUndo);
+    }
+
+    [Fact]
+    public void UseSwitchboardsTooltipSaysWhereToChangeItOutsideEdit()
+    {
+        var state = EditingPlayable();
+        Assert.True(state.CanSetUseSwitchboard);
+        Assert.Equal("Use switchboard", state.UseSwitchboardTooltip);
+
+        state.Cue();
+        Assert.Equal(CameraMode.Live, state.Mode);
+        Assert.Equal("Use switchboard (change it in Edit)", state.UseSwitchboardTooltip);
+    }
+
+    [Fact]
+    public void UseSwitchboardIsOneUndoStepInEditAndUndoAndRedoRestoreIt()
+    {
+        // OnAirScene has it off, so setting it off is no step.
+        var state = Editing();
+        Assert.Null(state.SetUseSwitchboard(false));
+        Assert.False(state.CanUndo);
+
+        Assert.Null(state.SetUseSwitchboard(true));
+        Assert.True(state.Scene.Switchboard.Enabled);
+        Assert.True(state.CanUndo);
+
+        Assert.True(state.Undo());
+        Assert.False(state.Scene.Switchboard.Enabled);
+        Assert.False(state.CanUndo);
+
+        Assert.True(state.Redo());
+        Assert.True(state.Scene.Switchboard.Enabled);
+        Assert.False(state.CanRedo);
+    }
+
+    [Fact]
+    public void LoadingASceneKeepsWhetherItUsesTheSwitchboard()
+    {
+        var state = new SessionState();
+
+        Assert.Null(state.LoadScene(SwitchboardEditing.SetEnabled(OnAirScene(), true)));
+        Assert.True(state.Scene.Switchboard.Enabled);
+
+        Assert.Null(state.LoadScene(OnAirScene()));
+        Assert.False(state.Scene.Switchboard.Enabled);
+    }
+
+    [Fact]
     public void UndoKeepsLivesPosition()
     {
         // The Assign's snapshot has nothing on Program or Next; Live then puts slot 0's Track 1 on Program, leaves it 3 s in, and makes slot 1 Next.
@@ -317,6 +387,7 @@ public class SessionSwitchboardTests
         {
             { "assign", s => s.AssignSlot(5, TrackId(s, 1)) },
             { "toggle", s => s.SetSwitchboardToggle(SwitchboardToggle.KeepRolling, true) },
+            { "use switchboard", s => s.SetUseSwitchboard(!s.Scene.Switchboard.Enabled) },
         };
 
     [Theory]

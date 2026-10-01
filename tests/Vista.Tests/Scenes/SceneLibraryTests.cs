@@ -527,6 +527,7 @@ public sealed class SceneLibraryTests : IDisposable
         Save("Dawn", "Crane");
         library.Open("Dawn");
         RenameFirstTrack("Jib");
+        Assert.Null(state.SetUseSwitchboard(true));
 
         Assert.Null(library.Duplicate("Dawn copy"));
 
@@ -534,6 +535,8 @@ public sealed class SceneLibraryTests : IDisposable
         Assert.Equal("Jib", FirstTrackIn(temp, "Dawn"));
         Assert.Equal("Jib", FirstTrackIn(temp, "Dawn copy"));
         Assert.Equal("Jib", EditedTrackName);
+        Assert.True(temp.Folder.LoadScene("Dawn copy").Switchboard.Enabled);
+        Assert.True(state.Scene.Switchboard.Enabled);
         Assert.False(state.CanUndo);
     }
 

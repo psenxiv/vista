@@ -68,7 +68,7 @@ public class SceneJsonTests
         );
     }
 
-    // The switchboard a file without one reads with: ten empty slots, every toggle off and nothing on air.
+    // The switchboard a file without one reads with: ten empty slots, every toggle off, nothing on air, and not in use.
     private static readonly Switchboard NoSwitchboard = new(
         new Slot?[10],
         false,
@@ -126,6 +126,30 @@ public class SceneJsonTests
                 Switchboard = scene.Switchboard,
             }
         );
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void UseSwitchboardIsWrittenAsEnabledAndRoundTrips(bool on)
+    {
+        var scene = SwitchboardEditing.SetEnabled(FullScene(), on);
+        var json = SceneJson.Write(scene);
+
+        Assert.Equal(on, JsonNode.Parse(json)!["switchboard"]!["enabled"]!.GetValue<bool>());
+        Assert.Equal(on, SceneJson.Read(json).Switchboard.Enabled);
+    }
+
+    [Fact]
+    public void ASwitchboardThatDoesntSayWhetherItIsUsedReadsOff()
+    {
+        // Written on, so only the missing value can read it off.
+        var json = Edited(
+            SwitchboardEditing.SetEnabled(FullScene(), true),
+            n => n["switchboard"]!.AsObject().Remove("enabled")
+        );
+
+        Assert.False(SceneJson.Read(json).Switchboard.Enabled);
     }
 
     [Fact]
@@ -241,6 +265,7 @@ public class SceneJsonTests
             { "nine resumes", n => n["switchboard"]!["live"]!["resume"]!.AsArray().RemoveAt(9) },
             { "eleven resumes", n => n["switchboard"]!["live"]!["resume"]!.AsArray().Add(null) },
             { "a negative resume", n => n["switchboard"]!["live"]!["resume"]![0] = -1.0 },
+            { "a use that isn't true or false", n => n["switchboard"]!["enabled"] = "yes" },
         };
 
     [Theory]
@@ -254,6 +279,7 @@ public class SceneJsonTests
         var read = SceneJson.Read(FormatOneSceneJson());
 
         // The fixture's playlist, in file order: five entries, the second repeating twice, and playlistLoops true.
+        Assert.False(read.Switchboard.Enabled);
         SameBoard(NoSwitchboard, read.Switchboard);
         var playlist = Assert.Single(read.Playlists);
         Assert.Equal("Playlist 1", playlist.Name);
@@ -605,7 +631,7 @@ public class SceneJsonTests
         }
     );
 
-    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them, following or under trimmed names of their own, with any toggles, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
+    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them, following or under trimmed names of their own, with any toggles, in use or not, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
     private static readonly Gen<Scene> AnyScene = Gen.Select(
         AnySavedTrack.Array[1, 4],
         Gen.Select(
@@ -624,7 +650,7 @@ public class SceneJsonTests
                 Gen.Bool,
                 Gen.Double[0.0, 600.0]
             ).Array[SwitchboardEditing.SlotCount],
-            Gen.Bool.Array[3],
+            Gen.Bool.Array[4],
             Gen.Select(
                 Gen.Int[-1, SwitchboardEditing.SlotCount - 1],
                 Gen.Int[-1, SwitchboardEditing.SlotCount - 1],
@@ -674,7 +700,7 @@ public class SceneJsonTests
                 tracks.Where((_, i) => hidden[i]).Select(t => t.Id).ToHashSet(),
                 built,
                 built[selected % built.Count].Id,
-                new Switchboard(slots, toggles[0], toggles[1], toggles[2], live),
+                new Switchboard(slots, toggles[0], toggles[1], toggles[2], live, toggles[3]),
                 new Anchor(scene.Item1, scene.Item2),
                 scene.Item3
             );

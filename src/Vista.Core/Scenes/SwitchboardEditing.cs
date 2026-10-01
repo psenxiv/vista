@@ -24,7 +24,13 @@ public static class SwitchboardEditing
     /// <summary>The hint on a slot holding something that can't play.</summary>
     public const string NothingToPlayHint = "Nothing to play yet";
 
-    /// <summary>A switchboard with every slot empty, every toggle off and nothing on air.</summary>
+    /// <summary>The Use switchboard toggle's tooltip.</summary>
+    public const string UseTooltip = "Use switchboard";
+
+    /// <summary>The Use switchboard toggle's tooltip where it can't be changed.</summary>
+    public const string UseTooltipOutsideEdit = "Use switchboard (change it in Edit)";
+
+    /// <summary>A switchboard with every slot empty, every toggle off, nothing on air, and not in use.</summary>
     public static Switchboard Empty() => new(new Slot?[SlotCount], false, false, false, EmptyAir());
 
     /// <summary>Nothing on Program or Next, at 0 s, and no resume points.</summary>
@@ -87,6 +93,10 @@ public static class SwitchboardEditing
         };
         return changed == board ? scene : scene with { Switchboard = changed };
     }
+
+    /// <summary>Sets whether the scene uses its switchboard.</summary>
+    public static Scene SetEnabled(Scene scene, bool on) =>
+        scene.Switchboard.Enabled == on ? scene : scene with { Switchboard = scene.Switchboard with { Enabled = on } };
 
     /// <summary>Empties every slot pointing at the track or playlist <paramref name="id"/>.</summary>
     public static Scene Forget(Scene scene, Guid id) =>

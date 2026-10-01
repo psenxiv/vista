@@ -181,7 +181,8 @@ public static class SceneJson
                 OnSlot(live.Next),
                 program is null ? 0.0 : live.ProgramTime,
                 live.Resume.Select((r, i) => slots[i] is null ? null : r).ToArray()
-            )
+            ),
+            board.Enabled
         );
     }
 
@@ -207,7 +208,8 @@ public static class SceneJson
             board.DirectCut,
             board.KeepRolling,
             board.AutoNext,
-            new OnAirDto(board.Live.Program, board.Live.Next, board.Live.ProgramTime, board.Live.Resume)
+            new OnAirDto(board.Live.Program, board.Live.Next, board.Live.ProgramTime, board.Live.Resume),
+            board.Enabled
         );
 
     private static Anchor CheckedAnchor(AnchorDto anchor) =>
@@ -388,7 +390,8 @@ public static class SceneJson
         bool DirectCut,
         bool KeepRolling,
         bool AutoNext,
-        OnAirDto Live
+        OnAirDto Live,
+        bool Enabled = false
     );
 
     private sealed record SlotDto(Guid? TrackId, Guid? PlaylistId, string? Name = null);

@@ -112,6 +112,7 @@ public sealed class SceneFolderTests : IDisposable
     {
         var scene = DemoScene();
 
+        Assert.False(scene.Switchboard.Enabled);
         Assert.Equal(5, scene.Tracks.Count);
         var playlist = Assert.Single(scene.Playlists);
         Assert.Equal(new Slot(null, null, playlist.Id), scene.Switchboard.Slots[0]);

@@ -125,6 +125,9 @@ public sealed class SessionState
     /// <summary>Why a switchboard change is refused in Off and View.</summary>
     private const string SwitchboardOnlyInEditOrLive = "The switchboard can only change in Edit or Live.";
 
+    /// <summary>Why Use switchboard is refused outside Edit.</summary>
+    private const string UseSwitchboardOnlyInEdit = "Use switchboard can only change in Edit.";
+
     /// <summary>Why an edit of the selected point is refused with none selected.</summary>
     private const string SelectAPoint = "Select a point first.";
 
@@ -541,6 +544,19 @@ public sealed class SessionState
     /// <summary>Turns a switchboard toggle on or off. Returns why it was refused, or null.</summary>
     public string? SetSwitchboardToggle(SwitchboardToggle toggle, bool on) =>
         ChangeSwitchboard(scene => SwitchboardEditing.SetToggle(scene, toggle, on));
+
+    /// <summary>True in Edit, the only mode Use switchboard can change in.</summary>
+    public bool CanSetUseSwitchboard => Mode == CameraMode.Editing;
+
+    /// <summary>The Use switchboard toggle's tooltip: its name, with where to change it when it can't change here.</summary>
+    public string UseSwitchboardTooltip =>
+        CanSetUseSwitchboard ? SwitchboardEditing.UseTooltip : SwitchboardEditing.UseTooltipOutsideEdit;
+
+    /// <summary>Sets whether the scene uses its switchboard, as one undo step in Edit, leaving the edited track's preview playing. Returns why it was refused, or null.</summary>
+    public string? SetUseSwitchboard(bool on) =>
+        CanSetUseSwitchboard
+            ? RecordScene(scene => (SwitchboardEditing.SetEnabled(scene, on), EditedTrackId))
+            : UseSwitchboardOnlyInEdit;
 
     /// <summary>Applies a switchboard change as one undo step, in Edit or Live, leaving the switchboard's shot playing. Returns why it was refused, or null.</summary>
     private string? ChangeSwitchboard(Func<Scene, Scene> change)
@@ -1161,7 +1177,7 @@ public sealed class SessionState
         return true;
     }
 
-    /// <summary>True when two switchboards hold the same slots, toggles and Live by value.</summary>
+    /// <summary>True when two switchboards hold the same slots, toggles, Live and use by value.</summary>
     private static bool SameSwitchboard(Switchboard a, Switchboard b) =>
         a.Slots.SequenceEqual(b.Slots)
         && a.Live.Resume.SequenceEqual(b.Live.Resume)

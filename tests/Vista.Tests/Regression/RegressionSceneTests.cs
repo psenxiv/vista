@@ -25,10 +25,11 @@ public class RegressionSceneTests
     }
 
     [Fact]
-    public void TheSceneFileHasSlot1OnItsPlaylistOnProgram()
+    public void TheSceneFileIsOffWithSlot1OnItsPlaylistOnProgram()
     {
         var scene = SceneJson.Read(File.ReadAllText(RegressionScene.FilePath()));
 
+        Assert.False(scene.Switchboard.Enabled);
         var playlist = Assert.Single(scene.Playlists);
         Assert.Equal(new Slot(null, null, playlist.Id), scene.Switchboard.Slots[0]);
         SameAir(new OnAir(0, null, 0.0, new double?[10]), scene.Switchboard.Live);
