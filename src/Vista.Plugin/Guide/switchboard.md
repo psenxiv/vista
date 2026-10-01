@@ -40,4 +40,4 @@ Without **Auto Next**, the camera holds the Program shot's last frame when it en
 
 In Edit, the switchboard plays your cuts on your own camera, so you can try them out. Program and Next start empty each time you choose Edit, and nothing you do there changes where Live had got to. Every shot plays from its beginning.
 
-Flying, playing the edited track, or changing a track or playlist stops the switchboard's shot, and you fly on from that frame.
+{icon:Play} **Play cut** and {icon:StepBackward} **Restart cut** play the switchboard's shot again. Flying, playing the edited track, or changing a track or playlist stops it, and you fly on from that frame.

@@ -26,11 +26,11 @@ internal static class LiveUiMenu
     {
         using (ImRaii.PushColor(ImGuiCol.Text, UiColours.Muted()))
             ImGui.TextUnformatted(LiveUiRules.Heading);
-        var current = game.LiveUi;
+        var current = game.WhenLive;
         foreach (var ui in Enum.GetValues<LiveUi>())
         {
             if (Menu.IconItem($"live-ui-{ui}", Icon(ui), LiveUiRules.Label(ui), ui == current))
-                game.LiveUi = ui;
+                game.WhenLive = ui;
         }
     }
 }

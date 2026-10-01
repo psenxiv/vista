@@ -25,7 +25,7 @@ Choosing Live opens the **Switchboard** window and brings back the Program shot 
 
 ## Hiding the UI
 
-{icon:Eye} **When Live** on the top row chooses what hides when you play or restart. Press {key:RestoreGameUi} to bring it back.
+{icon:Eye} **When Live** chooses what hides when you play or restart, and its icon shows the choice. Press {key:RestoreGameUi} to bring it back.
 
 | | Choice | Does |
 |---|---|---|

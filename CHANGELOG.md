@@ -7,7 +7,7 @@
 - The open scene's name moves from the window title to a strip under the Scene heading, and the selected playlist's name shows under the Playlist heading. Choose either name to open its list.
 - Vista updates older scene files to a new format, and keeps a copy of each in the backups folder inside vistaxiv.
 - Pressing Enter to confirm a name in Open scene no longer also opens the highlighted scene.
-- Hide game UI when Live is now a choice of three on the same button: show all UI, hide the game's UI and keep Vista's windows, or hide everything. Keeping Vista's windows lets you cut on the switchboard while the game's UI is hidden.
+- The eye button on the top row now chooses what playing in Live hides: nothing, the game's UI, or the game's UI and Vista's windows. Hide game UI keeps Vista's windows, so you can cut on the switchboard while you film.
 - The handles in the Timing window are larger and easier to grab.
 - The Vista window opens at the right size, and can't be shrunk too far, when Dalamud's UI scale isn't 100%.
 - Vista now tells you when a scene file can't be read, instead of leaving it out of the list without a word. If it was the scene you last had open, it says which scene opened instead.

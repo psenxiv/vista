@@ -104,6 +104,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly WheelSteps wheel = new();
     private bool escapeWasDown;
+
+    // True when the last frame drawn had a text field or a popup open, whose Escape is its own.
+    private bool escapeIsUis;
     private bool cameraHookChecked;
     private static bool blockEscape;
 
@@ -326,8 +329,10 @@ public sealed class Plugin : IDalamudPlugin
             )
                 is { Entry: var entry, Acts: true }
             && entry == HotkeyTable.RestoreGameUi;
-        if (escape && !escapeWasDown && restore)
+        GameUi.NoticeShown();
+        if (escape && !escapeWasDown && restore && !escapeIsUis)
             GameUi.Restore();
+        escapeIsUis = false;
         escapeWasDown = escape;
         blockEscape = GameUi.HiddenByUs || (blockEscape && escape);
         // Dalamud stops drawing a plugin while the game UI is hidden unless the plugin says otherwise.
@@ -357,10 +362,13 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows.</summary>
+    /// <summary>Steps fly speed with the scroll wheel while editing, then draws the windows; nothing while Vista has hidden all UI.</summary>
     private void Draw()
     {
+        if (game.HidesWindows)
+            return;
         var io = ImGui.GetIO();
+        escapeIsUis = io.WantTextInput || ImGui.IsPopupOpen(string.Empty, ImGuiPopupFlags.AnyPopup);
         if (game.State.Mode == CameraMode.Editing && !io.WantCaptureMouse)
         {
             var steps = wheel.Take(io.MouseWheel);

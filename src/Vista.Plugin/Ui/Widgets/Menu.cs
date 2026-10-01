@@ -26,7 +26,9 @@ internal static class Menu
         var span = (ImGuiSelectableFlags)ImGuiSelectableFlagsPrivate.SpanAvailWidth;
         var chosen = ImGui.Selectable($"##{id}", selected, span, new Vector2(width, 0f));
 
-        var at = ImGui.GetItemRectMin();
+        // A selectable's box reaches half the item spacing past its text, left and up.
+        var spacing = ImGui.GetStyle().ItemSpacing;
+        var at = ImGui.GetItemRectMin() + new Vector2(MathF.Floor(spacing.X * 0.5f), MathF.Floor(spacing.Y * 0.5f));
         var list = ImGui.GetWindowDrawList();
         var colour = ImGui.GetColorU32(ImGuiCol.Text);
         using (ImRaii.PushFont(UiBuilder.IconFont))

@@ -31,11 +31,11 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>The Playlist panel's width, in pixels.</summary>
     public float PlaylistWidth { get; set; } = PanelWidth.Default;
 
-    /// <summary>The setting <see cref="LiveUi"/> replaced, kept only so an older config file's choice carries over.</summary>
+    /// <summary>The setting <see cref="WhenLive"/> replaced, kept only so an older config file's choice carries over.</summary>
     public bool HideUiInLive { get; set; }
 
-    /// <summary>What playing in Live hides, or null in a config file from before the choice existed.</summary>
-    public LiveUi? LiveUi { get; set; }
+    /// <summary>What playing in Live hides, or null until it is first chosen, when <see cref="HideUiInLive"/> decides.</summary>
+    public LiveUi? WhenLive { get; set; }
 
     /// <summary>True to show track names above their anchors.</summary>
     public bool ShowTrackNames { get; set; } = true;

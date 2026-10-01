@@ -41,6 +41,17 @@ public class LiveUiRulesTests
         Assert.Equal(keeps, LiveUiRules.KeepsWindows(ui, hiddenByVista));
     }
 
+    // Vista stops drawing its windows only for Hide all UI, and only while Vista hid the UI.
+    [Theory]
+    [InlineData(LiveUi.ShowAll, true, false)]
+    [InlineData(LiveUi.HideGame, true, false)]
+    [InlineData(LiveUi.HideAll, true, true)]
+    [InlineData(LiveUi.HideAll, false, false)]
+    public void VistasWindowsHideOnlyForHideAllUiWhileVistaHidIt(LiveUi ui, bool hiddenByVista, bool hides)
+    {
+        Assert.Equal(hides, LiveUiRules.HidesWindows(ui, hiddenByVista));
+    }
+
     [Theory]
     [InlineData(false, LiveUi.ShowAll)]
     [InlineData(true, LiveUi.HideAll)]

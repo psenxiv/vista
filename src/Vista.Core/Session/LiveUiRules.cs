@@ -25,6 +25,9 @@ public static class LiveUiRules
     /// <summary>True when Vista's windows stay up though the game's UI is hidden: only for <see cref="LiveUi.HideGame"/>, and only while Vista is what hid it.</summary>
     public static bool KeepsWindows(LiveUi ui, bool hiddenByVista) => ui == LiveUi.HideGame && hiddenByVista;
 
+    /// <summary>True when Vista stops drawing its own windows: only for <see cref="LiveUi.HideAll"/>, and only while Vista is what hid the game's UI.</summary>
+    public static bool HidesWindows(LiveUi ui, bool hiddenByVista) => ui == LiveUi.HideAll && hiddenByVista;
+
     /// <summary>The choice that matches the setting from before there were three: hiding hid everything.</summary>
     public static LiveUi FromLegacy(bool hide) => hide ? LiveUi.HideAll : LiveUi.ShowAll;
 }

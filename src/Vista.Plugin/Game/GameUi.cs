@@ -22,6 +22,16 @@ internal static unsafe class GameUi
             Plugin.Log.Debug("[ui] hidden; visible now {Visible}", module->IsUiVisible);
         });
 
+    /// <summary>Forgets that we hid the game UI once something else has shown it again; call each frame on the game's thread.</summary>
+    public static void NoticeShown()
+    {
+        if (!hiddenByUs)
+            return;
+        var module = RaptureAtkModule.Instance();
+        if (module != null && module->IsUiVisible)
+            hiddenByUs = false;
+    }
+
     /// <summary>Shows the game UI again, only if we were the ones who hid it.</summary>
     public static void Restore() =>
         OnGameThread(() =>

@@ -364,7 +364,7 @@ internal sealed class TrackEditorWindow : Window
         using (ImRaii.Disabled(!editing))
             DrawFlySpeed();
 
-        // Hide game UI and User Guide at the right end, with LIVE just before them in Live.
+        // When Live, Give feedback and User Guide at the right end, with LIVE just before them in Live.
         var rightEnd = RightEndWidth();
         ImGui.SameLine();
         if (session.Mode == CameraMode.Live)
@@ -388,7 +388,7 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>The button showing what playing in Live hides, lit while it hides something; it opens the three choices.</summary>
     private void DrawLiveUi()
     {
-        var current = game.LiveUi;
+        var current = game.WhenLive;
         var lit = LiveUiRules.HidesGameUi(current);
         if (IconButton.Toggle("live-ui", LiveUiMenu.Icon(current), lit, LiveUiRules.Tooltip(current)))
             ImGui.OpenPopup("live-ui-menu");
@@ -399,7 +399,7 @@ internal sealed class TrackEditorWindow : Window
 
     /// <summary>What playing in Live hides, Give feedback and User Guide, at the top row's right end.</summary>
     private float RightEndWidth() =>
-        IconButton.RowWidth(LiveUiMenu.Icon(game.LiveUi), FontAwesomeIcon.Comment, FontAwesomeIcon.Question);
+        IconButton.RowWidth(LiveUiMenu.Icon(game.WhenLive), FontAwesomeIcon.Comment, FontAwesomeIcon.Question);
 
     /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before LIVE and the When Live button if that's nearer; null before the first frame.</summary>
     private float? FlySpeedStart()

@@ -1,6 +1,6 @@
 namespace Vista.Core.Session;
 
-/// <summary>What playing in Live hides.</summary>
+/// <summary>What playing in Live hides. Saved by number, so new choices go at the end.</summary>
 public enum LiveUi
 {
     /// <summary>Nothing.</summary>

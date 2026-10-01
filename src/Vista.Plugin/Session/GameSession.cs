@@ -34,14 +34,14 @@ internal sealed class GameSession
     public SessionState State => state;
 
     /// <summary>What playing in Live hides; changing it while Live plays applies at once.</summary>
-    public LiveUi LiveUi
+    public LiveUi WhenLive
     {
-        get => config.LiveUi ?? LiveUiRules.FromLegacy(config.HideUiInLive);
+        get => config.WhenLive ?? LiveUiRules.FromLegacy(config.HideUiInLive);
         set
         {
-            if (LiveUi == value)
+            if (WhenLive == value)
                 return;
-            config.LiveUi = value;
+            config.WhenLive = value;
             config.Save();
             if (state.Mode != CameraMode.Live)
                 return;
@@ -53,9 +53,12 @@ internal sealed class GameSession
     }
 
     /// <summary>True while Vista's windows stay up though Vista has hidden the game UI.</summary>
-    public bool KeepsWindows => LiveUiRules.KeepsWindows(LiveUi, GameUi.HiddenByUs);
+    public bool KeepsWindows => LiveUiRules.KeepsWindows(WhenLive, GameUi.HiddenByUs);
 
-    private bool HidesGameUi => LiveUiRules.HidesGameUi(LiveUi);
+    /// <summary>True while Vista draws none of its windows, having hidden all UI.</summary>
+    public bool HidesWindows => LiveUiRules.HidesWindows(WhenLive, GameUi.HiddenByUs);
+
+    private bool HidesGameUi => LiveUiRules.HidesGameUi(WhenLive);
 
     /// <summary>The characters loaded nearby, as last read.</summary>
     public NearbyCharacters Characters => characters;
