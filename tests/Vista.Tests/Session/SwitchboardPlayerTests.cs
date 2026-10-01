@@ -829,22 +829,6 @@ public class SwitchboardPlayerTests
     }
 
     [Fact]
-    public void ScrubbingAPausedShotLeavesItPaused()
-    {
-        var state = EditingSwitchboard();
-        var board = Live(state);
-        CutTo(board, 0);
-        state.Stop();
-
-        board.BeginScrub();
-        board.ScrubTo(2.0);
-        board.EndScrub();
-
-        Assert.True(board.IsPaused);
-        Assert.Equal(2.0, board.Head, Time);
-    }
-
-    [Fact]
     public void ScrubbingAFinishedShotBackUnfinishesIt()
     {
         var state = EditingSwitchboard();

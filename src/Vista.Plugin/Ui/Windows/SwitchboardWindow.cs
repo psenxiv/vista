@@ -165,7 +165,8 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var left = start with { X = start.X + toggle };
         DrawStripHalf("program", "Program", UiColours.Red, scene, program, left, size);
         DrawStripHalf("next", "Next", UiColours.Green, scene, next, left with { X = left.X + size.X + gap }, size);
-        Tooltip.OnHover("Goes live on Cut");
+        if (scene.Switchboard.Enabled)
+            Tooltip.OnHover("Goes live on Cut");
         ImGui.SetCursorScreenPos(start);
         ImGui.Dummy(size with { X = width });
     }

@@ -42,9 +42,6 @@ public class SessionStateTests
         return state;
     }
 
-    // Seconds through the playlist Live is playing.
-    private static double Head(SessionState state) => state.LivePlaylist!.Head;
-
     [Fact]
     public void EditFromLiveLeavesLive()
     {

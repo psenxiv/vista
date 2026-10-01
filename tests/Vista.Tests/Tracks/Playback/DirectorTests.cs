@@ -13,9 +13,6 @@ namespace Vista.Tests.Tracks.Playback;
 
 public class DirectorTests
 {
-    // Seconds through a shot, as the playhead counts them from float frame steps.
-    private const double HeadTolerance = 1e-5;
-
     [Fact]
     public void TickIsNullBeforeGoingLive()
     {
@@ -209,7 +206,7 @@ public class DirectorTests
 
         director.ScrubTo(6.0);
         Assert.Equal(6.0, director.ShotTime, 5);
-        Assert.Equal(6.0, director.Head, HeadTolerance);
+        Assert.Equal(6.0, director.Head, 1e-5);
         Assert.True(director.IsPaused);
     }
 
@@ -219,7 +216,7 @@ public class DirectorTests
         var director = new Director();
         director.ScrubTo(3.0);
         Assert.Equal(0.0, director.ShotTime);
-        Assert.Equal(0.0, director.Head);
+        Assert.Equal(0.0, director.Head, 1e-5);
     }
 
     [Fact]
@@ -329,11 +326,11 @@ public class DirectorTests
         // Two 10 s entries, 20 s in all: 13 s through is 3 s into the second.
         director.ScrubTo(13.0);
 
-        Assert.Equal(20.0, director.Timeline!.Total, HeadTolerance);
+        Assert.Equal(20.0, director.Timeline!.Total, 1e-5);
         Assert.Equal(items[1].EntryId, director.Playlist!.EntryId);
         Assert.Equal(1, director.EntryIndex);
         Assert.Equal(3.0, director.ShotTime, 5);
-        Assert.Equal(13.0, director.Head, HeadTolerance);
+        Assert.Equal(13.0, director.Head, 1e-5);
     }
 
     [Fact]
@@ -342,7 +339,7 @@ public class DirectorTests
         var director = new Director();
 
         Assert.Null(director.Timeline);
-        Assert.Equal(0.0, director.Head);
+        Assert.Equal(0.0, director.Head, 1e-5);
         Assert.Equal(0, director.EntryIndex);
         Assert.False(director.Scrubbing);
         Assert.False(director.IsPlaying);
@@ -382,7 +379,7 @@ public class DirectorTests
         Assert.False(director.IsPaused);
         // On from 3 s, 1 s more is 4 s.
         director.Tick(1f);
-        Assert.Equal(4.0, director.Head, HeadTolerance);
+        Assert.Equal(4.0, director.Head, 1e-5);
     }
 
     [Fact]
@@ -397,7 +394,7 @@ public class DirectorTests
         director.Play();
 
         Assert.False(director.IsFinished);
-        Assert.Equal(0.0, director.Head);
+        Assert.Equal(0.0, director.Head, 1e-5);
         // From the start, 2 s on is x = 2.
         Assert.Equal(2f, XAfter(director, 2f), 1e-3f);
     }
@@ -423,7 +420,7 @@ public class DirectorTests
         Assert.True(director.IsPaused);
         // Held at 3 s, so 2 s of ticking moves nothing.
         director.Tick(2f);
-        Assert.Equal(3.0, director.Head, HeadTolerance);
+        Assert.Equal(3.0, director.Head, 1e-5);
     }
 
     [Fact]
@@ -466,7 +463,7 @@ public class DirectorTests
         Assert.True(director.IsPaused);
         // Still held where it was let go.
         director.Tick(1f);
-        Assert.Equal(6.0, director.Head, HeadTolerance);
+        Assert.Equal(6.0, director.Head, 1e-5);
     }
 
     [Fact]

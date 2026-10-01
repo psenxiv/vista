@@ -268,6 +268,9 @@ internal static class Fixtures
         Assert.True(state.IsPlaying);
     }
 
+    /// <summary>Seconds through the playlist Live is playing.</summary>
+    internal static double Head(SessionState state) => state.LivePlaylist!.Head;
+
     /// <summary>From Edit, turns Use switchboard on, goes Live and cuts to the selected playlist: Cue, put the playlist on slot 0, click it and Cut.</summary>
     internal static void CutLive(SessionState state)
     {

@@ -90,9 +90,6 @@ public class SessionPlaylistTests
     // The entry of the selected playlist Live is playing.
     private static Guid Playing(SessionState state) => state.PlayingEntry!.Id;
 
-    // Seconds through the playlist Live is playing.
-    private static double Head(SessionState state) => state.LivePlaylist!.Head;
-
     [Fact]
     public void LivePlaysThePlaylistsEntriesInTurn()
     {

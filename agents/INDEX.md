@@ -34,7 +34,7 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
 - `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, its point list, and the scrub bar over the edited track or, in Live, the playlist it plays.
 - `Ui/Widgets`: the ImGui pieces the windows share.
-- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, Switchboard (with the Use switchboard toggle, and the scrub bar over its Program shot, which the Vista window also draws over Live's playlist), User Guide, Setup, Welcome and the scene, preset and playlist picker, with one source per kind it lists.
+- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, Switchboard (with the Use switchboard toggle and the scrub bar over its Program shot), User Guide, Setup, Welcome and the scene, preset and playlist picker, with one source per kind it lists.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.
 
 ## Helper homes
@@ -115,6 +115,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Ui/Widgets/Layout`: the spacing and field and dialog widths the windows share, right-aligning, `CentreRemaining` to centre content in the space left in a window, `CentredText` to draw a line centred there, centring a window as it appears, `PadLikeWindowTop` to match the window's top padding, and minimum window sizes.
 - `Ui/Widgets/WindowStyle`: a window's spacing, popup style and selected-row colours, or the popup style alone.
 - `Ui/Widgets/ScrubBar`: what the scrub bars share: their smaller grab and zooming with the wheel.
+- `Ui/Widgets/PlaylistBar`: the scrub bar over a playing shot, drawn by the Switchboard window for its Program shot and by the Vista window for Live's playlist.
 - `Ui/Widgets/Tooltip` and `Menu`: a tooltip on the item just drawn, shown even while disabled, and a menu's items: plain, ticked, and a labelled slider.
 - `Ui/Main/AddPointItems`: the three ways to add a point at the camera as menu items, shared by the Edit menu and the track row's add menu.
 - `Ui/Widgets/PoseGrid`: the Point and Camera windows' shared layout and fields.
