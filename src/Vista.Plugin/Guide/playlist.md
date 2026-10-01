@@ -10,7 +10,7 @@ You change playlists in Edit. A new scene's playlist starts with Track 1 in it. 
 
 | | Control | Does |
 |---|---|---|
-| | The playlist's name | Chooses a playlist, or makes, renames, duplicates or deletes one. |
+| | The playlist's name (**Open playlist**) | Chooses a playlist, or makes, renames, duplicates or deletes one. |
 | {icon:Plus} | **Add to playlist** | Adds a track to the end. |
 | | Drag tracks from the Hierarchy | Adds them where you drop them. |
 | | Click an entry | Edits its track. |
