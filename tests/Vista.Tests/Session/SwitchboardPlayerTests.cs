@@ -541,6 +541,21 @@ public class SwitchboardPlayerTests
     }
 
     [Fact]
+    public void TheEntryIndexReadsZeroOnceProgramLeavesTheSlot()
+    {
+        // Playlist 1 on slot 3 is Track 2's 2 s then Track 1; 3 s in, the second entry (index 1) plays.
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 3);
+        state.LiveFrame(3f);
+        Assert.Equal(1, board.EntryIndex);
+
+        state.ClearSlot(3);
+
+        Assert.Equal(0, board.EntryIndex);
+    }
+
+    [Fact]
     public void BeginningAScrubWithNothingOnProgramDoesntStartOne()
     {
         var state = EditingSwitchboard();

@@ -26,6 +26,14 @@ public class PlaylistHeadingTests
     }
 
     [Fact]
+    public void TheFirstEntryIsNumberedOne()
+    {
+        var scene = FiveEntries();
+
+        Assert.Equal("1 / 5 — Opening", PlaylistHeading.NowPlaying(scene, Entries(scene)[0].Id));
+    }
+
+    [Fact]
     public void AnEntryThePlaylistDoesntHoldHasNoHeading()
     {
         Assert.Null(PlaylistHeading.NowPlaying(FiveEntries(), Guid.NewGuid()));

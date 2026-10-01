@@ -387,6 +387,22 @@ public class SessionSwitchboardTests
     }
 
     [Fact]
+    public void WithTheSwitchboardInUseStopPausesTheProgramShot()
+    {
+        // The playlist's 2 s shot is cut to on slot 0 and stopped 1 s in; a further 0.5 s leaves the head at 1 s.
+        var state = EditingTwoPoints();
+        state.AddToPlaylist([state.EditedTrackId]);
+        CutLive(state);
+        state.LiveFrame(1f);
+
+        Assert.True(state.Stop());
+
+        Assert.False(state.IsPlaying);
+        state.LiveFrame(0.5f);
+        Assert.Equal(1.0, state.Board!.Head, 1e-5);
+    }
+
+    [Fact]
     public void HoveringASlotSaysToTurnUseSwitchboardOnWhileItIsOff()
     {
         // Slot 0 holds a track and slot 5 is empty.
