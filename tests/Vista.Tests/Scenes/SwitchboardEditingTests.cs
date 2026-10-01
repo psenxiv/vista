@@ -58,11 +58,7 @@ public class SwitchboardEditingTests
     }
 
     [Fact]
-    public void ANewSceneHasAnEmptySwitchboard() =>
-        SameBoard(SwitchboardEditing.Empty(), SceneEditing.New().Switchboard);
-
-    [Fact]
-    public void AssignNamesTheSlotFromATrackOrAPlaylist()
+    public void AssignLeavesTheSlotFollowingItsTrackOrPlaylistsName()
     {
         var scene = TwoTracksTwoPlaylists();
         var track = scene.Tracks[1].Id;
@@ -71,25 +67,31 @@ public class SwitchboardEditingTests
         scene = SwitchboardEditing.Assign(scene, 0, track);
         scene = SwitchboardEditing.Assign(scene, 9, playlist);
 
-        Assert.Equal(new Slot("Track 2", track, null), scene.Switchboard.Slots[0]);
-        Assert.Equal(new Slot("Playlist 2", null, playlist), scene.Switchboard.Slots[9]);
+        // A following slot has no name of its own, and shows its track or playlist's.
+        Assert.Equal(new Slot(null, track, null), scene.Switchboard.Slots[0]);
+        Assert.Equal(new Slot(null, null, playlist), scene.Switchboard.Slots[9]);
+        Assert.Equal("Track 2", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[0]!));
+        Assert.Equal("Playlist 2", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[9]!));
         Assert.Equal(8, scene.Switchboard.Slots.Count(s => s is null));
     }
 
     [Fact]
-    public void RenamingTheTargetLaterLeavesTheSlotsNameAlone()
+    public void RenamingTheTargetLaterRenamesAFollowingSlotAndLeavesOneWithItsOwnName()
     {
+        // Slots 0 and 1 follow Track 1 and Playlist 1; slot 2 is on Track 1 too, under its own name.
         var scene = TwoTracksTwoPlaylists();
         var track = scene.Tracks[0].Id;
         var playlist = scene.Playlists[0].Id;
         scene = SwitchboardEditing.Assign(scene, 0, track);
         scene = SwitchboardEditing.Assign(scene, 1, playlist);
+        scene = SwitchboardEditing.Rename(SwitchboardEditing.Assign(scene, 2, track), 2, "Wide");
 
         scene = SceneEditing.Rename(scene, track, "Dolly");
         scene = PlaylistEditing.Rename(scene, playlist, "Opening");
 
-        Assert.Equal("Track 1", scene.Switchboard.Slots[0]!.Name);
-        Assert.Equal("Playlist 1", scene.Switchboard.Slots[1]!.Name);
+        Assert.Equal("Dolly", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[0]!));
+        Assert.Equal("Opening", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[1]!));
+        Assert.Equal("Wide", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[2]!));
     }
 
     [Theory]
@@ -116,21 +118,44 @@ public class SwitchboardEditingTests
     [Fact]
     public void RenameTrimsAndAllowsANameAnotherSlotHas()
     {
+        // Slot 2 holds Track 2, so "Track 1" is a name of its own; slot 0 follows Track 1 and shows the same.
         var scene = SwitchboardEditing.Rename(OnAirScene(), 2, "  Track 1  ");
 
         Assert.Equal("Track 1", scene.Switchboard.Slots[2]!.Name);
-        Assert.Equal("Track 1", scene.Switchboard.Slots[0]!.Name);
+        Assert.Equal("Track 1", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[0]!));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("Track 1")]
+    [InlineData("  Track 1  ")]
+    public void RenamingToABlankNameOrTheTargetsOwnPutsTheSlotBackToFollowing(string name)
+    {
+        // Slot 0 holds Track 1 under its own name, "Wide".
+        var scene = SwitchboardEditing.Rename(OnAirScene(), 0, "Wide");
+        Assert.Equal("Wide", scene.Switchboard.Slots[0]!.Name);
+
+        var renamed = SwitchboardEditing.Rename(scene, 0, name);
+
+        Assert.Equal(new Slot(null, scene.Tracks[0].Id, null), renamed.Switchboard.Slots[0]);
+        Assert.Equal("Track 1", SwitchboardEditing.NameOf(renamed, renamed.Switchboard.Slots[0]!));
     }
 
     [Fact]
-    public void RenameRefusesABlankOrTooLongNameAndAnEmptySlot()
+    public void RenamingAPlaylistSlotToThePlaylistsOwnNameLeavesItFollowing()
+    {
+        // Slot 1 follows Playlist 1, so naming it "Playlist 1" changes nothing.
+        var scene = OnAirScene();
+
+        Assert.Same(scene, SwitchboardEditing.Rename(scene, 1, "Playlist 1"));
+    }
+
+    [Fact]
+    public void RenameRefusesATooLongNameAndAnEmptySlot()
     {
         var scene = OnAirScene();
 
-        Assert.Equal(
-            "Enter a name.",
-            Assert.Throws<ArgumentException>(() => SwitchboardEditing.Rename(scene, 0, "   ")).Message
-        );
         // SceneNames.MaxLength is 100, after trimming: 101 characters is one too many, 100 inside spaces is fine.
         Assert.Equal(
             "That name is too long.",
@@ -143,6 +168,10 @@ public class SwitchboardEditingTests
         Assert.Equal(
             "That slot is empty.",
             Assert.Throws<ArgumentException>(() => SwitchboardEditing.Rename(scene, 3, "Wide")).Message
+        );
+        Assert.Equal(
+            "That slot is empty.",
+            Assert.Throws<ArgumentException>(() => SwitchboardEditing.Rename(scene, 3, "")).Message
         );
     }
 
@@ -192,7 +221,7 @@ public class SwitchboardEditingTests
 
         var assigned = SwitchboardEditing.Assign(scene, 0, scene.Tracks[1].Id);
 
-        Assert.Equal(new Slot("Track 2", scene.Tracks[1].Id, null), assigned.Switchboard.Slots[0]);
+        Assert.Equal(new Slot(null, scene.Tracks[1].Id, null), assigned.Switchboard.Slots[0]);
         SameAir(new OnAir(null, 1, 0.0, Resume((1, 2.0), (2, 4.0))), assigned.Switchboard.Live);
     }
 
@@ -207,14 +236,44 @@ public class SwitchboardEditingTests
     }
 
     [Fact]
-    public void AssigningASlotItsOwnTargetAgainKeepsItOnAirAndTakesTheTargetsName()
+    public void AssigningASlotItsOwnTargetAgainKeepsItOnAirAndPutsItBackToFollowing()
     {
         var scene = SwitchboardEditing.Rename(OnAirScene(), 0, "Wide");
 
         var assigned = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
 
-        Assert.Equal("Track 1", assigned.Switchboard.Slots[0]!.Name);
+        Assert.Equal(new Slot(null, scene.Tracks[0].Id, null), assigned.Switchboard.Slots[0]);
         SameAir(scene.Switchboard.Live, assigned.Switchboard.Live);
+    }
+
+    [Fact]
+    public void AssigningOverASlotWithItsOwnNameLeavesItFollowingTheNewTarget()
+    {
+        // Slot 0 holds Track 1 as "Wide"; pointed at Playlist 2 it shows "Playlist 2".
+        var scene = SwitchboardEditing.Rename(OnAirScene(), 0, "Wide");
+
+        var assigned = SwitchboardEditing.Assign(scene, 0, scene.Playlists[1].Id);
+
+        Assert.Equal(new Slot(null, null, scene.Playlists[1].Id), assigned.Switchboard.Slots[0]);
+        Assert.Equal("Playlist 2", SwitchboardEditing.NameOf(assigned, assigned.Switchboard.Slots[0]!));
+    }
+
+    [Fact]
+    public void TheHintSaysHowToFillAnEmptySlotAndThatAHeldOneCantPlay()
+    {
+        // Track 1 has points and Track 2 none; Playlist 1 is empty, Playlist 2 holds only Track 2. Slot 5 is empty.
+        var scene = TwoTracksTwoPlaylists();
+        scene = SceneEditing.Replace(scene, WithTwoPoints(scene.Tracks[0]));
+        scene = PlaylistEditing.Add(PlaylistEditing.Select(scene, scene.Playlists[1].Id), [scene.Tracks[1].Id]);
+        scene = SwitchboardEditing.Assign(scene, 0, scene.Tracks[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 1, scene.Tracks[1].Id);
+        scene = SwitchboardEditing.Assign(scene, 2, scene.Playlists[0].Id);
+        scene = SwitchboardEditing.Assign(scene, 3, scene.Playlists[1].Id);
+
+        Assert.Equal(
+            [null, "Nothing to play yet", "Nothing to play yet", "Nothing to play yet", "Right-click to assign"],
+            new[] { 0, 1, 2, 3, 5 }.Select(slot => SwitchboardEditing.Hint(scene, slot))
+        );
     }
 
     [Theory]

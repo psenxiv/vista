@@ -3065,9 +3065,9 @@
   "switchboard": {
     "slots": [
       {
-        "name": "Playlist 1",
         "trackId": null,
-        "playlistId": "00000000-0000-0000-0003-000000000000"
+        "playlistId": "00000000-0000-0000-0003-000000000000",
+        "name": null
       },
       null,
       null,

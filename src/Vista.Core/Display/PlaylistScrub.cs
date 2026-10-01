@@ -35,11 +35,11 @@ public sealed class PlaylistScrub(PlaylistTimeline timeline, Scene scene, Slot p
             .Where(Shows)
             .Select(FractionOf);
 
-    /// <summary>A playlist's segment as its entry's number in the playlist and its track's name, as "3 · Hairpin"; a track's as its name; null when the scene no longer has them.</summary>
+    /// <summary>A playlist's segment as its entry's number in the playlist and its track's name, as "3 · Hairpin"; a track slot's as the name the slot shows; null when the scene no longer has them.</summary>
     public string? Label(PlaylistSegment segment)
     {
         if (program.TrackId is { } trackId)
-            return SceneEditing.TryGet(scene, trackId, out var played) ? played.Name : null;
+            return SceneEditing.TryGet(scene, trackId, out _) ? SwitchboardEditing.NameOf(scene, program) : null;
         var entries =
             program.PlaylistId is { } playlistId && PlaylistEditing.TryGet(scene, playlistId, out var playlist)
                 ? playlist.Entries

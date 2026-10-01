@@ -185,25 +185,25 @@ public static class SceneJson
         );
     }
 
-    /// <summary>A slot in a file, which must name exactly one of the scene's tracks or playlists and have a name a track could.</summary>
+    /// <summary>A slot in a file, which must name exactly one of the scene's tracks or playlists; its name, if it has one, must be one a track could have, and follows when it is its track or playlist's.</summary>
     private static Slot ReadSlot(SlotDto slot, IReadOnlyList<Track> tracks, IReadOnlyList<Playlist> playlists)
     {
-        if (SceneNames.LengthRefusal(slot.Name) is not null)
+        if (slot.Name is not null && SceneNames.LengthRefusal(slot.Name) is not null)
             throw new InvalidDataException("A switchboard slot's name is blank or too long.");
-        var known = (slot.TrackId, slot.PlaylistId) switch
-        {
-            ({ } track, null) => tracks.Any(t => t.Id == track),
-            (null, { } playlist) => playlists.Any(p => p.Id == playlist),
-            _ => throw new InvalidDataException("A switchboard slot needs one track or playlist."),
-        };
-        return known
-            ? new Slot(slot.Name.Trim(), slot.TrackId, slot.PlaylistId)
-            : throw new InvalidDataException("A switchboard slot names a missing track or playlist.");
+        var targetName =
+            (slot.TrackId, slot.PlaylistId) switch
+            {
+                ({ } track, null) => tracks.FirstOrDefault(t => t.Id == track)?.Name,
+                (null, { } playlist) => playlists.FirstOrDefault(p => p.Id == playlist)?.Name,
+                _ => throw new InvalidDataException("A switchboard slot needs one track or playlist."),
+            } ?? throw new InvalidDataException("A switchboard slot names a missing track or playlist.");
+        var name = slot.Name is null ? null : SwitchboardEditing.OwnName(slot.Name, targetName);
+        return new Slot(name, slot.TrackId, slot.PlaylistId);
     }
 
     private static SwitchboardDto FromSwitchboard(Switchboard board) =>
         new(
-            board.Slots.Select(s => s is null ? null : new SlotDto(s.Name, s.TrackId, s.PlaylistId)).ToList(),
+            board.Slots.Select(s => s is null ? null : new SlotDto(s.TrackId, s.PlaylistId, s.Name)).ToList(),
             board.DirectCut,
             board.KeepRolling,
             board.AutoNext,
@@ -391,7 +391,7 @@ public static class SceneJson
         OnAirDto Live
     );
 
-    private sealed record SlotDto(string Name, Guid? TrackId, Guid? PlaylistId);
+    private sealed record SlotDto(Guid? TrackId, Guid? PlaylistId, string? Name = null);
 
     private sealed record OnAirDto(int? Program, int? Next, double ProgramTime, IReadOnlyList<double?> Resume);
 

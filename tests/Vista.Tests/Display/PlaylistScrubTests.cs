@@ -208,15 +208,18 @@ public class PlaylistScrubTests
     }
 
     [Fact]
-    public void ATrackSlotsSegmentIsLabelledWithTheTracksName()
+    public void ATrackSlotsSegmentIsLabelledWithTheNameTheSlotShows()
     {
         var hairpin = OneLeg(2f) with { Name = "Hairpin" };
         var scene = OnePlaylist([hairpin]);
         var timeline = new PlaylistPlayback([new PlaylistItem(hairpin.Id, hairpin, null)]).Timeline;
 
-        var bar = new PlaylistScrub(timeline, scene, new Slot("Close-up", hairpin.Id, null));
+        // A following slot shows its track's name; one with its own name shows that.
+        var following = new PlaylistScrub(timeline, scene, new Slot(null, hairpin.Id, null));
+        var named = new PlaylistScrub(timeline, scene, new Slot("Close-up", hairpin.Id, null));
 
-        Assert.Equal("Hairpin", bar.Label(timeline.Segments[0]));
+        Assert.Equal("Hairpin", following.Label(timeline.Segments[0]));
+        Assert.Equal("Close-up", named.Label(timeline.Segments[0]));
     }
 
     [Fact]

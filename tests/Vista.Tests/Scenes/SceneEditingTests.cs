@@ -32,6 +32,21 @@ public class SceneEditingTests
     }
 
     [Fact]
+    public void ANewSceneHasItsPlaylistInSlot1FollowingItsNameAndNothingOnAir()
+    {
+        var scene = SceneEditing.New();
+
+        // Slot 1 is index 0; the other nine are empty, every toggle is off, and nothing is on Program or Next.
+        var slots = new Slot?[10];
+        slots[0] = new Slot(null, null, scene.Playlists[0].Id);
+        SameBoard(
+            new Switchboard(slots, false, false, false, new OnAir(null, null, 0.0, new double?[10])),
+            scene.Switchboard
+        );
+        Assert.Equal("Playlist 1", SwitchboardEditing.NameOf(scene, scene.Switchboard.Slots[0]!));
+    }
+
+    [Fact]
     public void AddPutsAnEmptyTrackAtTheEndNamedByTheCount()
     {
         var (scene, added) = SceneEditing.Add(SceneEditing.New());

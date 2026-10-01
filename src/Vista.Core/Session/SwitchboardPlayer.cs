@@ -72,13 +72,16 @@ public sealed class SwitchboardPlayer
     /// <summary>True when slot <paramref name="slot"/> holds a track with points, or a playlist with an entry whose track has points.</summary>
     public bool CanPlay(int slot) => SwitchboardEditing.CanPlay(session.Scene, slot);
 
-    /// <summary>Makes slot <paramref name="slot"/> Next, or with Direct cut cuts to it; an empty slot or one that can't play does nothing.</summary>
+    /// <summary>With Direct cut, cuts to slot <paramref name="slot"/>; without, makes it Next, or empties Next when it already is; any other slot that is empty or can't play does nothing.</summary>
     public void Click(int slot)
     {
         Sync();
-        if (!CanPlay(slot))
+        var directCut = session.Scene.Switchboard.DirectCut;
+        if (!directCut && readAir().Next == slot)
+            writeAir(readAir() with { Next = null });
+        else if (!CanPlay(slot))
             return;
-        if (session.Scene.Switchboard.DirectCut)
+        else if (directCut)
             CutTo(slot, emptyNext: false);
         else
             writeAir(readAir() with { Next = slot });

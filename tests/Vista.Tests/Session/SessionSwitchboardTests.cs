@@ -64,6 +64,23 @@ public class SessionSwitchboardTests
         Assert.False(state.CanUndo);
     }
 
+    [Fact]
+    public void RenamingASlotToABlankNameIsOneUndoStepInEditAndUndoBringsItsOwnNameBack()
+    {
+        // Slot 0 holds Track 1 as "Wide"; loading the scene starts the undo history empty.
+        var state = new SessionState();
+        state.LoadScene(SwitchboardEditing.Rename(OnAirScene(), 0, "Wide"));
+        state.Edit();
+
+        Assert.Null(state.RenameSlot(0, ""));
+
+        Assert.Null(state.Scene.Switchboard.Slots[0]!.Name);
+        Assert.True(state.CanUndo);
+        Assert.True(state.Undo());
+        Assert.Equal("Wide", state.Scene.Switchboard.Slots[0]!.Name);
+        Assert.False(state.CanUndo);
+    }
+
     [Theory]
     [MemberData(nameof(Commands))]
     public void EachCommandIsOneUndoStepInLive(string _, Func<SessionState, string?> command)
@@ -113,7 +130,7 @@ public class SessionSwitchboardTests
         SameBoard(board, state.Scene.Switchboard);
 
         Assert.True(state.Undo());
-        board = board with { Slots = ListEdit.Replace(board.Slots, 3, new Slot("Track 2", track2, null)) };
+        board = board with { Slots = ListEdit.Replace(board.Slots, 3, new Slot(null, track2, null)) };
         SameBoard(board, state.Scene.Switchboard);
 
         Assert.True(state.Undo());

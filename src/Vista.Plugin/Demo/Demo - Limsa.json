@@ -705,7 +705,7 @@
   "switchboard": {
     "slots": [
       {
-        "name": "Playlist 1",
+        "name": null,
         "trackId": null,
         "playlistId": "d7c33528-0a06-40ad-bb4f-7bac0d28c579"
       },

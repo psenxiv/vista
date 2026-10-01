@@ -6,26 +6,28 @@ The switchboard is how you run a live show. It has ten slots, each holding a tra
 
 ## Slots
 
-Each slot shows its number, its name, and {icon:Route} for a track or {icon:ListOl} for a playlist. {icon:Repeat} in the corner means it loops. Right-click a slot for its menu:
+Each slot shows its number, its name, and {icon:Route} for a track or {icon:ListOl} for a playlist. {icon:Repeat} in the corner means it loops. A new scene starts with its playlist in slot 1. Right-click a slot for its menu:
 
 | Item | Does |
 |---|---|
-| **Assign** | Puts one of the scene's playlists or tracks in the slot, named after it. |
-| **Rename** | Renames the slot. |
+| **Assign** | Puts one of the scene's playlists or tracks in the slot. |
+| **Rename** | Gives the slot a name of its own. |
 | **Clear** | Empties the slot. |
+
+A slot is named after the track or playlist it holds, and keeps up when you rename that. Once you rename the slot, it keeps its own name. Clear its name to go back.
 
 You can change slots in Live as well as in Edit.
 
 ## Cutting
 
-Click a slot to make it Next, then click **Cut** to put it on Program. It plays straight away. The slot on Program is outlined red, and Next green.
+Click a slot to make it Next, then click **Cut** to put it on Program. It plays straight away. Click the Next slot again to clear Next. The slot on Program is outlined red, and Next green.
 
 The strip along the top shows what's on **Program** and what's **Next**. Along the bottom, {icon:Play} **Play** / {icon:Pause} **Pause** and {icon:StepBackward} **Restart** act on the Program shot, and the scrub bar shows how far through it you are. For a playlist, the bar covers the whole playlist.
 
 | | Toggle | Does |
 |---|---|---|
 | {icon:Bolt} | **Direct cut** | Clicking a slot cuts to it straight away. |
-| {icon:History} | **Keep rolling** | A shot picks up where it was when you last cut away from it. |
+| {icon:History} | **Keep rolling** | In Live, a shot picks up where it was when you last cut away from it. |
 | {icon:StepForward} | **Auto Next** | Cuts to Next when the Program shot ends. |
 
 Without **Auto Next**, the camera holds the Program shot's last frame when it ends. A track with **Loop** on, or a playlist with **Loop playlist** on, keeps looping instead.

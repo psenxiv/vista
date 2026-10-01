@@ -18,32 +18,54 @@ public static class SwitchboardEditing
     /// <summary>Why an empty slot can't be renamed.</summary>
     public const string EmptySlot = "That slot is empty.";
 
+    /// <summary>The hint on an empty slot.</summary>
+    public const string AssignHint = "Right-click to assign";
+
+    /// <summary>The hint on a slot holding something that can't play.</summary>
+    public const string NothingToPlayHint = "Nothing to play yet";
+
     /// <summary>A switchboard with every slot empty, every toggle off and nothing on air.</summary>
     public static Switchboard Empty() => new(new Slot?[SlotCount], false, false, false, EmptyAir());
 
     /// <summary>Nothing on Program or Next, at 0 s, and no resume points.</summary>
     public static OnAir EmptyAir() => new(null, null, 0.0, new double?[SlotCount]);
 
-    /// <summary>Points slot <paramref name="slot"/> at the track or playlist <paramref name="id"/>, named after it.</summary>
+    /// <summary>Points slot <paramref name="slot"/> at the track or playlist <paramref name="id"/>, following its name.</summary>
     public static Scene Assign(Scene scene, int slot, Guid id)
     {
         RequireSlot(slot);
         var assigned =
-            SceneEditing.TryGet(scene, id, out var track) ? new Slot(track.Name, id, null)
-            : PlaylistEditing.TryGet(scene, id, out var playlist) ? new Slot(playlist.Name, null, id)
+            SceneEditing.TryGet(scene, id, out _) ? new Slot(null, id, null)
+            : PlaylistEditing.TryGet(scene, id, out _) ? new Slot(null, null, id)
             : throw new ArgumentException(NoSuchTarget);
         return WithSlot(scene, slot, assigned);
     }
 
-    /// <summary>Renames slot <paramref name="slot"/> to the trimmed <paramref name="name"/>; a blank or too long name and an empty slot are refused.</summary>
+    /// <summary>Gives slot <paramref name="slot"/> the trimmed <paramref name="name"/> as its own, or has it follow its track or playlist when blank or the same as theirs; a too long name and an empty slot are refused.</summary>
     public static Scene Rename(Scene scene, int slot, string name)
     {
         RequireSlot(slot);
-        if (SceneNames.LengthRefusal(name) is { } refusal)
+        if (SceneNames.TooLongRefusal(name) is { } refusal)
             throw new ArgumentException(refusal);
         var held = scene.Switchboard.Slots[slot] ?? throw new ArgumentException(EmptySlot);
-        return WithSlot(scene, slot, held with { Name = name.Trim() });
+        return WithSlot(scene, slot, held with { Name = OwnName(name, TargetName(scene, held)) });
     }
+
+    /// <summary>The name a slot shows: its own, or its track or playlist's.</summary>
+    public static string NameOf(Scene scene, Slot slot) => slot.Name ?? TargetName(scene, slot);
+
+    /// <summary>The trimmed <paramref name="name"/> as a slot's own, or null when it is blank or <paramref name="targetName"/>, so the slot follows.</summary>
+    internal static string? OwnName(string name, string targetName)
+    {
+        var trimmed = name.Trim();
+        return trimmed.Length == 0 || trimmed == targetName ? null : trimmed;
+    }
+
+    /// <summary>What to tell someone hovering slot <paramref name="slot"/>: how to fill an empty one, that a held one can't play, or null when it can.</summary>
+    public static string? Hint(Scene scene, int slot) =>
+        scene.Switchboard.Slots[slot] is null ? AssignHint
+        : CanPlay(scene, slot) ? null
+        : NothingToPlayHint;
 
     /// <summary>Empties slot <paramref name="slot"/>.</summary>
     public static Scene Clear(Scene scene, int slot)
@@ -113,6 +135,12 @@ public static class SwitchboardEditing
 
     /// <summary>The track or playlist a slot points at, or null for an empty one.</summary>
     public static Guid? Target(Slot? slot) => slot?.TrackId ?? slot?.PlaylistId;
+
+    /// <summary>The name of the track or playlist a slot points at.</summary>
+    private static string TargetName(Scene scene, Slot slot) =>
+        slot.TrackId is { } trackId
+            ? SceneEditing.Get(scene, trackId).Name
+            : PlaylistEditing.Get(scene, slot.PlaylistId!.Value).Name;
 
     /// <summary>Refuses a slot index outside the switchboard.</summary>
     private static void RequireSlot(int slot)

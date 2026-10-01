@@ -65,7 +65,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 
 ### Names
 
-- `Scenes/SceneNames`: checking scene, preset and track names, and suggesting the next free name or a copy's name.
+- `Scenes/SceneNames`: checking scene, preset, track and slot names, and suggesting the next free name or a copy's name.
 
 ### File listings
 
@@ -78,7 +78,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Editing/RowPicking`: a click on a list row, with Ctrl and Shift, and what a drag carries.
 - `Editing/BlockMove`: the new order when rows are dragged as a block, and applying an order to a list.
 - `Scenes/SceneEditing` and `PlaylistEditing`: finding a track, playlist or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist; whether a playlist has an entry that can play; playlist names and the create, rename, duplicate, delete and select rules.
-- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, whether a slot can play, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
+- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, the name a slot shows, whether a slot can play and the hint when it can't or is empty, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
 
 ### Formatting
 

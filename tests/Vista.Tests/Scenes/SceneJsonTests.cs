@@ -43,7 +43,7 @@ public class SceneJsonTests
             false
         );
 
-    // Two playlists, the second selected and looping; slot 0 on the full track, slot 4 on Intro under another name, every toggle on, slot 4 on Program at 2.5 s, slot 0 Next and resuming at 1.25 s.
+    // Two playlists, the second selected and looping; slot 0 on the full track and following its name, slot 4 on Intro under its own name, every toggle on, slot 4 on Program at 2.5 s, slot 0 Next and resuming at 1.25 s.
     private static Scene FullScene()
     {
         var full = FullTrack();
@@ -55,7 +55,7 @@ public class SceneJsonTests
         );
         var main = new Playlist(Guid.NewGuid(), "Main", [new PlaylistEntry(Guid.NewGuid(), plain.Id, 2)], true);
         var slots = new Slot?[SwitchboardEditing.SlotCount];
-        slots[0] = new Slot("Dolly in", full.Id, null);
+        slots[0] = new Slot(null, full.Id, null);
         slots[4] = new Slot("Opening", null, intro.Id);
         return new Scene(
             [full, plain],
@@ -147,11 +147,42 @@ public class SceneJsonTests
     }
 
     [Fact]
-    public void ASlotNameReadsTrimmed()
+    public void ASlotsOwnNameReadsTrimmed()
     {
-        var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![0]!["name"] = "  Dolly in  ");
+        var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![4]!["name"] = "  Opening night  ");
 
-        Assert.Equal("Dolly in", SceneJson.Read(json).Switchboard.Slots[0]!.Name);
+        Assert.Equal("Opening night", SceneJson.Read(json).Switchboard.Slots[4]!.Name);
+    }
+
+    [Fact]
+    public void AFollowingSlotIsWrittenWithANullName()
+    {
+        var slots = JsonNode.Parse(SceneJson.Write(FullScene()))!["switchboard"]!["slots"]!;
+
+        // Slot 0 follows its track; slot 4 has its own name.
+        Assert.True(slots[0]!.AsObject().ContainsKey("name"));
+        Assert.Null(slots[0]!["name"]);
+        Assert.Equal("Opening", slots[4]!["name"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ASlotWithNoNameInTheFileReadsAsFollowing()
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![4]!.AsObject().Remove("name"));
+
+        Assert.Null(SceneJson.Read(json).Switchboard.Slots[4]!.Name);
+    }
+
+    // FullScene's slot 0 holds the track "Dolly in" and its slot 4 the playlist "Intro".
+    [Theory]
+    [InlineData(0, "Dolly in")]
+    [InlineData(0, "  Dolly in  ")]
+    [InlineData(4, "Intro")]
+    public void ASlotNamedAsItsTrackOrPlaylistReadsAsFollowing(int slot, string name)
+    {
+        var json = Edited(FullScene(), n => n["switchboard"]!["slots"]![slot]!["name"] = name);
+
+        Assert.Null(SceneJson.Read(json).Switchboard.Slots[slot]!.Name);
     }
 
     // FullScene has slot 4 on Program at 2.5 s and slot 0 Next; slot 3 is empty.
@@ -575,7 +606,7 @@ public class SceneJsonTests
         }
     );
 
-    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them under trimmed names, with any toggles, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
+    /// <summary>One to four tracks, some hidden, one to three named playlists of them with random repeats and loop flags, one selected, a random anchor, and a switchboard whose slots are empty or on any of them, following or under trimmed names of their own, with any toggles, and Program, Next and resume times only on filled slots; built directly as <c>SceneJson.Read</c> builds a scene, not by an edit sequence.</summary>
     private static readonly Gen<Scene> AnyScene = Gen.Select(
         AnySavedTrack.Array[1, 4],
         Gen.Select(
@@ -590,7 +621,7 @@ public class SceneJsonTests
             Gen.Select(
                 Gen.Int[0, 2],
                 Gen.Int[0, 3],
-                AnyName.Select(n => n.Trim()),
+                AnyName.Select(n => n.Trim()).Null(),
                 Gen.Bool,
                 Gen.Double[0.0, 600.0]
             ).Array[SwitchboardEditing.SlotCount],
@@ -618,15 +649,20 @@ public class SceneJsonTests
                 ))
                 .ToList();
             var (slotPicks, toggles, air) = board;
+            // A name the same as its track or playlist's isn't the slot's own.
+            static string? Own(string? name, string target) => name == target ? null : name;
             var slots = slotPicks
                 .Select(s =>
-                    s.Item1 switch
+                {
+                    var track = tracks[s.Item2 % tracks.Length];
+                    var playlist = built[s.Item2 % built.Count];
+                    return s.Item1 switch
                     {
-                        1 => new Slot(s.Item3, tracks[s.Item2 % tracks.Length].Id, null),
-                        2 => new Slot(s.Item3, null, built[s.Item2 % built.Count].Id),
+                        1 => new Slot(Own(s.Item3, track.Name), track.Id, null),
+                        2 => new Slot(Own(s.Item3, playlist.Name), null, playlist.Id),
                         _ => null,
-                    }
-                )
+                    };
+                })
                 .ToArray();
             int? OnSlot(int i) => i >= 0 && slots[i] is not null ? i : null;
             var program = OnSlot(air.Item1);

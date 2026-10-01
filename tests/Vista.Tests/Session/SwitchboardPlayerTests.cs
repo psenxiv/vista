@@ -81,6 +81,78 @@ public class SwitchboardPlayerTests
         Assert.Equal(2f, XAfter(state, 1f), Along);
     }
 
+    [Fact]
+    public void ClickingTheNextSlotEmptiesNextAndLeavesProgramAlone()
+    {
+        // Track 1 on Program and Track 2 Next.
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 0);
+        board.Click(1);
+
+        board.Click(1);
+
+        Assert.Null(board.Next);
+        Assert.Equal(0, board.Program);
+        Assert.True(board.IsPlaying);
+
+        board.Click(3);
+        Assert.Equal(3, board.Next);
+        board.Click(1);
+        Assert.Equal(1, board.Next);
+    }
+
+    [Fact]
+    public void ClickingTheNextSlotInEditEmptiesEditsNext()
+    {
+        var state = EditingSwitchboard();
+        var board = state.Board!;
+        board.Click(1);
+
+        board.Click(1);
+
+        Assert.Null(board.Next);
+    }
+
+    [Fact]
+    public void WithDirectCutAClickOnTheNextSlotCutsToItAndLeavesNextAsItWas()
+    {
+        // Track 1 on Program and Track 2 Next; Direct cut then cuts to Track 2, which stays Next.
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 0);
+        board.Click(1);
+        state.SetSwitchboardToggle(SwitchboardToggle.DirectCut, true);
+
+        board.Click(1);
+
+        Assert.Equal(1, board.Program);
+        Assert.Equal(1, board.Next);
+        // Track 2 from its start: 1 s on is x = 2.
+        Assert.Equal(2f, XAfter(state, 1f), Along);
+    }
+
+    [Fact]
+    public void ClickingANextThatCanNoLongerPlayEmptiesNext()
+    {
+        // Track 1 on Program and Track 2 Next; then Edit takes Track 2's points away.
+        var state = EditingSwitchboard();
+        var board = Live(state);
+        CutTo(board, 0);
+        board.Click(1);
+        state.Edit();
+        state.SwitchTrack(TrackId(state, 1));
+        state.DeletePoints([0, 1]);
+        board = Live(state);
+        Assert.Equal(1, board.Next);
+        Assert.False(board.CanPlay(1));
+
+        board.Click(1);
+
+        Assert.Null(board.Next);
+        Assert.Equal(0, board.Program);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -40,13 +40,12 @@ public static class SceneNames
     );
 
     /// <summary>Why the trimmed <paramref name="name"/> is blank or too long, or null; all a track name is checked for.</summary>
-    public static string? LengthRefusal(string name)
-    {
-        var trimmed = name.Trim();
-        if (trimmed.Length == 0)
-            return "Enter a name.";
-        return trimmed.Length > MaxLength ? "That name is too long." : null;
-    }
+    public static string? LengthRefusal(string name) =>
+        name.Trim().Length == 0 ? "Enter a name." : TooLongRefusal(name);
+
+    /// <summary>Why the trimmed <paramref name="name"/> is too long, or null; a blank one passes.</summary>
+    public static string? TooLongRefusal(string name) =>
+        name.Trim().Length > MaxLength ? "That name is too long." : null;
 
     /// <summary>Why the trimmed <paramref name="name"/> can't be a file name, or null when it can.</summary>
     public static string? Refusal(string name)

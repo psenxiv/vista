@@ -114,7 +114,7 @@ public sealed class SceneFolderTests : IDisposable
 
         Assert.Equal(5, scene.Tracks.Count);
         var playlist = Assert.Single(scene.Playlists);
-        Assert.Equal(new Slot("Playlist 1", null, playlist.Id), scene.Switchboard.Slots[0]);
+        Assert.Equal(new Slot(null, null, playlist.Id), scene.Switchboard.Slots[0]);
         Assert.All(scene.Switchboard.Slots.Skip(1), Assert.Null);
         SameAir(new OnAir(0, null, 0.0, new double?[10]), scene.Switchboard.Live);
     }

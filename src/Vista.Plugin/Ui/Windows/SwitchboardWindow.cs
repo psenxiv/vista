@@ -198,7 +198,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var right = max.X - style.FramePadding.X;
         RowText.Draw(
             ("strip", id),
-            held.Name,
+            SwitchboardEditing.NameOf(scene, held),
             nameMin,
             new Vector2(right, top + ImGui.GetTextLineHeight()),
             right - nameLeft
@@ -236,7 +236,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         DrawSlotMenu(scene);
     }
 
-    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, marked when it loops, and dimmed when it can't play.</summary>
+    /// <summary>One slot: a click makes it Next (or cuts to it with Direct cut) and a right-click opens its menu; outlined red on Program and green as Next, marked when it loops, dimmed when it can't play, and hinting why when it is empty or can't.</summary>
     private void DrawSlot(
         SwitchboardPlayer? board,
         Scene scene,
@@ -255,6 +255,10 @@ internal sealed class SwitchboardWindow : Window, IDisposable
             menuSlot = slot;
             ImGui.OpenPopup(SlotMenu);
         }
+
+        // Only where the slots can be changed: the window is disabled in Off and View.
+        if (board is not null && SwitchboardEditing.Hint(scene, slot) is { } hint)
+            Tooltip.OnHover(hint);
 
         var style = ImGui.GetStyle();
         var list = ImGui.GetWindowDrawList();
@@ -299,7 +303,8 @@ internal sealed class SwitchboardWindow : Window, IDisposable
                 }
 
                 var nameMax = max with { Y = nameTop + ImGui.GetTextLineHeight() };
-                RowText.Draw(("slot", slot), held.Name, min with { Y = nameTop }, nameMax, size.X);
+                var name = SwitchboardEditing.NameOf(scene, held);
+                RowText.Draw(("slot", slot), name, min with { Y = nameTop }, nameMax, size.X);
             }
             else
             {
@@ -331,7 +336,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         }
     }
 
-    /// <summary>Direct cut, Keep rolling and Auto Next, centred in the sixth column's top cell and lit while on.</summary>
+    /// <summary>Direct cut, Keep rolling and Auto Next, centred in the sixth column's top cell and lit while on; Keep rolling is disabled in Edit.</summary>
     private void DrawToggles(Switchboard board, Vector2 min, Vector2 cell)
     {
         var row = IconButton.RowWidth(ToggleIcons);
@@ -340,7 +345,9 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         );
         Toggle("direct-cut", ToggleIcons[0], SwitchboardToggle.DirectCut, board.DirectCut, "Direct cut");
         ImGui.SameLine();
-        Toggle("keep-rolling", ToggleIcons[1], SwitchboardToggle.KeepRolling, board.KeepRolling, "Keep rolling");
+        // Every shot in Edit plays from its beginning, so Keep rolling does nothing there.
+        using (ImRaii.Disabled(session.Mode == CameraMode.Editing))
+            Toggle("keep-rolling", ToggleIcons[1], SwitchboardToggle.KeepRolling, board.KeepRolling, "Keep rolling");
         ImGui.SameLine();
         Toggle("auto-next", ToggleIcons[2], SwitchboardToggle.AutoNext, board.AutoNext, "Auto Next");
     }
@@ -380,8 +387,8 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         if (Menu.Item("Rename", held is not null) && held is not null)
             namePrompt.Ask(
                 "Rename slot",
-                held.Name,
-                text => (SceneNames.LengthRefusal(text), null),
+                SwitchboardEditing.NameOf(scene, held),
+                text => (SceneNames.TooLongRefusal(text), null),
                 name => Report(session.RenameSlot(slot, name))
             );
         if (Menu.Item("Clear", held is not null))
