@@ -37,4 +37,4 @@ Set it with **Playback speed** in the **Preview** menu.
 
 {icon:Repeat} **Loop** plays the track over and over.
 
-In Live, a track with **Loop** on plays until you stop it or cut away. See [Switchboard](switchboard.md).
+In Live, a track with **Loop** on plays until you stop it or cut away. See [Playlist](playlist.md) and [Switchboard](switchboard.md).

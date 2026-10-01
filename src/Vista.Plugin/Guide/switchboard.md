@@ -2,7 +2,9 @@
 
 The switchboard is how you run a live show. It has ten slots, each holding a track or a playlist, and cuts the camera from one to another as you go. The slot playing now is on Program, and the slot lined up to play after it is Next.
 
-{icon:ThLarge} **Switchboard** on the top row opens the **Switchboard** window, and so does **Switchboard** in the **View** menu. Choosing Live opens it too. Each scene has its own switchboard, saved with it.
+{icon:ThLarge} **Switchboard** on the top row opens the **Switchboard** window, and so does **Switchboard** in the **View** menu. Each scene has its own switchboard, saved with it.
+
+{icon:PowerOff} **Use switchboard** in that window turns the switchboard on for the scene. You change it in Edit. Without it, Live plays the selected [playlist](playlist.md). The rest of this page is about a scene that uses the switchboard, where choosing Live opens the window too.
 
 ## Slots
 

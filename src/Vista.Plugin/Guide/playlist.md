@@ -1,6 +1,6 @@
 # Playlist
 
-A playlist is a list of tracks that play top to bottom, cutting from one to the next. A playlist plays in Live from a [switchboard](switchboard.md) slot. A new scene's playlist starts in slot 1. A scene has one or more playlists.
+A playlist is a list of tracks that play top to bottom, cutting from one to the next. A scene has one or more playlists, and Live plays the selected one. When the scene uses the [switchboard](switchboard.md), a playlist plays from a slot instead. A new scene's playlist starts in slot 1.
 
 The Playlist is the panel on the right of the **Vista** window. It shows the selected playlist, and the strip under its heading shows that playlist's name.
 

@@ -48,7 +48,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 
 | Item | Does |
 |---|---|
-| **Play / Pause** | Plays or pauses the edited track, or in Live the Program shot ({key:Play}). |
+| **Play / Pause** | Plays or pauses the edited track, or in Live the playlist or the Program shot ({key:Play}). |
 | **Restart** | Plays it from the beginning ({key:Restart}). |
 | **Ghost camera** | Plays the track on a camera outline in the world while you keep your own view. See [Playing a track](tracks-playing.md). |
 | **Playback speed** | Sets how fast the track plays in Edit. See [Playing a track](tracks-playing.md). |

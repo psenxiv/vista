@@ -1,17 +1,27 @@
 # Live
 
-Live is for filming. Vista plays the shot on Program in the [switchboard](switchboard.md) through the camera, and you cut from shot to shot as you go. Choosing Live opens the **Switchboard** window.
+Live is for filming. Vista plays the selected [playlist](playlist.md) through the camera, one track after another.
 
-When nothing is on Program, as the first time you choose Live in a new scene, the camera holds still where it was until your first cut. After that, choosing Live brings back the Program shot where you left it, paused, with Next as it was.
+Choosing Live waits at the playlist's first frame until you play.
 
 ## Playing
 
 | Key | Button | Does |
 |---|---|---|
-| {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses the Program shot. |
-| {key:Restart} | {icon:StepBackward} **Restart** | Plays the Program shot from the start. |
+| {key:Play} | {icon:Play} **Play** / {icon:Pause} **Pause** | Plays or pauses the playlist. |
+| {key:Restart} | {icon:StepBackward} **Restart** | Plays the playlist from the start. |
 
-The **Switchboard** window has them too, beside the Program shot's scrub bar along its bottom.
+At the end of the playlist the camera holds its last frame, unless {icon:Repeat} **Loop playlist** is on.
+
+The scrub bar in the **Vista** window covers the whole playlist.
+
+## With the switchboard
+
+A scene can use the [switchboard](switchboard.md) instead, so you can cut from shot to shot as you film. Live then plays the shot on Program, and choosing Live opens the **Switchboard** window.
+
+Choosing Live brings back the Program shot where you left it, paused, with Next as it was. When nothing is on Program, the camera holds still where it was until your first cut.
+
+{key:Play} and {key:Restart} act on the Program shot. The **Switchboard** window has both buttons too, beside the Program shot's scrub bar along its bottom.
 
 ## Hiding the game UI
 

@@ -19,7 +19,7 @@ Click a point, an anchor or a Look At point in the world to select it. Clicking 
 
 ## The switchboard
 
-In Edit, the switchboard plays your cuts on your own camera, so you can try them before Live. See [Switchboard](switchboard.md).
+When the scene uses the switchboard, it plays your cuts on your own camera in Edit, so you can try them before Live. See [Switchboard](switchboard.md).
 
 ## The top row
 

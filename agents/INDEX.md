@@ -32,9 +32,9 @@ Where Vista's code lives, and which classes own the general-purpose logic. Check
 - `Game`: reading and writing the game: the camera and its hook, the free-cam, input blocking, movement lock, the UI toggle, ground and nearby characters, and faults.
 - `SelfTest`: running `/vista selftest` in the game.
 - `Session`: carrying the session's mode changes out in the game, and the save folder and scene files.
-- `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, its point list, and the edited track's scrub bar.
+- `Ui/Main`: the main Vista window, with its menu bar, its Hierarchy and Playlist panels, its point list, and the scrub bar over the edited track or, in Live, the playlist it plays.
 - `Ui/Widgets`: the ImGui pieces the windows share.
-- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, Switchboard (with the scrub bar over its Program shot), User Guide, Setup, Welcome and the scene, preset and playlist picker, with one source per kind it lists.
+- `Ui/Windows`: every other window: Camera, Point, Timing, Target, Watch and Follow Target, Switchboard (with the Use switchboard toggle, and the scrub bar over its Program shot, which the Vista window also draws over Live's playlist), User Guide, Setup, Welcome and the scene, preset and playlist picker, with one source per kind it lists.
 - `Guide` and `Demo` hold the User Guide's Markdown pages and the demo scene, embedded in the plugin.
 
 ## Helper homes
@@ -78,7 +78,7 @@ Put general logic in the home for its kind; add a home here when a new kind need
 - `Editing/RowPicking`: a click on a list row, with Ctrl and Shift, and what a drag carries.
 - `Editing/BlockMove`: the new order when rows are dragged as a block, and applying an order to a list.
 - `Scenes/SceneEditing` and `PlaylistEditing`: finding a track, playlist or playlist entry by id, and refusing unknown ones with their "no such" message; the selected playlist; whether a playlist has an entry that can play; playlist names and the create, rename, duplicate, delete and select rules.
-- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, the name a slot shows, whether a slot can play and the hint when it can't, is empty or the switchboard is off, assigning, renaming and clearing a slot, the toggles, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
+- `Scenes/SwitchboardEditing`: the slot count, the track or playlist a slot points at, the name a slot shows, whether a slot can play and the hint when it can't, is empty or the switchboard is off, assigning, renaming and clearing a slot, the toggles, whether the scene uses the switchboard and that toggle's tooltips, emptying the slots on a deleted track or playlist, and keeping Program, Next and resume points in step with the slots.
 
 ### Formatting
 
