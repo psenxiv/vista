@@ -75,6 +75,12 @@ public sealed class SessionState
     /// <summary>What hovering switchboard slot <paramref name="slot"/> says: to turn the switchboard on while it is off, the slot's hint while there is a switchboard to drive, otherwise null.</summary>
     public string? SlotHint(int slot) => !UsesBoard || Board is not null ? SwitchboardEditing.Hint(Scene, slot) : null;
 
+    /// <summary>What an empty Program says to do while there is a switchboard to drive, or null with a shot on Program or none to drive.</summary>
+    public string? ProgramPrompt =>
+        Board is not { Program: null } ? null
+        : Scene.Switchboard.DirectCut ? SwitchboardEditing.DirectCutPrompt
+        : SwitchboardEditing.CutPrompt;
+
     /// <summary>What's selected while editing.</summary>
     public SelectionState Selection { get; }
 

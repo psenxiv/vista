@@ -403,6 +403,29 @@ public class SessionSwitchboardTests
     }
 
     [Fact]
+    public void AnEmptyProgramSaysHowToCutWhileTheSwitchboardCanBeDriven()
+    {
+        // In Edit with the switchboard on and nothing on Program, the prompt is to line a slot up and cut.
+        var state = EditingSwitchboard();
+        Assert.Equal("Click a slot, then Cut", state.ProgramPrompt);
+
+        // With Direct cut on a click is the cut.
+        state.SetSwitchboardToggle(SwitchboardToggle.DirectCut, true);
+        Assert.Equal("Click a slot to cut to it", state.ProgramPrompt);
+
+        // Slot 0 on Program: nothing to prompt.
+        state.Board!.Click(0);
+        Assert.Null(state.ProgramPrompt);
+
+        // Off has no switchboard to drive, and neither does a scene that doesn't use it.
+        state.Release();
+        Assert.Null(state.ProgramPrompt);
+        state.Edit();
+        state.SetUseSwitchboard(false);
+        Assert.Null(state.ProgramPrompt);
+    }
+
+    [Fact]
     public void HoveringASlotSaysToTurnUseSwitchboardOnWhileItIsOff()
     {
         // Slot 0 holds a track and slot 5 is empty.

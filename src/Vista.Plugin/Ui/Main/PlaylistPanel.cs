@@ -91,7 +91,9 @@ internal sealed class PlaylistPanel
         }
 
         ImGui.EndDisabled();
-        if (NameStrip.Draw("playlist-name", playlist.Name, PlaylistPickerSource.OpenPlaylist, editing))
+        // The list opens to look in any mode but Live; it only lets a playlist be chosen or changed in Edit.
+        var canOpen = session.Mode != CameraMode.Live;
+        if (NameStrip.Draw("playlist-name", playlist.Name, PlaylistPickerSource.OpenPlaylist, canOpen))
             picker.Show(FilePickerKind.Playlist);
         ImGui.Separator();
 

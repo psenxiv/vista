@@ -163,8 +163,29 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var toggle = IconButton.Width(UseIcon) + gap;
         var size = new Vector2((width - toggle - gap) / 2f, ImGui.GetFrameHeight());
         var left = start with { X = start.X + toggle };
-        DrawStripHalf("program", "Program", UiColours.Red, scene, program, left, size);
-        DrawStripHalf("next", "Next", UiColours.Green, scene, next, left with { X = left.X + size.X + gap }, size);
+        DrawStripHalf(
+            "program",
+            "Program",
+            UiColours.Red,
+            scene,
+            program,
+            session.ProgramPrompt ?? EmptyLabel,
+            left,
+            size
+        );
+        DrawStripHalf(
+            "next",
+            "Next",
+            UiColours.Green,
+            scene,
+            next,
+            EmptyLabel,
+            left with
+            {
+                X = left.X + size.X + gap,
+            },
+            size
+        );
         if (scene.Switchboard.Enabled)
             Tooltip.OnHover("Goes live on Cut");
         ImGui.SetCursorScreenPos(start);
@@ -174,13 +195,14 @@ internal sealed class SwitchboardWindow : Window, IDisposable
     /// <summary>What slot <paramref name="slot"/> holds, or null when it's empty or none is given.</summary>
     private static Slot? Held(Scene scene, int? slot) => slot is { } i ? scene.Switchboard.Slots[i] : null;
 
-    /// <summary>Half of the strip: its frame, its heading, then the slot's number and name cut to fit, or a dash.</summary>
+    /// <summary>Half of the strip: its frame, its heading, then the slot's number and name cut to fit, or <paramref name="empty"/> with no slot.</summary>
     private static void DrawStripHalf(
         string id,
         string heading,
         uint colour,
         Scene scene,
         int? slot,
+        string empty,
         Vector2 min,
         Vector2 size
     )
@@ -198,7 +220,9 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         left += ImGui.CalcTextSize(heading).X + style.ItemSpacing.X;
         if (Held(scene, slot) is not { } held)
         {
-            list.AddText(new Vector2(left, top), ImGui.GetColorU32(UiColours.Muted()), EmptyLabel);
+            var room = max.X - style.FramePadding.X - left;
+            var shown = RowFit.Ellipsis(empty, room, s => ImGui.CalcTextSize(s).X);
+            list.AddText(new Vector2(left, top), ImGui.GetColorU32(UiColours.Muted()), shown);
             return;
         }
 
@@ -436,7 +460,8 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         var playing = session.BoardPlaying;
         using (ImRaii.Disabled(!session.CanPlayBoard))
         {
-            var label = playing ? "Pause" : "Play";
+            // In Edit the Vista window's Play is the edited track's, so these name the cut.
+            var label = (playing ? "Pause" : "Play") + (live ? string.Empty : " cut");
             if (
                 IconButton.Draw(
                     "board-play-pause",
@@ -450,7 +475,7 @@ internal sealed class SwitchboardWindow : Window, IDisposable
                 IconButton.Draw(
                     "board-restart",
                     FontAwesomeIcon.StepBackward,
-                    live ? HotkeyTable.Restart.Hotkey.Tooltip("Restart") : "Restart"
+                    live ? HotkeyTable.Restart.Hotkey.Tooltip("Restart") : "Restart cut"
                 )
             )
                 game.RestartBoard();

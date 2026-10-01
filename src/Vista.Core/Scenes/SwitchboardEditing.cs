@@ -27,6 +27,12 @@ public static class SwitchboardEditing
     /// <summary>The hint on every slot while the scene doesn't use its switchboard.</summary>
     public const string OffHint = "Switchboard is off";
 
+    /// <summary>What an empty Program says to do: line a slot up and cut to it.</summary>
+    public const string CutPrompt = "Click a slot, then Cut";
+
+    /// <summary>What an empty Program says to do with Direct cut on.</summary>
+    public const string DirectCutPrompt = "Click a slot to cut to it";
+
     /// <summary>The Use switchboard toggle's tooltip.</summary>
     public const string UseTooltip = "Use switchboard";
 
