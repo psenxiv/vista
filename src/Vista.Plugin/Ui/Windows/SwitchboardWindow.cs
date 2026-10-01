@@ -20,6 +20,7 @@ namespace Vista.Plugin.Ui.Windows;
 internal sealed class SwitchboardWindow : Window, IDisposable
 {
     private const int SlotsPerRow = SwitchboardEditing.SlotCount / 2;
+    private const int ProgramColumns = 3;
     private const float MinSlotWidth = 90f;
     private const float OutlineThickness = 2f;
     private const string EmptyLabel = "-";
@@ -161,7 +162,9 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         }
 
         var toggle = IconButton.Width(UseIcon) + gap;
-        var size = new Vector2((width - toggle - gap) / 2f, ImGui.GetFrameHeight());
+        // Program ends with the grid's third column, and Next takes the rest.
+        var split = (ProgramColumns * (ColumnWidth(width) + gap)) - gap;
+        var size = new Vector2(split - toggle, ImGui.GetFrameHeight());
         var left = start with { X = start.X + toggle };
         DrawStripHalf(
             "program",
@@ -180,11 +183,14 @@ internal sealed class SwitchboardWindow : Window, IDisposable
             scene,
             next,
             EmptyLabel,
-            left with
+            start with
             {
-                X = left.X + size.X + gap,
+                X = start.X + split + gap,
             },
-            size
+            size with
+            {
+                X = width - split - gap,
+            }
         );
         if (scene.Switchboard.Enabled)
             Tooltip.OnHover("Goes live on Cut");
