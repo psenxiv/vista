@@ -1,5 +1,6 @@
 using Dalamud.Configuration;
 using Vista.Core.Display;
+using Vista.Core.Session;
 
 namespace Vista.Plugin;
 
@@ -30,8 +31,11 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>The Playlist panel's width, in pixels.</summary>
     public float PlaylistWidth { get; set; } = PanelWidth.Default;
 
-    /// <summary>True to hide the game's UI while Live plays.</summary>
+    /// <summary>The setting <see cref="LiveUi"/> replaced, kept only so an older config file's choice carries over.</summary>
     public bool HideUiInLive { get; set; }
+
+    /// <summary>What playing in Live hides, or null in a config file from before the choice existed.</summary>
+    public LiveUi? LiveUi { get; set; }
 
     /// <summary>True to show track names above their anchors.</summary>
     public bool ShowTrackNames { get; set; } = true;

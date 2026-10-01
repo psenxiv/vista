@@ -42,7 +42,7 @@ The menu bar along the top of the **Vista** window holds the actions and setting
 | **Track names** | Shows or hides the names above track anchors. See [Scenes and anchors](scenes.md). |
 | **Track name size** | Makes those names bigger or smaller. |
 | **Colour path by turn speed** | Colours the path by how fast the camera turns ({key:ColourByTurnSpeed}). See [Aim](aim.md). |
-| **Hide game UI when Live** | Hides the game's UI when you play in Live. See [Live](modes-live.md). |
+| **When Live** | Chooses what hides when you play in Live. See [Live](modes-live.md). |
 
 ## Preview
 

@@ -330,6 +330,8 @@ public sealed class Plugin : IDalamudPlugin
             GameUi.Restore();
         escapeWasDown = escape;
         blockEscape = GameUi.HiddenByUs || (blockEscape && escape);
+        // Dalamud stops drawing a plugin while the game UI is hidden unless the plugin says otherwise.
+        PluginInterface.UiBuilder.DisableUserUiHide = game.KeepsWindows;
     }
 
     /// <summary>Opens the Vista window, or Setup in its place while there is no save folder.</summary>

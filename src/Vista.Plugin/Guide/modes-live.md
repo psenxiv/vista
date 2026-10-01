@@ -23,11 +23,17 @@ Choosing Live opens the **Switchboard** window and brings back the Program shot 
 
 {key:Play} and {key:Restart} act on the Program shot, and the **Switchboard** window has {icon:Play} **Play** and {icon:StepBackward} **Restart** too.
 
-## Hiding the game UI
+## Hiding the UI
 
-Turn on {icon:EyeSlash} **Hide game UI when Live** to hide the game's UI when you play or restart. Press {key:RestoreGameUi} to bring it back.
+{icon:Eye} **When Live** on the top row chooses what hides when you play or restart. Press {key:RestoreGameUi} to bring it back.
 
-With the switchboard, cutting doesn't hide the UI. The **Switchboard** window hides with it, so bring the UI back to cut.
+| | Choice | Does |
+|---|---|---|
+| {icon:Eye} | **Show all UI** | Hides nothing. |
+| {icon:LowVision} | **Hide game UI** | Hides the game's UI and leaves Vista's windows. |
+| {icon:EyeSlash} | **Hide all UI** | Hides the game's UI and Vista's windows. |
+
+With the switchboard, cutting doesn't hide anything. Choose **Hide game UI** to keep the **Switchboard** window while you film.
 
 ## Leaving Live
 

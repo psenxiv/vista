@@ -246,9 +246,7 @@ internal sealed class MainMenu
             layer.Heat = heat;
 
         ImGui.Separator();
-        var hideUi = game.HideUiInLive;
-        if (Menu.Check("Hide game UI when Live", ref hideUi))
-            game.HideUiInLive = hideUi;
+        LiveUiMenu.Draw(game);
     }
 
     private void DrawPreview(bool editing)

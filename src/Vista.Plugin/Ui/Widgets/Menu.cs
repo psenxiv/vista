@@ -1,4 +1,6 @@
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Vista.Plugin.Ui.Widgets;
@@ -13,6 +15,25 @@ internal static class Menu
     /// <summary>A menu item ticked while <paramref name="on"/>, which choosing flips; greyed out unless <paramref name="enabled"/>; true when chosen.</summary>
     public static bool Check(string label, ref bool on, bool enabled = true, string shortcut = "") =>
         ImGui.MenuItem(label, shortcut, ref on, enabled);
+
+    /// <summary>A menu item with <paramref name="icon"/> before its <paramref name="label"/>, highlighted while <paramref name="selected"/>, hovered and chosen as one item across the menu's width; true when chosen.</summary>
+    public static bool IconItem(string id, FontAwesomeIcon icon, string label, bool selected = false)
+    {
+        var iconWidth = IconButton.GlyphWidth(icon);
+        var gap = ImGui.GetStyle().ItemInnerSpacing.X;
+        var width = iconWidth + gap + ImGui.CalcTextSize(label).X;
+        // Sized to its content so the menu fits it, but hovered across the menu's width, as ImGui's own menu items are.
+        var span = (ImGuiSelectableFlags)ImGuiSelectableFlagsPrivate.SpanAvailWidth;
+        var chosen = ImGui.Selectable($"##{id}", selected, span, new Vector2(width, 0f));
+
+        var at = ImGui.GetItemRectMin();
+        var list = ImGui.GetWindowDrawList();
+        var colour = ImGui.GetColorU32(ImGuiCol.Text);
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            list.AddText(at, colour, icon.ToIconString());
+        list.AddText(at with { X = at.X + iconWidth + gap }, colour, label);
+        return chosen;
+    }
 
     /// <summary>A labelled slider in a menu, <paramref name="width"/> wide, greyed out unless <paramref name="enabled"/>; true when moved or typed.</summary>
     public static bool Slider(

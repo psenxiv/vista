@@ -431,23 +431,11 @@ internal sealed class SwitchboardWindow : Window, IDisposable
         ImGui.EndPopup();
     }
 
-    /// <summary>An Assign entry: the icon, then the track or playlist's name, hovered and chosen as one item across the menu's width.</summary>
+    /// <summary>An Assign entry: the icon, then the track or playlist's name.</summary>
     private void AssignItem(string id, FontAwesomeIcon icon, string name, int slot, Guid target)
     {
-        var iconWidth = IconButton.GlyphWidth(icon);
-        var gap = ImGui.GetStyle().ItemInnerSpacing.X;
-        var width = iconWidth + gap + ImGui.CalcTextSize(name).X;
-        // Sized to its content so the menu fits it, but hovered across the menu's width, as ImGui's own menu items are.
-        var span = (ImGuiSelectableFlags)ImGuiSelectableFlagsPrivate.SpanAvailWidth;
-        if (ImGui.Selectable($"##{id}", false, span, new Vector2(width, 0f)))
+        if (Menu.IconItem(id, icon, name))
             Report(session.AssignSlot(slot, target));
-
-        var at = ImGui.GetItemRectMin();
-        var list = ImGui.GetWindowDrawList();
-        var colour = ImGui.GetColorU32(ImGuiCol.Text);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-            list.AddText(at, colour, icon.ToIconString());
-        list.AddText(at with { X = at.X + iconWidth + gap }, colour, name);
     }
 
     /// <summary>Play/Pause and Restart for the Program shot; in Live they're the same as the Vista window's, so they show its keys.</summary>

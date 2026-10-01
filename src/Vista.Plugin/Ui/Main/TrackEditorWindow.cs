@@ -374,8 +374,7 @@ internal sealed class TrackEditorWindow : Window
             ImGui.SameLine();
         }
         Layout.RightAlign(rightEnd);
-        if (IconButton.Toggle("hide-ui", FontAwesomeIcon.EyeSlash, game.HideUiInLive, "Hide game UI when Live"))
-            game.HideUiInLive = !game.HideUiInLive;
+        DrawLiveUi();
         ImGui.SameLine();
         if (IconButton.Draw("feedback", FontAwesomeIcon.Comment, Feedback.Label))
             Feedback.Open();
@@ -386,11 +385,23 @@ internal sealed class TrackEditorWindow : Window
     /// <summary>LIVE and the gap after it.</summary>
     private static float LiveWidth() => ImGui.CalcTextSize("LIVE").X + ImGui.GetStyle().ItemSpacing.X;
 
-    /// <summary>Hide game UI, Give feedback and User Guide, at the top row's right end.</summary>
-    private static float RightEndWidth() =>
-        IconButton.RowWidth(FontAwesomeIcon.EyeSlash, FontAwesomeIcon.Comment, FontAwesomeIcon.Question);
+    /// <summary>The button showing what playing in Live hides, lit while it hides something; it opens the three choices.</summary>
+    private void DrawLiveUi()
+    {
+        var current = game.LiveUi;
+        var lit = LiveUiRules.HidesGameUi(current);
+        if (IconButton.Toggle("live-ui", LiveUiMenu.Icon(current), lit, LiveUiRules.Tooltip(current)))
+            ImGui.OpenPopup("live-ui-menu");
+        using var popup = ImRaii.Popup("live-ui-menu");
+        if (popup)
+            LiveUiMenu.Draw(game);
+    }
 
-    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before LIVE and the Hide game UI button if that's nearer; null before the first frame.</summary>
+    /// <summary>What playing in Live hides, Give feedback and User Guide, at the top row's right end.</summary>
+    private float RightEndWidth() =>
+        IconButton.RowWidth(LiveUiMenu.Icon(game.LiveUi), FontAwesomeIcon.Comment, FontAwesomeIcon.Question);
+
+    /// <summary>Where fly speed's slider starts so it ends under the track row's trash, or before LIVE and the When Live button if that's nearer; null before the first frame.</summary>
     private float? FlySpeedStart()
     {
         if (trashRight is not { } right)
@@ -830,7 +841,7 @@ internal sealed class TrackEditorWindow : Window
             + IconButton.Width(FontAwesomeIcon.RulerHorizontal)
             + IconButton.Width(FontAwesomeIcon.Camera)
             + IconButton.Width(FontAwesomeIcon.ThLarge)
-            + IconButton.Width(FontAwesomeIcon.EyeSlash)
+            + LiveUiMenu.ButtonWidth()
             + IconButton.Width(FontAwesomeIcon.Comment)
             + IconButton.Width(FontAwesomeIcon.Question);
         var live = Layout.Spacing.X + ImGui.CalcTextSize("LIVE").X;

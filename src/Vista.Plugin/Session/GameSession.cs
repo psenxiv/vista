@@ -33,24 +33,29 @@ internal sealed class GameSession
     /// <summary>The session this carries out.</summary>
     public SessionState State => state;
 
-    /// <summary>Whether Live hides the game UI while it plays; toggling it while Live plays applies at once.</summary>
-    public bool HideUiInLive
+    /// <summary>What playing in Live hides; changing it while Live plays applies at once.</summary>
+    public LiveUi LiveUi
     {
-        get => config.HideUiInLive;
+        get => config.LiveUi ?? LiveUiRules.FromLegacy(config.HideUiInLive);
         set
         {
-            if (config.HideUiInLive == value)
+            if (LiveUi == value)
                 return;
-            config.HideUiInLive = value;
+            config.LiveUi = value;
             config.Save();
             if (state.Mode != CameraMode.Live)
                 return;
-            if (value && state.IsPlaying)
+            if (HidesGameUi && state.IsPlaying)
                 GameUi.Hide();
-            else if (!value)
+            else if (!HidesGameUi)
                 GameUi.Restore();
         }
     }
+
+    /// <summary>True while Vista's windows stay up though Vista has hidden the game UI.</summary>
+    public bool KeepsWindows => LiveUiRules.KeepsWindows(LiveUi, GameUi.HiddenByUs);
+
+    private bool HidesGameUi => LiveUiRules.HidesGameUi(LiveUi);
 
     /// <summary>The characters loaded nearby, as last read.</summary>
     public NearbyCharacters Characters => characters;
@@ -371,11 +376,11 @@ internal sealed class GameSession
                 Plugin.Log.Debug(previewRefusal ? "cannot preview a track with no points." : "nothing to play.");
                 return;
             case PlayOutcome.ReHid:
-                if (HideUiInLive)
+                if (HidesGameUi)
                     GameUi.Hide();
                 return;
             case PlayOutcome.Resumed:
-                if (HideUiInLive)
+                if (HidesGameUi)
                     GameUi.Hide();
                 Plugin.Log.Information("resumed");
                 return;
@@ -392,7 +397,7 @@ internal sealed class GameSession
             return;
         }
 
-        if (HideUiInLive)
+        if (HidesGameUi)
             GameUi.Hide();
         Plugin.Log.Information(
             outcome == PlayOutcome.StartedFromGame ? "mode: live, playing" : "playing from the start"
