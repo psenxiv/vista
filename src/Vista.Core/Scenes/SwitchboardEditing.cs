@@ -25,7 +25,7 @@ public static class SwitchboardEditing
     public const string NothingToPlayHint = "Nothing to play yet";
 
     /// <summary>The hint on every slot while the scene doesn't use its switchboard.</summary>
-    public const string OffHint = "Turn on Use switchboard to use the slots";
+    public const string OffHint = "Switchboard is off";
 
     /// <summary>The Use switchboard toggle's tooltip.</summary>
     public const string UseTooltip = "Use switchboard";

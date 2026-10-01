@@ -286,11 +286,7 @@ public class SwitchboardEditingTests
         scene = SwitchboardEditing.Assign(scene, 1, scene.Tracks[1].Id);
 
         Assert.Equal(
-            [
-                "Turn on Use switchboard to use the slots",
-                "Turn on Use switchboard to use the slots",
-                "Turn on Use switchboard to use the slots",
-            ],
+            ["Switchboard is off", "Switchboard is off", "Switchboard is off"],
             new[] { 0, 1, 5 }.Select(slot => SwitchboardEditing.Hint(scene, slot))
         );
     }

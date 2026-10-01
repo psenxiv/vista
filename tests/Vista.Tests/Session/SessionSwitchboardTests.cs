@@ -408,12 +408,12 @@ public class SessionSwitchboardTests
         // Slot 0 holds a track and slot 5 is empty.
         var state = new SessionState();
         state.LoadScene(OnAirScene());
-        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(0));
-        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(5));
+        Assert.Equal("Switchboard is off", state.SlotHint(0));
+        Assert.Equal("Switchboard is off", state.SlotHint(5));
 
         state.Edit();
-        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(0));
-        Assert.Equal("Turn on Use switchboard to use the slots", state.SlotHint(5));
+        Assert.Equal("Switchboard is off", state.SlotHint(0));
+        Assert.Equal("Switchboard is off", state.SlotHint(5));
     }
 
     [Fact]
